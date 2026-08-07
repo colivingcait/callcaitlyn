@@ -170,7 +170,12 @@ export type DealStatus = "pending" | "won";
 export interface Deal {
   id: string;
   owner_id: string;
-  contact_id: string;
+  // Nullable so historical deals can be recorded without recreating a
+  // full contact for each one - client_name carries a plain-text name
+  // for the commission table when there's no linked contact to read it
+  // from.
+  contact_id: string | null;
+  client_name: string | null;
   stage_id: string | null;
   status: DealStatus;
   closed_at: string;

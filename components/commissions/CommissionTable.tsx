@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { formatCurrency, formatPercent, fullName, PROPERTY_TYPE_LABELS } from "@/lib/utils";
 import { formatLocal } from "@/lib/format-time";
+import { DealRowActions } from "@/components/commissions/DealRowActions";
 import type { DealComputedFields } from "@/lib/crm/commission";
 import type { DealWithContact } from "@/lib/data/commissions";
 
@@ -27,6 +28,7 @@ export function CommissionTable({ deals }: { deals: (DealWithContact & DealCompu
     "Net Comm",
     "% of Comm",
     "% of List",
+    "",
   ];
 
   return (
@@ -52,6 +54,8 @@ export function CommissionTable({ deals }: { deals: (DealWithContact & DealCompu
                     <Link href={`/contacts/${deal.contacts.id}`} className="font-medium text-brand-700 hover:underline">
                       {fullName(deal.contacts)}
                     </Link>
+                  ) : deal.client_name ? (
+                    <span className="font-medium text-neutral-700">{deal.client_name}</span>
                   ) : (
                     <span className="text-neutral-400">—</span>
                   )}
@@ -73,6 +77,9 @@ export function CommissionTable({ deals }: { deals: (DealWithContact & DealCompu
                 <td className="whitespace-nowrap px-3 py-2 font-semibold text-neutral-900">{formatCurrency(deal.netCommission)}</td>
                 <td className="whitespace-nowrap px-3 py-2 text-neutral-500">{formatPercent(deal.pctOfComm)}</td>
                 <td className="whitespace-nowrap px-3 py-2 text-neutral-500">{formatPercent(deal.pctOfListPrice, 2)}</td>
+                <td className="whitespace-nowrap px-3 py-2">
+                  <DealRowActions deal={deal} />
+                </td>
               </tr>
             );
           })}

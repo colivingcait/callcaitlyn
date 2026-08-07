@@ -8,6 +8,10 @@ import { PROPERTY_TYPE_LABELS } from "@/lib/utils";
 import { X, PartyPopper, Handshake } from "lucide-react";
 import type { Deal, DealSide, PropertyType } from "@/types/database";
 
+function toDateInputValue(value: string | null | undefined) {
+  return value ? value.slice(0, 10) : "";
+}
+
 // The deal row itself already exists by the time this opens (see
 // stage-transition.ts) - this only ever UPDATEs it, so skipping/closing
 // early loses nothing but the extra detail. Reused for the under-contract
@@ -31,6 +35,9 @@ export function DealCelebrationModal({
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const isStandaloneEdit = mode === "edit" && !initial?.contact_id;
+  const [clientName, setClientName] = useState(initial?.client_name ?? "");
+  const [closedAt, setClosedAt] = useState(toDateInputValue(initial?.closed_at) || new Date().toISOString().slice(0, 10));
   const [address, setAddress] = useState(initial?.address ?? "");
   const [propertyType, setPropertyType] = useState<PropertyType | "">(initial?.property_type ?? "");
   const [side, setSide] = useState<DealSide | "">(initial?.side ?? defaultSide ?? "");
@@ -47,21 +54,25 @@ export function DealCelebrationModal({
   async function handleSave() {
     setSaving(true);
     const supabase = createClient();
-    await supabase
-      .from("deals")
-      .update({
-        address: address || null,
-        property_type: propertyType || null,
-        side: side || null,
-        sale_price: salePrice ? Number(salePrice) : null,
-        gross_commission: grossCommission ? Number(grossCommission) : null,
-        referral_pct: referralPct ? Number(referralPct) : null,
-        misc_fee: miscFee ? Number(miscFee) : 0,
-        oz_fee: ozFee ? Number(ozFee) : 0,
-        lead_started_at: leadStartedAt ? new Date(leadStartedAt).toISOString() : null,
-        notes: notes || null,
-      })
-      .eq("id", dealId);
+    const patch: Record<string, unknown> = {
+      address: address || null,
+      property_type: propertyType || null,
+      side: side || null,
+      sale_price: salePrice ? Number(salePrice) : null,
+      gross_commission: grossCommission ? Number(grossCommission) : null,
+      referral_pct: referralPct ? Number(referralPct) : null,
+      misc_fee: miscFee ? Number(miscFee) : 0,
+      oz_fee: ozFee ? Number(ozFee) : 0,
+      lead_started_at: leadStartedAt ? new Date(leadStartedAt).toISOString() : null,
+      notes: notes || null,
+    };
+    // Closing date isn't meaningful yet while a deal is still pending
+    // (under contract) - closed_at there means "entered under contract at,"
+    // not an actual close date, so it's left untouched in that mode.
+    if (mode !== "under_contract") patch.closed_at = new Date(closedAt).toISOString();
+    if (isStandaloneEdit) patch.client_name = clientName || null;
+
+    await supabase.from("deals").update(patch).eq("id", dealId);
     setSaving(false);
     router.refresh();
     onClose();
@@ -87,8 +98,8 @@ export function DealCelebrationModal({
                 <Handshake size={20} className="text-brand-600" /> Under contract!
               </p>
               <p className="mt-0.5 text-sm text-neutral-500">
-                Lock in what you know about {contactName}&apos;s deal now — you&apos;ll get asked for the rest
-                (commission, splits) once it actually closes.
+                Lock in what you know about {contactName}&apos;s deal now — you can update anything once it
+                actually closes.
               </p>
             </div>
           )}
@@ -99,10 +110,27 @@ export function DealCelebrationModal({
         </div>
 
         <div className="mt-4 space-y-3">
+          {isStandaloneEdit && (
+            <div>
+              <Label htmlFor="deal-client-name">Client name</Label>
+              <Input
+                id="deal-client-name"
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+                placeholder="Not linked to a contact"
+              />
+            </div>
+          )}
           <div>
             <Label htmlFor="deal-address">Property address</Label>
             <Input id="deal-address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main St" />
           </div>
+          {mode !== "under_contract" && (
+            <div>
+              <Label htmlFor="deal-closed-at">Closing date</Label>
+              <Input id="deal-closed-at" type="date" value={closedAt} onChange={(e) => setClosedAt(e.target.value)} />
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label htmlFor="deal-property-type">Property type</Label>
@@ -151,35 +179,33 @@ export function DealCelebrationModal({
               />
             </div>
           </div>
-          {mode !== "under_contract" && (
-            <>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <Label htmlFor="deal-referral-pct">Referral %</Label>
-                  <Input
-                    id="deal-referral-pct"
-                    type="number"
-                    step="0.5"
-                    value={referralPct}
-                    onChange={(e) => setReferralPct(e.target.value)}
-                    placeholder="0"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="deal-misc-fee">Misc fee</Label>
-                  <Input id="deal-misc-fee" type="number" step="10" value={miscFee} onChange={(e) => setMiscFee(e.target.value)} placeholder="0" />
-                </div>
-                <div>
-                  <Label htmlFor="deal-oz-fee">OZ fee</Label>
-                  <Input id="deal-oz-fee" type="number" step="10" value={ozFee} onChange={(e) => setOzFee(e.target.value)} placeholder="0" />
-                </div>
-              </div>
-              <p className="text-xs text-neutral-400">
-                KW (30% to $15k cap), KWRI (3% to $3k cap), FMLS (0.12% of price), and TC ($500) are calculated
-                automatically on the Commissions page — referral, misc, and OZ are the only splits you enter directly.
-              </p>
-            </>
-          )}
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <Label htmlFor="deal-referral-pct">Referral %</Label>
+              <Input
+                id="deal-referral-pct"
+                type="number"
+                step="0.5"
+                value={referralPct}
+                onChange={(e) => setReferralPct(e.target.value)}
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <Label htmlFor="deal-misc-fee">Misc fee</Label>
+              <Input id="deal-misc-fee" type="number" step="10" value={miscFee} onChange={(e) => setMiscFee(e.target.value)} placeholder="0" />
+            </div>
+            <div>
+              <Label htmlFor="deal-oz-fee">OZ fee</Label>
+              <Input id="deal-oz-fee" type="number" step="10" value={ozFee} onChange={(e) => setOzFee(e.target.value)} placeholder="0" />
+            </div>
+          </div>
+          <p className="text-xs text-neutral-400">
+            KW (30% to $15k cap), KWRI (3% to $3k cap), and TC ($500) are calculated automatically on the
+            Commissions page based on your sale price and gross commission — referral, misc, and OZ are the only
+            splits you enter directly. FMLS (0.12% of price) is also automatic, but only once you&apos;ve entered a
+            sale price.
+          </p>
           <div>
             <Label htmlFor="deal-lead-started">Started working with them</Label>
             <Input
