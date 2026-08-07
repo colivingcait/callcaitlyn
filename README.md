@@ -161,7 +161,13 @@ Eventbrite's custom registration question is fetched from the attendee's `answer
 
 Each of these needs its own API key/OAuth setup from your accounts before it can go live — the data model is already built to receive them (the `activities.source` and `metadata` columns exist specifically for this):
 
-1. **Jotform journey-stage mapping** — wire the self-reported "house hacking journey" answer to actually move new contacts into the right pipeline stage, once the exact answer options are confirmed.
+1. **Accountability metrics dashboard** — a new goals table plus a dashboard section for:
+   - **Speed to lead** — average time from a contact being created to your first logged outbound call/text/email with them.
+   - **Contacted %** — of active (non-closed, non-archived) contacts, what % have a logged activity in the last 7/30 days.
+   - **Follow-up rate** — of tasks due in the period, what % got completed vs. left overdue.
+   - **Conversion rate** — of leads created in the period, what % have reached "Closed - Client."
+
+   Each metric gets a settable goal, an up/down arrow vs. last week/month, and a met/not-met indicator against the goal. Definitions above are proposed, not final — confirm before building.
 2. **Gmail** — capture new leads from your inbox, log email activity on contacts. Deferred for now — needs either accepting once-a-day sync on Vercel's free plan, paying for Vercel Pro for near-real-time polling, or building real-time push via Gmail + Google Cloud Pub/Sub (more setup, still free).
 3. **AI status detection & insights** — using an Anthropic API key, analyze new activity (especially texts) to auto-suggest stage changes ("I'm ready to start looking" → move to Hot/Ready) and generate a running action-item list per contact.
 4. **Newsletters & mass send** — AI-drafted emails in your voice, open/click tracking, scheduled sends to tagged audiences (e.g. promote a meetup to everyone tagged "Meetup").
