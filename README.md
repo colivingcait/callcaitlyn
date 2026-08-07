@@ -72,7 +72,8 @@ opens full-screen like a native app.
 - **Calendly booking sync** — a webhook receiver at `/api/webhooks/calendly` logs new bookings (and cancellations) onto the matching contact's timeline, auto-creating a contact if the email/phone isn't recognized, and pulls the follow-up date forward to the meeting time if that's sooner than what's already set. See **Setting up Calendly** below — not yet tested against a real delivery.
 - **Eventbrite registration sync** — a webhook receiver at `/api/webhooks/eventbrite` fetches attendee details when someone registers for an event, logs it on the matching contact (or creates one, or enriches an existing bare one with name/email), and tags them "Meetup". Confirmed working end to end.
 - **Jotform check-in sync** — a webhook receiver at `/api/webhooks/jotform` matches in-person kiosk check-ins to existing contacts (from Eventbrite or elsewhere) by email/phone instead of creating duplicates, updates their last-event-attended date, and logs "how did you hear about us" + "house hacking journey" answers. Confirmed working end to end.
-- **AI insights** — every inbound Quo text and every completed call transcript gets read by Claude, which decides whether it signals a stage or timeline change (e.g. "I'm ready to start looking" → suggest Hot/Ready) and writes a plain-English summary + suggested next action. Nothing changes automatically — it shows up as a card on the contact page with Apply/Dismiss buttons, so a wrong read never silently moves someone through your pipeline. Not yet tested against real activity.
+- **AI insights** — every inbound Quo text and every completed call transcript gets read by Claude, which decides whether it signals a stage or timeline change (e.g. "I'm ready to start looking" → suggest Hot/Ready) and writes a plain-English summary + suggested next action. Nothing changes automatically — it shows up as a card on the contact page with Apply/Dismiss buttons, so a wrong read never silently moves someone through your pipeline. Confirmed working end to end.
+- **Send texts from the CRM** — a compose box on the contact page sends a text through your Quo number directly (no need to open the Quo app), and logs it on the timeline the same as an incoming one. Not yet tested against a real send — the request format is a best-effort guess, same situation the webhooks started in.
 
 ## Setting up AI insights
 
@@ -80,6 +81,10 @@ opens full-screen like a native app.
 2. Add `ANTHROPIC_API_KEY` to Vercel, redeploy.
 3. Text or call your Quo number, then check the contact page for a suggestion card. Uses Claude Haiku (cheap, fast) since this is a lightweight classification task, not a big reasoning job — costs should be negligible at your call/text volume.
 4. Applying a suggestion updates the contact's stage/timeline and logs an activity (source `ai`) recording what changed and why. Dismissing just clears it — nothing on the contact changes.
+
+## Sending texts from the CRM
+
+Uses the `QUO_API_KEY` you already have set up — no new credential needed. Just try it: open any contact with a phone number, type a message in the box under the call/text/email buttons, and hit send. If it errors, paste me the error message it shows (it includes Quo's actual API response) and I'll fix the request shape to match.
 
 ## Setting up Quo (calling/texting sync)
 
@@ -203,7 +208,7 @@ components/                   UI, nav, contact, dashboard, settings components
 lib/data/                     Server-side data fetching (Supabase queries)
 lib/supabase/                 Supabase client/server/middleware/admin helpers
 lib/crm/                      Shared integration logic: find-or-create contact, activity upsert, event attendance
-lib/quo/                      Quo-specific webhook parsing + signature verification
+lib/quo/                      Quo-specific webhook parsing, signature verification, sending texts
 lib/calendly/                 Calendly-specific webhook parsing + signature verification
 lib/eventbrite/               Eventbrite-specific API client + attendee parsing
 lib/jotform/                  Jotform-specific submission parsing

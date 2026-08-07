@@ -10,6 +10,7 @@ import { AddActivityForm } from "@/components/contacts/AddActivityForm";
 import { TaskList } from "@/components/contacts/TaskList";
 import { ArchiveButton } from "@/components/contacts/ArchiveButton";
 import { AiInsightCard } from "@/components/contacts/AiInsightCard";
+import { SendTextForm } from "@/components/contacts/SendTextForm";
 import { Pencil, MapPin, DollarSign, Clock, Tag as TagIcon, CalendarHeart } from "lucide-react";
 
 export default async function ContactDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -52,6 +53,10 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
 
       <div className="mt-4">
         <QuickActions phone={contact.phone} email={contact.email} />
+      </div>
+
+      <div className="mt-4">
+        <SendTextForm contactId={contact.id} phone={contact.phone} />
       </div>
 
       {insights.length > 0 && (
