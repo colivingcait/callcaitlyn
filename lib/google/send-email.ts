@@ -8,13 +8,20 @@ function encodeSubject(subject: string) {
   return `=?UTF-8?B?${Buffer.from(subject, "utf-8").toString("base64")}?=`;
 }
 
-function buildRawMessage(from: string, to: string, subject: string, htmlBody: string) {
+function buildRawMessage(
+  from: string,
+  to: string,
+  subject: string,
+  htmlBody: string,
+  extraHeaders?: Record<string, string>,
+) {
   const message = [
     `From: ${from}`,
     `To: ${to}`,
     `Subject: ${encodeSubject(subject)}`,
     "MIME-Version: 1.0",
     'Content-Type: text/html; charset="UTF-8"',
+    ...Object.entries(extraHeaders ?? {}).map(([key, value]) => `${key}: ${value}`),
     "",
     htmlBody,
   ].join("\r\n");
@@ -38,6 +45,7 @@ export async function sendGmailMessage(
   to: string,
   subject: string,
   htmlBody: string,
+  extraHeaders?: Record<string, string>,
 ): Promise<{ ok: true; messageId: string } | { ok: false; error: string }> {
   const client = await getAuthorizedGmailClient(admin, ownerId);
   if (!client) return { ok: false, error: "Gmail isn't connected. Connect it in Settings first." };
@@ -47,7 +55,7 @@ export async function sendGmailMessage(
 
   const gmail = google.gmail({ version: "v1", auth: client });
   try {
-    const raw = buildRawMessage(account.email_address, to, subject, htmlBody);
+    const raw = buildRawMessage(account.email_address, to, subject, htmlBody, extraHeaders);
     const { data } = await gmail.users.messages.send({ userId: "me", requestBody: { raw } });
     return { ok: true, messageId: data.id ?? "" };
   } catch (err) {

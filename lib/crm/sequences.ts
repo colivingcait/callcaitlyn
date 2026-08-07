@@ -74,8 +74,12 @@ async function sendStepToContact(
 
   const subject = applyMergeFields(step.subject, contact);
   const html = instrumentEmail(textToHtml(applyMergeFields(step.body, contact)), claimed.id, contact);
+  const unsubscribeUrl = `${baseUrl()}/api/unsubscribe/${contact.unsubscribe_token}?send=${claimed.id}`;
 
-  const result = await sendGmailMessage(admin, ownerId, contact.email, subject, html);
+  const result = await sendGmailMessage(admin, ownerId, contact.email, subject, html, {
+    "List-Unsubscribe": `<${unsubscribeUrl}>`,
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  });
   if (!result.ok) {
     await admin.from("email_sequence_sends").delete().eq("id", claimed.id);
     console.error(`Sequence send failed for ${sequence.id}/${step.id}/${contact.id}:`, result.error);
