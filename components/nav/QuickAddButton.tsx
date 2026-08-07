@@ -1,7 +1,15 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Plus } from "lucide-react";
 
 export function QuickAddButton() {
+  const pathname = usePathname();
+  // Hidden on message threads - the compose bar already occupies that
+  // corner of the screen and the two would visually overlap.
+  if (pathname.startsWith("/messages/")) return null;
+
   return (
     <Link
       href="/contacts/new"

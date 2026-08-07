@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV_ITEMS } from "./nav-items";
+import { MOBILE_NAV_ITEMS } from "./nav-items";
 import { cn } from "@/lib/utils";
 
 export function BottomNav() {
@@ -11,7 +11,7 @@ export function BottomNav() {
   return (
     <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-neutral-200 bg-white/95 backdrop-blur md:hidden">
       <ul className="flex items-stretch justify-around">
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+        {MOBILE_NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
           return (
             <li key={href} className="flex-1">

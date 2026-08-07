@@ -67,6 +67,7 @@ opens full-screen like a native app.
 - **Activity timeline** — every call, text, email, note, meeting, or showing logged against a contact, plus automatic stage-change entries. Built with a `source` field (`manual`, `quo`, `gmail`, …) so future integrations write into the same timeline instead of a separate system.
 - **Tasks** — follow-up reminders per contact, with due dates and priority.
 - **Pipeline** — stage-grouped view (accordion on mobile, kanban columns on desktop) with a quick stage-move dropdown per contact.
+- **Messages** — an iMessage/Quo-style inbox at `/messages`: a conversation list (most recent call/text per contact) and, per contact, a full chat thread with text bubbles, call log entries (with play/transcript), and a compose bar to send texts right from the thread.
 - **Settings** — fully customize your pipeline stages (name, color, order) and tags. Nothing is hardcoded — this is meant to fit how *you* actually work, not a generic template.
 - **Quo call/text sync** — a webhook receiver at `/api/webhooks/quo` logs every call and text against the matching contact's activity timeline automatically (auto-creating a bare contact for numbers it doesn't recognize, so nothing gets missed). Confirmed working end to end (calls, texts, recordings, transcripts, summaries). Signature verification is still in log-only mode — see step 6 below.
 - **Calendly booking sync** — a webhook receiver at `/api/webhooks/calendly` logs new bookings (and cancellations) onto the matching contact's timeline, auto-creating a contact if the email/phone isn't recognized, and pulls the follow-up date forward to the meeting time if that's sooner than what's already set. See **Setting up Calendly** below — not yet tested against a real delivery.
@@ -193,6 +194,7 @@ Each of these needs its own API key/OAuth setup from your accounts before it can
 - **Past-client drip** — auto-tag anyone whose stage becomes "Closed - Client" and schedule periodic just-checking-in touches — the #1 way past clients turn into referrals.
 - **Duplicate detection** — warn when a new contact's phone/email matches an existing one, so leads from different channels (website, Eventbrite, sign call) don't fragment into duplicates.
 - **"Sphere" nurture cadence** — a separate lighter-touch cadence for sphere/referral-partner contacts vs. active buyers/sellers, since they need a different follow-up rhythm.
+- **Engagement-based tagging** — behavior as its own signal, separate from what a contact explicitly says: texting/calling multiple times a week, opening every newsletter, clicking links in emails. High-frequency engagement could auto-tag or nudge stage independently of the AI insight (which is per-activity-content) - this would be a per-contact rolling engagement score computed from activity frequency, plus email open/click data once the newsletter/email-tracking phase exists.
 
 ## Project structure
 
@@ -204,7 +206,7 @@ app/api/webhooks/quo/         Quo call/text webhook receiver
 app/api/webhooks/calendly/    Calendly booking webhook receiver
 app/api/webhooks/eventbrite/  Eventbrite registration webhook receiver
 app/api/webhooks/jotform/     Jotform in-person check-in webhook receiver
-components/                   UI, nav, contact, dashboard, settings components
+components/                   UI, nav, contact, dashboard, settings, messages components
 lib/data/                     Server-side data fetching (Supabase queries)
 lib/supabase/                 Supabase client/server/middleware/admin helpers
 lib/crm/                      Shared integration logic: find-or-create contact, activity upsert, event attendance
