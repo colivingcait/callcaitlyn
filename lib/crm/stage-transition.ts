@@ -18,12 +18,22 @@ export async function applyStageChange(
   if (newStage?.is_trash) patch.archived = true;
 
   const { error } = await supabase.from("contacts").update(patch).eq("id", contactId);
-  if (error) return { error };
+  if (error) return { error, dealId: null };
 
+  // dealId is only set when a brand-new deal was just written - the caller
+  // uses it to decide whether to pop the deal-closing celebration/details
+  // modal. The row exists (and counts toward conversion rate) regardless
+  // of whether the agent goes on to fill in the extra details or not.
+  let dealId: string | null = null;
   const enteringWon = newStage?.is_closed_won && !oldStage?.is_closed_won;
   if (enteringWon) {
-    await supabase.from("deals").insert({ owner_id: ownerId, contact_id: contactId, stage_id: newStage!.id });
+    const { data } = await supabase
+      .from("deals")
+      .insert({ owner_id: ownerId, contact_id: contactId, stage_id: newStage!.id })
+      .select("id")
+      .single();
+    dealId = data?.id ?? null;
   }
 
-  return { error: null };
+  return { error: null, dealId };
 }

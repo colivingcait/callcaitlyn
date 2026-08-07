@@ -48,6 +48,12 @@ export type ActivitySource =
 
 export type TaskPriority = "low" | "medium" | "high";
 
+export type Representing = "buyer" | "seller" | "both";
+
+export type PropertyType = "primary_residence" | "house_hack" | "investment" | "co_living" | "other";
+
+export type DealSide = "buyer" | "seller";
+
 export interface PipelineStage {
   id: string;
   owner_id: string;
@@ -77,6 +83,9 @@ export interface Contact {
   phone: string | null;
   secondary_phone: string | null;
   contact_type: ContactType;
+  representing: Representing | null;
+  listing_address: string | null;
+  listing_timeline: Timeline | null;
   stage_id: string | null;
   lead_source: string | null;
   budget_min: number | null;
@@ -158,6 +167,13 @@ export interface Deal {
   contact_id: string;
   stage_id: string | null;
   closed_at: string;
+  address: string | null;
+  property_type: PropertyType | null;
+  side: DealSide | null;
+  sale_price: number | null;
+  commission_amount: number | null;
+  lead_started_at: string | null;
+  notes: string | null;
   created_at: string;
 }
 

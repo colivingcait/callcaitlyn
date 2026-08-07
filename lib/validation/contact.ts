@@ -18,6 +18,15 @@ export const contactSchema = z.object({
     "sphere",
     "other",
   ]),
+  representing: z.union([z.enum(["buyer", "seller", "both"]), z.literal("")]).nullable().optional(),
+  listing_address: z.string().optional(),
+  listing_timeline: z
+    .union([
+      z.enum(["asap", "1_3_months", "3_6_months", "6_12_months", "12_plus_months", "just_browsing", "unknown"]),
+      z.literal(""),
+    ])
+    .nullable()
+    .optional(),
   stage_id: z.string().uuid().nullable().optional(),
   lead_source: z.string().optional(),
   budget_min: z.union([z.coerce.number(), z.nan()]).optional(),

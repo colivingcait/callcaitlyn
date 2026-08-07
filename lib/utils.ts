@@ -48,3 +48,23 @@ export const CONTACT_TYPE_LABELS: Record<string, string> = {
   sphere: "Sphere",
   other: "Other",
 };
+
+export const REPRESENTING_LABELS: Record<string, string> = {
+  buyer: "Buyer",
+  seller: "Seller",
+  both: "Buy/Sell",
+};
+
+export const REPRESENTING_COLORS: Record<string, string> = {
+  buyer: "#3b82f6",
+  seller: "#a855f7",
+  both: "#f97316",
+};
+
+export const PROPERTY_TYPE_LABELS: Record<string, string> = {
+  primary_residence: "Primary Residence",
+  house_hack: "House Hack",
+  investment: "Investment",
+  co_living: "Co-living",
+  other: "Other",
+};

@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { contactSchema, type ContactFormValues } from "@/lib/validation/contact";
 import { Button, Input, Label, Select, Textarea, Card } from "@/components/ui";
-import { CONTACT_TYPE_LABELS, TIMELINE_LABELS, cn } from "@/lib/utils";
+import { CONTACT_TYPE_LABELS, TIMELINE_LABELS, REPRESENTING_LABELS, cn } from "@/lib/utils";
 import type { ContactWithRelations, PipelineStage, Tag } from "@/types/database";
 
 const LEAD_SOURCES = [
@@ -47,6 +47,7 @@ export function ContactForm({
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<ContactFormValues>({
     resolver: zodResolver(contactSchema),
@@ -58,6 +59,9 @@ export function ContactForm({
           phone: contact.phone ?? "",
           secondary_phone: contact.secondary_phone ?? "",
           contact_type: contact.contact_type,
+          representing: contact.representing,
+          listing_address: contact.listing_address ?? "",
+          listing_timeline: contact.listing_timeline,
           stage_id: contact.stage_id,
           lead_source: contact.lead_source ?? "",
           budget_min: contact.budget_min ?? undefined,
@@ -75,10 +79,14 @@ export function ContactForm({
         }
       : {
           contact_type: "buyer",
+          representing: "buyer",
           timeline: "unknown",
           stage_id: stages[0]?.id ?? null,
         },
   });
+
+  const representing = watch("representing");
+  const showListingFields = representing === "seller" || representing === "both";
 
   async function onSubmit(values: ContactFormValues) {
     setSubmitting(true);
@@ -102,6 +110,9 @@ export function ContactForm({
       phone: values.phone || null,
       secondary_phone: values.secondary_phone || null,
       contact_type: values.contact_type,
+      representing: values.representing || null,
+      listing_address: values.listing_address || null,
+      listing_timeline: values.listing_timeline || null,
       stage_id: values.stage_id || null,
       lead_source: values.lead_source || null,
       budget_min: values.budget_min && !Number.isNaN(values.budget_min) ? values.budget_min : null,
@@ -214,6 +225,17 @@ export function ContactForm({
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
+            <Label htmlFor="representing">Representing</Label>
+            <Select id="representing" {...register("representing")}>
+              <option value="">Not applicable</option>
+              {Object.entries(REPRESENTING_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
             <Label htmlFor="lead_source">Lead source</Label>
             <Input id="lead_source" list="lead-sources" {...register("lead_source")} />
             <datalist id="lead-sources">
@@ -222,16 +244,16 @@ export function ContactForm({
               ))}
             </datalist>
           </div>
-          <div>
-            <Label htmlFor="timeline">Timeline</Label>
-            <Select id="timeline" {...register("timeline")}>
-              {Object.entries(TIMELINE_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </Select>
-          </div>
+        </div>
+        <div>
+          <Label htmlFor="timeline">Timeline</Label>
+          <Select id="timeline" {...register("timeline")}>
+            {Object.entries(TIMELINE_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </Select>
         </div>
         <div>
           <Label htmlFor="next_follow_up_at">Next follow-up</Label>
@@ -240,7 +262,7 @@ export function ContactForm({
       </Card>
 
       <Card className="space-y-4">
-        <h2 className="text-sm font-semibold text-neutral-700">Buying / selling details</h2>
+        <h2 className="text-sm font-semibold text-neutral-700">Buying details</h2>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label htmlFor="budget_min">Budget min</Label>
@@ -256,6 +278,27 @@ export function ContactForm({
           <Input id="areas_of_interest" {...register("areas_of_interest")} placeholder="Comma-separated, e.g. Downtown, Riverside" />
         </div>
       </Card>
+
+      {showListingFields && (
+        <Card className="space-y-4">
+          <h2 className="text-sm font-semibold text-neutral-700">Listing details</h2>
+          <div>
+            <Label htmlFor="listing_address">Listing address</Label>
+            <Input id="listing_address" {...register("listing_address")} placeholder="What are they selling?" />
+          </div>
+          <div>
+            <Label htmlFor="listing_timeline">Listing timeline</Label>
+            <Select id="listing_timeline" {...register("listing_timeline")}>
+              <option value="">Unknown</option>
+              {Object.entries(TIMELINE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+          </div>
+        </Card>
+      )}
 
       <Card className="space-y-4">
         <h2 className="text-sm font-semibold text-neutral-700">Address</h2>

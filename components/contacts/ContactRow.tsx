@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { fullName, formatPhone, initials, CONTACT_TYPE_LABELS } from "@/lib/utils";
+import { RepresentingBadge } from "@/components/contacts/RepresentingBadge";
 import type { ContactWithRelations } from "@/types/database";
 
 export function ContactRow({ contact }: { contact: ContactWithRelations }) {
@@ -14,7 +15,10 @@ export function ContactRow({ contact }: { contact: ContactWithRelations }) {
         {initials(contact.first_name, contact.last_name)}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate font-medium text-neutral-900">{fullName(contact)}</p>
+        <p className="flex items-center gap-1.5 truncate font-medium text-neutral-900">
+          {fullName(contact)}
+          <RepresentingBadge representing={contact.representing} />
+        </p>
         <p className="truncate text-xs text-neutral-400">
           {[CONTACT_TYPE_LABELS[contact.contact_type], formatPhone(contact.phone)].filter(Boolean).join(" · ")}
         </p>

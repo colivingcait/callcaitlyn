@@ -19,8 +19,11 @@ import { TaskList } from "@/components/contacts/TaskList";
 import { ArchiveButton } from "@/components/contacts/ArchiveButton";
 import { AiInsightCard } from "@/components/contacts/AiInsightCard";
 import { DealsList } from "@/components/contacts/DealsList";
+import { RepresentingBadge } from "@/components/contacts/RepresentingBadge";
+import { LikelihoodBadge } from "@/components/contacts/LikelihoodBadge";
+import { computeLikelihood } from "@/lib/crm/likelihood";
 import { SendTextForm } from "@/components/contacts/SendTextForm";
-import { Pencil, MapPin, DollarSign, Clock, Tag as TagIcon, CalendarHeart } from "lucide-react";
+import { Pencil, MapPin, DollarSign, Clock, Tag as TagIcon, CalendarHeart, Home } from "lucide-react";
 
 export default async function ContactDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -41,6 +44,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
     contact.budget_min || contact.budget_max
       ? `$${(contact.budget_min ?? 0).toLocaleString()} – $${(contact.budget_max ?? 0).toLocaleString()}`
       : null;
+  const likelihood = computeLikelihood(contact, stages);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6">
@@ -50,8 +54,16 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
             {initials(contact.first_name, contact.last_name)}
           </div>
           <div>
-            <h1 className="font-serif text-2xl font-semibold text-neutral-900">{fullName(contact)}</h1>
+            <h1 className="flex items-center gap-2 font-serif text-2xl font-semibold text-neutral-900">
+              {fullName(contact)}
+              <RepresentingBadge representing={contact.representing} />
+            </h1>
             <p className="text-sm text-neutral-500">{formatPhone(contact.phone) || contact.email}</p>
+            {likelihood && (
+              <div className="mt-1">
+                <LikelihoodBadge likelihood={likelihood} />
+              </div>
+            )}
           </div>
         </div>
         <Link href={`/contacts/${contact.id}/edit`}>
@@ -78,6 +90,9 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
               contactId={contact.id}
               ownerId={contact.owner_id}
               contactStageId={contact.stage_id}
+              contactName={fullName(contact)}
+              contactCreatedAt={contact.created_at}
+              representing={contact.representing}
               stages={stages}
             />
           ))}
@@ -92,8 +107,16 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
             ownerId={contact.owner_id}
             currentStageId={contact.stage_id}
             stages={stages}
+            contactName={fullName(contact)}
+            contactCreatedAt={contact.created_at}
+            representing={contact.representing}
           />
-          <DealsList deals={deals} />
+          <DealsList
+            deals={deals}
+            contactName={fullName(contact)}
+            contactCreatedAt={contact.created_at}
+            representing={contact.representing}
+          />
         </div>
         <div className="flex flex-wrap gap-2 text-sm text-neutral-600">
           <Badge className="bg-neutral-100 text-neutral-600">{CONTACT_TYPE_LABELS[contact.contact_type]}</Badge>
@@ -121,6 +144,13 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
           {(contact.city || contact.state) && (
             <div className="flex items-center gap-2">
               <MapPin size={14} className="text-neutral-400" /> {[contact.city, contact.state].filter(Boolean).join(", ")}
+            </div>
+          )}
+          {contact.listing_address && (
+            <div className="flex items-center gap-2">
+              <Home size={14} className="text-neutral-400" />
+              Listing: {contact.listing_address}
+              {contact.listing_timeline && ` (${TIMELINE_LABELS[contact.listing_timeline]})`}
             </div>
           )}
           {contact.last_event_name && (

@@ -7,23 +7,31 @@ import { Button, Card, Badge } from "@/components/ui";
 import { Sparkles, Check, X } from "lucide-react";
 import { TIMELINE_LABELS } from "@/lib/utils";
 import { applyStageChange } from "@/lib/crm/stage-transition";
-import type { AiInsight, PipelineStage } from "@/types/database";
+import { DealCelebrationModal } from "@/components/contacts/DealCelebrationModal";
+import type { AiInsight, DealSide, PipelineStage, Representing } from "@/types/database";
 
 export function AiInsightCard({
   insight,
   contactId,
   ownerId,
   contactStageId,
+  contactName,
+  contactCreatedAt,
+  representing,
   stages,
 }: {
   insight: AiInsight;
   contactId: string;
   ownerId: string;
   contactStageId: string | null;
+  contactName: string;
+  contactCreatedAt: string;
+  representing: Representing | null;
   stages: PipelineStage[];
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [celebrateDealId, setCelebrateDealId] = useState<string | null>(null);
 
   const suggestedStage = stages.find((s) => s.id === insight.suggested_stage_id);
   const currentStage = stages.find((s) => s.id === contactStageId);
@@ -41,7 +49,8 @@ export function AiInsightCard({
     const supabase = createClient();
 
     if (suggestedStage) {
-      await applyStageChange(supabase, ownerId, contactId, currentStage, suggestedStage);
+      const { dealId } = await applyStageChange(supabase, ownerId, contactId, currentStage, suggestedStage);
+      if (dealId) setCelebrateDealId(dealId);
     }
     if (insight.suggested_timeline) {
       await supabase.from("contacts").update({ timeline: insight.suggested_timeline }).eq("id", contactId);
@@ -99,6 +108,17 @@ export function AiInsightCard({
           <X size={14} /> Dismiss
         </Button>
       </div>
+
+      {celebrateDealId && (
+        <DealCelebrationModal
+          dealId={celebrateDealId}
+          contactName={contactName}
+          defaultLeadStartedAt={contactCreatedAt}
+          defaultSide={(representing === "buyer" || representing === "seller" ? representing : null) as DealSide | null}
+          mode="celebrate"
+          onClose={() => setCelebrateDealId(null)}
+        />
+      )}
     </Card>
   );
 }
