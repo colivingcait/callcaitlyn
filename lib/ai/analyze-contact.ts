@@ -5,7 +5,7 @@ const MODEL = "claude-haiku-4-5-20251001";
 
 const INSIGHT_TOOL = {
   name: "record_insight",
-  description: "Records an analysis of a new activity (text or call) against a real estate contact's CRM record.",
+  description: "Records an analysis of a new activity (call, text, or email) against a real estate contact's CRM record.",
   input_schema: {
     type: "object" as const,
     properties: {
@@ -45,7 +45,7 @@ export async function analyzeContactActivity(
   admin: SupabaseClient,
   ownerId: string,
   contactId: string,
-  activity: { type: "call" | "text"; direction: string; content: string },
+  activity: { type: "call" | "text" | "email"; direction: string; content: string },
 ): Promise<void> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return;

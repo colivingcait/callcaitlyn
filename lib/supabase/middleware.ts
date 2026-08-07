@@ -33,7 +33,12 @@ export async function updateSession(request: NextRequest) {
   const isAuthCallback = request.nextUrl.pathname.startsWith("/auth");
   // Webhooks (Quo, and any future integration) authenticate via their own
   // signature, not a Supabase session - they must bypass the login guard.
-  const isWebhook = request.nextUrl.pathname.startsWith("/api/webhooks");
+  // Same for cron jobs (authenticate via CRON_SECRET, no browser session)
+  // and the unsubscribe link (clicked by a contact, not the logged-in agent).
+  const isWebhook =
+    request.nextUrl.pathname.startsWith("/api/webhooks") ||
+    request.nextUrl.pathname.startsWith("/api/cron") ||
+    request.nextUrl.pathname.startsWith("/api/unsubscribe");
   const isPublicAsset =
     request.nextUrl.pathname.startsWith("/manifest.json") ||
     request.nextUrl.pathname.startsWith("/_next") ||

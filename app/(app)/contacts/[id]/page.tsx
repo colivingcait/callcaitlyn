@@ -23,6 +23,7 @@ import { RepresentingBadge } from "@/components/contacts/RepresentingBadge";
 import { LikelihoodBadge } from "@/components/contacts/LikelihoodBadge";
 import { computeLikelihood } from "@/lib/crm/likelihood";
 import { SendTextForm } from "@/components/contacts/SendTextForm";
+import { SendEmailForm } from "@/components/contacts/SendEmailForm";
 import { Pencil, MapPin, DollarSign, Clock, Tag as TagIcon, CalendarHeart, Home } from "lucide-react";
 
 export default async function ContactDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -79,6 +80,10 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
 
       <div className="mt-4">
         <SendTextForm contactId={contact.id} phone={contact.phone} />
+      </div>
+
+      <div className="mt-4">
+        <SendEmailForm contactId={contact.id} email={contact.email} />
       </div>
 
       {insights.length > 0 && (

@@ -241,23 +241,56 @@ The stage is only ever set on a **brand-new** contact — an existing contact's 
 
 Eventbrite's custom registration question is fetched from the attendee's `answers` array (matched by the question text containing "journey" or "house hacking") — this field shape isn't confirmed against a real payload yet, so if it doesn't come through, the full raw order is saved in the activity's `metadata.raw` for us to check.
 
+## Setting up Gmail (sync, sending, and sequences)
+
+Unlike the other integrations, Gmail requires a real OAuth connection (not a webhook), and only syncs mail **to/from contacts already in the CRM** — no marketing/spam classification needed, since the contact's email address itself is the filter. New leads from your inbox still need to be added to the CRM by hand; this isn't a lead-discovery tool.
+
+### 1. Google Cloud setup (one-time, in your own Google account)
+
+1. Go to [console.cloud.google.com](https://console.cloud.google.com), create a project (or use an existing one).
+2. **APIs & Services → Library** → enable the **Gmail API**.
+3. **APIs & Services → OAuth consent screen**: choose **External**, fill in the basic app info (name, your email), add scopes `gmail.readonly`, `gmail.send`, and `userinfo.email`. While in "Testing" mode you'll need to add your own Google account under **Test users** — that's fine for a single-user app, no need to publish it.
+4. **APIs & Services → Credentials → Create Credentials → OAuth client ID** → Application type **Web application**. Add an **Authorized redirect URI**: `https://www.callcaitlyn.com/api/auth/gmail/callback` (must be the exact `www` URL — the bare domain redirects, and Google won't follow that on this flow).
+5. Copy the **Client ID** and **Client Secret** — these are `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
+
+### 2. App setup
+
+1. Run [`supabase/migrations/0015_gmail_accounts.sql`](./supabase/migrations/0015_gmail_accounts.sql) and [`supabase/migrations/0016_email_sequences.sql`](./supabase/migrations/0016_email_sequences.sql) in Supabase's SQL Editor.
+2. Add `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` (the same callback URL from step 4 above), `APP_BASE_URL` (`https://www.callcaitlyn.com`), and a random string for `CRON_SECRET` to Vercel, then redeploy.
+3. **This needs Vercel Pro** (~$20/mo) — the free Hobby plan only allows daily cron jobs, and both inbox sync and scheduled sequence sends need to run every 15 minutes to be useful (a broadcast step scheduled for "9am" shouldn't fire whenever it happens to be tomorrow).
+4. In the app, go to **Settings** and click **Connect Gmail** — you'll be sent to Google's consent screen, then back to Settings showing "Connected as you@gmail.com".
+
+### What syncs automatically
+
+- **Inbound/outbound mail with existing contacts** — logged to their timeline, read by the same AI insight pipeline that already handles calls/texts (suggests stage/timeline updates for you to approve).
+- **Sending from a contact's profile** — a compose box next to the texting one, sends via your connected Gmail account and logs to their timeline.
+- First sync after connecting doesn't backfill your existing inbox — it starts fresh from the moment you connect.
+
+## Email sequences
+
+Two trigger types, picked per sequence, both driven off a tag:
+
+- **Scheduled** — each step fires on a fixed date/time, to whoever currently has the target tag *at that moment*. Built for event promotion: schedule "3 days before," "day-of," and "follow-up" steps once for your August meetup, and anyone who joins the "House Hacking Meetup" tag in July gets all three; anyone who joins in mid-August only gets whichever steps haven't fired yet.
+- **Drip** — each contact starts their own clock the moment they get the target tag, and steps fire at a delay relative to that (e.g. "1 day after joining," then "3 days after the previous step"). Two people who join a week apart each get their own independent timing. Built for an ongoing mailing list/nurture sequence rather than a one-time campaign.
+
+Create one from **Sequences** (sidebar on desktop, or "Manage sequences" under Settings → Gmail on mobile): name it, pick a type and a target tag, then add steps. Every step supports `{{first_name}}` / `{{last_name}}` merge fields in the subject or body.
+
+Every sequence email automatically gets an invisible open-tracking pixel, every link rewritten to track clicks, and an unsubscribe footer — none of that needs to be added by hand. Each sequence's detail page shows per-step stats (sent/opened/clicked/unsubscribed counts) and a list of who's unsubscribed from *that* sequence specifically — unsubscribing is per-sequence, not global, so opting out of the newsletter drip doesn't silently drop someone from event reminders they still want.
+
+A sequence can be paused (stops sending, keeps its history and enrollments) or deleted (removes steps and history) from its detail page.
+
 ## Roadmap (next phases)
 
-Each of these needs its own API key/OAuth setup from your accounts before it can go live — the data model is already built to receive them (the `activities.source` and `metadata` columns exist specifically for this):
-
-1. **Gmail** — capture new leads from your inbox, log email activity on contacts. Deferred for now — needs either accepting once-a-day sync on Vercel's free plan, paying for Vercel Pro for near-real-time polling, or building real-time push via Gmail + Google Cloud Pub/Sub (more setup, still free).
-2. **Newsletters & mass send** — AI-drafted emails in your voice, open/click tracking, scheduled sends to tagged audiences (e.g. promote a meetup to everyone tagged "Meetup"). Would also unlock email-based engagement tagging (see above).
-3. **Scheduled touches by tag** — e.g. auto-text/email a segment on a date (birthday reminders, closing anniversaries — the `important_dates` table is already there for this).
+1. **Per-contact date-triggered touches** — birthday and closing-anniversary reminders. Sequences cover tag-triggered sends (fixed date or relative-to-tag-join); this is different — relative to each contact's own `important_dates` row — and needs its own trigger logic, checked daily rather than on a tag event.
 
 ### Ideas worth adding as a realtor/event manager (not yet built, flagged for later)
 
-- **Closing-anniversary & birthday touches** — the `important_dates` table supports this now; automating the reminder/send is part of the newsletter phase.
 - **Referral-source ROI** — `lead_source` is tracked per contact; a future report can show which sources actually convert to closings, so you know where to spend marketing effort.
 - **Showing feedback capture** — a lightweight form logged as a `showing` activity right after each showing, so feedback doesn't live in your head or a text thread.
-- **Past-client drip** — auto-tag anyone whose stage becomes "Closed - Client" and schedule periodic just-checking-in touches — the #1 way past clients turn into referrals.
+- **Past-client drip** — a Scheduled or Drip sequence tagged off "Closed - Client" would cover this now; just needs setting up, not new code.
 - **Duplicate detection** — warn when a new contact's phone/email matches an existing one, so leads from different channels (website, Eventbrite, sign call) don't fragment into duplicates.
-- **"Sphere" nurture cadence** — a separate lighter-touch cadence for sphere/referral-partner contacts vs. active buyers/sellers, since they need a different follow-up rhythm.
-- **Email-based engagement** — the call/text half of this is now live (the "Engaged" tag, see above). The email half — opening every newsletter, clicking links — needs the newsletter/email-tracking phase to exist first, then can feed the same tag.
+- **"Sphere" nurture cadence** — a separate lighter-touch cadence for sphere/referral-partner contacts vs. active buyers/sellers, since they need a different follow-up rhythm. A Drip sequence targeting a "Sphere" tag would work today.
+- **Email-based engagement tagging** — open/click tracking now exists (see Email sequences above) but only feeds sequence reports, not the "Engaged" tag itself; wiring synced/sequence email activity into `lib/crm/engagement.ts` would extend that tag beyond calls/texts.
 
 ## Project structure
 
@@ -269,14 +302,19 @@ app/api/webhooks/quo/         Quo call/text webhook receiver
 app/api/webhooks/calendly/    Calendly booking webhook receiver
 app/api/webhooks/eventbrite/  Eventbrite registration webhook receiver
 app/api/webhooks/jotform/     Jotform in-person check-in webhook receiver
-components/                   UI, nav, contact, dashboard, settings, messages components
+app/api/auth/gmail/           Gmail OAuth connect/callback routes
+app/api/cron/                 Vercel Cron endpoints: Gmail inbox sync, sequence sends
+app/api/track/                Sequence email open/click tracking redirects
+app/api/unsubscribe/          Public per-sequence unsubscribe link handler
+components/                   UI, nav, contact, dashboard, settings, messages, sequences components
 lib/data/                     Server-side data fetching (Supabase queries)
 lib/supabase/                 Supabase client/server/middleware/admin helpers
-lib/crm/                      Shared integration logic: find-or-create contact, activity upsert, event attendance, engagement tagging
+lib/crm/                      Shared integration logic: find-or-create contact, activity upsert, event attendance, engagement tagging, sequence sending
 lib/quo/                      Quo-specific webhook parsing, signature verification, sending texts
 lib/calendly/                 Calendly-specific webhook parsing + signature verification
 lib/eventbrite/               Eventbrite-specific API client + attendee parsing
 lib/jotform/                  Jotform-specific submission parsing
+lib/google/                   Gmail OAuth, inbox sync, sending
 lib/ai/                       Claude-based activity analysis (stage/timeline suggestions)
 lib/validation/                Zod schemas for forms
 supabase/migrations/           Database schema (run in Supabase SQL Editor)

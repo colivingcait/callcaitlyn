@@ -106,6 +106,7 @@ export interface Contact {
   last_event_at: string | null;
   ai_last_status_note: string | null;
   ai_last_analyzed_at: string | null;
+  unsubscribe_token: string;
   created_at: string;
   updated_at: string;
 }
@@ -218,4 +219,71 @@ export interface MetricGoal {
   target_value: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface GmailAccount {
+  id: string;
+  owner_id: string;
+  email_address: string;
+  access_token: string;
+  refresh_token: string;
+  token_expiry: string;
+  last_history_id: string | null;
+  connected_at: string;
+  updated_at: string;
+}
+
+export type SequenceType = "broadcast" | "drip";
+export type SequenceDelayUnit = "hours" | "days";
+export type SequenceEnrollmentStatus = "active" | "completed" | "unsubscribed";
+
+export interface EmailSequence {
+  id: string;
+  owner_id: string;
+  name: string;
+  type: SequenceType;
+  target_tag_id: string | null;
+  active: boolean;
+  created_at: string;
+}
+
+export interface EmailSequenceStep {
+  id: string;
+  sequence_id: string;
+  step_order: number;
+  subject: string;
+  body: string;
+  send_at: string | null;
+  delay_amount: number | null;
+  delay_unit: SequenceDelayUnit | null;
+  created_at: string;
+}
+
+export interface EmailSequenceEnrollment {
+  id: string;
+  sequence_id: string;
+  contact_id: string;
+  enrolled_at: string;
+  current_step: number;
+  status: SequenceEnrollmentStatus;
+}
+
+export interface EmailSequenceSend {
+  id: string;
+  sequence_id: string;
+  step_id: string;
+  contact_id: string;
+  sent_at: string;
+  opened_at: string | null;
+  open_count: number;
+  clicked_at: string | null;
+  click_count: number;
+  unsubscribed_at: string | null;
+}
+
+export interface EmailSequenceExclusion {
+  id: string;
+  sequence_id: string;
+  contact_id: string;
+  excluded_at: string;
 }
