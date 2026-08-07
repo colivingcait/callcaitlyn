@@ -1,8 +1,12 @@
 import type { Deal } from "@/types/database";
 
-// KW's commission year is fixed Dec 1 - Nov 30 (not calendar year, not
+// KW's commission year was fixed Dec 1 - Nov 30 (not calendar year, not
 // her join anniversary) - splits reset to full rate at the start of each
-// window and drop to $0 once that window's cap is hit.
+// window and drop to $0 once that window's cap is hit. KW moved the reset
+// date to Jan 1 effective 2027, so the cap year that would otherwise have
+// run Dec 2025 - Nov 2026 was extended through Dec 31 2026 instead of
+// splitting into two, and every cap year from Jan 1 2027 onward is a
+// clean calendar year.
 export const KW_RATE = 0.3;
 export const KW_CAP = 15_000;
 export const KWRI_RATE = 0.03;
@@ -10,19 +14,33 @@ export const KWRI_CAP = 3_000;
 export const FMLS_RATE = 0.0012;
 export const TC_FLAT = 500;
 
+const RESET_CHANGE_DATE = new Date(Date.UTC(2027, 0, 1)); // Jan 1, 2027 - new annual reset
+const EXTENDED_YEAR_START = new Date(Date.UTC(2025, 11, 1)); // Dec 1, 2025 - last old-cycle start, extended through Dec 31, 2026
+
 export function capYearStart(date: Date): Date {
+  if (date.getTime() >= RESET_CHANGE_DATE.getTime()) {
+    return new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  }
+  if (date.getTime() >= EXTENDED_YEAR_START.getTime()) {
+    return EXTENDED_YEAR_START;
+  }
   const year = date.getUTCMonth() === 11 ? date.getUTCFullYear() : date.getUTCFullYear() - 1;
   return new Date(Date.UTC(year, 11, 1));
 }
 
 export function capYearKey(date: Date): string {
   const start = capYearStart(date);
+  // The extended transition year keys as "2026" (matching its calendar
+  // year, same as every clean year after it) even though it technically
+  // starts in Dec 2025 - deliberate, so the year toggle reads plainly.
+  if (start.getTime() === EXTENDED_YEAR_START.getTime()) return "2026";
   return `${start.getUTCFullYear()}`;
 }
 
 export function capYearLabel(key: string): string {
-  const startYear = Number(key);
-  return `Dec ${startYear} – Nov ${startYear + 1}`;
+  const year = Number(key);
+  if (year >= 2026) return `${year}`;
+  return `Dec ${year} – Nov ${year + 1}`;
 }
 
 export interface DealComputedFields {
