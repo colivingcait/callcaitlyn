@@ -142,7 +142,9 @@ Reachable from the $ icon next to Settings (mobile) or the sidebar (desktop) at 
 
 The **commission year runs Dec 1 – Nov 30**, not the calendar year — the caps reset at the start of each one. Because the KW/KWRI caps are cumulative, the calculation walks every `won` deal in a year in closing-date order — editing a deal's numbers, or deleting one, correctly recalculates every deal that closed after it in that same year. Use the year toggle at the top of the page to look at a different commission year; the page always includes the current one even before you've closed anything in it.
 
-The page shows the full deal-by-deal table (closing date, address, sale price, commission %, gross comp, side, every fee column, net commission, % of comm, % of list price) plus summary stats: total deals, volume, GCI, net commission, average sale price, average commission rate, average net per deal, buyer/seller split, a fee breakdown (with a note once you've hit the KW or KWRI cap for the year), and a lead-source breakdown. Run [`supabase/migrations/0009_commission_tracker.sql`](./supabase/migrations/0009_commission_tracker.sql) to add the columns this needs.
+The page shows the full deal-by-deal table (closing date, address, sale price, commission %, gross comp, side, every fee column, net commission, % of comm, % of list price) plus summary stats: total deals, volume, GCI, net commission, average sale price, average commission rate, average net per deal, buyer/seller split, and a lead-source breakdown. Run [`supabase/migrations/0009_commission_tracker.sql`](./supabase/migrations/0009_commission_tracker.sql) to add the columns this needs.
+
+The fee breakdown is four boxes: **KW/KWRI** (with a combined total), **Team Fees** (FMLS + Team Fees/OZ + TC, with a total — "Team Fees" is just the display label for the OZ fee field), **Referrals & Misc** (with a total), and **Cap Status**, which shows a progress bar for KW and KWRI against their $15k/$3k caps — remaining headroom in dollars, or "Capped" once you've hit it.
 
 **Importing past deals**: two ways, both on the Commissions page, neither requiring a contact record first:
 
