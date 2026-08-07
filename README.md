@@ -140,7 +140,22 @@ For the iPad kiosk form: matches by email/phone against existing contacts (so pe
 4. Add `JOTFORM_WEBHOOK_SECRET` to Vercel, redeploy.
 5. Submit a test entry on the kiosk form and confirm it shows up on the right contact.
 
-**One thing not finished yet**: the "where are you at in your house hacking journey" answer is captured (visible on the logged activity and in `metadata.journey_stage`) but doesn't automatically move the contact's pipeline stage — that mapping needs the exact answer options from the form before it can be built. Field-label matching for name/email/phone/etc. is fuzzy (matches on keywords like "name", "email", "phone", "hear", "journey"/"stage") since Jotform doesn't send predictable field IDs — if a submission doesn't match up correctly, the full raw text is saved in `metadata.raw_pretty` so we can adjust it.
+Field-label matching for name/email/phone/etc. is fuzzy (matches on keywords like "name", "email", "phone", "hear", "journey"/"stage") since Jotform doesn't send predictable field IDs — if a submission doesn't match up correctly, the full raw text is saved in `metadata.raw_pretty` so we can adjust it.
+
+### House hacking journey stage → pipeline mapping
+
+Both Jotform and Eventbrite ask "Where are you at in your house hacking journey?" with four options, and both feed the same shared logic (`lib/crm/journey-stage.ts`):
+
+| Answer | Stage (new contacts only) | Tags |
+|---|---|---|
+| Just researching | New Lead | House Hacking |
+| Looking for my first house hack | Hot / Ready | House Hacking, First-Time Buyer |
+| Already house hacking — looking for my next one | Hot / Ready | House Hacking, House Hacker |
+| Currently house hacking — not actively looking right now | *(unchanged)* | House Hacking, House Hacker |
+
+The stage is only ever set on a **brand-new** contact — an existing contact's stage reflects real relationship progress and never gets overwritten by a meetup form answer. The "House Hacking" and "House Hacker" tags only get applied when this question was actually asked and answered, which is also what keeps this scoped correctly to house-hacking events only — the women's meetups (and any other non-house-hacking event) won't include this question, so those registrants just get the generic "Meetup" tag and nothing else. Run [`supabase/migrations/0003_house_hacking_tags.sql`](./supabase/migrations/0003_house_hacking_tags.sql) to seed the two new tags.
+
+Eventbrite's custom registration question is fetched from the attendee's `answers` array (matched by the question text containing "journey" or "house hacking") — this field shape isn't confirmed against a real payload yet, so if it doesn't come through, the full raw order is saved in the activity's `metadata.raw` for us to check.
 
 ## Roadmap (next phases)
 

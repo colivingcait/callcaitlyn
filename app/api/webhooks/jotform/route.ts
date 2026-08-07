@@ -4,6 +4,7 @@ import { parseJotformSubmission } from "@/lib/jotform/parse-event";
 import { findOrCreateContact, addTagByName } from "@/lib/crm/find-or-create-contact";
 import { upsertActivity } from "@/lib/crm/activities";
 import { recordEventAttendance } from "@/lib/crm/events";
+import { applyJourneyStageAnswer } from "@/lib/crm/journey-stage";
 
 const OWNER_ID = process.env.CRM_OWNER_USER_ID;
 
@@ -55,6 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     await addTagByName(admin, OWNER_ID, contact.id, "Meetup");
+    await applyJourneyStageAnswer(admin, OWNER_ID, contact.id, submission.journeyStage, contact.wasCreated);
 
     const occurredAt = new Date().toISOString();
     const bodyParts = ["Checked in at an in-person meetup (Jotform kiosk)"];
@@ -74,11 +76,6 @@ export async function POST(request: NextRequest) {
     });
 
     await recordEventAttendance(admin, contact.id, "In-person meetup", occurredAt);
-
-    // Journey-stage -> pipeline-stage mapping isn't wired up yet - the
-    // answer is captured above (activity + metadata.journey_stage) but
-    // doesn't move the contact's stage automatically. Needs the exact
-    // answer options confirmed before mapping them to real stages.
   } catch (err) {
     console.error("Error processing Jotform webhook", err);
   }

@@ -10,7 +10,17 @@ export type ParsedEventbriteAttendee = {
   firstName: string | null;
   lastName: string | null;
   phone: string | null;
+  journeyStage: string | null;
 };
+
+function findJourneyStageAnswer(answers: unknown): string | null {
+  if (!Array.isArray(answers)) return null;
+  const match = (answers as AnyRecord[]).find((a) => {
+    const question = asString(a.question)?.toLowerCase() ?? "";
+    return question.includes("journey") || question.includes("house hacking");
+  });
+  return asString(match?.answer);
+}
 
 export function parseEventbriteAttendees(order: AnyRecord): ParsedEventbriteAttendee[] {
   const attendees = order.attendees as AnyRecord[] | undefined;
@@ -26,6 +36,7 @@ export function parseEventbriteAttendees(order: AnyRecord): ParsedEventbriteAtte
         firstName: asString(order.first_name) ?? asString(profile?.first_name),
         lastName: asString(order.last_name) ?? asString(profile?.last_name),
         phone: asString(order.cell_phone) ?? asString(profile?.cell_phone),
+        journeyStage: findJourneyStageAnswer(order.answers),
       },
     ];
   }
@@ -38,6 +49,7 @@ export function parseEventbriteAttendees(order: AnyRecord): ParsedEventbriteAtte
       firstName: asString(profile?.first_name),
       lastName: asString(profile?.last_name),
       phone: asString(profile?.cell_phone),
+      journeyStage: findJourneyStageAnswer(attendee.answers),
     };
   });
 }

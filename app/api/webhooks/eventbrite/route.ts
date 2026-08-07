@@ -5,6 +5,7 @@ import { parseEventbriteAttendees } from "@/lib/eventbrite/parse-event";
 import { findOrCreateContact, addTagByName } from "@/lib/crm/find-or-create-contact";
 import { upsertActivity } from "@/lib/crm/activities";
 import { recordEventAttendance } from "@/lib/crm/events";
+import { applyJourneyStageAnswer } from "@/lib/crm/journey-stage";
 
 const OWNER_ID = process.env.CRM_OWNER_USER_ID;
 
@@ -65,6 +66,7 @@ export async function POST(request: NextRequest) {
       if (!contact) continue;
 
       await addTagByName(admin, OWNER_ID, contact.id, "Meetup");
+      await applyJourneyStageAnswer(admin, OWNER_ID, contact.id, attendee.journeyStage, contact.wasCreated);
 
       const occurredAt = typeof order.created === "string" ? order.created : new Date().toISOString();
 
@@ -78,6 +80,7 @@ export async function POST(request: NextRequest) {
           eventbrite_order_id: order.id,
           event_id: eventId,
           event_name: eventName,
+          journey_stage: attendee.journeyStage,
           raw: order,
         },
       });
