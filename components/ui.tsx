@@ -75,7 +75,7 @@ export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLab
 }
 
 export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm", className)} {...props} />;
+  return <div className={cn("rounded-2xl border border-neutral-200/70 bg-white p-4 shadow-card", className)} {...props} />;
 }
 
 export function Badge({

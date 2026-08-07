@@ -29,12 +29,12 @@ export default function LoginPage() {
     <main className="flex min-h-dvh items-center justify-center bg-neutral-50 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-semibold text-neutral-900">CallCaitlyn CRM</h1>
+          <h1 className="font-serif text-3xl font-semibold text-neutral-900">CallCaitlyn</h1>
           <p className="mt-1 text-sm text-neutral-500">Sign in to manage your leads and clients.</p>
         </div>
 
         {status === "sent" ? (
-          <div className="rounded-2xl border border-neutral-200 bg-white p-6 text-center">
+          <div className="rounded-2xl border border-neutral-200/70 bg-white p-6 text-center shadow-card">
             <p className="text-sm text-neutral-700">
               Check <span className="font-medium">{email}</span> for a sign-in link.
             </p>
@@ -43,7 +43,7 @@ export default function LoginPage() {
             </Button>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="rounded-2xl border border-neutral-200 bg-white p-6">
+          <form onSubmit={handleSubmit} className="rounded-2xl border border-neutral-200/70 bg-white p-6 shadow-card">
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"

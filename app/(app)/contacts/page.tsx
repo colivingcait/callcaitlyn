@@ -17,7 +17,7 @@ export default async function ContactsPage({
   return (
     <div className="mx-auto max-w-3xl">
       <div className="px-4 pt-6 pb-2">
-        <h1 className="text-xl font-semibold text-neutral-900">Contacts</h1>
+        <h1 className="font-serif text-2xl font-semibold text-neutral-900">Contacts</h1>
         <p className="mt-0.5 text-sm text-neutral-500">{contacts.length} people</p>
       </div>
       <ContactFilters stages={stages} tags={tags} />

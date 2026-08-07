@@ -13,7 +13,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-5 px-4 py-6">
-      <h1 className="text-xl font-semibold text-neutral-900">Settings</h1>
+      <h1 className="font-serif text-2xl font-semibold text-neutral-900">Settings</h1>
 
       {user && <StageManager stages={stages} ownerId={user.id} />}
       {user && <TagManager tags={tags} ownerId={user.id} />}
@@ -21,9 +21,9 @@ export default async function SettingsPage() {
       <Card className="space-y-2 bg-neutral-50">
         <h2 className="text-sm font-semibold text-neutral-700">Integrations</h2>
         <p className="text-sm text-neutral-500">
-          Quo call/text sync is wired up (see the README for setup) — calls and texts log automatically to each
-          contact&apos;s timeline. Still coming: Gmail lead capture, mass email &amp; newsletters, AI status
-          detection and insights, Eventbrite / Jotform / Calendly lead capture.
+          Quo (calls/texts), Eventbrite, and Jotform are live — activity logs straight to each contact&apos;s
+          timeline automatically. Calendly is built, just needs setup (see the README). Still coming: Gmail lead
+          capture, mass email &amp; newsletters, AI status detection and insights.
         </p>
       </Card>
     </div>

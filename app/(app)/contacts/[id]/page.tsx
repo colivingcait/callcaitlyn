@@ -37,7 +37,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
             {initials(contact.first_name, contact.last_name)}
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-neutral-900">{fullName(contact)}</h1>
+            <h1 className="font-serif text-2xl font-semibold text-neutral-900">{fullName(contact)}</h1>
             <p className="text-sm text-neutral-500">{formatPhone(contact.phone) || contact.email}</p>
           </div>
         </div>

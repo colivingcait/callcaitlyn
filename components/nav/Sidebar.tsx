@@ -12,7 +12,7 @@ export function Sidebar({ userEmail }: { userEmail?: string | null }) {
   return (
     <aside className="hidden w-60 shrink-0 flex-col border-r border-neutral-200 bg-white md:flex">
       <div className="px-5 py-6">
-        <h1 className="text-lg font-semibold text-neutral-900">CallCaitlyn</h1>
+        <h1 className="font-serif text-xl font-semibold text-neutral-900">CallCaitlyn</h1>
         <p className="text-xs text-neutral-400">Real Estate CRM</p>
       </div>
       <nav className="flex-1 px-3">
