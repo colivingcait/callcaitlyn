@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getContact, getContactActivities, getContactTasks, getContactInsights, listStages } from "@/lib/data/contacts";
 import { fullName, formatPhone, initials, CONTACT_TYPE_LABELS, TIMELINE_LABELS } from "@/lib/utils";
+import { formatLocal } from "@/lib/format-time";
 import { Card, Badge, Button } from "@/components/ui";
 import { QuickActions } from "@/components/contacts/QuickActions";
 import { StageSelector } from "@/components/contacts/StageSelector";
@@ -115,7 +116,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
             <div className="flex items-center gap-2">
               <CalendarHeart size={14} className="text-neutral-400" />
               Last event: {contact.last_event_name}
-              {contact.last_event_at && ` (${new Date(contact.last_event_at).toLocaleDateString()})`}
+              {contact.last_event_at && ` (${formatLocal(contact.last_event_at, "MMM d, yyyy")})`}
             </div>
           )}
         </div>

@@ -4,15 +4,16 @@ import { FollowUpList } from "@/components/dashboard/FollowUpList";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { StageBreakdown } from "@/components/dashboard/StageBreakdown";
 import { Card } from "@/components/ui";
-import { isPast, isToday } from "date-fns";
+import { isPast } from "date-fns";
+import { isTodayLocal } from "@/lib/format-time";
 
 export default async function DashboardPage() {
   const { stages, stageCounts, totalActive, followUps, activities } = await getDashboardData();
 
+  const todayCount = followUps.filter((c) => c.next_follow_up_at && isTodayLocal(c.next_follow_up_at)).length;
   const overdueCount = followUps.filter(
-    (c) => c.next_follow_up_at && isPast(new Date(c.next_follow_up_at)) && !isToday(new Date(c.next_follow_up_at)),
+    (c) => c.next_follow_up_at && isPast(new Date(c.next_follow_up_at)) && !isTodayLocal(c.next_follow_up_at),
   ).length;
-  const todayCount = followUps.filter((c) => c.next_follow_up_at && isToday(new Date(c.next_follow_up_at))).length;
   const hotCount = stages.find((s) => s.name.toLowerCase().includes("hot"))
     ? stageCounts.get(stages.find((s) => s.name.toLowerCase().includes("hot"))!.id) ?? 0
     : 0;

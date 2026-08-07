@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { format } from "date-fns";
+import { formatLocal } from "@/lib/format-time";
 import { Button, Input, Select } from "@/components/ui";
 import { Plus, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -63,7 +63,7 @@ export function TaskList({ contactId, ownerId, tasks }: { contactId: string; own
               {task.title}
             </p>
             {task.due_at && (
-              <p className="text-xs text-neutral-400">{format(new Date(task.due_at), "MMM d, yyyy")}</p>
+              <p className="text-xs text-neutral-400">{formatLocal(task.due_at, "MMM d, yyyy")}</p>
             )}
           </div>
         </div>

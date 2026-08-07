@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { isPast, isToday } from "date-fns";
+import { isPast } from "date-fns";
 import { fullName, formatPhone } from "@/lib/utils";
+import { formatLocal, isTodayLocal } from "@/lib/format-time";
 import { Card } from "@/components/ui";
 import { CalendarClock } from "lucide-react";
 
@@ -23,8 +24,8 @@ export function FollowUpList({ items }: { items: FollowUp[] }) {
     <div className="space-y-2">
       {items.map((c) => {
         const due = c.next_follow_up_at ? new Date(c.next_follow_up_at) : null;
-        const overdue = due ? isPast(due) && !isToday(due) : false;
-        const today = due ? isToday(due) : false;
+        const today = c.next_follow_up_at ? isTodayLocal(c.next_follow_up_at) : false;
+        const overdue = due ? isPast(due) && !today : false;
 
         return (
           <Link key={c.id} href={`/contacts/${c.id}`}>
@@ -40,7 +41,7 @@ export function FollowUpList({ items }: { items: FollowUp[] }) {
                 }
               >
                 <CalendarClock size={13} />
-                {overdue ? "Overdue" : today ? "Today" : due?.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                {overdue ? "Overdue" : today ? "Today" : due && formatLocal(due, "MMM d")}
               </div>
             </Card>
           </Link>

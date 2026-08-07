@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { formatLocal } from "@/lib/format-time";
 import {
   Phone,
   MessageSquare,
@@ -62,7 +62,7 @@ export function ActivityTimeline({ activities }: { activities: Activity[] }) {
             </div>
             <div className="min-w-0 flex-1 border-b border-neutral-100 pb-4">
               <div className="flex items-center gap-1.5 text-xs text-neutral-400">
-                <span>{format(new Date(a.occurred_at), "MMM d, yyyy · h:mm a")}</span>
+                <span>{formatLocal(a.occurred_at, "MMM d, yyyy · h:mm a")}</span>
                 {a.direction === "inbound" && <ArrowDownLeft size={12} />}
                 {a.direction === "outbound" && <ArrowUpRight size={12} />}
                 {sourceLabel && (

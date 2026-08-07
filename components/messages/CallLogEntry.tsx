@@ -1,5 +1,5 @@
-import { format } from "date-fns";
 import { Phone, PhoneIncoming, PhoneOutgoing, PlayCircle } from "lucide-react";
+import { formatLocal } from "@/lib/format-time";
 import type { Activity } from "@/types/database";
 
 function asString(v: unknown): string | null {
@@ -13,10 +13,10 @@ export function CallLogEntry({ activity }: { activity: Activity }) {
 
   return (
     <div className="flex flex-col items-center gap-1 py-2">
-      <div className="flex items-center gap-2 rounded-full bg-neutral-100 px-3.5 py-1.5 text-xs text-neutral-600">
-        <Icon size={13} className="text-neutral-400" />
-        <span>{activity.body ?? "Call"}</span>
-        <span className="text-neutral-400">· {format(new Date(activity.occurred_at), "h:mm a")}</span>
+      <div className="flex max-w-full items-center gap-2 rounded-full bg-neutral-100 px-3.5 py-1.5 text-xs text-neutral-600">
+        <Icon size={13} className="shrink-0 text-neutral-400" />
+        <span className="min-w-0 truncate">{activity.body ?? "Call"}</span>
+        <span className="shrink-0 text-neutral-400">· {formatLocal(activity.occurred_at, "h:mm a")}</span>
       </div>
       <div className="flex gap-3">
         {recordingUrl && (
