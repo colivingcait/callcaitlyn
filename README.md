@@ -146,6 +146,8 @@ The page shows the full deal-by-deal table (closing date, address, sale price, c
 
 The fee breakdown is four boxes: **KW/KWRI** (with a combined total), **Team Fees** (FMLS + Team Fees/OZ + TC, with a total — "Team Fees" is just the display label for the OZ fee field), **Referrals & Misc** (with a total), and **Cap Status**, which shows a progress bar for KW and KWRI against their $15k/$3k caps — remaining headroom in dollars, or "Capped" once you've hit it.
 
+**Deals under contract show up too.** Below the main table, any deal still `pending` (Under Contract, not yet closed) gets its own "Under contract (projected)" table with a lighter highlight — same fee columns, but computed as a *projection*: since pending deals are walked through the same cap logic as closed ones (in order, right after whatever's already closed this commission year), a pending deal's projected KW/KWRI fee is automatically capped at whatever room is actually left, not the full 30%/3%. The Cap Status meter reflects this too — a second, lighter segment on the bar shows how much of your remaining room a pending deal is on track to use, with the exact dollar figure in the caption below it. None of this counts toward the totals or stats above until the deal actually closes.
+
 **Importing past deals**: two ways, both on the Commissions page, neither requiring a contact record first:
 
 - **Add past deal** — one deal at a time, same fields as the regular deal modal (client name instead of a linked contact).

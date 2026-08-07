@@ -1,17 +1,27 @@
 import Link from "next/link";
-import { formatCurrency, formatPercent, fullName, PROPERTY_TYPE_LABELS } from "@/lib/utils";
+import { formatCurrency, formatPercent, fullName, PROPERTY_TYPE_LABELS, cn } from "@/lib/utils";
 import { formatLocal } from "@/lib/format-time";
 import { DealRowActions } from "@/components/commissions/DealRowActions";
 import type { DealComputedFields } from "@/lib/crm/commission";
 import type { DealWithContact } from "@/lib/data/commissions";
 
-export function CommissionTable({ deals }: { deals: (DealWithContact & DealComputedFields)[] }) {
+export function CommissionTable({
+  deals,
+  pending = false,
+}: {
+  deals: (DealWithContact & DealComputedFields)[];
+  pending?: boolean;
+}) {
   if (deals.length === 0) {
-    return <p className="text-sm text-neutral-500">No closed deals in this commission year yet.</p>;
+    return (
+      <p className="text-sm text-neutral-500">
+        {pending ? "Nothing under contract right now." : "No closed deals in this commission year yet."}
+      </p>
+    );
   }
 
   const cols = [
-    "Closing Date",
+    pending ? "Entered UC" : "Closing Date",
     "Client / Address",
     "Sale Price",
     "Comm %",
@@ -47,7 +57,13 @@ export function CommissionTable({ deals }: { deals: (DealWithContact & DealCompu
           {deals.map((deal) => {
             const commRate = deal.sale_price && deal.gross_commission ? (deal.gross_commission / deal.sale_price) * 100 : null;
             return (
-              <tr key={deal.id} className="border-b border-neutral-50 last:border-0 hover:bg-neutral-50">
+              <tr
+                key={deal.id}
+                className={cn(
+                  "border-b border-neutral-50 last:border-0 hover:bg-neutral-50",
+                  pending && "bg-amber-50/40",
+                )}
+              >
                 <td className="whitespace-nowrap px-3 py-2 text-neutral-600">{formatLocal(deal.closed_at, "MMM d, yyyy")}</td>
                 <td className="px-3 py-2">
                   {deal.contacts ? (

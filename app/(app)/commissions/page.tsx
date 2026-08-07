@@ -1,4 +1,4 @@
-import { listWonDeals } from "@/lib/data/commissions";
+import { listWonDeals, listPendingDeals } from "@/lib/data/commissions";
 import { computeDeals, summarizeDeals, listCapYears, capYearKey } from "@/lib/crm/commission";
 import { CommissionTable } from "@/components/commissions/CommissionTable";
 import { CommissionStats } from "@/components/commissions/CommissionStats";
@@ -12,18 +12,20 @@ export default async function CommissionsPage({
   searchParams: Promise<{ year?: string }>;
 }) {
   const params = await searchParams;
-  const deals = await listWonDeals();
+  const [wonDeals, pendingDeals] = await Promise.all([listWonDeals(), listPendingDeals()]);
 
-  // Caps are cumulative across ALL deals in a commission year, so the
-  // full set is computed together before filtering down to what's shown -
-  // computing only the visible year in isolation would reset the caps
-  // incorrectly for years after the first.
-  const computed = computeDeals(deals);
+  // Won and pending are walked together, in date order, so a pending
+  // deal's projected KW/KWRI fee reflects exactly how much cap room prior
+  // deals in the same commission year already used - computing only the
+  // visible year in isolation, or only won deals, would get this wrong.
+  const computed = computeDeals([...wonDeals, ...pendingDeals]);
 
-  const years = listCapYears(deals);
+  const years = listCapYears([...wonDeals, ...pendingDeals]);
   const currentYear = params.year && years.includes(params.year) ? params.year : capYearKey(new Date());
   const visible = computed.filter((d) => d.capYear === currentYear);
-  const stats = summarizeDeals(visible);
+  const won = visible.filter((d) => d.status === "won");
+  const pending = visible.filter((d) => d.status === "pending");
+  const stats = summarizeDeals(won);
 
   return (
     <div className="mx-auto max-w-6xl space-y-5 px-4 py-6">
@@ -42,12 +44,23 @@ export default async function CommissionsPage({
       </div>
 
       <CapYearToggle years={years} current={currentYear} />
-      <CommissionStats stats={stats} />
+      <CommissionStats stats={stats} pendingKw={pending.reduce((s, d) => s + d.kwFee, 0)} pendingKwri={pending.reduce((s, d) => s + d.kwriFee, 0)} />
 
       <div>
         <h2 className="mb-3 text-sm font-semibold text-neutral-700">Deals this commission year</h2>
-        <CommissionTable deals={visible} />
+        <CommissionTable deals={won} />
       </div>
+
+      {pending.length > 0 && (
+        <div>
+          <h2 className="mb-1 text-sm font-semibold text-neutral-700">Under contract (projected)</h2>
+          <p className="mb-3 text-xs text-neutral-400">
+            Not closed yet — these numbers show what each deal would owe based on cap room used so far, and
+            aren&apos;t counted in the totals above until they actually close.
+          </p>
+          <CommissionTable deals={pending} pending />
+        </div>
+      )}
     </div>
   );
 }

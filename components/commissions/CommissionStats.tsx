@@ -4,7 +4,15 @@ import { formatCurrency, formatPercent, cn } from "@/lib/utils";
 import { KW_CAP, KWRI_CAP } from "@/lib/crm/commission";
 import type { CommissionStats as CommissionStatsType } from "@/lib/crm/commission";
 
-export function CommissionStats({ stats }: { stats: CommissionStatsType }) {
+export function CommissionStats({
+  stats,
+  pendingKw = 0,
+  pendingKwri = 0,
+}: {
+  stats: CommissionStatsType;
+  pendingKw?: number;
+  pendingKwri?: number;
+}) {
   const kwRemaining = Math.max(KW_CAP - stats.totalKW, 0);
   const kwriRemaining = Math.max(KWRI_CAP - stats.totalKWRI, 0);
   const teamFeesTotal = stats.totalOZ + stats.totalTC + stats.totalFMLS;
@@ -53,8 +61,8 @@ export function CommissionStats({ stats }: { stats: CommissionStatsType }) {
 
           <Card className="space-y-2 text-sm">
             <p className="text-xs font-medium uppercase tracking-wide text-neutral-400">Cap status</p>
-            <CapMeter label="KW" paid={stats.totalKW} cap={KW_CAP} remaining={kwRemaining} />
-            <CapMeter label="KWRI" paid={stats.totalKWRI} cap={KWRI_CAP} remaining={kwriRemaining} />
+            <CapMeter label="KW" paid={stats.totalKW} cap={KW_CAP} remaining={kwRemaining} projected={pendingKw} />
+            <CapMeter label="KWRI" paid={stats.totalKWRI} cap={KWRI_CAP} remaining={kwriRemaining} projected={pendingKwri} />
           </Card>
         </div>
       </div>
@@ -99,9 +107,29 @@ function FeeLine({
   );
 }
 
-function CapMeter({ label, paid, cap, remaining }: { label: string; paid: number; cap: number; remaining: number }) {
-  const pct = Math.min((paid / cap) * 100, 100);
+// `projected` is the sum of this cap's fee across deals still Under
+// Contract - already run through the same cap-clamping logic as paid
+// deals (see computeDeals), so it can never push paid+projected past the
+// cap. The lighter segment shows how much of the remaining room a pending
+// deal is on track to use.
+function CapMeter({
+  label,
+  paid,
+  cap,
+  remaining,
+  projected = 0,
+}: {
+  label: string;
+  paid: number;
+  cap: number;
+  remaining: number;
+  projected?: number;
+}) {
+  const paidPct = Math.min((paid / cap) * 100, 100);
+  const projectedPct = Math.min(((paid + projected) / cap) * 100, 100) - paidPct;
   const capped = remaining <= 0;
+  const remainingAfterProjected = Math.max(remaining - projected, 0);
+
   return (
     <div>
       <div className="flex items-baseline justify-between text-xs">
@@ -110,14 +138,14 @@ function CapMeter({ label, paid, cap, remaining }: { label: string; paid: number
           {capped ? "Capped" : `${formatCurrency(remaining)} left`}
         </span>
       </div>
-      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-neutral-100">
-        <div
-          className={cn("h-full rounded-full", capped ? "bg-red-500" : "bg-brand-500")}
-          style={{ width: `${pct}%` }}
-        />
+      <div className="mt-1 flex h-1.5 overflow-hidden rounded-full bg-neutral-100">
+        <div className={cn("h-full", capped ? "bg-red-500" : "bg-brand-500")} style={{ width: `${paidPct}%` }} />
+        {projected > 0 && <div className="h-full bg-amber-400" style={{ width: `${projectedPct}%` }} />}
       </div>
       <p className="mt-0.5 text-[10px] text-neutral-400">
         {formatCurrency(paid)} of {formatCurrency(cap)} paid
+        {projected > 0 &&
+          ` · +${formatCurrency(projected)} projected from deals under contract, ${formatCurrency(remainingAfterProjected)} would remain`}
       </p>
     </div>
   );
