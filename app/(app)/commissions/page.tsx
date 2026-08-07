@@ -4,6 +4,7 @@ import { CommissionTable } from "@/components/commissions/CommissionTable";
 import { CommissionStats } from "@/components/commissions/CommissionStats";
 import { CapYearToggle } from "@/components/commissions/CapYearToggle";
 import { AddPastDealButton } from "@/components/commissions/AddPastDealButton";
+import { BulkImportButton } from "@/components/commissions/BulkImportButton";
 
 export default async function CommissionsPage({
   searchParams,
@@ -34,7 +35,10 @@ export default async function CommissionsPage({
             OZ come from what you entered on each deal.
           </p>
         </div>
-        <AddPastDealButton />
+        <div className="flex shrink-0 gap-2">
+          <BulkImportButton />
+          <AddPastDealButton />
+        </div>
       </div>
 
       <CapYearToggle years={years} current={currentYear} />
