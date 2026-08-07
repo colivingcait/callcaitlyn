@@ -18,7 +18,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <h1 className="font-serif text-lg font-semibold text-neutral-900">CallCaitlyn</h1>
           <SignOutButton />
         </header>
-        <main className="flex-1 bg-neutral-50/60 pb-24 md:pb-8">{children}</main>
+        <main className="flex-1 bg-neutral-50/60 pb-28 md:pb-8">{children}</main>
       </div>
       <QuickAddButton />
       <BottomNav />

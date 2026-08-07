@@ -18,11 +18,11 @@ export function BottomNav() {
               <Link
                 href={href}
                 className={cn(
-                  "flex flex-col items-center gap-1 py-2.5 text-xs font-medium",
+                  "flex h-full min-h-[64px] flex-col items-center justify-center gap-1.5 py-3 text-[13px] font-medium active:bg-neutral-50",
                   active ? "text-brand-600" : "text-neutral-400",
                 )}
               >
-                <Icon size={22} strokeWidth={active ? 2.4 : 2} />
+                <Icon size={26} strokeWidth={active ? 2.4 : 2} />
                 {label}
               </Link>
             </li>
