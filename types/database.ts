@@ -140,8 +140,11 @@ export interface AiInsight {
   contact_id: string;
   summary: string;
   suggested_action: string | null;
+  suggested_stage_id: string | null;
+  suggested_timeline: Timeline | null;
   confidence: number | null;
   dismissed: boolean;
+  applied: boolean;
   created_at: string;
 }
 

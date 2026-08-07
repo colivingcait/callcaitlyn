@@ -72,6 +72,14 @@ opens full-screen like a native app.
 - **Calendly booking sync** — a webhook receiver at `/api/webhooks/calendly` logs new bookings (and cancellations) onto the matching contact's timeline, auto-creating a contact if the email/phone isn't recognized, and pulls the follow-up date forward to the meeting time if that's sooner than what's already set. See **Setting up Calendly** below — not yet tested against a real delivery.
 - **Eventbrite registration sync** — a webhook receiver at `/api/webhooks/eventbrite` fetches attendee details when someone registers for an event, logs it on the matching contact (or creates one, or enriches an existing bare one with name/email), and tags them "Meetup". Confirmed working end to end.
 - **Jotform check-in sync** — a webhook receiver at `/api/webhooks/jotform` matches in-person kiosk check-ins to existing contacts (from Eventbrite or elsewhere) by email/phone instead of creating duplicates, updates their last-event-attended date, and logs "how did you hear about us" + "house hacking journey" answers. Confirmed working end to end.
+- **AI insights** — every inbound Quo text and every completed call transcript gets read by Claude, which decides whether it signals a stage or timeline change (e.g. "I'm ready to start looking" → suggest Hot/Ready) and writes a plain-English summary + suggested next action. Nothing changes automatically — it shows up as a card on the contact page with Apply/Dismiss buttons, so a wrong read never silently moves someone through your pipeline. Not yet tested against real activity.
+
+## Setting up AI insights
+
+1. Get an API key at [console.anthropic.com](https://console.anthropic.com) → API Keys.
+2. Add `ANTHROPIC_API_KEY` to Vercel, redeploy.
+3. Text or call your Quo number, then check the contact page for a suggestion card. Uses Claude Haiku (cheap, fast) since this is a lightweight classification task, not a big reasoning job — costs should be negligible at your call/text volume.
+4. Applying a suggestion updates the contact's stage/timeline and logs an activity (source `ai`) recording what changed and why. Dismissing just clears it — nothing on the contact changes.
 
 ## Setting up Quo (calling/texting sync)
 
@@ -169,9 +177,8 @@ Each of these needs its own API key/OAuth setup from your accounts before it can
 
    Each metric gets a settable goal, an up/down arrow vs. last week/month, and a met/not-met indicator against the goal. Definitions above are proposed, not final — confirm before building.
 2. **Gmail** — capture new leads from your inbox, log email activity on contacts. Deferred for now — needs either accepting once-a-day sync on Vercel's free plan, paying for Vercel Pro for near-real-time polling, or building real-time push via Gmail + Google Cloud Pub/Sub (more setup, still free).
-3. **AI status detection & insights** — using an Anthropic API key, analyze new activity (especially texts) to auto-suggest stage changes ("I'm ready to start looking" → move to Hot/Ready) and generate a running action-item list per contact.
-4. **Newsletters & mass send** — AI-drafted emails in your voice, open/click tracking, scheduled sends to tagged audiences (e.g. promote a meetup to everyone tagged "Meetup").
-5. **Scheduled touches by tag** — e.g. auto-text/email a segment on a date (birthday reminders, closing anniversaries — the `important_dates` table is already there for this).
+3. **Newsletters & mass send** — AI-drafted emails in your voice, open/click tracking, scheduled sends to tagged audiences (e.g. promote a meetup to everyone tagged "Meetup").
+4. **Scheduled touches by tag** — e.g. auto-text/email a segment on a date (birthday reminders, closing anniversaries — the `important_dates` table is already there for this).
 
 ### Ideas worth adding as a realtor/event manager (not yet built, flagged for later)
 
@@ -200,6 +207,7 @@ lib/quo/                      Quo-specific webhook parsing + signature verificat
 lib/calendly/                 Calendly-specific webhook parsing + signature verification
 lib/eventbrite/               Eventbrite-specific API client + attendee parsing
 lib/jotform/                  Jotform-specific submission parsing
+lib/ai/                       Claude-based activity analysis (stage/timeline suggestions)
 lib/validation/                Zod schemas for forms
 supabase/migrations/           Database schema (run in Supabase SQL Editor)
 types/database.ts              Hand-written types matching the schema

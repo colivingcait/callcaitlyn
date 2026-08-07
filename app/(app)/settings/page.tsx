@@ -22,8 +22,9 @@ export default async function SettingsPage() {
         <h2 className="text-sm font-semibold text-neutral-700">Integrations</h2>
         <p className="text-sm text-neutral-500">
           Quo (calls/texts), Eventbrite, and Jotform are live — activity logs straight to each contact&apos;s
-          timeline automatically. Calendly is built, just needs setup (see the README). Still coming: Gmail lead
-          capture, mass email &amp; newsletters, AI status detection and insights.
+          timeline automatically. New calls/texts also get read by AI, which suggests stage/timeline updates for
+          you to approve on the contact page. Calendly is built, just needs setup (see the README). Still coming:
+          Gmail lead capture, mass email &amp; newsletters.
         </p>
       </Card>
     </div>

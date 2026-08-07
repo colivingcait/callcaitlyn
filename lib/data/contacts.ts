@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Activity, ContactWithRelations, PipelineStage, Tag, Task } from "@/types/database";
+import type { Activity, AiInsight, ContactWithRelations, PipelineStage, Tag, Task } from "@/types/database";
 
 export async function listStages() {
   const supabase = await createClient();
@@ -56,6 +56,17 @@ export async function getContactActivities(contactId: string) {
     .eq("contact_id", contactId)
     .order("occurred_at", { ascending: false });
   return (data ?? []) as Activity[];
+}
+
+export async function getContactInsights(contactId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("ai_insights")
+    .select("*")
+    .eq("contact_id", contactId)
+    .eq("dismissed", false)
+    .order("created_at", { ascending: false });
+  return (data ?? []) as AiInsight[];
 }
 
 export async function getContactTasks(contactId: string) {

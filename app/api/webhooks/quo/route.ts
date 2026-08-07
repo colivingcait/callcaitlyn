@@ -4,6 +4,7 @@ import { verifyQuoSignature } from "@/lib/quo/verify-signature";
 import { parseQuoCall, parseQuoMessage } from "@/lib/quo/parse-event";
 import { findOrCreateContact } from "@/lib/crm/find-or-create-contact";
 import { upsertActivity, patchActivityMetadata } from "@/lib/crm/activities";
+import { analyzeContactActivity } from "@/lib/ai/analyze-contact";
 
 const OWNER_ID = process.env.CRM_OWNER_USER_ID;
 
@@ -70,11 +71,19 @@ export async function POST(request: NextRequest) {
       eventType === "call.transcript.completed"
     ) {
       const call = parseQuoCall(body);
-      await patchActivityMetadata(admin, OWNER_ID, "quo", "quo_call_id", call.quoCallId, {
+      const contactId = await patchActivityMetadata(admin, OWNER_ID, "quo", "quo_call_id", call.quoCallId, {
         recording_url: call.recordingUrl ?? undefined,
         summary: call.summary ?? undefined,
         transcript: call.transcript ?? undefined,
       });
+      const content = call.transcript ?? call.summary;
+      if (contactId && content) {
+        await analyzeContactActivity(admin, OWNER_ID, contactId, {
+          type: "call",
+          direction: call.direction,
+          content,
+        });
+      }
     } else if (eventType === "message.received" || eventType === "message.delivered") {
       const msg = parseQuoMessage(body);
       const contact = await findOrCreateContact(admin, OWNER_ID, {
@@ -89,6 +98,14 @@ export async function POST(request: NextRequest) {
           body: msg.text,
           metadata: { quo_message_id: msg.quoMessageId, quo_event_type: eventType, raw: body },
         });
+
+        if (eventType === "message.received" && msg.text) {
+          await analyzeContactActivity(admin, OWNER_ID, contact.id, {
+            type: "text",
+            direction: msg.direction,
+            content: msg.text,
+          });
+        }
       }
     } else {
       console.log("Unhandled Quo webhook event type:", eventType);

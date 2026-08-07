@@ -60,16 +60,16 @@ export async function patchActivityMetadata(
   idValue: string | null,
   patch: Record<string, unknown>,
 ) {
-  if (!idValue) return;
+  if (!idValue) return null;
   const { data: existing } = await admin
     .from("activities")
-    .select("id, metadata, body")
+    .select("id, contact_id, metadata, body")
     .eq("owner_id", ownerId)
     .eq("source", source)
     .eq(`metadata->>${idField}`, idValue)
     .maybeSingle();
 
-  if (!existing) return;
+  if (!existing) return null;
 
   const nextMetadata = { ...(existing.metadata as Record<string, unknown>), ...patch };
   const summary = typeof patch.summary === "string" ? patch.summary : undefined;
@@ -81,4 +81,6 @@ export async function patchActivityMetadata(
       body: summary ? `${existing.body ?? ""}${existing.body ? " · " : ""}${summary}` : existing.body,
     })
     .eq("id", existing.id);
+
+  return existing.contact_id as string;
 }

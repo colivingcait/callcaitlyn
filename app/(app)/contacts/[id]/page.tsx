@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getContact, getContactActivities, getContactTasks, listStages } from "@/lib/data/contacts";
+import { getContact, getContactActivities, getContactTasks, getContactInsights, listStages } from "@/lib/data/contacts";
 import { fullName, formatPhone, initials, CONTACT_TYPE_LABELS, TIMELINE_LABELS } from "@/lib/utils";
 import { Card, Badge, Button } from "@/components/ui";
 import { QuickActions } from "@/components/contacts/QuickActions";
@@ -9,15 +9,17 @@ import { ActivityTimeline } from "@/components/contacts/ActivityTimeline";
 import { AddActivityForm } from "@/components/contacts/AddActivityForm";
 import { TaskList } from "@/components/contacts/TaskList";
 import { ArchiveButton } from "@/components/contacts/ArchiveButton";
+import { AiInsightCard } from "@/components/contacts/AiInsightCard";
 import { Pencil, MapPin, DollarSign, Clock, Tag as TagIcon, CalendarHeart } from "lucide-react";
 
 export default async function ContactDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [contact, activities, tasks, stages] = await Promise.all([
+  const [contact, activities, tasks, stages, insights] = await Promise.all([
     getContact(id),
     getContactActivities(id),
     getContactTasks(id),
     listStages(),
+    getContactInsights(id),
   ]);
 
   if (!contact) notFound();
@@ -51,6 +53,20 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
       <div className="mt-4">
         <QuickActions phone={contact.phone} email={contact.email} />
       </div>
+
+      {insights.length > 0 && (
+        <div className="mt-4 space-y-3">
+          {insights.map((insight) => (
+            <AiInsightCard
+              key={insight.id}
+              insight={insight}
+              contactId={contact.id}
+              ownerId={contact.owner_id}
+              stages={stages}
+            />
+          ))}
+        </div>
+      )}
 
       <Card className="mt-4 space-y-3">
         <div>
