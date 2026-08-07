@@ -46,11 +46,6 @@ export default async function CommissionsPage({
       <CapYearToggle years={years} current={currentYear} />
       <CommissionStats stats={stats} pendingKw={pending.reduce((s, d) => s + d.kwFee, 0)} pendingKwri={pending.reduce((s, d) => s + d.kwriFee, 0)} />
 
-      <div>
-        <h2 className="mb-3 text-sm font-semibold text-neutral-700">Deals this commission year</h2>
-        <CommissionTable deals={won} />
-      </div>
-
       {pending.length > 0 && (
         <div>
           <h2 className="mb-1 text-sm font-semibold text-neutral-700">Under contract (projected)</h2>
@@ -61,6 +56,11 @@ export default async function CommissionsPage({
           <CommissionTable deals={pending} pending />
         </div>
       )}
+
+      <div>
+        <h2 className="mb-3 text-sm font-semibold text-neutral-700">Deals this commission year</h2>
+        <CommissionTable deals={won} />
+      </div>
     </div>
   );
 }
