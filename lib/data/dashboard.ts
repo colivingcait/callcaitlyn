@@ -34,11 +34,14 @@ export async function getDashboardData() {
     stageCounts.set(c.stage_id, (stageCounts.get(c.stage_id) ?? 0) + 1);
   }
 
-  // "Active" excludes stages marked closed (won or lost) - Closed - Client,
-  // Past Client, Lost / Not Now by default, but driven by the flags rather
-  // than hardcoded names so it stays correct if stages are renamed/added.
+  // "Active" excludes stages marked closed (won or lost) or trash - Closed -
+  // Client, Past Client, Lost / Not Now, Trash by default, but driven by the
+  // flags rather than hardcoded names so it stays correct if stages are
+  // renamed/added. Trash contacts are also archived on the way in, so the
+  // archived=false filter above already excludes them - this is belt and
+  // suspenders in case a contact's archived flag ever falls out of sync.
   const activeStageIds = new Set(
-    (stages ?? []).filter((s) => !s.is_closed_won && !s.is_closed_lost).map((s) => s.id),
+    (stages ?? []).filter((s) => !s.is_closed_won && !s.is_closed_lost && !s.is_trash).map((s) => s.id),
   );
   const totalActive = (contacts ?? []).filter((c) => c.stage_id && activeStageIds.has(c.stage_id)).length;
 

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Select } from "@/components/ui";
+import { applyStageChange } from "@/lib/crm/stage-transition";
 import type { PipelineStage } from "@/types/database";
 
 export function StageSelector({
@@ -30,7 +31,7 @@ export function StageSelector({
     const oldStage = stages.find((s) => s.id === previous);
     const newStage = stages.find((s) => s.id === newStageId);
 
-    const { error } = await supabase.from("contacts").update({ stage_id: newStageId || null }).eq("id", contactId);
+    const { error } = await applyStageChange(supabase, ownerId, contactId, oldStage, newStage);
 
     if (!error) {
       await supabase.from("activities").insert({

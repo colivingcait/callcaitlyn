@@ -33,6 +33,7 @@ async function speedToLeadFor(
   const { data: newContacts } = await supabase
     .from("contacts")
     .select("id, created_at")
+    .eq("archived", false)
     .gte("created_at", start)
     .lt("created_at", end);
 
@@ -91,32 +92,46 @@ async function followUpRateFor(
   start: string,
   end: string,
 ): Promise<number | null> {
+  // Tasks tied to an archived contact (mostly trashed non-leads) shouldn't
+  // drag this down; general tasks with no contact still count.
+  const { data: archivedContacts } = await supabase.from("contacts").select("id").eq("archived", true);
+  const archivedIds = new Set((archivedContacts ?? []).map((c) => c.id));
+
   const { data: tasks } = await supabase
     .from("tasks")
-    .select("completed_at")
+    .select("contact_id, completed_at")
     .gte("due_at", start)
     .lt("due_at", end);
 
-  if (!tasks || tasks.length === 0) return null;
-  const completed = tasks.filter((t) => t.completed_at).length;
-  return (completed / tasks.length) * 100;
+  const relevant = (tasks ?? []).filter((t) => !t.contact_id || !archivedIds.has(t.contact_id));
+  if (relevant.length === 0) return null;
+  const completed = relevant.filter((t) => t.completed_at).length;
+  return (completed / relevant.length) * 100;
 }
 
+// Conversion is tracked via the append-only `deals` table rather than a
+// contact's current stage_id, since an investor who closes and then goes
+// back to actively shopping for the next property shouldn't stop counting
+// as converted just because they've moved off the Won stage.
 async function conversionRateFor(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  wonStageIds: Set<string>,
   start: string,
   end: string,
 ): Promise<number | null> {
   const { data: contacts } = await supabase
     .from("contacts")
-    .select("stage_id")
+    .select("id")
+    .eq("archived", false)
     .gte("created_at", start)
     .lt("created_at", end);
 
   if (!contacts || contacts.length === 0) return null;
-  const won = contacts.filter((c) => c.stage_id && wonStageIds.has(c.stage_id)).length;
-  return (won / contacts.length) * 100;
+
+  const contactIds = contacts.map((c) => c.id);
+  const { data: deals } = await supabase.from("deals").select("contact_id").in("contact_id", contactIds);
+  const wonIds = new Set((deals ?? []).map((d) => d.contact_id));
+
+  return (wonIds.size / contacts.length) * 100;
 }
 
 export async function getMetrics(period: Period): Promise<Metrics> {
@@ -129,13 +144,14 @@ export async function getMetrics(period: Period): Promise<Metrics> {
   const previousEnd = currentStart;
 
   const [{ data: stages }, { data: goalRows }] = await Promise.all([
-    supabase.from("pipeline_stages").select("id, is_closed_won, is_closed_lost"),
+    supabase.from("pipeline_stages").select("id, is_closed_won, is_closed_lost, is_trash"),
     supabase.from("metric_goals").select("*"),
   ]);
   const goalByKey = new Map<MetricKey, MetricGoal>((goalRows ?? []).map((g) => [g.metric_key as MetricKey, g]));
 
-  const activeStageIds = new Set((stages ?? []).filter((s) => !s.is_closed_won && !s.is_closed_lost).map((s) => s.id));
-  const wonStageIds = new Set((stages ?? []).filter((s) => s.is_closed_won).map((s) => s.id));
+  const activeStageIds = new Set(
+    (stages ?? []).filter((s) => !s.is_closed_won && !s.is_closed_lost && !s.is_trash).map((s) => s.id),
+  );
 
   const [
     speedCurrent,
@@ -153,8 +169,8 @@ export async function getMetrics(period: Period): Promise<Metrics> {
     contactedPctFor(supabase, activeStageIds, previousStart, previousEnd),
     followUpRateFor(supabase, currentStart, currentEnd),
     followUpRateFor(supabase, previousStart, previousEnd),
-    conversionRateFor(supabase, wonStageIds, currentStart, currentEnd),
-    conversionRateFor(supabase, wonStageIds, previousStart, previousEnd),
+    conversionRateFor(supabase, currentStart, currentEnd),
+    conversionRateFor(supabase, previousStart, previousEnd),
   ]);
 
   function build(current: number | null, previous: number | null, key: MetricKey, lowerIsBetter: boolean): MetricResult {

@@ -6,23 +6,27 @@ import { createClient } from "@/lib/supabase/client";
 import { Button, Card, Badge } from "@/components/ui";
 import { Sparkles, Check, X } from "lucide-react";
 import { TIMELINE_LABELS } from "@/lib/utils";
+import { applyStageChange } from "@/lib/crm/stage-transition";
 import type { AiInsight, PipelineStage } from "@/types/database";
 
 export function AiInsightCard({
   insight,
   contactId,
   ownerId,
+  contactStageId,
   stages,
 }: {
   insight: AiInsight;
   contactId: string;
   ownerId: string;
+  contactStageId: string | null;
   stages: PipelineStage[];
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
   const suggestedStage = stages.find((s) => s.id === insight.suggested_stage_id);
+  const currentStage = stages.find((s) => s.id === contactStageId);
   const hasSuggestion = !!suggestedStage || !!insight.suggested_timeline;
 
   async function handleDismiss() {
@@ -36,12 +40,14 @@ export function AiInsightCard({
     setBusy(true);
     const supabase = createClient();
 
-    const patch: Record<string, string> = {};
-    if (insight.suggested_stage_id) patch.stage_id = insight.suggested_stage_id;
-    if (insight.suggested_timeline) patch.timeline = insight.suggested_timeline;
+    if (suggestedStage) {
+      await applyStageChange(supabase, ownerId, contactId, currentStage, suggestedStage);
+    }
+    if (insight.suggested_timeline) {
+      await supabase.from("contacts").update({ timeline: insight.suggested_timeline }).eq("id", contactId);
+    }
 
-    if (Object.keys(patch).length > 0) {
-      await supabase.from("contacts").update(patch).eq("id", contactId);
+    if (hasSuggestion) {
       await supabase.from("activities").insert({
         owner_id: ownerId,
         contact_id: contactId,

@@ -56,6 +56,7 @@ export interface PipelineStage {
   sort_order: number;
   is_closed_won: boolean;
   is_closed_lost: boolean;
+  is_trash: boolean;
   created_at: string;
 }
 
@@ -145,6 +146,18 @@ export interface AiInsight {
   confidence: number | null;
   dismissed: boolean;
   applied: boolean;
+  created_at: string;
+}
+
+// One row per closed transaction, written when a contact enters a
+// "Win" stage and never touched again - lets a repeat investor cycle
+// back to active after closing without losing that they converted.
+export interface Deal {
+  id: string;
+  owner_id: string;
+  contact_id: string;
+  stage_id: string | null;
+  closed_at: string;
   created_at: string;
 }
 

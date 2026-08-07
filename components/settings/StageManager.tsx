@@ -11,6 +11,12 @@ function isClosed(stage: PipelineStage) {
   return stage.is_closed_won || stage.is_closed_lost;
 }
 
+function statusOf(stage: PipelineStage): "active" | "closed" | "trash" {
+  if (stage.is_trash) return "trash";
+  if (isClosed(stage)) return "closed";
+  return "active";
+}
+
 export function StageManager({ stages, ownerId }: { stages: PipelineStage[]; ownerId: string }) {
   const router = useRouter();
   const [newName, setNewName] = useState("");
@@ -58,12 +64,20 @@ export function StageManager({ stages, ownerId }: { stages: PipelineStage[]; own
     router.refresh();
   }
 
-  // Simple binary for the main control: Active or Closed. Closed defaults
-  // to "lost" until explicitly marked a win - the won/lost distinction
-  // only matters for the conversion-rate metric, so it's a secondary,
-  // only-shown-when-closed checkbox rather than a 3-way choice up front.
-  async function setActive(stage: PipelineStage, active: boolean) {
-    await updateStage(stage.id, active ? { is_closed_won: false, is_closed_lost: false } : { is_closed_lost: true });
+  // Main control is Active / Closed / Trash. Closed defaults to "lost"
+  // until explicitly marked a win - the won/lost distinction only matters
+  // for the conversion-rate metric, so it's a secondary, only-shown-when-
+  // closed checkbox rather than a 4-way choice up front. Trash is its own
+  // status (not a flavor of Closed) since it means "not a real lead" and
+  // archives the contact rather than tracking a relationship outcome.
+  async function setStatus(stage: PipelineStage, status: "active" | "closed" | "trash") {
+    if (status === "active") {
+      await updateStage(stage.id, { is_closed_won: false, is_closed_lost: false, is_trash: false });
+    } else if (status === "closed") {
+      await updateStage(stage.id, { is_closed_lost: true, is_closed_won: false, is_trash: false });
+    } else {
+      await updateStage(stage.id, { is_trash: true, is_closed_won: false, is_closed_lost: false });
+    }
   }
 
   async function setWon(stage: PipelineStage, won: boolean) {
@@ -75,7 +89,9 @@ export function StageManager({ stages, ownerId }: { stages: PipelineStage[]; own
       <h2 className="text-sm font-semibold text-neutral-700">Pipeline stages</h2>
       <p className="text-xs text-neutral-400">
         &quot;Active&quot; vs &quot;Closed&quot; controls who counts as an active lead on your dashboard and in
-        metrics — mark any stage that means the relationship is done as Closed.
+        metrics — mark any stage that means the relationship is done as Closed. &quot;Trash&quot; is for
+        contacts who were never a real lead (spam, wrong number) — moving a contact into a Trash stage
+        archives them and removes them from metrics entirely.
       </p>
       <div className="space-y-2">
         {sorted.map((stage, i) => (
@@ -92,12 +108,13 @@ export function StageManager({ stages, ownerId }: { stages: PipelineStage[]; own
               className="min-w-[7rem] flex-1"
             />
             <Select
-              value={isClosed(stage) ? "closed" : "active"}
-              onChange={(e) => setActive(stage, e.target.value === "active")}
+              value={statusOf(stage)}
+              onChange={(e) => setStatus(stage, e.target.value as "active" | "closed" | "trash")}
               className="w-auto shrink-0 text-xs"
             >
               <option value="active">Active</option>
               <option value="closed">Closed</option>
+              <option value="trash">Trash</option>
             </Select>
             {isClosed(stage) && (
               <label className="flex shrink-0 items-center gap-1.5 text-xs text-neutral-500">

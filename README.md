@@ -92,18 +92,26 @@ Uses the `QUO_API_KEY` you already have set up — no new credential needed. Jus
 ## Setting up the metrics dashboard
 
 1. Run [`supabase/migrations/0005_metrics.sql`](./supabase/migrations/0005_metrics.sql) in Supabase's SQL Editor — flips "Past Client" to a closed stage (see below) and adds the `metric_goals` table.
-2. That's it — no new env vars or credentials. The dashboard picks it up automatically.
-3. In **Settings → Pipeline stages**, each stage now has an Active/Closed (Won)/Closed (Lost) dropdown. This drives both the "Active Leads" count and the metrics below — mark any new or renamed stage that means the relationship is done as Closed, or it'll keep counting as active.
+2. Run [`supabase/migrations/0006_deals_and_trash.sql`](./supabase/migrations/0006_deals_and_trash.sql) too — adds the `deals` table (permanent conversion history, see below) and a Trash status for stages.
+3. That's it — no new env vars or credentials. The dashboard picks it up automatically.
+4. In **Settings → Pipeline stages**, each stage now has an Active / Closed / Trash dropdown, plus a "Win" checkbox that only shows up once a stage is set to Closed:
+   - **Active** — counts as an active lead and in the metrics below.
+   - **Closed** — the relationship reached an end state; check "Win" if it means they became a client (this is what the conversion-rate metric and the `deals` history use). Leave unchecked for a closed-lost stage like "Lost / Not Now".
+   - **Trash** — not a real lead at all (spam, wrong number, unrelated). Moving a contact into a Trash stage **archives them immediately** — same as hitting Archive on their profile — so they disappear from your contact list and every metric, and you never have to look at them again.
 
 ### How the metrics are defined
 
-- **Active leads** (dashboard stat tile): non-archived contacts whose stage isn't marked Closed (Won or Lost). Driven by the per-stage flag above, not hardcoded stage names, so it stays correct if you rename/add stages.
-- **Speed to lead**: for contacts created in the selected period, the average time from creation to your first logged outbound call/text/email with them. Contacts not yet contacted are excluded from the average rather than counted as infinite.
+- **Active leads** (dashboard stat tile): non-archived contacts whose stage isn't marked Closed or Trash. Driven by the per-stage flags above, not hardcoded stage names, so it stays correct if you rename/add stages.
+- **Speed to lead**: for non-archived contacts created in the selected period, the average time from creation to your first logged outbound call/text/email with them. Contacts not yet contacted are excluded from the average rather than counted as infinite.
 - **Contacted %**: of currently-active contacts, what % have any logged activity (call/text/email/note/meeting/showing) within the selected period.
-- **Follow-up rate**: of tasks *due* in the selected period, what % have been completed (as of now, not necessarily completed on time).
-- **Conversion rate**: of contacts *created* in the selected period, what % have (as of now) reached a Closed (Won) stage. Since older cohorts have had more time to convert than the current period's, this naturally trends better for the "previous period" comparison — a known simplification, not a bug, for a lightweight personal dashboard rather than full cohort-normalized reporting.
+- **Follow-up rate**: of tasks *due* in the selected period, what % have been completed (as of now, not necessarily completed on time). Tasks tied to a since-trashed contact don't count against you; general tasks with no contact always count.
+- **Conversion rate**: of non-archived contacts *created* in the selected period, what % have *ever* closed a deal (see below) — not just whatever stage they're in right now. Since older cohorts have had more time to convert than the current period's, this naturally trends better for the "previous period" comparison — a known simplification, not a bug, for a lightweight personal dashboard rather than full cohort-normalized reporting.
 
 Each metric's trend arrow accounts for which direction is "good" — lower is better for speed to lead, higher is better for the three percentages.
+
+### Deals (repeat-conversion tracking)
+
+A contact's *current* stage can't be the source of truth for "have they ever converted" — an investor can close a deal, then go right back to actively shopping for the next property, cycling back through your active pipeline. So closing is recorded separately: every time a contact's stage moves into a stage marked "Win" (and it wasn't already a Win stage), a permanent row gets written to the `deals` table, timestamped, and never touched again regardless of where the contact moves next. This happens automatically no matter how the stage change happens — the dropdown on a contact's profile, the pipeline board, or applying an AI suggestion. The contact's profile page shows a running "Deals closed" count once they have at least one.
 
 ## Setting up Quo (calling/texting sync)
 

@@ -1,6 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getContact, getContactActivities, getContactTasks, getContactInsights, listStages } from "@/lib/data/contacts";
+import {
+  getContact,
+  getContactActivities,
+  getContactTasks,
+  getContactInsights,
+  getContactDeals,
+  listStages,
+} from "@/lib/data/contacts";
 import { fullName, formatPhone, initials, CONTACT_TYPE_LABELS, TIMELINE_LABELS } from "@/lib/utils";
 import { formatLocal } from "@/lib/format-time";
 import { Card, Badge, Button } from "@/components/ui";
@@ -16,12 +23,13 @@ import { Pencil, MapPin, DollarSign, Clock, Tag as TagIcon, CalendarHeart } from
 
 export default async function ContactDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [contact, activities, tasks, stages, insights] = await Promise.all([
+  const [contact, activities, tasks, stages, insights, deals] = await Promise.all([
     getContact(id),
     getContactActivities(id),
     getContactTasks(id),
     listStages(),
     getContactInsights(id),
+    getContactDeals(id),
   ]);
 
   if (!contact) notFound();
@@ -68,6 +76,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
               insight={insight}
               contactId={contact.id}
               ownerId={contact.owner_id}
+              contactStageId={contact.stage_id}
               stages={stages}
             />
           ))}
@@ -83,6 +92,11 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
             currentStageId={contact.stage_id}
             stages={stages}
           />
+          {deals.length > 0 && (
+            <p className="mt-1.5 text-xs text-neutral-400">
+              Deals closed: {deals.length} (most recent {formatLocal(deals[0].closed_at, "MMM d, yyyy")})
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap gap-2 text-sm text-neutral-600">
           <Badge className="bg-neutral-100 text-neutral-600">{CONTACT_TYPE_LABELS[contact.contact_type]}</Badge>
