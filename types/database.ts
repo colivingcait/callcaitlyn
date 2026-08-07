@@ -187,6 +187,7 @@ export interface Deal {
   referral_pct: number | null;
   misc_fee: number;
   oz_fee: number;
+  on_fmls: boolean;
   lead_started_at: string | null;
   notes: string | null;
   created_at: string;

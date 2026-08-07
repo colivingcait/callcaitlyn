@@ -69,7 +69,7 @@ export function computeDeals<T extends Deal>(deals: T[]): (T & DealComputedField
     const kwriFee = Math.min(adjustedGross * KWRI_RATE, Math.max(KWRI_CAP - kwriPaidSoFar, 0));
     kwriPaid.set(capYear, kwriPaidSoFar + kwriFee);
 
-    const fmlsFee = (deal.sale_price ?? 0) * FMLS_RATE;
+    const fmlsFee = deal.on_fmls ? (deal.sale_price ?? 0) * FMLS_RATE : 0;
     const tcFee = TC_FLAT;
 
     const totalFees = referralFee + kwFee + kwriFee + deal.oz_fee + fmlsFee + tcFee + deal.misc_fee;

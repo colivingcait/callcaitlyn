@@ -135,7 +135,7 @@ Reachable from the $ icon next to Settings (mobile) or the sidebar (desktop) at 
 
 - **KW**: 30% of (gross commission − referral fee), until you've paid $15,000 total for the commission year — then $0.
 - **KWRI**: 3% of the same base, capped at $3,000 for the year.
-- **FMLS**: 0.12% of sale price, every deal, no cap.
+- **FMLS**: 0.12% of sale price, no cap — only for deals where the "On FMLS" checkbox is checked (defaults on, since most are; uncheck it per-deal for the ones that aren't).
 - **TC**: flat $500 per transaction, every deal, no cap.
 - **Referral fee**: gross commission × the referral % you enter per deal, taken off the top *before* KW/KWRI are calculated — matches "referral is taken off the top, prior to any splits."
 - **OZ and Misc**: no formula (OZ isn't applicable to new deals since KW discontinued it, kept only for old deals that predate that) — both are whatever you typed on the deal.
@@ -144,7 +144,7 @@ The **commission year runs Dec 1 – Nov 30**, not the calendar year — the cap
 
 The page shows the full deal-by-deal table (closing date, address, sale price, commission %, gross comp, side, every fee column, net commission, % of comm, % of list price) plus summary stats: total deals, volume, GCI, net commission, average sale price, average commission rate, average net per deal, buyer/seller split, a fee breakdown (with a note once you've hit the KW or KWRI cap for the year), and a lead-source breakdown. Run [`supabase/migrations/0009_commission_tracker.sql`](./supabase/migrations/0009_commission_tracker.sql) to add the columns this needs.
 
-**Importing past deals**: hit "Add past deal" at the top of the Commissions page to backfill a deal that closed before this CRM was tracking anything — same fields as the regular deal modal (client name instead of a linked contact, closing date, address, price, commission, splits), but it doesn't require creating a contact record first. These count toward the KW/KWRI caps for whichever commission year their closing date falls in, exactly like any other deal. A backfilled deal can be edited or removed later from the pencil/✕ icons in the Commissions table itself, since it has no contact profile to manage it from. Run [`supabase/migrations/0011_standalone_deals.sql`](./supabase/migrations/0011_standalone_deals.sql) to make `contact_id` optional on deals.
+**Importing past deals**: hit "Add past deal" at the top of the Commissions page to backfill a deal that closed before this CRM was tracking anything — same fields as the regular deal modal (client name instead of a linked contact, closing date, address, price, commission, splits), but it doesn't require creating a contact record first. These count toward the KW/KWRI caps for whichever commission year their closing date falls in, exactly like any other deal. A backfilled deal can be edited or removed later from the pencil/✕ icons in the Commissions table itself, since it has no contact profile to manage it from. Run [`supabase/migrations/0011_standalone_deals.sql`](./supabase/migrations/0011_standalone_deals.sql) to make `contact_id` optional on deals, and [`supabase/migrations/0012_fmls_toggle.sql`](./supabase/migrations/0012_fmls_toggle.sql) to add the "On FMLS" checkbox.
 
 ## Setting up Quo (calling/texting sync)
 

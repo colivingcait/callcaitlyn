@@ -46,6 +46,7 @@ export function DealCelebrationModal({
   const [referralPct, setReferralPct] = useState(initial?.referral_pct?.toString() ?? "");
   const [miscFee, setMiscFee] = useState(initial?.misc_fee?.toString() ?? "");
   const [ozFee, setOzFee] = useState(initial?.oz_fee?.toString() ?? "");
+  const [onFmls, setOnFmls] = useState(initial?.on_fmls ?? true);
   const [leadStartedAt, setLeadStartedAt] = useState(
     (initial?.lead_started_at ?? defaultLeadStartedAt)?.slice(0, 10) ?? "",
   );
@@ -63,6 +64,7 @@ export function DealCelebrationModal({
       referral_pct: referralPct ? Number(referralPct) : null,
       misc_fee: miscFee ? Number(miscFee) : 0,
       oz_fee: ozFee ? Number(ozFee) : 0,
+      on_fmls: onFmls,
       lead_started_at: leadStartedAt ? new Date(leadStartedAt).toISOString() : null,
       notes: notes || null,
     };
@@ -200,11 +202,19 @@ export function DealCelebrationModal({
               <Input id="deal-oz-fee" type="number" step="10" value={ozFee} onChange={(e) => setOzFee(e.target.value)} placeholder="0" />
             </div>
           </div>
+          <label className="flex items-center gap-2 text-sm text-neutral-600">
+            <input
+              type="checkbox"
+              checked={onFmls}
+              onChange={(e) => setOnFmls(e.target.checked)}
+              className="h-4 w-4 rounded border-neutral-300"
+            />
+            On FMLS
+          </label>
           <p className="text-xs text-neutral-400">
             KW (30% to $15k cap), KWRI (3% to $3k cap), and TC ($500) are calculated automatically on the
-            Commissions page based on your sale price and gross commission — referral, misc, and OZ are the only
-            splits you enter directly. FMLS (0.12% of price) is also automatic, but only once you&apos;ve entered a
-            sale price.
+            Commissions page based on your sale price and gross commission. FMLS (0.12% of price) only applies if
+            the box above is checked. Referral, misc, and OZ are the only splits you enter directly.
           </p>
           <div>
             <Label htmlFor="deal-lead-started">Started working with them</Label>

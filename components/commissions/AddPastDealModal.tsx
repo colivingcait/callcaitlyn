@@ -26,6 +26,7 @@ export function AddPastDealModal({ onClose }: { onClose: () => void }) {
   const [referralPct, setReferralPct] = useState("");
   const [miscFee, setMiscFee] = useState("");
   const [ozFee, setOzFee] = useState("");
+  const [onFmls, setOnFmls] = useState(true);
   const [notes, setNotes] = useState("");
 
   async function handleSave() {
@@ -55,6 +56,7 @@ export function AddPastDealModal({ onClose }: { onClose: () => void }) {
       referral_pct: referralPct ? Number(referralPct) : null,
       misc_fee: miscFee ? Number(miscFee) : 0,
       oz_fee: ozFee ? Number(ozFee) : 0,
+      on_fmls: onFmls,
       notes: notes || null,
     });
 
@@ -145,8 +147,18 @@ export function AddPastDealModal({ onClose }: { onClose: () => void }) {
               <Input id="past-oz-fee" type="number" step="10" value={ozFee} onChange={(e) => setOzFee(e.target.value)} placeholder="0" />
             </div>
           </div>
+          <label className="flex items-center gap-2 text-sm text-neutral-600">
+            <input
+              type="checkbox"
+              checked={onFmls}
+              onChange={(e) => setOnFmls(e.target.checked)}
+              className="h-4 w-4 rounded border-neutral-300"
+            />
+            On FMLS
+          </label>
           <p className="text-xs text-neutral-400">
-            KW, KWRI, FMLS, and TC are calculated automatically once saved, same as any other deal.
+            KW, KWRI, and TC are calculated automatically once saved, same as any other deal. FMLS only applies if
+            the box above is checked.
           </p>
           <div>
             <Label htmlFor="past-notes">Notes</Label>
