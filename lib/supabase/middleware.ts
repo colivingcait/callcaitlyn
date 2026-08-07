@@ -33,12 +33,17 @@ export async function updateSession(request: NextRequest) {
   const isAuthCallback = request.nextUrl.pathname.startsWith("/auth");
   // Webhooks (Quo, and any future integration) authenticate via their own
   // signature, not a Supabase session - they must bypass the login guard.
-  // Same for cron jobs (authenticate via CRON_SECRET, no browser session)
-  // and the unsubscribe link (clicked by a contact, not the logged-in agent).
+  // Same for cron jobs (authenticate via CRON_SECRET, no browser session),
+  // the unsubscribe link (clicked by a contact, not the logged-in agent),
+  // and the Gmail OAuth callback - Google's redirect back is a cross-site
+  // navigation, and some browsers don't reliably resend the session cookie
+  // on that hop, so that route verifies the request itself (state cookie)
+  // instead of relying on a recognized session.
   const isWebhook =
     request.nextUrl.pathname.startsWith("/api/webhooks") ||
     request.nextUrl.pathname.startsWith("/api/cron") ||
-    request.nextUrl.pathname.startsWith("/api/unsubscribe");
+    request.nextUrl.pathname.startsWith("/api/unsubscribe") ||
+    request.nextUrl.pathname.startsWith("/api/auth/gmail/callback");
   const isPublicAsset =
     request.nextUrl.pathname.startsWith("/manifest.json") ||
     request.nextUrl.pathname.startsWith("/_next") ||
