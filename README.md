@@ -70,6 +70,7 @@ opens full-screen like a native app.
 - **Settings** — fully customize your pipeline stages (name, color, order) and tags. Nothing is hardcoded — this is meant to fit how *you* actually work, not a generic template.
 - **Quo call/text sync** — a webhook receiver at `/api/webhooks/quo` logs every call and text against the matching contact's activity timeline automatically (auto-creating a bare contact for numbers it doesn't recognize, so nothing gets missed). Confirmed working end to end (calls, texts, recordings, transcripts, summaries). Signature verification is still in log-only mode — see step 6 below.
 - **Calendly booking sync** — a webhook receiver at `/api/webhooks/calendly` logs new bookings (and cancellations) onto the matching contact's timeline, auto-creating a contact if the email/phone isn't recognized, and pulls the follow-up date forward to the meeting time if that's sooner than what's already set. See **Setting up Calendly** below — not yet tested against a real delivery.
+- **Eventbrite registration sync** — a webhook receiver at `/api/webhooks/eventbrite` fetches attendee details when someone registers for an event, logs it on the matching contact (or creates one), and tags them "Meetup". See **Setting up Eventbrite** below — not yet tested against a real delivery.
 
 ## Setting up Quo (calling/texting sync)
 
@@ -111,16 +112,29 @@ Same shape as Quo: a webhook logs bookings straight onto the matching contact.
 5. Book a test appointment on your own Calendly link and confirm it shows up on the right contact (or creates a new one).
 6. Set `CRM_CALENDLY_ENFORCE_SIGNATURE=true` once confirmed working.
 
+## Setting up Eventbrite (registration sync)
+
+Eventbrite webhooks only send a link to the changed resource, not the data itself, so this fetches attendee details back from their API when a registration comes in — and tags the contact "Meetup". Unlike Quo/Calendly, Eventbrite doesn't offer webhook signature verification, so this is secured with a secret you choose yourself, baked into the webhook URL.
+
+1. Pick any long random string — this is `EVENTBRITE_WEBHOOK_SECRET`.
+2. Eventbrite → **Account Settings → Developer Links → Webhooks → Add Webhook**:
+   - **Payload URL**: `https://callcaitlyn.com/api/webhooks/eventbrite?secret=YOUR_SECRET` (using the string from step 1)
+   - **Event**: All Events
+   - **Actions**: check only `order.placed`
+   - Save.
+3. **Account Settings → Developer Links → API Keys** → copy your **Private Token** → this is `EVENTBRITE_API_TOKEN`.
+4. Add `EVENTBRITE_API_TOKEN` and `EVENTBRITE_WEBHOOK_SECRET` to Vercel, redeploy.
+5. Register for one of your own events as a test and confirm it shows up on the right contact, tagged "Meetup".
+
 ## Roadmap (next phases)
 
 Each of these needs its own API key/OAuth setup from your accounts before it can go live — the data model is already built to receive them (the `activities.source` and `metadata` columns exist specifically for this):
 
-1. **Eventbrite** — event registrations auto-populate as leads.
-2. **Jotform** — in-person event registrations match to existing contacts (from Eventbrite or elsewhere) by email/phone and update their "last event attended" instead of creating duplicates; only genuinely new people get a new contact.
-3. **Gmail** — capture new leads from your inbox, log email activity on contacts. Deferred for now — needs either accepting once-a-day sync on Vercel's free plan, paying for Vercel Pro for near-real-time polling, or building real-time push via Gmail + Google Cloud Pub/Sub (more setup, still free).
-4. **AI status detection & insights** — using an Anthropic API key, analyze new activity (especially texts) to auto-suggest stage changes ("I'm ready to start looking" → move to Hot/Ready) and generate a running action-item list per contact.
-5. **Newsletters & mass send** — AI-drafted emails in your voice, open/click tracking, scheduled sends to tagged audiences (e.g. promote a meetup to everyone tagged "Meetup").
-6. **Scheduled touches by tag** — e.g. auto-text/email a segment on a date (birthday reminders, closing anniversaries — the `important_dates` table is already there for this).
+1. **Jotform** — in-person event registrations match to existing contacts (from Eventbrite or elsewhere) by email/phone and update their "last event attended" instead of creating duplicates; only genuinely new people get a new contact. Also captures "how did you hear about us" (lead source) and a self-reported "where are you in your journey" stage question.
+2. **Gmail** — capture new leads from your inbox, log email activity on contacts. Deferred for now — needs either accepting once-a-day sync on Vercel's free plan, paying for Vercel Pro for near-real-time polling, or building real-time push via Gmail + Google Cloud Pub/Sub (more setup, still free).
+3. **AI status detection & insights** — using an Anthropic API key, analyze new activity (especially texts) to auto-suggest stage changes ("I'm ready to start looking" → move to Hot/Ready) and generate a running action-item list per contact.
+4. **Newsletters & mass send** — AI-drafted emails in your voice, open/click tracking, scheduled sends to tagged audiences (e.g. promote a meetup to everyone tagged "Meetup").
+5. **Scheduled touches by tag** — e.g. auto-text/email a segment on a date (birthday reminders, closing anniversaries — the `important_dates` table is already there for this).
 
 ### Ideas worth adding as a realtor/event manager (not yet built, flagged for later)
 
@@ -134,18 +148,20 @@ Each of these needs its own API key/OAuth setup from your accounts before it can
 ## Project structure
 
 ```
-app/(app)/                 Authenticated pages (dashboard, contacts, pipeline, settings)
-app/login/                 Magic-link sign-in
-app/auth/confirm/          Supabase auth magic-link verification handler
-app/api/webhooks/quo/      Quo call/text webhook receiver
-app/api/webhooks/calendly/ Calendly booking webhook receiver
-components/                UI, nav, contact, dashboard, settings components
-lib/data/                  Server-side data fetching (Supabase queries)
-lib/supabase/              Supabase client/server/middleware/admin helpers
-lib/crm/                   Shared integration logic: find-or-create contact, activity upsert
-lib/quo/                   Quo-specific webhook parsing + signature verification
-lib/calendly/              Calendly-specific webhook parsing + signature verification
-lib/validation/             Zod schemas for forms
-supabase/migrations/        Database schema (run in Supabase SQL Editor)
-types/database.ts           Hand-written types matching the schema
+app/(app)/                    Authenticated pages (dashboard, contacts, pipeline, settings)
+app/login/                    Magic-link sign-in
+app/auth/confirm/             Supabase auth magic-link verification handler
+app/api/webhooks/quo/         Quo call/text webhook receiver
+app/api/webhooks/calendly/    Calendly booking webhook receiver
+app/api/webhooks/eventbrite/  Eventbrite registration webhook receiver
+components/                   UI, nav, contact, dashboard, settings components
+lib/data/                     Server-side data fetching (Supabase queries)
+lib/supabase/                 Supabase client/server/middleware/admin helpers
+lib/crm/                      Shared integration logic: find-or-create contact, activity upsert
+lib/quo/                      Quo-specific webhook parsing + signature verification
+lib/calendly/                 Calendly-specific webhook parsing + signature verification
+lib/eventbrite/               Eventbrite-specific API client + attendee parsing
+lib/validation/                Zod schemas for forms
+supabase/migrations/           Database schema (run in Supabase SQL Editor)
+types/database.ts              Hand-written types matching the schema
 ```
