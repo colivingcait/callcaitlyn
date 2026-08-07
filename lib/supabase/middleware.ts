@@ -30,10 +30,15 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const isAuthRoute = request.nextUrl.pathname.startsWith("/login");
+  const isAuthCallback = request.nextUrl.pathname.startsWith("/auth");
   const isPublicAsset =
     request.nextUrl.pathname.startsWith("/manifest.json") ||
     request.nextUrl.pathname.startsWith("/_next") ||
     request.nextUrl.pathname.startsWith("/favicon");
+
+  if (isAuthCallback) {
+    return response;
+  }
 
   if (!user && !isAuthRoute && !isPublicAsset) {
     const url = request.nextUrl.clone();
