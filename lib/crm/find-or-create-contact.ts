@@ -24,7 +24,7 @@ export async function findOrCreateContact(
 
   const { data: candidates } = await admin
     .from("contacts")
-    .select("id, email, phone, secondary_phone")
+    .select("id, first_name, last_name, email, phone, secondary_phone")
     .eq("owner_id", ownerId)
     .eq("archived", false);
 
@@ -33,7 +33,10 @@ export async function findOrCreateContact(
     const phoneMatch = phone && (phonesMatch(c.phone, phone) || phonesMatch(c.secondary_phone, phone));
     return emailMatch || phoneMatch;
   });
-  if (match) return { id: match.id, wasCreated: false };
+  if (match) {
+    await enrichContact(admin, match, { email, phone, firstName: input.firstName, lastName: input.lastName });
+    return { id: match.id, wasCreated: false };
+  }
 
   const { data: firstStage } = await admin
     .from("pipeline_stages")
@@ -60,6 +63,36 @@ export async function findOrCreateContact(
 
   if (error || !created) return null;
   return { id: created.id, wasCreated: true };
+}
+
+// When a match is found, integrations often know more than what's on file
+// yet - e.g. a contact auto-created from a bare phone number (Quo) has no
+// name until a richer source (Eventbrite, Jotform, Calendly) hands us one.
+// Only fills in genuinely missing/placeholder fields; never overwrites
+// real data already on the contact.
+async function enrichContact(
+  admin: SupabaseClient,
+  contact: { id: string; first_name: string; last_name: string; email: string | null; phone: string | null },
+  incoming: { email: string | null; phone: string | null; firstName?: string | null; lastName?: string | null },
+) {
+  const patch: Record<string, string> = {};
+
+  const isPlaceholderName =
+    !contact.first_name ||
+    contact.first_name === "Unknown" ||
+    contact.first_name === contact.phone ||
+    contact.first_name === contact.email;
+
+  if (isPlaceholderName && incoming.firstName?.trim()) {
+    patch.first_name = incoming.firstName.trim();
+    if (incoming.lastName?.trim()) patch.last_name = incoming.lastName.trim();
+  }
+  if (!contact.email && incoming.email) patch.email = incoming.email;
+  if (!contact.phone && incoming.phone) patch.phone = incoming.phone;
+
+  if (Object.keys(patch).length > 0) {
+    await admin.from("contacts").update(patch).eq("id", contact.id);
+  }
 }
 
 export async function addTagByName(admin: SupabaseClient, ownerId: string, contactId: string, tagName: string) {
