@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { listSequences } from "@/lib/data/sequences";
+import { listSequencesWithSummary, getAllSequencesSummary } from "@/lib/data/sequences";
 import { listTags } from "@/lib/data/contacts";
 import { CreateSequenceForm } from "@/components/sequences/CreateSequenceForm";
+import { SequencesDashboard } from "@/components/sequences/SequencesDashboard";
 import { Card, Badge } from "@/components/ui";
+import { formatLocal } from "@/lib/format-time";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function SequencesPage() {
@@ -10,7 +12,7 @@ export default async function SequencesPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const [sequences, tags] = await Promise.all([listSequences(), listTags()]);
+  const [sequences, tags, summary] = await Promise.all([listSequencesWithSummary(), listTags(), getAllSequencesSummary()]);
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 px-4 py-6">
@@ -21,20 +23,33 @@ export default async function SequencesPage() {
         </p>
       </div>
 
+      {summary.totalCount > 0 && <SequencesDashboard summary={summary} />}
+
       {user && <CreateSequenceForm tags={tags} ownerId={user.id} />}
 
       <div className="space-y-2">
         {sequences.map((seq) => (
           <Link key={seq.id} href={`/sequences/${seq.id}`}>
-            <Card className="flex items-center justify-between gap-3 hover:bg-neutral-50">
-              <div>
-                <p className="font-medium text-neutral-900">{seq.name}</p>
-                <p className="text-xs text-neutral-400">
-                  {seq.type === "broadcast" ? "Scheduled" : "Drip"}
-                  {!seq.active && " · Paused"}
-                </p>
+            <Card className="space-y-2 hover:bg-neutral-50">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium text-neutral-900">{seq.name}</p>
+                  <p className="text-xs text-neutral-400">
+                    {seq.type === "broadcast" ? "Scheduled" : "Drip"}
+                    {!seq.active && " · Paused"}
+                  </p>
+                </div>
+                {seq.tags && <Badge color={seq.tags.color}>{seq.tags.name}</Badge>}
               </div>
-              {seq.tags && <Badge color={seq.tags.color}>{seq.tags.name}</Badge>}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-500">
+                {seq.type === "drip" && <span>{seq.activeEnrolled} enrolled</span>}
+                {seq.type === "broadcast" && seq.nextSendAt && <span>Next send: {formatLocal(seq.nextSendAt, "MMM d, h:mm a")}</span>}
+                {seq.sentTotal > 0 && (
+                  <span>
+                    {seq.sentTotal} sent · {seq.openRate.toFixed(0)}% opened
+                  </span>
+                )}
+              </div>
             </Card>
           </Link>
         ))}

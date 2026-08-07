@@ -3,8 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Button, Input, Textarea, Select, Card, Label } from "@/components/ui";
-import { ArrowUp, ArrowDown, Trash2, Plus } from "lucide-react";
+import { sendTestStepEmail } from "@/app/(app)/sequences/actions";
+import { Button, Input, Textarea, Select, Card, Label, Badge } from "@/components/ui";
+import { RateBar } from "@/components/sequences/RateBar";
+import { formatLocal } from "@/lib/format-time";
+import { ArrowUp, ArrowDown, Trash2, Plus, Pause, Play, Send } from "lucide-react";
 import type { EmailSequenceStep, SequenceType } from "@/types/database";
 import type { StepStats } from "@/lib/data/sequences";
 
@@ -13,6 +16,29 @@ function toDatetimeLocal(value: string | null) {
   const d = new Date(value);
   const pad = (n: number) => n.toString().padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function StatusChip({ step, type }: { step: EmailSequenceStep; type: SequenceType }) {
+  if (!step.active) return <Badge className="bg-neutral-100 text-neutral-500">Paused</Badge>;
+  if (type !== "broadcast") return null;
+  if (!step.send_at) return null;
+  const isFuture = new Date(step.send_at).getTime() > Date.now();
+  return isFuture ? (
+    <Badge className="bg-brand-50 text-brand-700">Scheduled</Badge>
+  ) : (
+    <Badge className="bg-emerald-50 text-emerald-700">Sent</Badge>
+  );
+}
+
+// Reordering N items by swapping step_order values can transiently collide
+// with the unique(sequence_id, step_order) constraint depending on request
+// timing. Moving everything to guaranteed-unused negative placeholders
+// first, then assigning final positions, avoids that regardless of how the
+// requests interleave.
+async function persistOrder(steps: EmailSequenceStep[]) {
+  const supabase = createClient();
+  await Promise.all(steps.map((step, i) => supabase.from("email_sequence_steps").update({ step_order: -(i + 1) }).eq("id", step.id)));
+  await Promise.all(steps.map((step, i) => supabase.from("email_sequence_steps").update({ step_order: i }).eq("id", step.id)));
 }
 
 export function StepManager({
@@ -29,6 +55,8 @@ export function StepManager({
   const router = useRouter();
   const sorted = [...steps].sort((a, b) => a.step_order - b.step_order);
   const [adding, setAdding] = useState(false);
+  const [testingId, setTestingId] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<{ id: string; ok: boolean; message: string } | null>(null);
 
   async function updateStep(id: string, patch: Record<string, unknown>) {
     const supabase = createClient();
@@ -45,14 +73,19 @@ export function StepManager({
 
   async function move(index: number, direction: -1 | 1) {
     const target = sorted[index + direction];
-    const current = sorted[index];
     if (!target) return;
-    const supabase = createClient();
-    await Promise.all([
-      supabase.from("email_sequence_steps").update({ step_order: target.step_order }).eq("id", current.id),
-      supabase.from("email_sequence_steps").update({ step_order: current.step_order }).eq("id", target.id),
-    ]);
+    const reordered = [...sorted];
+    [reordered[index], reordered[index + direction]] = [reordered[index + direction], reordered[index]];
+    await persistOrder(reordered);
     router.refresh();
+  }
+
+  async function sendTest(id: string) {
+    setTestingId(id);
+    setTestResult(null);
+    const result = await sendTestStepEmail(id);
+    setTestingId(null);
+    setTestResult({ id, ok: result.ok, message: result.ok ? "Sent to your inbox" : result.error });
   }
 
   return (
@@ -62,15 +95,40 @@ export function StepManager({
         return (
           <Card key={step.id} className="space-y-2">
             <div className="flex items-start justify-between gap-2">
-              <span className="mt-2 shrink-0 text-xs font-medium text-neutral-400">Step {i + 1}</span>
+              <div className="mt-1 flex items-center gap-2">
+                <span className="shrink-0 text-xs font-medium text-neutral-400">Step {i + 1}</span>
+                <StatusChip step={step} type={type} />
+              </div>
               <div className="flex shrink-0 items-center gap-1">
-                <button onClick={() => move(i, -1)} disabled={i === 0} className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 disabled:opacity-30">
+                <button
+                  onClick={() => updateStep(step.id, { active: !step.active })}
+                  className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100"
+                  aria-label={step.active ? "Pause this step" : "Resume this step"}
+                  title={step.active ? "Pause this step" : "Resume this step"}
+                >
+                  {step.active ? <Pause size={14} /> : <Play size={14} />}
+                </button>
+                <button
+                  onClick={() => move(i, -1)}
+                  disabled={i === 0}
+                  className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 disabled:opacity-30"
+                  aria-label="Move up"
+                >
                   <ArrowUp size={14} />
                 </button>
-                <button onClick={() => move(i, 1)} disabled={i === sorted.length - 1} className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 disabled:opacity-30">
+                <button
+                  onClick={() => move(i, 1)}
+                  disabled={i === sorted.length - 1}
+                  className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 disabled:opacity-30"
+                  aria-label="Move down"
+                >
                   <ArrowDown size={14} />
                 </button>
-                <button onClick={() => deleteStep(step.id)} className="rounded-lg p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600">
+                <button
+                  onClick={() => deleteStep(step.id)}
+                  className="rounded-lg p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600"
+                  aria-label="Delete step"
+                >
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -88,7 +146,7 @@ export function StepManager({
             />
             {type === "broadcast" ? (
               <div>
-                <Label htmlFor={`step-send-at-${step.id}`}>Send at</Label>
+                <Label htmlFor={`step-send-at-${step.id}`}>Send at (Eastern time)</Label>
                 <Input
                   id={`step-send-at-${step.id}`}
                   type="datetime-local"
@@ -121,11 +179,29 @@ export function StepManager({
                 </div>
               </div>
             )}
+
+            <div className="flex items-center justify-between gap-2 border-t border-neutral-100 pt-2">
+              <button
+                onClick={() => sendTest(step.id)}
+                disabled={testingId === step.id}
+                className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-brand-600 disabled:opacity-50"
+              >
+                <Send size={13} /> {testingId === step.id ? "Sending…" : "Send test to myself"}
+              </button>
+              {testResult?.id === step.id && (
+                <span className={`text-xs ${testResult.ok ? "text-emerald-600" : "text-red-600"}`}>{testResult.message}</span>
+              )}
+            </div>
+
             {s && s.sent > 0 && (
-              <p className="border-t border-neutral-100 pt-2 text-xs text-neutral-400">
-                Sent {s.sent} · Opened {s.opened} ({Math.round((s.opened / s.sent) * 100)}%) · Clicked {s.clicked} (
-                {Math.round((s.clicked / s.sent) * 100)}%) · Unsubscribed {s.unsubscribed}
-              </p>
+              <div className="grid grid-cols-3 gap-3 border-t border-neutral-100 pt-2">
+                <RateBar label="Opened" count={s.opened} total={s.sent} color="bg-brand-500" />
+                <RateBar label="Clicked" count={s.clicked} total={s.sent} color="bg-emerald-500" />
+                <RateBar label="Unsubscribed" count={s.unsubscribed} total={s.sent} color="bg-red-400" />
+              </div>
+            )}
+            {s && s.sent > 0 && type === "broadcast" && step.send_at && (
+              <p className="text-[10px] text-neutral-400">Sent {formatLocal(step.send_at, "MMM d, h:mm a")}</p>
             )}
           </Card>
         );
@@ -194,10 +270,20 @@ function NewStepForm({
     <Card className="space-y-2">
       <form onSubmit={handleAdd} className="space-y-2">
         <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject" />
-        <Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={3} placeholder="Email body — use {{first_name}} to personalize" />
+        <Textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          rows={3}
+          placeholder="Email body — use {{first_name}} to personalize"
+        />
+        {body && (
+          <p className="rounded-lg bg-neutral-50 px-3 py-2 text-xs text-neutral-500">
+            Preview: {body.replace(/\{\{\s*first_name\s*\}\}/gi, "Jamie").replace(/\{\{\s*last_name\s*\}\}/gi, "Example")}
+          </p>
+        )}
         {type === "broadcast" ? (
           <div>
-            <Label htmlFor="new-step-send-at">Send at</Label>
+            <Label htmlFor="new-step-send-at">Send at (Eastern time)</Label>
             <Input id="new-step-send-at" type="datetime-local" value={sendAt} onChange={(e) => setSendAt(e.target.value)} />
           </div>
         ) : (

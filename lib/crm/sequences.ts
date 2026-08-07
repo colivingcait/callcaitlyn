@@ -16,7 +16,7 @@ function baseUrl() {
   return (process.env.APP_BASE_URL ?? "https://www.callcaitlyn.com").replace(/\/$/, "");
 }
 
-function applyMergeFields(text: string, contact: { first_name: string; last_name: string }) {
+export function applyMergeFields(text: string, contact: { first_name: string; last_name: string }) {
   return text
     .replace(/\{\{\s*first_name\s*\}\}/gi, contact.first_name || "")
     .replace(/\{\{\s*last_name\s*\}\}/gi, contact.last_name || "");
@@ -38,10 +38,21 @@ function instrumentEmail(html: string, sendId: string, contact: SequenceContact)
   return `${withTrackedLinks}${pixel}${unsubscribe}`;
 }
 
-function stepDelayMs(step: EmailSequenceStep) {
+export function stepDelayMs(step: EmailSequenceStep) {
   const amount = step.delay_amount ?? 0;
   const unitMs = step.delay_unit === "hours" ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
   return amount * unitMs;
+}
+
+// The moment a drip enrollment's *current* step becomes due - cumulative
+// delay from every step up to and including it, relative to enrolled_at.
+// Shared between the sender (below) and the read-side "next send" display
+// so they can never drift apart.
+export function computeDripDueAt(steps: EmailSequenceStep[], enrollment: { enrolled_at: string; current_step: number }): Date | null {
+  if (enrollment.current_step >= steps.length) return null;
+  let cumulativeMs = 0;
+  for (let i = 0; i <= enrollment.current_step; i++) cumulativeMs += stepDelayMs(steps[i]);
+  return new Date(new Date(enrollment.enrolled_at).getTime() + cumulativeMs);
 }
 
 // Shared by both broadcast and drip: claim the send (insert first, so a
@@ -105,7 +116,7 @@ async function processBroadcastSequence(admin: SupabaseClient, ownerId: string, 
     .eq("sequence_id", sequence.id)
     .order("step_order", { ascending: true });
 
-  const dueSteps = (steps ?? []).filter((s) => s.send_at && new Date(s.send_at) <= new Date());
+  const dueSteps = (steps ?? []).filter((s) => s.active && s.send_at && new Date(s.send_at) <= new Date());
   if (dueSteps.length === 0) return;
 
   const { data: members } = await admin
@@ -147,12 +158,12 @@ async function processDripSequence(admin: SupabaseClient, ownerId: string, seque
       continue;
     }
 
-    let cumulativeMs = 0;
-    for (let i = 0; i <= enrollment.current_step; i++) cumulativeMs += stepDelayMs(steps[i]);
-    const dueAt = new Date(enrollment.enrolled_at).getTime() + cumulativeMs;
-    if (dueAt > Date.now()) continue;
-
     const step = steps[enrollment.current_step];
+    if (!step.active) continue; // held - stays parked at this step until resumed
+
+    const dueAt = computeDripDueAt(steps, enrollment);
+    if (!dueAt || dueAt.getTime() > Date.now()) continue;
+
     const sendId = await sendStepToContact(admin, ownerId, sequence, step, contact);
     if (sendId) {
       const isLastStep = enrollment.current_step + 1 >= steps.length;

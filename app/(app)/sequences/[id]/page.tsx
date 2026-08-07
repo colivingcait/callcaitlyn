@@ -4,27 +4,49 @@ import {
   getSequence,
   getSequenceSteps,
   getSequenceStepStats,
-  getSequenceEnrollmentCount,
+  getSequenceRollup,
+  getUpcomingBroadcastSteps,
+  getDripEnrollmentsDetailed,
+  getRecentSequenceActivity,
   getSequenceExclusions,
 } from "@/lib/data/sequences";
+import { listContacts, listTags } from "@/lib/data/contacts";
 import { StepManager } from "@/components/sequences/StepManager";
 import { SequenceToggle } from "@/components/sequences/SequenceToggle";
+import { SequenceSettingsPanel } from "@/components/sequences/SequenceSettingsPanel";
+import { SequenceOverviewStats } from "@/components/sequences/SequenceOverviewStats";
+import { UpcomingBroadcastPanel } from "@/components/sequences/UpcomingBroadcastPanel";
+import { EnrollmentManager } from "@/components/sequences/EnrollmentManager";
+import { RecentActivityFeed } from "@/components/sequences/RecentActivityFeed";
 import { Card, Badge } from "@/components/ui";
 import { formatLocal } from "@/lib/format-time";
 import { fullName } from "@/lib/utils";
 import { ChevronLeft } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function SequenceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [sequence, steps, stats, exclusions] = await Promise.all([
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const [sequence, steps, stats, rollup, exclusions, tags] = await Promise.all([
     getSequence(id),
     getSequenceSteps(id),
     getSequenceStepStats(id),
+    getSequenceRollup(id),
     getSequenceExclusions(id),
+    listTags(),
   ]);
   if (!sequence) notFound();
 
-  const enrollmentCount = sequence.type === "drip" ? await getSequenceEnrollmentCount(id) : null;
+  const [upcomingSteps, dripEnrollments, activity, allContacts] = await Promise.all([
+    sequence.type === "broadcast" ? getUpcomingBroadcastSteps(id, sequence.target_tag_id) : Promise.resolve([]),
+    sequence.type === "drip" ? getDripEnrollmentsDetailed(id) : Promise.resolve([]),
+    getRecentSequenceActivity(id, 25),
+    sequence.type === "drip" ? listContacts({}) : Promise.resolve([]),
+  ]);
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 px-4 py-6">
@@ -35,16 +57,36 @@ export default async function SequenceDetailPage({ params }: { params: Promise<{
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="font-serif text-2xl font-semibold text-neutral-900">{sequence.name}</h1>
-          <p className="mt-0.5 flex items-center gap-2 text-sm text-neutral-500">
+          {sequence.description && <p className="mt-0.5 text-sm text-neutral-500">{sequence.description}</p>}
+          <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-neutral-500">
             {sequence.type === "broadcast" ? "Scheduled" : "Drip"}
             {sequence.tags && <Badge color={sequence.tags.color}>{sequence.tags.name}</Badge>}
             {!sequence.active && <Badge className="bg-neutral-100 text-neutral-600">Paused</Badge>}
           </p>
-          {enrollmentCount !== null && (
-            <p className="mt-1 text-xs text-neutral-400">{enrollmentCount} actively enrolled</p>
+          {sequence.type === "drip" && (
+            <p className="mt-1 text-xs text-neutral-400">
+              {dripEnrollments.filter((e) => e.status === "active").length} actively enrolled
+            </p>
           )}
         </div>
-        <SequenceToggle sequenceId={sequence.id} active={sequence.active} />
+        <div className="flex shrink-0 items-center gap-2">
+          {user && (
+            <SequenceSettingsPanel
+              sequenceId={sequence.id}
+              ownerId={user.id}
+              name={sequence.name}
+              description={sequence.description}
+              targetTagId={sequence.target_tag_id}
+              tags={tags}
+            />
+          )}
+          <SequenceToggle sequenceId={sequence.id} active={sequence.active} />
+        </div>
+      </div>
+
+      <div>
+        <h2 className="mb-3 text-sm font-semibold text-neutral-700">Overview</h2>
+        <SequenceOverviewStats rollup={rollup} />
       </div>
 
       <div>
@@ -52,14 +94,40 @@ export default async function SequenceDetailPage({ params }: { params: Promise<{
         <StepManager sequenceId={sequence.id} type={sequence.type} steps={steps} stats={stats} />
       </div>
 
+      {sequence.type === "broadcast" ? (
+        <div>
+          <h2 className="mb-3 text-sm font-semibold text-neutral-700">Upcoming sends</h2>
+          <UpcomingBroadcastPanel steps={upcomingSteps} />
+        </div>
+      ) : (
+        <div>
+          <h2 className="mb-3 text-sm font-semibold text-neutral-700">Enrolled contacts</h2>
+          <EnrollmentManager
+            sequenceId={sequence.id}
+            enrollments={dripEnrollments}
+            candidateContacts={allContacts.map((c) => ({ id: c.id, first_name: c.first_name, last_name: c.last_name, email: c.email }))}
+          />
+        </div>
+      )}
+
+      <div>
+        <h2 className="mb-3 text-sm font-semibold text-neutral-700">Recent activity</h2>
+        <RecentActivityFeed items={activity} />
+      </div>
+
       {exclusions.length > 0 && (
         <div>
           <h2 className="mb-3 text-sm font-semibold text-neutral-700">Unsubscribed from this sequence</h2>
           <Card className="divide-y divide-neutral-100 p-0">
             {exclusions.map((ex, i) => (
-              <div key={i} className="flex items-center justify-between px-4 py-2.5 text-sm">
-                <span className="text-neutral-700">{ex.contacts ? fullName(ex.contacts) : "Unknown"}</span>
-                <span className="text-xs text-neutral-400">{formatLocal(ex.excluded_at, "MMM d, yyyy")}</span>
+              <div key={i} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+                <div>
+                  <span className="text-neutral-700">{ex.contacts ? fullName(ex.contacts) : "Unknown"}</span>
+                  {ex.unsubscribedFromStep && (
+                    <span className="ml-2 text-xs text-neutral-400">after &ldquo;{ex.unsubscribedFromStep}&rdquo;</span>
+                  )}
+                </div>
+                <span className="shrink-0 text-xs text-neutral-400">{formatLocal(ex.excluded_at, "MMM d, yyyy")}</span>
               </div>
             ))}
           </Card>

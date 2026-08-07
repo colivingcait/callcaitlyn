@@ -235,7 +235,7 @@ export interface GmailAccount {
 
 export type SequenceType = "broadcast" | "drip";
 export type SequenceDelayUnit = "hours" | "days";
-export type SequenceEnrollmentStatus = "active" | "completed" | "unsubscribed";
+export type SequenceEnrollmentStatus = "active" | "paused" | "completed";
 
 export interface EmailSequence {
   id: string;
@@ -243,6 +243,7 @@ export interface EmailSequence {
   name: string;
   type: SequenceType;
   target_tag_id: string | null;
+  description: string | null;
   active: boolean;
   created_at: string;
 }
@@ -256,6 +257,7 @@ export interface EmailSequenceStep {
   send_at: string | null;
   delay_amount: number | null;
   delay_unit: SequenceDelayUnit | null;
+  active: boolean;
   created_at: string;
 }
 
