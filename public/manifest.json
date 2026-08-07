@@ -1,0 +1,9 @@
+{
+  "name": "CallCaitlyn CRM",
+  "short_name": "CallCaitlyn",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fdf3f2",
+  "theme_color": "#cc4a37",
+  "icons": []
+}
