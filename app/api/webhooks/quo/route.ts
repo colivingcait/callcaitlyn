@@ -2,7 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyQuoSignature } from "@/lib/quo/verify-signature";
 import { parseQuoCall, parseQuoMessage } from "@/lib/quo/parse-event";
-import { findOrCreateContactByPhone } from "@/lib/quo/find-or-create-contact";
+import { findOrCreateContact } from "@/lib/crm/find-or-create-contact";
+import { upsertActivity, patchActivityMetadata } from "@/lib/crm/activities";
 
 const OWNER_ID = process.env.CRM_OWNER_USER_ID;
 
@@ -41,9 +42,12 @@ export async function POST(request: NextRequest) {
   try {
     if (eventType === "call.completed") {
       const call = parseQuoCall(body);
-      const contactId = await findOrCreateContactByPhone(admin, OWNER_ID, call.counterpartNumber);
-      if (contactId) {
-        await upsertActivity(admin, OWNER_ID, contactId, "quo_call_id", call.quoCallId, {
+      const contact = await findOrCreateContact(admin, OWNER_ID, {
+        phone: call.counterpartNumber,
+        leadSource: "Quo (auto-created from call)",
+      });
+      if (contact) {
+        await upsertActivity(admin, OWNER_ID, contact.id, "quo", "quo_call_id", call.quoCallId, {
           type: "call",
           direction: call.direction,
           occurred_at: call.occurredAt,
@@ -66,16 +70,19 @@ export async function POST(request: NextRequest) {
       eventType === "call.transcript.completed"
     ) {
       const call = parseQuoCall(body);
-      await patchActivityMetadata(admin, OWNER_ID, "quo_call_id", call.quoCallId, {
+      await patchActivityMetadata(admin, OWNER_ID, "quo", "quo_call_id", call.quoCallId, {
         recording_url: call.recordingUrl ?? undefined,
         summary: call.summary ?? undefined,
         transcript: call.transcript ?? undefined,
       });
     } else if (eventType === "message.received" || eventType === "message.delivered") {
       const msg = parseQuoMessage(body);
-      const contactId = await findOrCreateContactByPhone(admin, OWNER_ID, msg.counterpartNumber);
-      if (contactId) {
-        await upsertActivity(admin, OWNER_ID, contactId, "quo_message_id", msg.quoMessageId, {
+      const contact = await findOrCreateContact(admin, OWNER_ID, {
+        phone: msg.counterpartNumber,
+        leadSource: "Quo (auto-created from text)",
+      });
+      if (contact) {
+        await upsertActivity(admin, OWNER_ID, contact.id, "quo", "quo_message_id", msg.quoMessageId, {
           type: "text",
           direction: msg.direction,
           occurred_at: msg.occurredAt,
@@ -103,78 +110,4 @@ function describeCall(call: ReturnType<typeof parseQuoCall>) {
   if (call.status) parts.push(call.status);
   if (call.summary) parts.push(call.summary);
   return parts.join(" · ") || null;
-}
-
-async function upsertActivity(
-  admin: ReturnType<typeof createAdminClient>,
-  ownerId: string,
-  contactId: string,
-  idField: "quo_call_id" | "quo_message_id",
-  idValue: string | null,
-  fields: {
-    type: "call" | "text";
-    direction: "inbound" | "outbound" | "none";
-    occurred_at: string;
-    body: string | null;
-    metadata: Record<string, unknown>;
-  },
-) {
-  if (idValue) {
-    const { data: existing } = await admin
-      .from("activities")
-      .select("id")
-      .eq("owner_id", ownerId)
-      .eq("source", "quo")
-      .eq(`metadata->>${idField}`, idValue)
-      .maybeSingle();
-
-    if (existing) {
-      await admin
-        .from("activities")
-        .update({ body: fields.body, metadata: fields.metadata })
-        .eq("id", existing.id);
-      return;
-    }
-  }
-
-  await admin.from("activities").insert({
-    owner_id: ownerId,
-    contact_id: contactId,
-    type: fields.type,
-    direction: fields.direction,
-    body: fields.body,
-    occurred_at: fields.occurred_at,
-    source: "quo",
-    metadata: fields.metadata,
-  });
-}
-
-async function patchActivityMetadata(
-  admin: ReturnType<typeof createAdminClient>,
-  ownerId: string,
-  idField: "quo_call_id",
-  idValue: string | null,
-  patch: Record<string, unknown>,
-) {
-  if (!idValue) return;
-  const { data: existing } = await admin
-    .from("activities")
-    .select("id, metadata, body")
-    .eq("owner_id", ownerId)
-    .eq("source", "quo")
-    .eq(`metadata->>${idField}`, idValue)
-    .maybeSingle();
-
-  if (!existing) return;
-
-  const nextMetadata = { ...(existing.metadata as Record<string, unknown>), ...patch };
-  const summary = typeof patch.summary === "string" ? patch.summary : undefined;
-
-  await admin
-    .from("activities")
-    .update({
-      metadata: nextMetadata,
-      body: summary ? `${existing.body ?? ""}${existing.body ? " · " : ""}${summary}` : existing.body,
-    })
-    .eq("id", existing.id);
 }

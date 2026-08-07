@@ -68,7 +68,8 @@ opens full-screen like a native app.
 - **Tasks** — follow-up reminders per contact, with due dates and priority.
 - **Pipeline** — stage-grouped view (accordion on mobile, kanban columns on desktop) with a quick stage-move dropdown per contact.
 - **Settings** — fully customize your pipeline stages (name, color, order) and tags. Nothing is hardcoded — this is meant to fit how *you* actually work, not a generic template.
-- **Quo call/text sync** — a webhook receiver at `/api/webhooks/quo` logs every call and text against the matching contact's activity timeline automatically (auto-creating a bare contact for numbers it doesn't recognize, so nothing gets missed). See **Setting up Quo** below — this one needs a bit of manual setup and a first real test to fully confirm.
+- **Quo call/text sync** — a webhook receiver at `/api/webhooks/quo` logs every call and text against the matching contact's activity timeline automatically (auto-creating a bare contact for numbers it doesn't recognize, so nothing gets missed). Confirmed working end to end (calls, texts, recordings, transcripts, summaries). Signature verification is still in log-only mode — see step 6 below.
+- **Calendly booking sync** — a webhook receiver at `/api/webhooks/calendly` logs new bookings (and cancellations) onto the matching contact's timeline, auto-creating a contact if the email/phone isn't recognized, and pulls the follow-up date forward to the meeting time if that's sooner than what's already set. See **Setting up Calendly** below — not yet tested against a real delivery.
 
 ## Setting up Quo (calling/texting sync)
 
@@ -81,19 +82,45 @@ This logs every call and text from your Quo number straight into each contact's 
 3. **Register the webhook.** There's no dashboard button for this — it has to be created via Quo's API, and I haven't been able to confirm the exact request shape against their live docs from here (my sandboxed environment can't reach quo.com). Open [quo.com/docs](https://www.quo.com/docs) in your own browser, find the "create a webhook" page, and paste me the example request — I'll turn it into the exact `curl` command for your account and lock in the webhook signing key (`QUO_WEBHOOK_SIGNING_KEY`) at the same time. In the meantime, the receiver works with signature verification in log-only mode, so we can get it running now and harden it once confirmed.
 4. Add all four env vars (`CRM_OWNER_USER_ID`, `SUPABASE_SERVICE_ROLE_KEY`, `QUO_API_KEY`, `QUO_WEBHOOK_SIGNING_KEY`) to Vercel and redeploy.
 5. Once a real call/text comes in, check that it shows up on the right contact's timeline. If Quo's actual field names differ from what the code guesses, nothing is lost — the full raw payload is saved on the activity's `metadata.raw`, so we can adjust the parsing from real data.
-6. Set `CRM_QUO_ENFORCE_SIGNATURE=true` once the signature format is confirmed working, so the endpoint starts rejecting anything not actually from Quo.
+6. Set `CRM_QUO_ENFORCE_SIGNATURE=true` once the signature format is confirmed working, so the endpoint starts rejecting anything not actually from Quo. **Still open** — works fine with enforcement off, just not hardened yet.
+
+## Setting up Calendly (booking sync)
+
+Same shape as Quo: a webhook logs bookings straight onto the matching contact.
+
+1. **Get a Calendly Personal Access Token**: Calendly → Integrations → API & Webhooks → generate one → this is `CALENDLY_API_TOKEN`. Only needed once, to register the webhook.
+2. **Find your organization URI**: with that token, run:
+   ```
+   curl -H "Authorization: Bearer YOUR_TOKEN" https://api.calendly.com/users/me
+   ```
+   Copy the `current_organization` value from the response.
+3. **Register the webhook**:
+   ```
+   curl -X POST https://api.calendly.com/webhook_subscriptions \
+     -H "Authorization: Bearer YOUR_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "url": "https://callcaitlyn.com/api/webhooks/calendly",
+       "events": ["invitee.created", "invitee.canceled"],
+       "organization": "YOUR_ORGANIZATION_URI",
+       "scope": "organization"
+     }'
+   ```
+   The response should include a signing key — that's `CALENDLY_WEBHOOK_SIGNING_KEY`. Like Quo, I haven't been able to confirm this request shape against Calendly's live docs from here, so if it errors, paste me the response and I'll adjust it.
+4. Add `CALENDLY_API_TOKEN` and `CALENDLY_WEBHOOK_SIGNING_KEY` to Vercel, redeploy.
+5. Book a test appointment on your own Calendly link and confirm it shows up on the right contact (or creates a new one).
+6. Set `CRM_CALENDLY_ENFORCE_SIGNATURE=true` once confirmed working.
 
 ## Roadmap (next phases)
 
 Each of these needs its own API key/OAuth setup from your accounts before it can go live — the data model is already built to receive them (the `activities.source` and `metadata` columns exist specifically for this):
 
-1. **AI status detection & insights** — using an Anthropic API key, analyze new activity (especially texts) to auto-suggest stage changes ("I'm ready to start looking" → move to Hot/Ready) and generate a running action-item list per contact.
-2. **Gmail** — capture new leads from your inbox, log email activity on contacts, and lay the groundwork for mass email/newsletters.
-3. **Calendly** — new bookings auto-create or update contacts.
-4. **Eventbrite** — event registrations auto-populate as leads.
-5. **Jotform** — in-person event registrations/details flow straight into contacts with the right stage.
-6. **Newsletters & mass send** — AI-drafted emails in your voice, open/click tracking, scheduled sends to tagged audiences (e.g. promote a meetup to everyone tagged "Meetup").
-7. **Scheduled touches by tag** — e.g. auto-text/email a segment on a date (birthday reminders, closing anniversaries — the `important_dates` table is already there for this).
+1. **Eventbrite** — event registrations auto-populate as leads.
+2. **Jotform** — in-person event registrations match to existing contacts (from Eventbrite or elsewhere) by email/phone and update their "last event attended" instead of creating duplicates; only genuinely new people get a new contact.
+3. **Gmail** — capture new leads from your inbox, log email activity on contacts. Deferred for now — needs either accepting once-a-day sync on Vercel's free plan, paying for Vercel Pro for near-real-time polling, or building real-time push via Gmail + Google Cloud Pub/Sub (more setup, still free).
+4. **AI status detection & insights** — using an Anthropic API key, analyze new activity (especially texts) to auto-suggest stage changes ("I'm ready to start looking" → move to Hot/Ready) and generate a running action-item list per contact.
+5. **Newsletters & mass send** — AI-drafted emails in your voice, open/click tracking, scheduled sends to tagged audiences (e.g. promote a meetup to everyone tagged "Meetup").
+6. **Scheduled touches by tag** — e.g. auto-text/email a segment on a date (birthday reminders, closing anniversaries — the `important_dates` table is already there for this).
 
 ### Ideas worth adding as a realtor/event manager (not yet built, flagged for later)
 
@@ -107,15 +134,18 @@ Each of these needs its own API key/OAuth setup from your accounts before it can
 ## Project structure
 
 ```
-app/(app)/            Authenticated pages (dashboard, contacts, pipeline, settings)
-app/login/            Magic-link sign-in
-app/auth/confirm/     Supabase auth magic-link verification handler
-app/api/webhooks/quo/ Quo call/text webhook receiver
-components/           UI, nav, contact, dashboard, settings components
-lib/data/             Server-side data fetching (Supabase queries)
-lib/supabase/         Supabase client/server/middleware/admin helpers
-lib/quo/              Quo webhook parsing, signature verification, contact matching
-lib/validation/        Zod schemas for forms
-supabase/migrations/   Database schema (run in Supabase SQL Editor)
-types/database.ts      Hand-written types matching the schema
+app/(app)/                 Authenticated pages (dashboard, contacts, pipeline, settings)
+app/login/                 Magic-link sign-in
+app/auth/confirm/          Supabase auth magic-link verification handler
+app/api/webhooks/quo/      Quo call/text webhook receiver
+app/api/webhooks/calendly/ Calendly booking webhook receiver
+components/                UI, nav, contact, dashboard, settings components
+lib/data/                  Server-side data fetching (Supabase queries)
+lib/supabase/              Supabase client/server/middleware/admin helpers
+lib/crm/                   Shared integration logic: find-or-create contact, activity upsert
+lib/quo/                   Quo-specific webhook parsing + signature verification
+lib/calendly/              Calendly-specific webhook parsing + signature verification
+lib/validation/             Zod schemas for forms
+supabase/migrations/        Database schema (run in Supabase SQL Editor)
+types/database.ts           Hand-written types matching the schema
 ```
