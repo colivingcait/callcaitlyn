@@ -5,6 +5,7 @@ import { parseQuoCall, parseQuoMessage } from "@/lib/quo/parse-event";
 import { findOrCreateContact } from "@/lib/crm/find-or-create-contact";
 import { upsertActivity, patchActivityMetadata } from "@/lib/crm/activities";
 import { analyzeContactActivity } from "@/lib/ai/analyze-contact";
+import { updateEngagementTag } from "@/lib/crm/engagement";
 
 const OWNER_ID = process.env.CRM_OWNER_USER_ID;
 
@@ -64,6 +65,7 @@ export async function POST(request: NextRequest) {
             raw: body,
           },
         });
+        await updateEngagementTag(admin, OWNER_ID, contact.id);
       }
     } else if (
       eventType === "call.recording.completed" ||
@@ -98,6 +100,7 @@ export async function POST(request: NextRequest) {
           body: msg.text,
           metadata: { quo_message_id: msg.quoMessageId, quo_event_type: eventType, raw: body },
         });
+        await updateEngagementTag(admin, OWNER_ID, contact.id);
 
         if (eventType === "message.received" && msg.text) {
           await analyzeContactActivity(admin, OWNER_ID, contact.id, {

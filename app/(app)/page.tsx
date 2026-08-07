@@ -1,14 +1,33 @@
 import { getDashboardData } from "@/lib/data/dashboard";
+import { getMetrics, type Period } from "@/lib/data/metrics";
+import { createClient } from "@/lib/supabase/server";
 import { StatTile } from "@/components/dashboard/StatTile";
 import { FollowUpList } from "@/components/dashboard/FollowUpList";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { StageBreakdown } from "@/components/dashboard/StageBreakdown";
+import { MetricCard } from "@/components/dashboard/MetricCard";
+import { PeriodToggle } from "@/components/dashboard/PeriodToggle";
 import { Card } from "@/components/ui";
 import { isPast } from "date-fns";
 import { isTodayLocal } from "@/lib/format-time";
 
-export default async function DashboardPage() {
-  const { stages, stageCounts, totalActive, followUps, activities } = await getDashboardData();
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ period?: string }>;
+}) {
+  const params = await searchParams;
+  const period: Period = params.period === "month" ? "month" : "week";
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const [{ stages, stageCounts, totalActive, followUps, activities }, metrics] = await Promise.all([
+    getDashboardData(),
+    getMetrics(period),
+  ]);
 
   const todayCount = followUps.filter((c) => c.next_follow_up_at && isTodayLocal(c.next_follow_up_at)).length;
   const overdueCount = followUps.filter(
@@ -29,6 +48,45 @@ export default async function DashboardPage() {
         <StatTile label="Due Today" value={todayCount} tone="warning" />
         <StatTile label="Overdue" value={overdueCount} tone="critical" />
       </div>
+
+      {user && (
+        <div className="mt-8">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-neutral-700">Accountability</h2>
+            <PeriodToggle period={period} />
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
+            <MetricCard
+              label="Speed to lead"
+              result={metrics.speedToLead}
+              kind="hours"
+              ownerId={user.id}
+              metricKey="speed_to_lead"
+            />
+            <MetricCard
+              label="Contacted"
+              result={metrics.contactedPct}
+              kind="percent"
+              ownerId={user.id}
+              metricKey="contacted_pct"
+            />
+            <MetricCard
+              label="Follow-up rate"
+              result={metrics.followUpRate}
+              kind="percent"
+              ownerId={user.id}
+              metricKey="follow_up_rate"
+            />
+            <MetricCard
+              label="Conversion rate"
+              result={metrics.conversionRate}
+              kind="percent"
+              ownerId={user.id}
+              metricKey="conversion_rate"
+            />
+          </div>
+        </div>
+      )}
 
       <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-3">
         <div className="md:col-span-2">

@@ -152,3 +152,14 @@ export interface ContactWithRelations extends Contact {
   pipeline_stages: PipelineStage | null;
   contact_tags: { tags: Tag }[];
 }
+
+export type MetricKey = "speed_to_lead" | "contacted_pct" | "follow_up_rate" | "conversion_rate";
+
+export interface MetricGoal {
+  id: string;
+  owner_id: string;
+  metric_key: MetricKey;
+  target_value: number;
+  created_at: string;
+  updated_at: string;
+}

@@ -62,7 +62,9 @@ opens full-screen like a native app.
 
 ## What's in phase 1
 
-- **Dashboard** — active lead count, hot/ready count, follow-ups due today/overdue, recent activity, pipeline snapshot.
+- **Dashboard** — active lead count (only stages not marked closed — see below), hot/ready count, follow-ups due today/overdue, recent activity, pipeline snapshot, and an accountability section (see below).
+- **Accountability metrics** — speed to lead, contacted %, follow-up rate, and conversion rate, each with a week/month toggle, a trend arrow vs. the prior period, and a settable goal (click "Set a goal" under any metric). See **How the metrics are defined** below for exactly what each one measures.
+- **Engagement tagging** — a contact gets tagged "Engaged" automatically once they've had 3+ calls/texts (either direction) in the trailing 7 days, recomputed after every new call/text rather than on a schedule. Email-based engagement (opens/clicks) is noted for later, once the newsletter/email-tracking phase exists.
 - **Contacts** — search and filter by stage/type/tag; full profile (contact info, budget, timeline, areas of interest, address, notes, tags); one-tap call/text/email links.
 - **Activity timeline** — every call, text, email, note, meeting, or showing logged against a contact, plus automatic stage-change entries. Built with a `source` field (`manual`, `quo`, `gmail`, …) so future integrations write into the same timeline instead of a separate system.
 - **Tasks** — follow-up reminders per contact, with due dates and priority.
@@ -86,6 +88,22 @@ opens full-screen like a native app.
 ## Sending texts from the CRM
 
 Uses the `QUO_API_KEY` you already have set up — no new credential needed. Just try it: open any contact with a phone number, type a message in the box under the call/text/email buttons, and hit send. If it errors, paste me the error message it shows (it includes Quo's actual API response) and I'll fix the request shape to match.
+
+## Setting up the metrics dashboard
+
+1. Run [`supabase/migrations/0005_metrics.sql`](./supabase/migrations/0005_metrics.sql) in Supabase's SQL Editor — flips "Past Client" to a closed stage (see below) and adds the `metric_goals` table.
+2. That's it — no new env vars or credentials. The dashboard picks it up automatically.
+3. In **Settings → Pipeline stages**, each stage now has an Active/Closed (Won)/Closed (Lost) dropdown. This drives both the "Active Leads" count and the metrics below — mark any new or renamed stage that means the relationship is done as Closed, or it'll keep counting as active.
+
+### How the metrics are defined
+
+- **Active leads** (dashboard stat tile): non-archived contacts whose stage isn't marked Closed (Won or Lost). Driven by the per-stage flag above, not hardcoded stage names, so it stays correct if you rename/add stages.
+- **Speed to lead**: for contacts created in the selected period, the average time from creation to your first logged outbound call/text/email with them. Contacts not yet contacted are excluded from the average rather than counted as infinite.
+- **Contacted %**: of currently-active contacts, what % have any logged activity (call/text/email/note/meeting/showing) within the selected period.
+- **Follow-up rate**: of tasks *due* in the selected period, what % have been completed (as of now, not necessarily completed on time).
+- **Conversion rate**: of contacts *created* in the selected period, what % have (as of now) reached a Closed (Won) stage. Since older cohorts have had more time to convert than the current period's, this naturally trends better for the "previous period" comparison — a known simplification, not a bug, for a lightweight personal dashboard rather than full cohort-normalized reporting.
+
+Each metric's trend arrow accounts for which direction is "good" — lower is better for speed to lead, higher is better for the three percentages.
 
 ## Setting up Quo (calling/texting sync)
 
@@ -175,16 +193,9 @@ Eventbrite's custom registration question is fetched from the attendee's `answer
 
 Each of these needs its own API key/OAuth setup from your accounts before it can go live — the data model is already built to receive them (the `activities.source` and `metadata` columns exist specifically for this):
 
-1. **Accountability metrics dashboard** — a new goals table plus a dashboard section for:
-   - **Speed to lead** — average time from a contact being created to your first logged outbound call/text/email with them.
-   - **Contacted %** — of active (non-closed, non-archived) contacts, what % have a logged activity in the last 7/30 days.
-   - **Follow-up rate** — of tasks due in the period, what % got completed vs. left overdue.
-   - **Conversion rate** — of leads created in the period, what % have reached "Closed - Client."
-
-   Each metric gets a settable goal, an up/down arrow vs. last week/month, and a met/not-met indicator against the goal. Definitions above are proposed, not final — confirm before building.
-2. **Gmail** — capture new leads from your inbox, log email activity on contacts. Deferred for now — needs either accepting once-a-day sync on Vercel's free plan, paying for Vercel Pro for near-real-time polling, or building real-time push via Gmail + Google Cloud Pub/Sub (more setup, still free).
-3. **Newsletters & mass send** — AI-drafted emails in your voice, open/click tracking, scheduled sends to tagged audiences (e.g. promote a meetup to everyone tagged "Meetup").
-4. **Scheduled touches by tag** — e.g. auto-text/email a segment on a date (birthday reminders, closing anniversaries — the `important_dates` table is already there for this).
+1. **Gmail** — capture new leads from your inbox, log email activity on contacts. Deferred for now — needs either accepting once-a-day sync on Vercel's free plan, paying for Vercel Pro for near-real-time polling, or building real-time push via Gmail + Google Cloud Pub/Sub (more setup, still free).
+2. **Newsletters & mass send** — AI-drafted emails in your voice, open/click tracking, scheduled sends to tagged audiences (e.g. promote a meetup to everyone tagged "Meetup"). Would also unlock email-based engagement tagging (see above).
+3. **Scheduled touches by tag** — e.g. auto-text/email a segment on a date (birthday reminders, closing anniversaries — the `important_dates` table is already there for this).
 
 ### Ideas worth adding as a realtor/event manager (not yet built, flagged for later)
 
@@ -194,7 +205,7 @@ Each of these needs its own API key/OAuth setup from your accounts before it can
 - **Past-client drip** — auto-tag anyone whose stage becomes "Closed - Client" and schedule periodic just-checking-in touches — the #1 way past clients turn into referrals.
 - **Duplicate detection** — warn when a new contact's phone/email matches an existing one, so leads from different channels (website, Eventbrite, sign call) don't fragment into duplicates.
 - **"Sphere" nurture cadence** — a separate lighter-touch cadence for sphere/referral-partner contacts vs. active buyers/sellers, since they need a different follow-up rhythm.
-- **Engagement-based tagging** — behavior as its own signal, separate from what a contact explicitly says: texting/calling multiple times a week, opening every newsletter, clicking links in emails. High-frequency engagement could auto-tag or nudge stage independently of the AI insight (which is per-activity-content) - this would be a per-contact rolling engagement score computed from activity frequency, plus email open/click data once the newsletter/email-tracking phase exists.
+- **Email-based engagement** — the call/text half of this is now live (the "Engaged" tag, see above). The email half — opening every newsletter, clicking links — needs the newsletter/email-tracking phase to exist first, then can feed the same tag.
 
 ## Project structure
 
@@ -209,7 +220,7 @@ app/api/webhooks/jotform/     Jotform in-person check-in webhook receiver
 components/                   UI, nav, contact, dashboard, settings, messages components
 lib/data/                     Server-side data fetching (Supabase queries)
 lib/supabase/                 Supabase client/server/middleware/admin helpers
-lib/crm/                      Shared integration logic: find-or-create contact, activity upsert, event attendance
+lib/crm/                      Shared integration logic: find-or-create contact, activity upsert, event attendance, engagement tagging
 lib/quo/                      Quo-specific webhook parsing, signature verification, sending texts
 lib/calendly/                 Calendly-specific webhook parsing + signature verification
 lib/eventbrite/               Eventbrite-specific API client + attendee parsing

@@ -34,10 +34,18 @@ export async function getDashboardData() {
     stageCounts.set(c.stage_id, (stageCounts.get(c.stage_id) ?? 0) + 1);
   }
 
+  // "Active" excludes stages marked closed (won or lost) - Closed - Client,
+  // Past Client, Lost / Not Now by default, but driven by the flags rather
+  // than hardcoded names so it stays correct if stages are renamed/added.
+  const activeStageIds = new Set(
+    (stages ?? []).filter((s) => !s.is_closed_won && !s.is_closed_lost).map((s) => s.id),
+  );
+  const totalActive = (contacts ?? []).filter((c) => c.stage_id && activeStageIds.has(c.stage_id)).length;
+
   return {
     stages: (stages ?? []) as PipelineStage[],
     stageCounts,
-    totalActive: (contacts ?? []).length,
+    totalActive,
     followUps: (followUps ?? []) as Partial<Contact>[],
     tasks: (tasks ?? []) as (Task & { contacts: { first_name: string; last_name: string } | null })[],
     activities: (activities ?? []) as (Activity & { contacts: { first_name: string; last_name: string } | null })[],

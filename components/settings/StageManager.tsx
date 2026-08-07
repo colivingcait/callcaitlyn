@@ -3,9 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Button, Input, Card } from "@/components/ui";
+import { Button, Input, Card, Select } from "@/components/ui";
 import { ArrowUp, ArrowDown, Trash2, Plus } from "lucide-react";
 import type { PipelineStage } from "@/types/database";
+
+function statusOf(stage: PipelineStage) {
+  if (stage.is_closed_won) return "won";
+  if (stage.is_closed_lost) return "lost";
+  return "active";
+}
 
 export function StageManager({ stages, ownerId }: { stages: PipelineStage[]; ownerId: string }) {
   const router = useRouter();
@@ -54,12 +60,20 @@ export function StageManager({ stages, ownerId }: { stages: PipelineStage[]; own
     router.refresh();
   }
 
+  async function updateStatus(stage: PipelineStage, status: string) {
+    await updateStage(stage.id, { is_closed_won: status === "won", is_closed_lost: status === "lost" });
+  }
+
   return (
     <Card className="space-y-3">
       <h2 className="text-sm font-semibold text-neutral-700">Pipeline stages</h2>
+      <p className="text-xs text-neutral-400">
+        &quot;Active&quot; vs &quot;Closed&quot; controls who counts as an active lead on your dashboard and in
+        metrics — mark any stage that means the relationship is done (won or lost) as Closed.
+      </p>
       <div className="space-y-2">
         {sorted.map((stage, i) => (
-          <div key={stage.id} className="flex items-center gap-2">
+          <div key={stage.id} className="flex flex-wrap items-center gap-2">
             <input
               type="color"
               value={stage.color}
@@ -69,8 +83,17 @@ export function StageManager({ stages, ownerId }: { stages: PipelineStage[]; own
             <Input
               defaultValue={stage.name}
               onBlur={(e) => e.target.value !== stage.name && updateStage(stage.id, { name: e.target.value })}
-              className="flex-1"
+              className="min-w-[7rem] flex-1"
             />
+            <Select
+              value={statusOf(stage)}
+              onChange={(e) => updateStatus(stage, e.target.value)}
+              className="w-auto shrink-0 text-xs"
+            >
+              <option value="active">Active</option>
+              <option value="won">Closed (Won)</option>
+              <option value="lost">Closed (Lost)</option>
+            </Select>
             <button
               onClick={() => move(i, -1)}
               disabled={i === 0}

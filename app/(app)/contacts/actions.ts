@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendQuoText } from "@/lib/quo/send-message";
 import { upsertActivity } from "@/lib/crm/activities";
+import { updateEngagementTag } from "@/lib/crm/engagement";
 
 export async function sendTextToContact(contactId: string, toNumber: string, body: string) {
   const supabase = await createClient();
@@ -29,6 +30,7 @@ export async function sendTextToContact(contactId: string, toNumber: string, bod
     body,
     metadata: { quo_message_id: result.quoMessageId, sent_from_crm: true },
   });
+  await updateEngagementTag(admin, user.id, contactId);
 
   return { ok: true as const };
 }
