@@ -179,6 +179,7 @@ export interface Deal {
   stage_id: string | null;
   status: DealStatus;
   closed_at: string;
+  expected_closing_date: string | null;
   address: string | null;
   property_type: PropertyType | null;
   side: DealSide | null;

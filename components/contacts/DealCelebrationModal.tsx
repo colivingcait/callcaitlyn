@@ -47,6 +47,7 @@ export function DealCelebrationModal({
   // make sense once the deal is actually (or about to be marked) won.
   const isPendingContext = mode === "under_contract" || ((mode === "create" || mode === "edit") && status === "pending");
   const [closedAt, setClosedAt] = useState(toDateInputValue(initial?.closed_at) || new Date().toISOString().slice(0, 10));
+  const [expectedClosingDate, setExpectedClosingDate] = useState(toDateInputValue(initial?.expected_closing_date));
   const [address, setAddress] = useState(initial?.address ?? "");
   const [propertyType, setPropertyType] = useState<PropertyType | "">(initial?.property_type ?? "");
   const [side, setSide] = useState<DealSide | "">(initial?.side ?? defaultSide ?? "");
@@ -93,6 +94,7 @@ export function DealCelebrationModal({
       fields.on_fmls = onFmls;
     }
     if (!isPendingContext) fields.closed_at = new Date(closedAt).toISOString();
+    fields.expected_closing_date = expectedClosingDate || null;
     if (isStandaloneEdit) fields.client_name = clientName || null;
 
     if (dealId) {
@@ -173,7 +175,17 @@ export function DealCelebrationModal({
             <Label htmlFor="deal-address">Property address</Label>
             <Input id="deal-address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main St" />
           </div>
-          {!isPendingContext && (
+          {isPendingContext ? (
+            <div>
+              <Label htmlFor="deal-expected-closing">Expected closing date</Label>
+              <Input
+                id="deal-expected-closing"
+                type="date"
+                value={expectedClosingDate}
+                onChange={(e) => setExpectedClosingDate(e.target.value)}
+              />
+            </div>
+          ) : (
             <div>
               <Label htmlFor="deal-closed-at">Closing date</Label>
               <Input id="deal-closed-at" type="date" value={closedAt} onChange={(e) => setClosedAt(e.target.value)} />
@@ -227,7 +239,7 @@ export function DealCelebrationModal({
               />
             </div>
           </div>
-          {!isPendingContext && (mode === "edit" || mode === "create") && (
+          {(mode === "edit" || mode === "create") && (
             <label className="flex items-center gap-2 text-sm text-neutral-600">
               <input
                 type="checkbox"
@@ -238,7 +250,7 @@ export function DealCelebrationModal({
               Use exact fee amounts instead of calculating them
             </label>
           )}
-          {isPendingContext ? null : manualSplit ? (
+          {manualSplit ? (
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <Label htmlFor="deal-kw-fee">KW</Label>
