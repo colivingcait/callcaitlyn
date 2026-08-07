@@ -10,12 +10,17 @@ export async function POST(request: NextRequest) {
   const rawBody = await request.text();
 
   const { ok, reason } = verifyQuoSignature(rawBody, request.headers);
+  if (reason) {
+    // Dump every header whenever verification is inconclusive so we can
+    // find Quo's actual signature header name/format from a real delivery
+    // and correct lib/quo/verify-signature.ts to match.
+    console.warn("Quo webhook signature not verified:", reason, {
+      headers: Object.fromEntries(request.headers.entries()),
+    });
+  }
   if (!ok) {
     console.error("Quo webhook rejected: signature check failed", reason);
     return NextResponse.json({ error: "invalid signature" }, { status: 401 });
-  }
-  if (reason) {
-    console.warn("Quo webhook signature not verified:", reason);
   }
 
   if (!OWNER_ID) {
