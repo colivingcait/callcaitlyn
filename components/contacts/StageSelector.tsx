@@ -4,8 +4,9 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Select } from "@/components/ui";
-import { applyStageChange, type DealModalMode } from "@/lib/crm/stage-transition";
+import { applyStageChange, type DealModalMode, type PendingDealSummary } from "@/lib/crm/stage-transition";
 import { DealCelebrationModal } from "@/components/contacts/DealCelebrationModal";
+import { PendingDealCleanupModal } from "@/components/contacts/PendingDealCleanupModal";
 import type { DealSide, PipelineStage, Representing } from "@/types/database";
 
 export function StageSelector({
@@ -29,6 +30,7 @@ export function StageSelector({
   const [value, setValue] = useState(currentStageId ?? "");
   const [saving, setSaving] = useState(false);
   const [dealModal, setDealModal] = useState<{ id: string; mode: DealModalMode } | null>(null);
+  const [pendingCleanup, setPendingCleanup] = useState<PendingDealSummary[] | null>(null);
 
   async function handleChange(newStageId: string) {
     const previous = value;
@@ -39,7 +41,13 @@ export function StageSelector({
     const oldStage = stages.find((s) => s.id === previous);
     const newStage = stages.find((s) => s.id === newStageId);
 
-    const { error, dealId, dealMode } = await applyStageChange(supabase, ownerId, contactId, oldStage, newStage);
+    const { error, dealId, dealMode, pendingAtRisk } = await applyStageChange(
+      supabase,
+      ownerId,
+      contactId,
+      oldStage,
+      newStage,
+    );
 
     if (!error) {
       await supabase.from("activities").insert({
@@ -51,6 +59,7 @@ export function StageSelector({
         body: `Stage changed from ${oldStage?.name ?? "None"} to ${newStage?.name ?? "None"}`,
       });
       if (dealId && dealMode) setDealModal({ id: dealId, mode: dealMode });
+      if (pendingAtRisk) setPendingCleanup(pendingAtRisk);
       router.refresh();
     } else {
       setValue(previous);
@@ -77,6 +86,7 @@ export function StageSelector({
           onClose={() => setDealModal(null)}
         />
       )}
+      {pendingCleanup && <PendingDealCleanupModal deals={pendingCleanup} onClose={() => setPendingCleanup(null)} />}
     </>
   );
 }

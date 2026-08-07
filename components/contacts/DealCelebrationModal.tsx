@@ -5,19 +5,21 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui";
 import { PROPERTY_TYPE_LABELS } from "@/lib/utils";
-import { X, PartyPopper, Handshake } from "lucide-react";
-import type { Deal, DealSide, PropertyType } from "@/types/database";
+import { X, PartyPopper, Handshake, Plus } from "lucide-react";
+import type { Deal, DealSide, DealStatus, PropertyType } from "@/types/database";
 
 function toDateInputValue(value: string | null | undefined) {
   return value ? value.slice(0, 10) : "";
 }
 
-// The deal row itself already exists by the time this opens (see
-// stage-transition.ts) - this only ever UPDATEs it, so skipping/closing
-// early loses nothing but the extra detail. Reused for the under-contract
-// capture, the closed-deal celebration, and later editing from DealsList.
+// Handles both UPDATE (dealId provided - the under-contract capture, the
+// closed-deal celebration, and later editing) and INSERT (dealId omitted -
+// manually adding another deal for a contact who already has one, e.g. a
+// Buy/Sell contact under contract on both sides at once).
 export function DealCelebrationModal({
   dealId,
+  contactId,
+  ownerId,
   contactName,
   defaultLeadStartedAt,
   defaultSide,
@@ -25,18 +27,25 @@ export function DealCelebrationModal({
   mode,
   onClose,
 }: {
-  dealId: string;
+  dealId?: string;
+  contactId?: string;
+  ownerId?: string;
   contactName: string;
   defaultLeadStartedAt: string | null;
   defaultSide: DealSide | null;
   initial?: Partial<Deal>;
-  mode: "under_contract" | "celebrate" | "edit";
+  mode: "under_contract" | "celebrate" | "edit" | "create";
   onClose: () => void;
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const isStandaloneEdit = mode === "edit" && !initial?.contact_id;
   const [clientName, setClientName] = useState(initial?.client_name ?? "");
+  const [status, setStatus] = useState<DealStatus>(initial?.status ?? (mode === "under_contract" ? "pending" : "won"));
+  // A pending deal's closed_at means "entered under contract at," not a
+  // real close date - the closing-date field and commission fields only
+  // make sense once the deal is actually (or about to be marked) won.
+  const isPendingContext = mode === "under_contract" || ((mode === "create" || mode === "edit") && status === "pending");
   const [closedAt, setClosedAt] = useState(toDateInputValue(initial?.closed_at) || new Date().toISOString().slice(0, 10));
   const [address, setAddress] = useState(initial?.address ?? "");
   const [propertyType, setPropertyType] = useState<PropertyType | "">(initial?.property_type ?? "");
@@ -61,7 +70,7 @@ export function DealCelebrationModal({
   async function handleSave() {
     setSaving(true);
     const supabase = createClient();
-    const patch: Record<string, unknown> = {
+    const fields: Record<string, unknown> = {
       address: address || null,
       property_type: propertyType || null,
       side: side || null,
@@ -74,22 +83,24 @@ export function DealCelebrationModal({
       notes: notes || null,
     };
     if (manualSplit) {
-      patch.kw_fee = kwFee ? Number(kwFee) : 0;
-      patch.kwri_fee = kwriFee ? Number(kwriFee) : 0;
-      patch.fmls_fee = manualFmlsFee ? Number(manualFmlsFee) : 0;
-      patch.tc_fee = tcFee ? Number(tcFee) : 0;
-      patch.referral_fee = manualReferralFee ? Number(manualReferralFee) : 0;
+      fields.kw_fee = kwFee ? Number(kwFee) : 0;
+      fields.kwri_fee = kwriFee ? Number(kwriFee) : 0;
+      fields.fmls_fee = manualFmlsFee ? Number(manualFmlsFee) : 0;
+      fields.tc_fee = tcFee ? Number(tcFee) : 0;
+      fields.referral_fee = manualReferralFee ? Number(manualReferralFee) : 0;
     } else {
-      patch.referral_pct = referralPct ? Number(referralPct) : null;
-      patch.on_fmls = onFmls;
+      fields.referral_pct = referralPct ? Number(referralPct) : null;
+      fields.on_fmls = onFmls;
     }
-    // Closing date isn't meaningful yet while a deal is still pending
-    // (under contract) - closed_at there means "entered under contract at,"
-    // not an actual close date, so it's left untouched in that mode.
-    if (mode !== "under_contract") patch.closed_at = new Date(closedAt).toISOString();
-    if (isStandaloneEdit) patch.client_name = clientName || null;
+    if (!isPendingContext) fields.closed_at = new Date(closedAt).toISOString();
+    if (isStandaloneEdit) fields.client_name = clientName || null;
 
-    await supabase.from("deals").update(patch).eq("id", dealId);
+    if (dealId) {
+      if (mode === "edit") fields.status = status;
+      await supabase.from("deals").update(fields).eq("id", dealId);
+    } else {
+      await supabase.from("deals").insert({ owner_id: ownerId, contact_id: contactId, status, ...fields });
+    }
     setSaving(false);
     router.refresh();
     onClose();
@@ -121,12 +132,32 @@ export function DealCelebrationModal({
             </div>
           )}
           {mode === "edit" && <p className="font-serif text-xl font-semibold text-neutral-900">Edit deal</p>}
+          {mode === "create" && (
+            <div>
+              <p className="flex items-center gap-1.5 font-serif text-xl font-semibold text-neutral-900">
+                <Plus size={20} className="text-brand-600" /> Add a deal
+              </p>
+              <p className="mt-0.5 text-sm text-neutral-500">
+                For {contactName} — use this when they have more than one deal going at once (e.g. buying and
+                selling at the same time).
+              </p>
+            </div>
+          )}
           <button onClick={onClose} className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100">
             <X size={18} />
           </button>
         </div>
 
         <div className="mt-4 space-y-3">
+          {(mode === "create" || mode === "edit") && (
+            <div>
+              <Label htmlFor="deal-status">Status</Label>
+              <Select id="deal-status" value={status} onChange={(e) => setStatus(e.target.value as DealStatus)}>
+                <option value="pending">Under Contract</option>
+                <option value="won">Closed</option>
+              </Select>
+            </div>
+          )}
           {isStandaloneEdit && (
             <div>
               <Label htmlFor="deal-client-name">Client name</Label>
@@ -142,7 +173,7 @@ export function DealCelebrationModal({
             <Label htmlFor="deal-address">Property address</Label>
             <Input id="deal-address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main St" />
           </div>
-          {mode !== "under_contract" && (
+          {!isPendingContext && (
             <div>
               <Label htmlFor="deal-closed-at">Closing date</Label>
               <Input id="deal-closed-at" type="date" value={closedAt} onChange={(e) => setClosedAt(e.target.value)} />
@@ -196,7 +227,7 @@ export function DealCelebrationModal({
               />
             </div>
           </div>
-          {mode === "edit" && (
+          {!isPendingContext && (mode === "edit" || mode === "create") && (
             <label className="flex items-center gap-2 text-sm text-neutral-600">
               <input
                 type="checkbox"
@@ -207,7 +238,7 @@ export function DealCelebrationModal({
               Use exact fee amounts instead of calculating them
             </label>
           )}
-          {manualSplit ? (
+          {isPendingContext ? null : manualSplit ? (
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <Label htmlFor="deal-kw-fee">KW</Label>
@@ -300,10 +331,10 @@ export function DealCelebrationModal({
 
         <div className="mt-5 flex gap-3">
           <Button onClick={handleSave} disabled={saving} className="flex-1">
-            {saving ? "Saving…" : "Save deal"}
+            {saving ? "Saving…" : mode === "create" ? "Add deal" : "Save deal"}
           </Button>
           <Button variant="secondary" onClick={onClose} disabled={saving}>
-            {mode === "edit" ? "Cancel" : "Skip for now"}
+            {mode === "edit" || mode === "create" ? "Cancel" : "Skip for now"}
           </Button>
         </div>
       </div>

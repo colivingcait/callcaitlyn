@@ -113,6 +113,8 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
           />
           <DealsList
             deals={deals}
+            contactId={contact.id}
+            ownerId={contact.owner_id}
             contactName={fullName(contact)}
             contactCreatedAt={contact.created_at}
             representing={contact.representing}

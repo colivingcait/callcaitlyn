@@ -1,7 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { PipelineStage } from "@/types/database";
+import type { Deal, PipelineStage } from "@/types/database";
 
 export type DealModalMode = "under_contract" | "celebrate" | null;
+
+export type PendingDealSummary = Pick<Deal, "id" | "address" | "client_name">;
 
 // Central place to apply a contact's stage change so every entry point
 // (manual selector, kanban card, AI-suggested apply) gets the same side
@@ -21,7 +23,7 @@ export async function applyStageChange(
   if (newStage?.is_trash) patch.archived = true;
 
   const { error } = await supabase.from("contacts").update(patch).eq("id", contactId);
-  if (error) return { error, dealId: null, dealMode: null as DealModalMode };
+  if (error) return { error, dealId: null, dealMode: null as DealModalMode, pendingAtRisk: null };
 
   // dealId+dealMode are only set when the caller should pop the deal
   // details modal. The underlying row exists (and 'won' rows count toward
@@ -29,15 +31,18 @@ export async function applyStageChange(
   // skips it - the modal is purely for the extra detail.
   let dealId: string | null = null;
   let dealMode: DealModalMode = null;
+  let pendingAtRisk: PendingDealSummary[] | null = null;
 
   const enteringWon = newStage?.is_closed_won && !oldStage?.is_closed_won;
   const enteringUnderContract = newStage?.is_under_contract && !oldStage?.is_under_contract;
-  const leavingUnderContractWithoutClosing = oldStage?.is_under_contract && !newStage?.is_under_contract && !enteringWon;
 
   if (enteringWon) {
     // Reuse a pending deal opened at Under Contract if one exists, so the
     // address/price/etc. already captured there survives instead of being
-    // asked for twice - otherwise this is a fresh conversion.
+    // asked for twice - otherwise this is a fresh conversion. If a contact
+    // has more than one pending deal at once, this grabs the most recent
+    // one; get the wrong one and it's a quick fix via the edit (pencil)
+    // icon's Status dropdown on either deal.
     const { data: pending } = await supabase
       .from("deals")
       .select("id")
@@ -70,11 +75,20 @@ export async function applyStageChange(
       .single();
     dealId = data?.id ?? null;
     dealMode = "under_contract";
-  } else if (leavingUnderContractWithoutClosing) {
-    // Contract fell through before closing - the pending row was never a
-    // real conversion, so it's deleted rather than left dangling.
-    await supabase.from("deals").delete().eq("contact_id", contactId).eq("status", "pending");
+  } else if (oldStage?.is_under_contract && !newStage?.is_under_contract) {
+    // Left an Under Contract stage without closing - never auto-delete,
+    // since a contact can have more than one deal in flight at once (a
+    // Buy/Sell client under contract on both sides) and there's no
+    // reliable way to know which pending deal the stage change was
+    // "about." Instead, surface every still-pending deal so the caller
+    // can ask before removing anything.
+    const { data: stillPending } = await supabase
+      .from("deals")
+      .select("id, address, client_name")
+      .eq("contact_id", contactId)
+      .eq("status", "pending");
+    if (stillPending && stillPending.length > 0) pendingAtRisk = stillPending;
   }
 
-  return { error: null, dealId, dealMode };
+  return { error: null, dealId, dealMode, pendingAtRisk };
 }

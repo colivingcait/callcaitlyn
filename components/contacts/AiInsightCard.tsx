@@ -6,8 +6,9 @@ import { createClient } from "@/lib/supabase/client";
 import { Button, Card, Badge } from "@/components/ui";
 import { Sparkles, Check, X } from "lucide-react";
 import { TIMELINE_LABELS } from "@/lib/utils";
-import { applyStageChange, type DealModalMode } from "@/lib/crm/stage-transition";
+import { applyStageChange, type DealModalMode, type PendingDealSummary } from "@/lib/crm/stage-transition";
 import { DealCelebrationModal } from "@/components/contacts/DealCelebrationModal";
+import { PendingDealCleanupModal } from "@/components/contacts/PendingDealCleanupModal";
 import type { AiInsight, DealSide, PipelineStage, Representing } from "@/types/database";
 
 export function AiInsightCard({
@@ -32,6 +33,7 @@ export function AiInsightCard({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [dealModal, setDealModal] = useState<{ id: string; mode: DealModalMode } | null>(null);
+  const [pendingCleanup, setPendingCleanup] = useState<PendingDealSummary[] | null>(null);
 
   const suggestedStage = stages.find((s) => s.id === insight.suggested_stage_id);
   const currentStage = stages.find((s) => s.id === contactStageId);
@@ -49,8 +51,15 @@ export function AiInsightCard({
     const supabase = createClient();
 
     if (suggestedStage) {
-      const { dealId, dealMode } = await applyStageChange(supabase, ownerId, contactId, currentStage, suggestedStage);
+      const { dealId, dealMode, pendingAtRisk } = await applyStageChange(
+        supabase,
+        ownerId,
+        contactId,
+        currentStage,
+        suggestedStage,
+      );
       if (dealId && dealMode) setDealModal({ id: dealId, mode: dealMode });
+      if (pendingAtRisk) setPendingCleanup(pendingAtRisk);
     }
     if (insight.suggested_timeline) {
       await supabase.from("contacts").update({ timeline: insight.suggested_timeline }).eq("id", contactId);
@@ -119,6 +128,7 @@ export function AiInsightCard({
           onClose={() => setDealModal(null)}
         />
       )}
+      {pendingCleanup && <PendingDealCleanupModal deals={pendingCleanup} onClose={() => setPendingCleanup(null)} />}
     </Card>
   );
 }
