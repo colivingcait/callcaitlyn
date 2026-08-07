@@ -4,6 +4,7 @@ import { fetchOrderWithAttendees, fetchEventName } from "@/lib/eventbrite/client
 import { parseEventbriteAttendees } from "@/lib/eventbrite/parse-event";
 import { findOrCreateContact, addTagByName } from "@/lib/crm/find-or-create-contact";
 import { upsertActivity } from "@/lib/crm/activities";
+import { recordEventAttendance } from "@/lib/crm/events";
 
 const OWNER_ID = process.env.CRM_OWNER_USER_ID;
 
@@ -65,10 +66,12 @@ export async function POST(request: NextRequest) {
 
       await addTagByName(admin, OWNER_ID, contact.id, "Meetup");
 
+      const occurredAt = typeof order.created === "string" ? order.created : new Date().toISOString();
+
       await upsertActivity(admin, OWNER_ID, contact.id, "eventbrite", "eventbrite_attendee_id", attendee.attendeeId, {
         type: "meeting",
         direction: "none",
-        occurred_at: typeof order.created === "string" ? order.created : new Date().toISOString(),
+        occurred_at: occurredAt,
         body: `Registered${eventName ? ` for ${eventName}` : " for an event"} via Eventbrite`,
         metadata: {
           eventbrite_attendee_id: attendee.attendeeId,
@@ -78,6 +81,8 @@ export async function POST(request: NextRequest) {
           raw: order,
         },
       });
+
+      await recordEventAttendance(admin, contact.id, eventName ?? "Eventbrite event", occurredAt);
     }
   } catch (err) {
     console.error("Error processing Eventbrite webhook", action, err);

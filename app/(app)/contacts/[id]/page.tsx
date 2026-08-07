@@ -9,7 +9,7 @@ import { ActivityTimeline } from "@/components/contacts/ActivityTimeline";
 import { AddActivityForm } from "@/components/contacts/AddActivityForm";
 import { TaskList } from "@/components/contacts/TaskList";
 import { ArchiveButton } from "@/components/contacts/ArchiveButton";
-import { Pencil, MapPin, DollarSign, Clock, Tag as TagIcon } from "lucide-react";
+import { Pencil, MapPin, DollarSign, Clock, Tag as TagIcon, CalendarHeart } from "lucide-react";
 
 export default async function ContactDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -88,6 +88,13 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
           {(contact.city || contact.state) && (
             <div className="flex items-center gap-2">
               <MapPin size={14} className="text-neutral-400" /> {[contact.city, contact.state].filter(Boolean).join(", ")}
+            </div>
+          )}
+          {contact.last_event_name && (
+            <div className="flex items-center gap-2">
+              <CalendarHeart size={14} className="text-neutral-400" />
+              Last event: {contact.last_event_name}
+              {contact.last_event_at && ` (${new Date(contact.last_event_at).toLocaleDateString()})`}
             </div>
           )}
         </div>

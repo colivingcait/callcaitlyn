@@ -71,6 +71,7 @@ opens full-screen like a native app.
 - **Quo call/text sync** — a webhook receiver at `/api/webhooks/quo` logs every call and text against the matching contact's activity timeline automatically (auto-creating a bare contact for numbers it doesn't recognize, so nothing gets missed). Confirmed working end to end (calls, texts, recordings, transcripts, summaries). Signature verification is still in log-only mode — see step 6 below.
 - **Calendly booking sync** — a webhook receiver at `/api/webhooks/calendly` logs new bookings (and cancellations) onto the matching contact's timeline, auto-creating a contact if the email/phone isn't recognized, and pulls the follow-up date forward to the meeting time if that's sooner than what's already set. See **Setting up Calendly** below — not yet tested against a real delivery.
 - **Eventbrite registration sync** — a webhook receiver at `/api/webhooks/eventbrite` fetches attendee details when someone registers for an event, logs it on the matching contact (or creates one), and tags them "Meetup". See **Setting up Eventbrite** below — not yet tested against a real delivery.
+- **Jotform check-in sync** — a webhook receiver at `/api/webhooks/jotform` matches in-person kiosk check-ins to existing contacts (from Eventbrite or elsewhere) by email/phone instead of creating duplicates, updates their last-event-attended date, and logs "how did you hear about us" + "house hacking journey" answers. See **Setting up Jotform** below — not yet tested against a real delivery.
 
 ## Setting up Quo (calling/texting sync)
 
@@ -126,11 +127,26 @@ Eventbrite webhooks only send a link to the changed resource, not the data itsel
 4. Add `EVENTBRITE_API_TOKEN` and `EVENTBRITE_WEBHOOK_SECRET` to Vercel, redeploy.
 5. Register for one of your own events as a test and confirm it shows up on the right contact, tagged "Meetup".
 
+## Setting up Jotform (in-person meetup check-in)
+
+For the iPad kiosk form: matches by email/phone against existing contacts (so people who already registered on Eventbrite, or are already in the CRM, get updated instead of duplicated), tags them "Meetup", updates their **last event attended** date, and logs the submission — including the "how did you hear about us" and "house hacking journey" answers — on their timeline. Run the migration below first (adds the last-event-attended fields), then:
+
+1. **Run the new migration**: open [`supabase/migrations/0002_last_event.sql`](./supabase/migrations/0002_last_event.sql) and run it in Supabase's SQL Editor, same as you did for the first one.
+2. Pick any long random string — this is `JOTFORM_WEBHOOK_SECRET`.
+3. In your Jotform form's builder: **Settings → Integrations → Webhooks** → add:
+   ```
+   https://callcaitlyn.com/api/webhooks/jotform?secret=YOUR_SECRET
+   ```
+4. Add `JOTFORM_WEBHOOK_SECRET` to Vercel, redeploy.
+5. Submit a test entry on the kiosk form and confirm it shows up on the right contact.
+
+**One thing not finished yet**: the "where are you at in your house hacking journey" answer is captured (visible on the logged activity and in `metadata.journey_stage`) but doesn't automatically move the contact's pipeline stage — that mapping needs the exact answer options from the form before it can be built. Field-label matching for name/email/phone/etc. is fuzzy (matches on keywords like "name", "email", "phone", "hear", "journey"/"stage") since Jotform doesn't send predictable field IDs — if a submission doesn't match up correctly, the full raw text is saved in `metadata.raw_pretty` so we can adjust it.
+
 ## Roadmap (next phases)
 
 Each of these needs its own API key/OAuth setup from your accounts before it can go live — the data model is already built to receive them (the `activities.source` and `metadata` columns exist specifically for this):
 
-1. **Jotform** — in-person event registrations match to existing contacts (from Eventbrite or elsewhere) by email/phone and update their "last event attended" instead of creating duplicates; only genuinely new people get a new contact. Also captures "how did you hear about us" (lead source) and a self-reported "where are you in your journey" stage question.
+1. **Jotform journey-stage mapping** — wire the self-reported "house hacking journey" answer to actually move new contacts into the right pipeline stage, once the exact answer options are confirmed.
 2. **Gmail** — capture new leads from your inbox, log email activity on contacts. Deferred for now — needs either accepting once-a-day sync on Vercel's free plan, paying for Vercel Pro for near-real-time polling, or building real-time push via Gmail + Google Cloud Pub/Sub (more setup, still free).
 3. **AI status detection & insights** — using an Anthropic API key, analyze new activity (especially texts) to auto-suggest stage changes ("I'm ready to start looking" → move to Hot/Ready) and generate a running action-item list per contact.
 4. **Newsletters & mass send** — AI-drafted emails in your voice, open/click tracking, scheduled sends to tagged audiences (e.g. promote a meetup to everyone tagged "Meetup").
@@ -154,13 +170,15 @@ app/auth/confirm/             Supabase auth magic-link verification handler
 app/api/webhooks/quo/         Quo call/text webhook receiver
 app/api/webhooks/calendly/    Calendly booking webhook receiver
 app/api/webhooks/eventbrite/  Eventbrite registration webhook receiver
+app/api/webhooks/jotform/     Jotform in-person check-in webhook receiver
 components/                   UI, nav, contact, dashboard, settings components
 lib/data/                     Server-side data fetching (Supabase queries)
 lib/supabase/                 Supabase client/server/middleware/admin helpers
-lib/crm/                      Shared integration logic: find-or-create contact, activity upsert
+lib/crm/                      Shared integration logic: find-or-create contact, activity upsert, event attendance
 lib/quo/                      Quo-specific webhook parsing + signature verification
 lib/calendly/                 Calendly-specific webhook parsing + signature verification
 lib/eventbrite/               Eventbrite-specific API client + attendee parsing
+lib/jotform/                  Jotform-specific submission parsing
 lib/validation/                Zod schemas for forms
 supabase/migrations/           Database schema (run in Supabase SQL Editor)
 types/database.ts              Hand-written types matching the schema

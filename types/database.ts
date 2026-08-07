@@ -91,6 +91,8 @@ export interface Contact {
   postal_code: string | null;
   notes: string | null;
   archived: boolean;
+  last_event_name: string | null;
+  last_event_at: string | null;
   ai_last_status_note: string | null;
   ai_last_analyzed_at: string | null;
   created_at: string;
