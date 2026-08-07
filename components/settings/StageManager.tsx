@@ -7,10 +7,8 @@ import { Button, Input, Card, Select } from "@/components/ui";
 import { ArrowUp, ArrowDown, Trash2, Plus } from "lucide-react";
 import type { PipelineStage } from "@/types/database";
 
-function statusOf(stage: PipelineStage) {
-  if (stage.is_closed_won) return "won";
-  if (stage.is_closed_lost) return "lost";
-  return "active";
+function isClosed(stage: PipelineStage) {
+  return stage.is_closed_won || stage.is_closed_lost;
 }
 
 export function StageManager({ stages, ownerId }: { stages: PipelineStage[]; ownerId: string }) {
@@ -60,8 +58,16 @@ export function StageManager({ stages, ownerId }: { stages: PipelineStage[]; own
     router.refresh();
   }
 
-  async function updateStatus(stage: PipelineStage, status: string) {
-    await updateStage(stage.id, { is_closed_won: status === "won", is_closed_lost: status === "lost" });
+  // Simple binary for the main control: Active or Closed. Closed defaults
+  // to "lost" until explicitly marked a win - the won/lost distinction
+  // only matters for the conversion-rate metric, so it's a secondary,
+  // only-shown-when-closed checkbox rather than a 3-way choice up front.
+  async function setActive(stage: PipelineStage, active: boolean) {
+    await updateStage(stage.id, active ? { is_closed_won: false, is_closed_lost: false } : { is_closed_lost: true });
+  }
+
+  async function setWon(stage: PipelineStage, won: boolean) {
+    await updateStage(stage.id, { is_closed_won: won, is_closed_lost: !won });
   }
 
   return (
@@ -69,7 +75,7 @@ export function StageManager({ stages, ownerId }: { stages: PipelineStage[]; own
       <h2 className="text-sm font-semibold text-neutral-700">Pipeline stages</h2>
       <p className="text-xs text-neutral-400">
         &quot;Active&quot; vs &quot;Closed&quot; controls who counts as an active lead on your dashboard and in
-        metrics — mark any stage that means the relationship is done (won or lost) as Closed.
+        metrics — mark any stage that means the relationship is done as Closed.
       </p>
       <div className="space-y-2">
         {sorted.map((stage, i) => (
@@ -86,14 +92,24 @@ export function StageManager({ stages, ownerId }: { stages: PipelineStage[]; own
               className="min-w-[7rem] flex-1"
             />
             <Select
-              value={statusOf(stage)}
-              onChange={(e) => updateStatus(stage, e.target.value)}
+              value={isClosed(stage) ? "closed" : "active"}
+              onChange={(e) => setActive(stage, e.target.value === "active")}
               className="w-auto shrink-0 text-xs"
             >
               <option value="active">Active</option>
-              <option value="won">Closed (Won)</option>
-              <option value="lost">Closed (Lost)</option>
+              <option value="closed">Closed</option>
             </Select>
+            {isClosed(stage) && (
+              <label className="flex shrink-0 items-center gap-1.5 text-xs text-neutral-500">
+                <input
+                  type="checkbox"
+                  checked={stage.is_closed_won}
+                  onChange={(e) => setWon(stage, e.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-neutral-300"
+                />
+                Win
+              </label>
+            )}
             <button
               onClick={() => move(i, -1)}
               disabled={i === 0}
