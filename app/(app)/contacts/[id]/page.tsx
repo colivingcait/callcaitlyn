@@ -18,6 +18,7 @@ import { AddActivityForm } from "@/components/contacts/AddActivityForm";
 import { TaskList } from "@/components/contacts/TaskList";
 import { ArchiveButton } from "@/components/contacts/ArchiveButton";
 import { AiInsightCard } from "@/components/contacts/AiInsightCard";
+import { DealsList } from "@/components/contacts/DealsList";
 import { SendTextForm } from "@/components/contacts/SendTextForm";
 import { Pencil, MapPin, DollarSign, Clock, Tag as TagIcon, CalendarHeart } from "lucide-react";
 
@@ -92,11 +93,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
             currentStageId={contact.stage_id}
             stages={stages}
           />
-          {deals.length > 0 && (
-            <p className="mt-1.5 text-xs text-neutral-400">
-              Deals closed: {deals.length} (most recent {formatLocal(deals[0].closed_at, "MMM d, yyyy")})
-            </p>
-          )}
+          <DealsList deals={deals} />
         </div>
         <div className="flex flex-wrap gap-2 text-sm text-neutral-600">
           <Badge className="bg-neutral-100 text-neutral-600">{CONTACT_TYPE_LABELS[contact.contact_type]}</Badge>
