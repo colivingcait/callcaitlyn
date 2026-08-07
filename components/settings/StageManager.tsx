@@ -74,14 +74,20 @@ export function StageManager({ stages, ownerId }: { stages: PipelineStage[]; own
     if (status === "active") {
       await updateStage(stage.id, { is_closed_won: false, is_closed_lost: false, is_trash: false });
     } else if (status === "closed") {
-      await updateStage(stage.id, { is_closed_lost: true, is_closed_won: false, is_trash: false });
+      // Under Contract doesn't apply once a stage means the relationship
+      // is done, so it's cleared along with the active-only checkbox.
+      await updateStage(stage.id, { is_closed_lost: true, is_closed_won: false, is_trash: false, is_under_contract: false });
     } else {
-      await updateStage(stage.id, { is_trash: true, is_closed_won: false, is_closed_lost: false });
+      await updateStage(stage.id, { is_trash: true, is_closed_won: false, is_closed_lost: false, is_under_contract: false });
     }
   }
 
   async function setWon(stage: PipelineStage, won: boolean) {
     await updateStage(stage.id, { is_closed_won: won, is_closed_lost: !won });
+  }
+
+  async function setUnderContract(stage: PipelineStage, value: boolean) {
+    await updateStage(stage.id, { is_under_contract: value });
   }
 
   return (
@@ -91,7 +97,8 @@ export function StageManager({ stages, ownerId }: { stages: PipelineStage[]; own
         &quot;Active&quot; vs &quot;Closed&quot; controls who counts as an active lead on your dashboard and in
         metrics — mark any stage that means the relationship is done as Closed. &quot;Trash&quot; is for
         contacts who were never a real lead (spam, wrong number) — moving a contact into a Trash stage
-        archives them and removes them from metrics entirely.
+        archives them and removes them from metrics entirely. Flag one active stage as &quot;Under Contract&quot;
+        to get a details prompt (address, price, etc.) the moment a deal goes pending, before it actually closes.
       </p>
       <div className="space-y-2">
         {sorted.map((stage, i) => (
@@ -125,6 +132,17 @@ export function StageManager({ stages, ownerId }: { stages: PipelineStage[]; own
                   className="h-3.5 w-3.5 rounded border-neutral-300"
                 />
                 Win
+              </label>
+            )}
+            {statusOf(stage) === "active" && (
+              <label className="flex shrink-0 items-center gap-1.5 text-xs text-neutral-500">
+                <input
+                  type="checkbox"
+                  checked={stage.is_under_contract}
+                  onChange={(e) => setUnderContract(stage, e.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-neutral-300"
+                />
+                Under Contract
               </label>
             )}
             <button

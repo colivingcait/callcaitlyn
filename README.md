@@ -109,11 +109,17 @@ Uses the `QUO_API_KEY` you already have set up — no new credential needed. Jus
 
 Each metric's trend arrow accounts for which direction is "good" — lower is better for speed to lead, higher is better for the three percentages.
 
-### Deals (repeat-conversion tracking)
+### Deals (repeat-conversion tracking + under-contract capture)
 
-A contact's *current* stage can't be the source of truth for "have they ever converted" — an investor can close a deal, then go right back to actively shopping for the next property, cycling back through your active pipeline. So closing is recorded separately: every time a contact's stage moves into a stage marked "Win" (and it wasn't already a Win stage), a permanent row gets written to the `deals` table, timestamped, and never touched again regardless of where the contact moves next. This happens automatically no matter how the stage change happens — the dropdown on a contact's profile, the pipeline board, or applying an AI suggestion.
+A contact's *current* stage can't be the source of truth for "have they ever converted" — an investor can close a deal, then go right back to actively shopping for the next property, cycling back through your active pipeline. So closing is recorded separately in a `deals` table, decoupled from the contact's stage.
 
-When that happens, a **deal details modal** pops up so you can capture the address, property type (Primary Residence / House Hack / Investment / Co-living / Other), which side you represented, sale price, what you made, when you started working with them (defaults to their lead-created date, editable), and freeform notes — or just hit "Skip for now," since the deal itself is already recorded either way and you can add the details later. The contact's profile page lists every deal with an edit (pencil) and delete (✕) icon on each — delete is for the "oops, wrong stage" case; edit is always available since those fields are just data entry, not conversion history. Run [`supabase/migrations/0008_deal_details.sql`](./supabase/migrations/0008_deal_details.sql) to add these columns.
+A deal has a lifecycle:
+
+1. **Under Contract** — flag any active stage as "Under Contract" in Settings → Pipeline stages (the default seed stage already has this). The moment a contact enters that stage, a `deals` row is written with `status: pending`, and a details modal pops up asking for the address, property type, which side you're on, sale price, when you started working with them (defaults to their lead-created date, editable), and notes — or just hit "Skip for now" and fill it in later. This is the point where you actually know these details, well before the transaction closes.
+2. **Falls through** — if the contact's stage moves off Under Contract *without* reaching a Win stage, the pending row is deleted automatically. It was never a real conversion, so it doesn't linger or skew any metrics.
+3. **Closes** — when the contact enters a stage marked "Win," the same pending row (if one exists — a deal can also close without ever passing through Under Contract) is finalized to `status: won`, and the modal reopens to collect the commission numbers: gross commission, referral %, misc fee, OZ fee. The KW/KWRI/FMLS/TC splits are calculated automatically on the Commissions page, not entered here.
+
+This all happens automatically no matter how the stage change happens — the dropdown on a contact's profile, the pipeline board, or applying an AI suggestion. Only `won` deals count toward the conversion-rate metric and the commission tracker; `pending` ones are informational only. The contact's profile page lists every deal (both pending and won) with an edit (pencil) and delete (✕) icon on each — delete is for the "oops, wrong stage" case; edit is always available since those fields are just data entry, not conversion history. Run [`supabase/migrations/0008_deal_details.sql`](./supabase/migrations/0008_deal_details.sql) and [`supabase/migrations/0010_under_contract.sql`](./supabase/migrations/0010_under_contract.sql) to add these.
 
 ### Buyer/seller tracking
 
@@ -122,6 +128,23 @@ Every contact can now be tagged **Representing: Buyer, Seller, or Buy/Sell** —
 ### Likelihood to close (pipeline board)
 
 A small High/Med/Low badge shows up next to active contacts on the pipeline board and profile page, as a first pass at "who in the pipeline is most likely to close soon." It's a deterministic score (not an AI call) from three inputs already on the contact: how far along their stage is, how urgent their timeline is, and whether they're tagged "Engaged" (3+ calls/texts in the last 7 days) — instant, free, and transparent about what's driving it. This is intentionally a coarse first pass, not deep conversation analysis; closed/lost/trash contacts don't get a score since the question doesn't apply to them anymore.
+
+## Commission tracker
+
+Reachable from the $ icon next to Settings (mobile) or the sidebar (desktop) at `/commissions`. It's built entirely from your closed (`won`) deals — nothing to enter separately — and mirrors your KW commission-year structure:
+
+- **KW**: 30% of (gross commission − referral fee), until you've paid $15,000 total for the commission year — then $0.
+- **KWRI**: 3% of the same base, capped at $3,000 for the year.
+- **FMLS**: 0.12% of sale price, every deal, no cap.
+- **TC**: flat $500 per transaction, every deal, no cap.
+- **Referral fee**: gross commission × the referral % you enter per deal, taken off the top *before* KW/KWRI are calculated — matches "referral is taken off the top, prior to any splits."
+- **OZ and Misc**: no formula (OZ isn't applicable to new deals since KW discontinued it, kept only for old deals that predate that) — both are whatever you typed on the deal.
+
+The **commission year runs Dec 1 – Nov 30**, not the calendar year — the caps reset at the start of each one. Because the KW/KWRI caps are cumulative, the calculation walks every `won` deal in a year in closing-date order — editing a deal's numbers, or deleting one, correctly recalculates every deal that closed after it in that same year. Use the year toggle at the top of the page to look at a different commission year; the page always includes the current one even before you've closed anything in it.
+
+The page shows the full deal-by-deal table (closing date, address, sale price, commission %, gross comp, side, every fee column, net commission, % of comm, % of list price) plus summary stats: total deals, volume, GCI, net commission, average sale price, average commission rate, average net per deal, buyer/seller split, a fee breakdown (with a note once you've hit the KW or KWRI cap for the year), and a lead-source breakdown. Run [`supabase/migrations/0009_commission_tracker.sql`](./supabase/migrations/0009_commission_tracker.sql) to add the columns this needs.
+
+**Importing past deals**: this only knows about deals recorded through the CRM. If you want your 2026 KW cap tracking to be accurate from day one, you'll need to manually add your already-closed 2026 deals as contacts (mark them Closed/Won to generate a deal row, or I can help you write a one-time import script if you'd rather not click through each one).
 
 ## Setting up Quo (calling/texting sync)
 

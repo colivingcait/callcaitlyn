@@ -14,6 +14,16 @@ export function fullName(c: { first_name: string; last_name?: string | null }) {
   return [c.first_name, c.last_name].filter(Boolean).join(" ").trim();
 }
 
+export function formatCurrency(value: number | null | undefined) {
+  if (value == null) return "—";
+  return `$${Math.round(value).toLocaleString()}`;
+}
+
+export function formatPercent(value: number | null | undefined, digits = 1) {
+  if (value == null) return "—";
+  return `${value.toFixed(digits)}%`;
+}
+
 export function formatPhone(phone?: string | null) {
   if (!phone) return "";
   const digits = phone.replace(/\D/g, "");

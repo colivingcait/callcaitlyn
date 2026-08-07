@@ -44,14 +44,19 @@ export function DealsList({
   const defaultSide = (representing === "buyer" || representing === "seller" ? representing : null) as
     | DealSide
     | null;
+  const wonCount = deals.filter((d) => d.status === "won").length;
 
   return (
     <div className="mt-1.5 space-y-1">
-      <p className="text-xs font-medium text-neutral-400">Deals closed: {deals.length}</p>
+      <p className="text-xs font-medium text-neutral-400">
+        Deals closed: {wonCount}
+        {deals.length > wonCount && ` (+${deals.length - wonCount} pending)`}
+      </p>
       <ul className="space-y-0.5">
         {deals.map((deal) => (
           <li key={deal.id} className="flex items-center gap-2 text-xs text-neutral-500">
             <span>
+              {deal.status === "pending" && <span className="font-medium text-amber-600">Pending · </span>}
               {formatLocal(deal.closed_at, "MMM d, yyyy")}
               {deal.address && ` · ${deal.address}`}
             </span>

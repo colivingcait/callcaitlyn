@@ -128,7 +128,11 @@ async function conversionRateFor(
   if (!contacts || contacts.length === 0) return null;
 
   const contactIds = contacts.map((c) => c.id);
-  const { data: deals } = await supabase.from("deals").select("contact_id").in("contact_id", contactIds);
+  const { data: deals } = await supabase
+    .from("deals")
+    .select("contact_id")
+    .eq("status", "won")
+    .in("contact_id", contactIds);
   const wonIds = new Set((deals ?? []).map((d) => d.contact_id));
 
   return (wonIds.size / contacts.length) * 100;

@@ -63,6 +63,7 @@ export interface PipelineStage {
   is_closed_won: boolean;
   is_closed_lost: boolean;
   is_trash: boolean;
+  is_under_contract: boolean;
   created_at: string;
 }
 
@@ -158,20 +159,29 @@ export interface AiInsight {
   created_at: string;
 }
 
-// One row per closed transaction, written when a contact enters a
-// "Win" stage and never touched again - lets a repeat investor cycle
-// back to active after closing without losing that they converted.
+export type DealStatus = "pending" | "won";
+
+// A row is created 'pending' the moment a contact enters an Under
+// Contract stage (captured early, doesn't count as a real conversion
+// yet), promoted in place to 'won' if they later enter a Win stage, or
+// deleted if the contract falls through. A 'won' row is never touched
+// again after that, so a repeat closer can cycle back to active without
+// losing that they converted.
 export interface Deal {
   id: string;
   owner_id: string;
   contact_id: string;
   stage_id: string | null;
+  status: DealStatus;
   closed_at: string;
   address: string | null;
   property_type: PropertyType | null;
   side: DealSide | null;
   sale_price: number | null;
-  commission_amount: number | null;
+  gross_commission: number | null;
+  referral_pct: number | null;
+  misc_fee: number;
+  oz_fee: number;
   lead_started_at: string | null;
   notes: string | null;
   created_at: string;

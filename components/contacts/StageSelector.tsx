@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Select } from "@/components/ui";
-import { applyStageChange } from "@/lib/crm/stage-transition";
+import { applyStageChange, type DealModalMode } from "@/lib/crm/stage-transition";
 import { DealCelebrationModal } from "@/components/contacts/DealCelebrationModal";
 import type { DealSide, PipelineStage, Representing } from "@/types/database";
 
@@ -28,7 +28,7 @@ export function StageSelector({
   const router = useRouter();
   const [value, setValue] = useState(currentStageId ?? "");
   const [saving, setSaving] = useState(false);
-  const [celebrateDealId, setCelebrateDealId] = useState<string | null>(null);
+  const [dealModal, setDealModal] = useState<{ id: string; mode: DealModalMode } | null>(null);
 
   async function handleChange(newStageId: string) {
     const previous = value;
@@ -39,7 +39,7 @@ export function StageSelector({
     const oldStage = stages.find((s) => s.id === previous);
     const newStage = stages.find((s) => s.id === newStageId);
 
-    const { error, dealId } = await applyStageChange(supabase, ownerId, contactId, oldStage, newStage);
+    const { error, dealId, dealMode } = await applyStageChange(supabase, ownerId, contactId, oldStage, newStage);
 
     if (!error) {
       await supabase.from("activities").insert({
@@ -50,7 +50,7 @@ export function StageSelector({
         source: "manual",
         body: `Stage changed from ${oldStage?.name ?? "None"} to ${newStage?.name ?? "None"}`,
       });
-      if (dealId) setCelebrateDealId(dealId);
+      if (dealId && dealMode) setDealModal({ id: dealId, mode: dealMode });
       router.refresh();
     } else {
       setValue(previous);
@@ -67,14 +67,14 @@ export function StageSelector({
           </option>
         ))}
       </Select>
-      {celebrateDealId && (
+      {dealModal && (
         <DealCelebrationModal
-          dealId={celebrateDealId}
+          dealId={dealModal.id}
           contactName={contactName ?? "This contact"}
           defaultLeadStartedAt={contactCreatedAt ?? null}
           defaultSide={(representing === "buyer" || representing === "seller" ? representing : null) as DealSide | null}
-          mode="celebrate"
-          onClose={() => setCelebrateDealId(null)}
+          mode={dealModal.mode ?? "celebrate"}
+          onClose={() => setDealModal(null)}
         />
       )}
     </>
