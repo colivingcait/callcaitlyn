@@ -255,7 +255,7 @@ Unlike the other integrations, Gmail requires a real OAuth connection (not a web
 
 ### 2. App setup
 
-1. Run [`supabase/migrations/0015_gmail_accounts.sql`](./supabase/migrations/0015_gmail_accounts.sql) and [`supabase/migrations/0016_email_sequences.sql`](./supabase/migrations/0016_email_sequences.sql) in Supabase's SQL Editor.
+1. Run [`supabase/migrations/0015_gmail_accounts.sql`](./supabase/migrations/0015_gmail_accounts.sql), [`supabase/migrations/0016_email_sequences.sql`](./supabase/migrations/0016_email_sequences.sql), and [`supabase/migrations/0017_gmail_oauth_states.sql`](./supabase/migrations/0017_gmail_oauth_states.sql) in Supabase's SQL Editor.
 2. Add `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` (the same callback URL from step 4 above), `APP_BASE_URL` (`https://www.callcaitlyn.com`), and a random string for `CRON_SECRET` to Vercel, then redeploy.
 3. **This needs Vercel Pro** (~$20/mo) — the free Hobby plan only allows daily cron jobs, and both inbox sync and scheduled sequence sends need to run every 15 minutes to be useful (a broadcast step scheduled for "9am" shouldn't fire whenever it happens to be tomorrow).
 4. In the app, go to **Settings** and click **Connect Gmail** — you'll be sent to Google's consent screen, then back to Settings showing "Connected as you@gmail.com".

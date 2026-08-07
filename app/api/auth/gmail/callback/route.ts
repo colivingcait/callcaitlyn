@@ -4,26 +4,24 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { exchangeCodeForTokens } from "@/lib/google/oauth";
 
 // Google's redirect back here is a cross-site navigation, which some
-// browsers don't reliably carry the session cookie across - so this route
-// doesn't require a recognized Supabase session (see middleware.ts). The
-// gmail_oauth_state cookie (short-lived, set by /connect, checked below)
-// is the real guard against this being hit by anyone but the browser that
-// just started the connect flow. Since this is a single-owner CRM,
-// CRM_OWNER_USER_ID is who the tokens belong to - no session needed to
-// know that.
+// browsers don't reliably carry cookies across - so this route doesn't
+// depend on a recognized Supabase session (see middleware.ts) or on a
+// cookie for the CSRF-style state check. Instead the state value is
+// recorded server-side by /connect and looked up here, single-use. Since
+// this is a single-owner CRM, CRM_OWNER_USER_ID is who the tokens belong
+// to - no session needed to know that either.
 export async function GET(request: NextRequest) {
   const settingsUrl = new URL("/settings", request.url);
 
   const code = request.nextUrl.searchParams.get("code");
   const state = request.nextUrl.searchParams.get("state");
-  const storedState = request.cookies.get("gmail_oauth_state")?.value;
   const error = request.nextUrl.searchParams.get("error");
 
   if (error) {
     settingsUrl.searchParams.set("gmail_error", error);
     return NextResponse.redirect(settingsUrl);
   }
-  if (!code || !state || !storedState || state !== storedState) {
+  if (!code || !state) {
     settingsUrl.searchParams.set("gmail_error", "state_mismatch");
     return NextResponse.redirect(settingsUrl);
   }
@@ -36,6 +34,14 @@ export async function GET(request: NextRequest) {
   }
 
   const admin = createAdminClient();
+
+  const { data: pending } = await admin.from("gmail_oauth_states").select("created_at").eq("state", state).maybeSingle();
+  await admin.from("gmail_oauth_states").delete().eq("state", state);
+  const isExpired = !pending || Date.now() - new Date(pending.created_at).getTime() > 10 * 60_000;
+  if (isExpired) {
+    settingsUrl.searchParams.set("gmail_error", "state_mismatch");
+    return NextResponse.redirect(settingsUrl);
+  }
 
   try {
     const tokens = await exchangeCodeForTokens(code);
@@ -70,7 +76,5 @@ export async function GET(request: NextRequest) {
     settingsUrl.searchParams.set("gmail_error", "exchange_failed");
   }
 
-  const response = NextResponse.redirect(settingsUrl);
-  response.cookies.delete("gmail_oauth_state");
-  return response;
+  return NextResponse.redirect(settingsUrl);
 }
