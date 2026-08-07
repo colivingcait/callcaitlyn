@@ -273,11 +273,20 @@ Two trigger types, picked per sequence, both driven off a tag:
 - **Scheduled** — each step fires on a fixed date/time, to whoever currently has the target tag *at that moment*. Built for event promotion: schedule "3 days before," "day-of," and "follow-up" steps once for your August meetup, and anyone who joins the "House Hacking Meetup" tag in July gets all three; anyone who joins in mid-August only gets whichever steps haven't fired yet.
 - **Drip** — each contact starts their own clock the moment they get the target tag, and steps fire at a delay relative to that (e.g. "1 day after joining," then "3 days after the previous step"). Two people who join a week apart each get their own independent timing. Built for an ongoing mailing list/nurture sequence rather than a one-time campaign.
 
-Create one from **Sequences** (sidebar on desktop, or "Manage sequences" under Settings → Gmail on mobile): name it, pick a type and a target tag, then add steps. Every step supports `{{first_name}}` / `{{last_name}}` merge fields in the subject or body.
+Create one from **Sequences** (sidebar on desktop, or "Manage sequences" under Settings → Gmail on mobile): name it, optionally jot a note for yourself, pick a type and a target tag (or create a new tag right there), then add steps. Every step supports `{{first_name}}` / `{{last_name}}` merge fields in the subject or body, with a live preview while you draft it, and a "Send test to myself" button to proofread in your actual inbox before it goes live.
 
-Every sequence email automatically gets an invisible open-tracking pixel, every link rewritten to track clicks, and an unsubscribe footer — none of that needs to be added by hand. Each sequence's detail page shows per-step stats (sent/opened/clicked/unsubscribed counts) and a list of who's unsubscribed from *that* sequence specifically — unsubscribing is per-sequence, not global, so opting out of the newsletter drip doesn't silently drop someone from event reminders they still want.
+Every sequence email automatically gets an invisible open-tracking pixel, every link rewritten to track clicks, and an unsubscribe footer (including the RFC 8058 one-click header mail clients use) — none of that needs to be added by hand.
 
-A sequence can be paused (stops sending, keeps its history and enrollments) or deleted (removes steps and history) from its detail page.
+Each sequence's detail page shows:
+- A rollup (open/click/click-to-open/unsubscribe rates, plus which step opened best and worst) once it's sent anything
+- Per-step rate bars, a pause toggle for that step alone (holds it without stopping the rest of the sequence), and safe drag-free reordering
+- **Scheduled sequences**: an upcoming-sends panel with a live preview of how many contacts currently have the target tag
+- **Drip sequences**: an enrolled-contacts panel showing each contact's current step and next-send date, with per-contact pause/remove and a manual "enroll a contact" search (for backfilling someone outside the normal tag trigger)
+- A recent activity feed (opens/clicks/unsubscribes as they happen) and a list of who's unsubscribed from *that* sequence specifically, and from which step — unsubscribing is per-sequence, not global, so opting out of the newsletter drip doesn't silently drop someone from event reminders they still want
+
+A sequence can be paused (stops sending, keeps its history and enrollments), duplicated as a starting template for a new one, or deleted (removes steps and history) from its detail page. The Sequences list page also shows a dashboard (active sequences, currently enrolled, last-30-day sends/open rate) across everything at once.
+
+If you set up sequences before this upgrade, run [`supabase/migrations/0018_sequence_upgrades.sql`](./supabase/migrations/0018_sequence_upgrades.sql) once in Supabase's SQL Editor to pick up the new step-pause/notes/enrollment-pause columns.
 
 ## Roadmap (next phases)
 
