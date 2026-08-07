@@ -12,15 +12,21 @@ export interface ParsedDealRow {
   miscFee: number;
   ozFee: number;
   onFmls: boolean;
+  // Only used when the import is set to "use exact fee amounts" - parsed
+  // regardless of that setting so switching the toggle after pasting
+  // doesn't require re-pasting.
+  kwFee: number;
+  kwriFee: number;
+  fmlsFee: number;
+  tcFee: number;
+  referralFee: number;
   notes: string | null;
   errors: string[];
 }
 
 // Aliases cover both our own simple template AND the literal column names
 // on a typical KW-style commission spreadsheet, so a row copied straight
-// out of an existing tracker (including columns we don't use, like KW/
-// KWRI/Total Fees - those get recomputed fresh, not imported) still parses
-// without reformatting first.
+// out of an existing tracker still parses without reformatting first.
 const HEADER_ALIASES: Record<string, string> = {
   address: "address",
   property: "address",
@@ -40,6 +46,8 @@ const HEADER_ALIASES: Record<string, string> = {
   side: "side",
   "referral %": "referralPct",
   "referral pct": "referralPct",
+  "referral fees": "referralFee",
+  "referral fee": "referralFee",
   referral: "referralPct",
   misc: "miscFee",
   "misc.": "miscFee",
@@ -48,6 +56,9 @@ const HEADER_ALIASES: Record<string, string> = {
   "oz fee": "ozFee",
   fmls: "fmls",
   "on fmls": "fmls",
+  kw: "kwFee",
+  kwri: "kwriFee",
+  tc: "tcFee",
   notes: "notes",
 };
 
@@ -91,6 +102,8 @@ function parseSide(raw: string | undefined): DealSide | null {
 
 // A blank/missing FMLS column defaults to "on" (the common case, matches
 // the checkbox's own default) - only an explicit $0/zero/"no" turns it off.
+// Only relevant in computed mode; manual mode uses the FMLS column's
+// dollar value directly instead (see fmlsFee).
 function parseOnFmls(raw: string | undefined): boolean {
   if (raw === undefined || raw.trim() === "") return true;
   const v = raw.trim().toLowerCase();
@@ -136,6 +149,11 @@ export function parseBulkDeals(text: string): { rows: ParsedDealRow[]; unmatched
       miscFee: parseMoney(byField.miscFee) ?? 0,
       ozFee: parseMoney(byField.ozFee) ?? 0,
       onFmls: parseOnFmls(byField.fmls),
+      kwFee: parseMoney(byField.kwFee) ?? 0,
+      kwriFee: parseMoney(byField.kwriFee) ?? 0,
+      fmlsFee: parseMoney(byField.fmls) ?? 0,
+      tcFee: parseMoney(byField.tcFee) ?? 0,
+      referralFee: parseMoney(byField.referralFee) ?? 0,
       notes: byField.notes?.trim() || null,
       errors,
     });

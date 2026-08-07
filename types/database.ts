@@ -188,6 +188,16 @@ export interface Deal {
   misc_fee: number;
   oz_fee: number;
   on_fmls: boolean;
+  // When true, kw_fee/kwri_fee/fmls_fee/tc_fee/referral_fee below are used
+  // as-is instead of being computed from the formula - for backfilling
+  // historical deals with their real, already-known paid amounts rather
+  // than a reconstruction that might not match old exceptions exactly.
+  manual_split: boolean;
+  kw_fee: number | null;
+  kwri_fee: number | null;
+  fmls_fee: number | null;
+  tc_fee: number | null;
+  referral_fee: number | null;
   lead_started_at: string | null;
   notes: string | null;
   created_at: string;

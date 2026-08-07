@@ -55,22 +55,29 @@ export function computeDeals<T extends Deal>(deals: T[]): (T & DealComputedField
 
   return sorted.map((deal) => {
     const gross = deal.gross_commission ?? 0;
-    const referralPct = deal.referral_pct ?? 0;
-    const referralFee = gross * (referralPct / 100);
+    const referralFee = deal.manual_split ? (deal.referral_fee ?? 0) : gross * ((deal.referral_pct ?? 0) / 100);
     const adjustedGross = gross - referralFee;
 
     const capYear = capYearKey(new Date(deal.closed_at));
 
+    // A manual deal's real paid amount still adds to the running cap
+    // total (so later formula-computed deals see accurate remaining room)
+    // - it's just never itself clamped by the cap, since it already
+    // happened exactly as entered.
     const kwPaidSoFar = kwPaid.get(capYear) ?? 0;
-    const kwFee = Math.min(adjustedGross * KW_RATE, Math.max(KW_CAP - kwPaidSoFar, 0));
+    const kwFee = deal.manual_split
+      ? (deal.kw_fee ?? 0)
+      : Math.min(adjustedGross * KW_RATE, Math.max(KW_CAP - kwPaidSoFar, 0));
     kwPaid.set(capYear, kwPaidSoFar + kwFee);
 
     const kwriPaidSoFar = kwriPaid.get(capYear) ?? 0;
-    const kwriFee = Math.min(adjustedGross * KWRI_RATE, Math.max(KWRI_CAP - kwriPaidSoFar, 0));
+    const kwriFee = deal.manual_split
+      ? (deal.kwri_fee ?? 0)
+      : Math.min(adjustedGross * KWRI_RATE, Math.max(KWRI_CAP - kwriPaidSoFar, 0));
     kwriPaid.set(capYear, kwriPaidSoFar + kwriFee);
 
-    const fmlsFee = deal.on_fmls ? (deal.sale_price ?? 0) * FMLS_RATE : 0;
-    const tcFee = TC_FLAT;
+    const fmlsFee = deal.manual_split ? (deal.fmls_fee ?? 0) : deal.on_fmls ? (deal.sale_price ?? 0) * FMLS_RATE : 0;
+    const tcFee = deal.manual_split ? (deal.tc_fee ?? 0) : TC_FLAT;
 
     const totalFees = referralFee + kwFee + kwriFee + deal.oz_fee + fmlsFee + tcFee + deal.misc_fee;
     const netCommission = gross - totalFees;

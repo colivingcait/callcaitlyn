@@ -8,11 +8,16 @@ import { formatCurrency } from "@/lib/utils";
 import { X, AlertTriangle } from "lucide-react";
 import { parseBulkDeals, type ParsedDealRow } from "@/lib/crm/bulk-import-deals";
 
-const TEMPLATE = "Address\tClosing Date\tSale Price\tGross Comp\tSide\tReferral %\tMisc\tOZ\tFMLS\tNotes";
+const TEMPLATE =
+  "Address\tClosing Date\tSale Price\tGross Comp\tSide\tReferral Fees\tKW\tKWRI\tOZ\tFMLS\tTC\tMisc\tNotes";
 
 export function BulkImportModal({ onClose }: { onClose: () => void }) {
   const router = useRouter();
   const [text, setText] = useState("");
+  // Defaults on since backfilling past deals with their real, already-
+  // known fee amounts is the primary reason to bulk-import in the first
+  // place - flip it off to have KW/KWRI/FMLS/TC calculated instead.
+  const [manualSplit, setManualSplit] = useState(true);
   const [parsed, setParsed] = useState<{ rows: ParsedDealRow[]; unmatchedHeaders: string[] } | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -50,10 +55,12 @@ export function BulkImportModal({ onClose }: { onClose: () => void }) {
         side: r.side,
         sale_price: r.salePrice,
         gross_commission: r.grossCommission,
-        referral_pct: r.referralPct,
         misc_fee: r.miscFee,
         oz_fee: r.ozFee,
-        on_fmls: r.onFmls,
+        manual_split: manualSplit,
+        ...(manualSplit
+          ? { kw_fee: r.kwFee, kwri_fee: r.kwriFee, fmls_fee: r.fmlsFee, tc_fee: r.tcFee, referral_fee: r.referralFee }
+          : { referral_pct: r.referralPct, on_fmls: r.onFmls }),
         notes: r.notes,
       })),
     );
@@ -77,13 +84,21 @@ export function BulkImportModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <p className="mt-0.5 text-sm text-neutral-500">
-          Copy rows straight from a spreadsheet (including your own commission tracker — extra columns like KW,
-          KWRI, and Total Fees are ignored, since those get recalculated fresh) and paste below. First row must be
-          headers.
+          Copy rows straight from a spreadsheet — you can paste your entire existing tracker as-is, extra columns
+          just get ignored. First row must be headers.
         </p>
 
         {!parsed && (
           <div className="mt-4 space-y-3">
+            <label className="flex items-center gap-2 text-sm text-neutral-600">
+              <input
+                type="checkbox"
+                checked={manualSplit}
+                onChange={(e) => setManualSplit(e.target.checked)}
+                className="h-4 w-4 rounded border-neutral-300"
+              />
+              Use my exact KW / KWRI / FMLS / TC / Referral amounts instead of recalculating them
+            </label>
             <Textarea
               rows={10}
               value={text}
@@ -92,8 +107,12 @@ export function BulkImportModal({ onClose }: { onClose: () => void }) {
               className="font-mono text-xs"
             />
             <p className="text-xs text-neutral-400">
-              Recognized headers: Address (or Client Name), Closing Date, Sale Price, Gross Comp, Side, Referral %,
-              Misc, OZ, FMLS, Notes. Address or Client Name and Closing Date are required per row.
+              Recognized headers: Address (or Client Name), Closing Date, Sale Price, Gross Comp, Side, Misc, OZ,
+              Notes, plus{" "}
+              {manualSplit
+                ? "KW, KWRI, TC, FMLS, and Referral Fees (all as dollar amounts, used exactly as entered)"
+                : "Referral % and FMLS (Yes/No or a $ amount — zero/No means that deal isn't on FMLS)"}
+              . Address or Client Name and Closing Date are required per row.
             </p>
             <Button onClick={handleParse} disabled={!text.trim()}>
               Preview
@@ -123,7 +142,7 @@ export function BulkImportModal({ onClose }: { onClose: () => void }) {
             )}
 
             <div className="overflow-x-auto rounded-xl border border-neutral-200">
-              <table className="w-full min-w-[600px] text-left text-xs">
+              <table className="w-full min-w-[700px] text-left text-xs">
                 <thead>
                   <tr className="border-b border-neutral-100 text-neutral-400">
                     <th className="px-2 py-1.5 font-medium">Client / Address</th>
@@ -131,7 +150,16 @@ export function BulkImportModal({ onClose }: { onClose: () => void }) {
                     <th className="px-2 py-1.5 font-medium">Sale Price</th>
                     <th className="px-2 py-1.5 font-medium">Gross Comp</th>
                     <th className="px-2 py-1.5 font-medium">Side</th>
-                    <th className="px-2 py-1.5 font-medium">FMLS</th>
+                    {manualSplit ? (
+                      <>
+                        <th className="px-2 py-1.5 font-medium">KW</th>
+                        <th className="px-2 py-1.5 font-medium">KWRI</th>
+                        <th className="px-2 py-1.5 font-medium">FMLS</th>
+                        <th className="px-2 py-1.5 font-medium">TC</th>
+                      </>
+                    ) : (
+                      <th className="px-2 py-1.5 font-medium">On FMLS</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -142,15 +170,26 @@ export function BulkImportModal({ onClose }: { onClose: () => void }) {
                       <td className="whitespace-nowrap px-2 py-1.5">{formatCurrency(r.salePrice)}</td>
                       <td className="whitespace-nowrap px-2 py-1.5">{formatCurrency(r.grossCommission)}</td>
                       <td className="px-2 py-1.5 capitalize">{r.side ?? "—"}</td>
-                      <td className="px-2 py-1.5">{r.onFmls ? "Yes" : "No"}</td>
+                      {manualSplit ? (
+                        <>
+                          <td className="whitespace-nowrap px-2 py-1.5">{formatCurrency(r.kwFee)}</td>
+                          <td className="whitespace-nowrap px-2 py-1.5">{formatCurrency(r.kwriFee)}</td>
+                          <td className="whitespace-nowrap px-2 py-1.5">{formatCurrency(r.fmlsFee)}</td>
+                          <td className="whitespace-nowrap px-2 py-1.5">{formatCurrency(r.tcFee)}</td>
+                        </>
+                      ) : (
+                        <td className="px-2 py-1.5">{r.onFmls ? "Yes" : "No"}</td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
             <p className="text-xs text-neutral-400">
-              Double-check these against your source before importing — KW, KWRI, and FMLS fees are calculated
-              fresh from sale price and gross commission once saved, not copied from your original sheet.
+              Double-check these against your source before importing.{" "}
+              {manualSplit
+                ? "KW/KWRI/FMLS/TC will be saved exactly as shown above — they still count toward this commission year's KW/KWRI caps for deals that come after."
+                : "KW, KWRI, and FMLS fees will be calculated fresh from sale price and gross commission once saved, not copied from your original sheet."}
             </p>
 
             {error && <p className="text-sm text-red-600">{error}</p>}

@@ -47,6 +47,12 @@ export function DealCelebrationModal({
   const [miscFee, setMiscFee] = useState(initial?.misc_fee?.toString() ?? "");
   const [ozFee, setOzFee] = useState(initial?.oz_fee?.toString() ?? "");
   const [onFmls, setOnFmls] = useState(initial?.on_fmls ?? true);
+  const [manualSplit, setManualSplit] = useState(initial?.manual_split ?? false);
+  const [kwFee, setKwFee] = useState(initial?.kw_fee?.toString() ?? "");
+  const [kwriFee, setKwriFee] = useState(initial?.kwri_fee?.toString() ?? "");
+  const [manualFmlsFee, setManualFmlsFee] = useState(initial?.fmls_fee?.toString() ?? "");
+  const [tcFee, setTcFee] = useState(initial?.tc_fee?.toString() ?? "");
+  const [manualReferralFee, setManualReferralFee] = useState(initial?.referral_fee?.toString() ?? "");
   const [leadStartedAt, setLeadStartedAt] = useState(
     (initial?.lead_started_at ?? defaultLeadStartedAt)?.slice(0, 10) ?? "",
   );
@@ -61,13 +67,22 @@ export function DealCelebrationModal({
       side: side || null,
       sale_price: salePrice ? Number(salePrice) : null,
       gross_commission: grossCommission ? Number(grossCommission) : null,
-      referral_pct: referralPct ? Number(referralPct) : null,
       misc_fee: miscFee ? Number(miscFee) : 0,
       oz_fee: ozFee ? Number(ozFee) : 0,
-      on_fmls: onFmls,
+      manual_split: manualSplit,
       lead_started_at: leadStartedAt ? new Date(leadStartedAt).toISOString() : null,
       notes: notes || null,
     };
+    if (manualSplit) {
+      patch.kw_fee = kwFee ? Number(kwFee) : 0;
+      patch.kwri_fee = kwriFee ? Number(kwriFee) : 0;
+      patch.fmls_fee = manualFmlsFee ? Number(manualFmlsFee) : 0;
+      patch.tc_fee = tcFee ? Number(tcFee) : 0;
+      patch.referral_fee = manualReferralFee ? Number(manualReferralFee) : 0;
+    } else {
+      patch.referral_pct = referralPct ? Number(referralPct) : null;
+      patch.on_fmls = onFmls;
+    }
     // Closing date isn't meaningful yet while a deal is still pending
     // (under contract) - closed_at there means "entered under contract at,"
     // not an actual close date, so it's left untouched in that mode.
@@ -181,41 +196,87 @@ export function DealCelebrationModal({
               />
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <Label htmlFor="deal-referral-pct">Referral %</Label>
-              <Input
-                id="deal-referral-pct"
-                type="number"
-                step="0.5"
-                value={referralPct}
-                onChange={(e) => setReferralPct(e.target.value)}
-                placeholder="0"
+          {mode === "edit" && (
+            <label className="flex items-center gap-2 text-sm text-neutral-600">
+              <input
+                type="checkbox"
+                checked={manualSplit}
+                onChange={(e) => setManualSplit(e.target.checked)}
+                className="h-4 w-4 rounded border-neutral-300"
               />
+              Use exact fee amounts instead of calculating them
+            </label>
+          )}
+          {manualSplit ? (
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label htmlFor="deal-kw-fee">KW</Label>
+                <Input id="deal-kw-fee" type="number" step="10" value={kwFee} onChange={(e) => setKwFee(e.target.value)} placeholder="0" />
+              </div>
+              <div>
+                <Label htmlFor="deal-kwri-fee">KWRI</Label>
+                <Input id="deal-kwri-fee" type="number" step="10" value={kwriFee} onChange={(e) => setKwriFee(e.target.value)} placeholder="0" />
+              </div>
+              <div>
+                <Label htmlFor="deal-fmls-fee">FMLS</Label>
+                <Input id="deal-fmls-fee" type="number" step="10" value={manualFmlsFee} onChange={(e) => setManualFmlsFee(e.target.value)} placeholder="0" />
+              </div>
+              <div>
+                <Label htmlFor="deal-tc-fee">TC</Label>
+                <Input id="deal-tc-fee" type="number" step="10" value={tcFee} onChange={(e) => setTcFee(e.target.value)} placeholder="0" />
+              </div>
+              <div>
+                <Label htmlFor="deal-referral-fee">Referral $</Label>
+                <Input id="deal-referral-fee" type="number" step="10" value={manualReferralFee} onChange={(e) => setManualReferralFee(e.target.value)} placeholder="0" />
+              </div>
+              <div>
+                <Label htmlFor="deal-misc-fee">Misc fee</Label>
+                <Input id="deal-misc-fee" type="number" step="10" value={miscFee} onChange={(e) => setMiscFee(e.target.value)} placeholder="0" />
+              </div>
+              <div>
+                <Label htmlFor="deal-oz-fee">OZ fee</Label>
+                <Input id="deal-oz-fee" type="number" step="10" value={ozFee} onChange={(e) => setOzFee(e.target.value)} placeholder="0" />
+              </div>
             </div>
-            <div>
-              <Label htmlFor="deal-misc-fee">Misc fee</Label>
-              <Input id="deal-misc-fee" type="number" step="10" value={miscFee} onChange={(e) => setMiscFee(e.target.value)} placeholder="0" />
-            </div>
-            <div>
-              <Label htmlFor="deal-oz-fee">OZ fee</Label>
-              <Input id="deal-oz-fee" type="number" step="10" value={ozFee} onChange={(e) => setOzFee(e.target.value)} placeholder="0" />
-            </div>
-          </div>
-          <label className="flex items-center gap-2 text-sm text-neutral-600">
-            <input
-              type="checkbox"
-              checked={onFmls}
-              onChange={(e) => setOnFmls(e.target.checked)}
-              className="h-4 w-4 rounded border-neutral-300"
-            />
-            On FMLS
-          </label>
-          <p className="text-xs text-neutral-400">
-            KW (30% to $15k cap), KWRI (3% to $3k cap), and TC ($500) are calculated automatically on the
-            Commissions page based on your sale price and gross commission. FMLS (0.12% of price) only applies if
-            the box above is checked. Referral, misc, and OZ are the only splits you enter directly.
-          </p>
+          ) : (
+            <>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label htmlFor="deal-referral-pct">Referral %</Label>
+                  <Input
+                    id="deal-referral-pct"
+                    type="number"
+                    step="0.5"
+                    value={referralPct}
+                    onChange={(e) => setReferralPct(e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="deal-misc-fee">Misc fee</Label>
+                  <Input id="deal-misc-fee" type="number" step="10" value={miscFee} onChange={(e) => setMiscFee(e.target.value)} placeholder="0" />
+                </div>
+                <div>
+                  <Label htmlFor="deal-oz-fee">OZ fee</Label>
+                  <Input id="deal-oz-fee" type="number" step="10" value={ozFee} onChange={(e) => setOzFee(e.target.value)} placeholder="0" />
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-neutral-600">
+                <input
+                  type="checkbox"
+                  checked={onFmls}
+                  onChange={(e) => setOnFmls(e.target.checked)}
+                  className="h-4 w-4 rounded border-neutral-300"
+                />
+                On FMLS
+              </label>
+              <p className="text-xs text-neutral-400">
+                KW (30% to $15k cap), KWRI (3% to $3k cap), and TC ($500) are calculated automatically on the
+                Commissions page based on your sale price and gross commission. FMLS (0.12% of price) only applies
+                if the box above is checked. Referral, misc, and OZ are the only splits you enter directly.
+              </p>
+            </>
+          )}
           <div>
             <Label htmlFor="deal-lead-started">Started working with them</Label>
             <Input

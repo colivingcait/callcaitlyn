@@ -27,6 +27,14 @@ export function AddPastDealModal({ onClose }: { onClose: () => void }) {
   const [miscFee, setMiscFee] = useState("");
   const [ozFee, setOzFee] = useState("");
   const [onFmls, setOnFmls] = useState(true);
+  // Defaults on since a past deal's real fees are usually already known -
+  // matches Bulk import's default for the same reason.
+  const [manualSplit, setManualSplit] = useState(true);
+  const [kwFee, setKwFee] = useState("");
+  const [kwriFee, setKwriFee] = useState("");
+  const [manualFmlsFee, setManualFmlsFee] = useState("");
+  const [tcFee, setTcFee] = useState("");
+  const [manualReferralFee, setManualReferralFee] = useState("");
   const [notes, setNotes] = useState("");
 
   async function handleSave() {
@@ -53,10 +61,18 @@ export function AddPastDealModal({ onClose }: { onClose: () => void }) {
       side: side || null,
       sale_price: salePrice ? Number(salePrice) : null,
       gross_commission: grossCommission ? Number(grossCommission) : null,
-      referral_pct: referralPct ? Number(referralPct) : null,
       misc_fee: miscFee ? Number(miscFee) : 0,
       oz_fee: ozFee ? Number(ozFee) : 0,
-      on_fmls: onFmls,
+      manual_split: manualSplit,
+      ...(manualSplit
+        ? {
+            kw_fee: kwFee ? Number(kwFee) : 0,
+            kwri_fee: kwriFee ? Number(kwriFee) : 0,
+            fmls_fee: manualFmlsFee ? Number(manualFmlsFee) : 0,
+            tc_fee: tcFee ? Number(tcFee) : 0,
+            referral_fee: manualReferralFee ? Number(manualReferralFee) : 0,
+          }
+        : { referral_pct: referralPct ? Number(referralPct) : null, on_fmls: onFmls }),
       notes: notes || null,
     });
 
@@ -133,33 +149,77 @@ export function AddPastDealModal({ onClose }: { onClose: () => void }) {
               />
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <Label htmlFor="past-referral-pct">Referral %</Label>
-              <Input id="past-referral-pct" type="number" step="0.5" value={referralPct} onChange={(e) => setReferralPct(e.target.value)} placeholder="0" />
-            </div>
-            <div>
-              <Label htmlFor="past-misc-fee">Misc fee</Label>
-              <Input id="past-misc-fee" type="number" step="10" value={miscFee} onChange={(e) => setMiscFee(e.target.value)} placeholder="0" />
-            </div>
-            <div>
-              <Label htmlFor="past-oz-fee">OZ fee</Label>
-              <Input id="past-oz-fee" type="number" step="10" value={ozFee} onChange={(e) => setOzFee(e.target.value)} placeholder="0" />
-            </div>
-          </div>
           <label className="flex items-center gap-2 text-sm text-neutral-600">
             <input
               type="checkbox"
-              checked={onFmls}
-              onChange={(e) => setOnFmls(e.target.checked)}
+              checked={manualSplit}
+              onChange={(e) => setManualSplit(e.target.checked)}
               className="h-4 w-4 rounded border-neutral-300"
             />
-            On FMLS
+            Use exact fee amounts instead of calculating them
           </label>
-          <p className="text-xs text-neutral-400">
-            KW, KWRI, and TC are calculated automatically once saved, same as any other deal. FMLS only applies if
-            the box above is checked.
-          </p>
+          {manualSplit ? (
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label htmlFor="past-kw-fee">KW</Label>
+                <Input id="past-kw-fee" type="number" step="10" value={kwFee} onChange={(e) => setKwFee(e.target.value)} placeholder="0" />
+              </div>
+              <div>
+                <Label htmlFor="past-kwri-fee">KWRI</Label>
+                <Input id="past-kwri-fee" type="number" step="10" value={kwriFee} onChange={(e) => setKwriFee(e.target.value)} placeholder="0" />
+              </div>
+              <div>
+                <Label htmlFor="past-fmls-fee">FMLS</Label>
+                <Input id="past-fmls-fee" type="number" step="10" value={manualFmlsFee} onChange={(e) => setManualFmlsFee(e.target.value)} placeholder="0" />
+              </div>
+              <div>
+                <Label htmlFor="past-tc-fee">TC</Label>
+                <Input id="past-tc-fee" type="number" step="10" value={tcFee} onChange={(e) => setTcFee(e.target.value)} placeholder="0" />
+              </div>
+              <div>
+                <Label htmlFor="past-referral-fee">Referral $</Label>
+                <Input id="past-referral-fee" type="number" step="10" value={manualReferralFee} onChange={(e) => setManualReferralFee(e.target.value)} placeholder="0" />
+              </div>
+              <div>
+                <Label htmlFor="past-misc-fee">Misc fee</Label>
+                <Input id="past-misc-fee" type="number" step="10" value={miscFee} onChange={(e) => setMiscFee(e.target.value)} placeholder="0" />
+              </div>
+              <div>
+                <Label htmlFor="past-oz-fee">OZ fee</Label>
+                <Input id="past-oz-fee" type="number" step="10" value={ozFee} onChange={(e) => setOzFee(e.target.value)} placeholder="0" />
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label htmlFor="past-referral-pct">Referral %</Label>
+                  <Input id="past-referral-pct" type="number" step="0.5" value={referralPct} onChange={(e) => setReferralPct(e.target.value)} placeholder="0" />
+                </div>
+                <div>
+                  <Label htmlFor="past-misc-fee">Misc fee</Label>
+                  <Input id="past-misc-fee" type="number" step="10" value={miscFee} onChange={(e) => setMiscFee(e.target.value)} placeholder="0" />
+                </div>
+                <div>
+                  <Label htmlFor="past-oz-fee">OZ fee</Label>
+                  <Input id="past-oz-fee" type="number" step="10" value={ozFee} onChange={(e) => setOzFee(e.target.value)} placeholder="0" />
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-neutral-600">
+                <input
+                  type="checkbox"
+                  checked={onFmls}
+                  onChange={(e) => setOnFmls(e.target.checked)}
+                  className="h-4 w-4 rounded border-neutral-300"
+                />
+                On FMLS
+              </label>
+              <p className="text-xs text-neutral-400">
+                KW, KWRI, and TC are calculated automatically once saved, same as any other deal. FMLS only applies
+                if the box above is checked.
+              </p>
+            </>
+          )}
           <div>
             <Label htmlFor="past-notes">Notes</Label>
             <Textarea id="past-notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
