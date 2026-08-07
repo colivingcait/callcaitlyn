@@ -50,15 +50,21 @@ export async function POST(request: NextRequest) {
             duration_seconds: call.durationSeconds,
             recording_url: call.recordingUrl,
             summary: call.summary,
+            transcript: call.transcript,
             raw: body,
           },
         });
       }
-    } else if (eventType === "call.recording.completed" || eventType === "call.summary.completed") {
+    } else if (
+      eventType === "call.recording.completed" ||
+      eventType === "call.summary.completed" ||
+      eventType === "call.transcript.completed"
+    ) {
       const call = parseQuoCall(body);
       await patchActivityMetadata(admin, OWNER_ID, "quo_call_id", call.quoCallId, {
         recording_url: call.recordingUrl ?? undefined,
         summary: call.summary ?? undefined,
+        transcript: call.transcript ?? undefined,
       });
     } else if (eventType === "message.received" || eventType === "message.delivered") {
       const msg = parseQuoMessage(body);

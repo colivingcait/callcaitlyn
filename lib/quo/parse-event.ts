@@ -25,6 +25,7 @@ export type ParsedQuoCall = {
   occurredAt: string;
   recordingUrl: string | null;
   summary: string | null;
+  transcript: string | null;
 };
 
 export type ParsedQuoMessage = {
@@ -54,6 +55,7 @@ export function parseQuoCall(body: AnyRecord): ParsedQuoCall {
   const to = asString(obj.to) ?? firstOf(obj.to) ?? firstOf((obj.participants as AnyRecord | undefined)?.to);
   const media = obj.media as AnyRecord[] | undefined;
   const recording = obj.recording as AnyRecord | undefined;
+  const transcript = obj.transcript as unknown;
 
   return {
     quoCallId: asString(obj.id),
@@ -64,7 +66,28 @@ export function parseQuoCall(body: AnyRecord): ParsedQuoCall {
     occurredAt: asString(obj.completedAt) ?? asString(obj.createdAt) ?? new Date().toISOString(),
     recordingUrl: asString(media?.[0]?.url) ?? asString(recording?.url) ?? asString(obj.recordingUrl),
     summary: asString(obj.summary) ?? asString(obj.aiSummary),
+    transcript: parseTranscript(transcript),
   };
+}
+
+function parseTranscript(transcript: unknown): string | null {
+  if (typeof transcript === "string") return transcript;
+  if (transcript && typeof transcript === "object") {
+    const obj = transcript as AnyRecord;
+    if (typeof obj.text === "string") return obj.text;
+    const dialogue = (obj.dialogue ?? obj.segments ?? obj.utterances) as AnyRecord[] | undefined;
+    if (Array.isArray(dialogue)) {
+      return dialogue
+        .map((turn) => {
+          const speaker = asString(turn.speaker) ?? asString(turn.identifier);
+          const content = asString(turn.content) ?? asString(turn.text);
+          return speaker && content ? `${speaker}: ${content}` : content;
+        })
+        .filter(Boolean)
+        .join("\n");
+    }
+  }
+  return null;
 }
 
 export function parseQuoMessage(body: AnyRecord): ParsedQuoMessage {
