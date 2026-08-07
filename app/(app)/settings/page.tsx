@@ -19,10 +19,11 @@ export default async function SettingsPage() {
       {user && <TagManager tags={tags} ownerId={user.id} />}
 
       <Card className="space-y-2 bg-neutral-50">
-        <h2 className="text-sm font-semibold text-neutral-700">Coming next</h2>
+        <h2 className="text-sm font-semibold text-neutral-700">Integrations</h2>
         <p className="text-sm text-neutral-500">
-          Quo call/text sync, Gmail lead capture, mass email &amp; newsletters, AI status detection and insights,
-          Eventbrite / Jotform / Calendly lead capture. Each connects here once it&apos;s wired up.
+          Quo call/text sync is wired up (see the README for setup) — calls and texts log automatically to each
+          contact&apos;s timeline. Still coming: Gmail lead capture, mass email &amp; newsletters, AI status
+          detection and insights, Eventbrite / Jotform / Calendly lead capture.
         </p>
       </Card>
     </div>

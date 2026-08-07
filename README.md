@@ -19,8 +19,10 @@ Jotform, Calendly, AI insights, newsletters) come next, one at a time — see
 2. Once it's ready, open **SQL Editor** in the left sidebar.
 3. Paste in the full contents of [`supabase/migrations/0001_init.sql`](./supabase/migrations/0001_init.sql) and run it. This creates every table, security policy, and seeds sensible default pipeline stages ("New Lead", "Contacted", "Nurturing", "Hot / Ready", "Under Contract", "Closed - Client", "Past Client", "Lost / Not Now") and starter tags — you can rename, reorder, add, or delete any of these later from the Settings page in the app.
 4. Go to **Authentication → Providers** and make sure **Email** is enabled. This app signs in with a magic link (no passwords), which is simplest on a phone.
-5. Go to **Authentication → URL Configuration** and add your site URL (e.g. `http://localhost:3000` for local dev, and your Vercel URL once deployed) to the **Redirect URLs** list, each followed by `/auth/callback` (e.g. `http://localhost:3000/auth/callback`).
-6. Go to **Project Settings → API** and copy the **Project URL** and **anon public** key.
+5. Go to **Authentication → URL Configuration** and set **Site URL** to your real domain (e.g. `https://callcaitlyn.com`), and add `https://callcaitlyn.com/auth/confirm` (and a `localhost:3000` version if testing locally) to **Redirect URLs**.
+6. Go to **Authentication → Emails → Templates → Magic Link** and replace `{{ .ConfirmationURL }}` in the link with `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next=/`. (This app verifies magic links via `token_hash` instead of the default PKCE `code` flow, because PKCE breaks when the link is opened in a different browser/app than the one that requested it — e.g. an email app's in-app browser.)
+7. Go to **Project Settings → API** and copy the **Project URL** and **anon public** key.
+8. (Recommended) Set up custom SMTP under **Authentication → Emails → SMTP Settings** — Supabase's built-in email sender has a very low rate limit. [Resend](https://resend.com) has a free tier that works well; you don't need a verified domain if you're only sending to your own email (the account you signed up to Resend with).
 
 ## 2. Configure environment variables
 
@@ -55,8 +57,8 @@ opens full-screen like a native app.
 
 1. Push this repo to GitHub (already done if you're reading this from the repo).
 2. Go to [vercel.com](https://vercel.com), **Add New Project**, import this repo.
-3. Add the same two environment variables (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`) in the Vercel project settings.
-4. Deploy. Then go back to Supabase **Authentication → URL Configuration** and add `https://your-app.vercel.app/auth/callback` to the redirect URLs.
+3. Add the same two environment variables (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`) in the Vercel project settings — plus the Quo-related ones from the section below once you're setting that up.
+4. Deploy. Then go back to Supabase **Authentication → URL Configuration** and add `https://your-app.vercel.app/auth/confirm` to the redirect URLs (and your custom domain's `/auth/confirm` once that's live).
 
 ## What's in phase 1
 
@@ -66,19 +68,32 @@ opens full-screen like a native app.
 - **Tasks** — follow-up reminders per contact, with due dates and priority.
 - **Pipeline** — stage-grouped view (accordion on mobile, kanban columns on desktop) with a quick stage-move dropdown per contact.
 - **Settings** — fully customize your pipeline stages (name, color, order) and tags. Nothing is hardcoded — this is meant to fit how *you* actually work, not a generic template.
+- **Quo call/text sync** — a webhook receiver at `/api/webhooks/quo` logs every call and text against the matching contact's activity timeline automatically (auto-creating a bare contact for numbers it doesn't recognize, so nothing gets missed). See **Setting up Quo** below — this one needs a bit of manual setup and a first real test to fully confirm.
+
+## Setting up Quo (calling/texting sync)
+
+This logs every call and text from your Quo number straight into each contact's activity timeline.
+
+1. **Get your Supabase user ID and service role key** (server-only secret, different from the anon key):
+   - Authentication → Users → copy the UID next to your email → this is `CRM_OWNER_USER_ID`.
+   - Project Settings → API → copy the **service_role** key → this is `SUPABASE_SERVICE_ROLE_KEY`. Treat this like a password — it bypasses all database security. Never share it in chat or commit it to the repo.
+2. **Get a Quo API key**: Quo → Settings → API (requires Owner/Admin on an active subscription) → this is `QUO_API_KEY`.
+3. **Register the webhook.** There's no dashboard button for this — it has to be created via Quo's API, and I haven't been able to confirm the exact request shape against their live docs from here (my sandboxed environment can't reach quo.com). Open [quo.com/docs](https://www.quo.com/docs) in your own browser, find the "create a webhook" page, and paste me the example request — I'll turn it into the exact `curl` command for your account and lock in the webhook signing key (`QUO_WEBHOOK_SIGNING_KEY`) at the same time. In the meantime, the receiver works with signature verification in log-only mode, so we can get it running now and harden it once confirmed.
+4. Add all four env vars (`CRM_OWNER_USER_ID`, `SUPABASE_SERVICE_ROLE_KEY`, `QUO_API_KEY`, `QUO_WEBHOOK_SIGNING_KEY`) to Vercel and redeploy.
+5. Once a real call/text comes in, check that it shows up on the right contact's timeline. If Quo's actual field names differ from what the code guesses, nothing is lost — the full raw payload is saved on the activity's `metadata.raw`, so we can adjust the parsing from real data.
+6. Set `CRM_QUO_ENFORCE_SIGNATURE=true` once the signature format is confirmed working, so the endpoint starts rejecting anything not actually from Quo.
 
 ## Roadmap (next phases)
 
 Each of these needs its own API key/OAuth setup from your accounts before it can go live — the data model is already built to receive them (the `activities.source` and `metadata` columns exist specifically for this):
 
-1. **Quo (calling/texting)** — confirmed feasible: Quo (formerly OpenPhone) has a REST API (`api.openphone.com/v1`) with contact sync and webhooks for `call.completed`, `call.recording.completed`, and `message.received`/`message.delivered`. Once you generate an API key in Quo (Settings → API, requires Owner/Admin), we wire up a webhook receiver that logs every call/text straight into each contact's timeline, including recordings/transcripts where available.
-2. **AI status detection & insights** — using an Anthropic API key, analyze new activity (especially texts) to auto-suggest stage changes ("I'm ready to start looking" → move to Hot/Ready) and generate a running action-item list per contact.
-3. **Gmail** — capture new leads from your inbox, log email activity on contacts, and lay the groundwork for mass email/newsletters.
-4. **Calendly** — new bookings auto-create or update contacts.
-5. **Eventbrite** — event registrations auto-populate as leads.
-6. **Jotform** — in-person event registrations/details flow straight into contacts with the right stage.
-7. **Newsletters & mass send** — AI-drafted emails in your voice, open/click tracking, scheduled sends to tagged audiences (e.g. promote a meetup to everyone tagged "Meetup").
-8. **Scheduled touches by tag** — e.g. auto-text/email a segment on a date (birthday reminders, closing anniversaries — the `important_dates` table is already there for this).
+1. **AI status detection & insights** — using an Anthropic API key, analyze new activity (especially texts) to auto-suggest stage changes ("I'm ready to start looking" → move to Hot/Ready) and generate a running action-item list per contact.
+2. **Gmail** — capture new leads from your inbox, log email activity on contacts, and lay the groundwork for mass email/newsletters.
+3. **Calendly** — new bookings auto-create or update contacts.
+4. **Eventbrite** — event registrations auto-populate as leads.
+5. **Jotform** — in-person event registrations/details flow straight into contacts with the right stage.
+6. **Newsletters & mass send** — AI-drafted emails in your voice, open/click tracking, scheduled sends to tagged audiences (e.g. promote a meetup to everyone tagged "Meetup").
+7. **Scheduled touches by tag** — e.g. auto-text/email a segment on a date (birthday reminders, closing anniversaries — the `important_dates` table is already there for this).
 
 ### Ideas worth adding as a realtor/event manager (not yet built, flagged for later)
 
@@ -92,13 +107,15 @@ Each of these needs its own API key/OAuth setup from your accounts before it can
 ## Project structure
 
 ```
-app/(app)/         Authenticated pages (dashboard, contacts, pipeline, settings)
-app/login/          Magic-link sign-in
-app/auth/callback/   Supabase auth redirect handler
-components/          UI, nav, contact, dashboard, settings components
-lib/data/            Server-side data fetching (Supabase queries)
-lib/supabase/        Supabase client/server/middleware helpers
-lib/validation/       Zod schemas for forms
-supabase/migrations/  Database schema (run in Supabase SQL Editor)
-types/database.ts     Hand-written types matching the schema
+app/(app)/            Authenticated pages (dashboard, contacts, pipeline, settings)
+app/login/            Magic-link sign-in
+app/auth/confirm/     Supabase auth magic-link verification handler
+app/api/webhooks/quo/ Quo call/text webhook receiver
+components/           UI, nav, contact, dashboard, settings components
+lib/data/             Server-side data fetching (Supabase queries)
+lib/supabase/         Supabase client/server/middleware/admin helpers
+lib/quo/              Quo webhook parsing, signature verification, contact matching
+lib/validation/        Zod schemas for forms
+supabase/migrations/   Database schema (run in Supabase SQL Editor)
+types/database.ts      Hand-written types matching the schema
 ```

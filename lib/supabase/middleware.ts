@@ -31,12 +31,15 @@ export async function updateSession(request: NextRequest) {
 
   const isAuthRoute = request.nextUrl.pathname.startsWith("/login");
   const isAuthCallback = request.nextUrl.pathname.startsWith("/auth");
+  // Webhooks (Quo, and any future integration) authenticate via their own
+  // signature, not a Supabase session - they must bypass the login guard.
+  const isWebhook = request.nextUrl.pathname.startsWith("/api/webhooks");
   const isPublicAsset =
     request.nextUrl.pathname.startsWith("/manifest.json") ||
     request.nextUrl.pathname.startsWith("/_next") ||
     request.nextUrl.pathname.startsWith("/favicon");
 
-  if (isAuthCallback) {
+  if (isAuthCallback || isWebhook) {
     return response;
   }
 
