@@ -1,5 +1,6 @@
 import { listContacts, listStages, listTags } from "@/lib/data/contacts";
-import { ContactRow } from "@/components/contacts/ContactRow";
+import { listSequencesWithSummary } from "@/lib/data/sequences";
+import { ContactsList } from "@/components/contacts/ContactsList";
 import { ContactFilters } from "@/components/contacts/ContactFilters";
 
 export default async function ContactsPage({
@@ -8,10 +9,11 @@ export default async function ContactsPage({
   searchParams: Promise<{ q?: string; stage?: string; tag?: string; type?: string }>;
 }) {
   const params = await searchParams;
-  const [contacts, stages, tags] = await Promise.all([
+  const [contacts, stages, tags, sequences] = await Promise.all([
     listContacts({ q: params.q, stageId: params.stage, tagId: params.tag, type: params.type }),
     listStages(),
     listTags(),
+    listSequencesWithSummary(),
   ]);
 
   return (
@@ -22,11 +24,11 @@ export default async function ContactsPage({
       </div>
       <ContactFilters stages={stages} tags={tags} />
       <div className="bg-white">
-        {contacts.length === 0 ? (
-          <p className="px-4 py-10 text-center text-sm text-neutral-400">No contacts match. Try clearing filters or add a new contact.</p>
-        ) : (
-          contacts.map((c) => <ContactRow key={c.id} contact={c} />)
-        )}
+        <ContactsList
+          contacts={contacts}
+          tags={tags}
+          sequences={sequences.map((s) => ({ id: s.id, name: s.name, type: s.type }))}
+        />
       </div>
     </div>
   );
