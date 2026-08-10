@@ -191,7 +191,9 @@ export async function processDueSequences(admin: SupabaseClient, ownerId: string
   const { data: sequences } = await admin.from("email_sequences").select("*").eq("owner_id", ownerId).eq("active", true);
   for (const sequence of (sequences ?? []) as EmailSequence[]) {
     if (budget.remaining <= 0) break;
-    if (sequence.type === "broadcast") await processBroadcastSequence(admin, ownerId, sequence, budget);
+    // A batch email is a broadcast sequence with exactly one step - same
+    // audience-resolution and send logic, just framed as one-off in the UI.
+    if (sequence.type === "broadcast" || sequence.type === "batch") await processBroadcastSequence(admin, ownerId, sequence, budget);
     else await processDripSequence(admin, ownerId, sequence, budget);
   }
 }

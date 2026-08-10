@@ -21,7 +21,7 @@ function toDatetimeLocal(value: string | null) {
 
 function StatusChip({ step, type }: { step: EmailSequenceStep; type: SequenceType }) {
   if (!step.active) return <Badge className="bg-neutral-100 text-neutral-500">Paused</Badge>;
-  if (type !== "broadcast") return null;
+  if (type === "drip") return null;
   if (!step.send_at) return null;
   const isFuture = new Date(step.send_at).getTime() > Date.now();
   return isFuture ? (
@@ -148,7 +148,7 @@ export function StepManager({
               placeholder="Email body — use {{first_name}} to personalize"
               onBlur={(e) => e.target.value !== step.body && updateStep(step.id, { body: e.target.value })}
             />
-            {type === "broadcast" ? (
+            {type !== "drip" ? (
               <div>
                 <Label htmlFor={`step-send-at-${step.id}`}>Send at (Eastern time)</Label>
                 <Input
@@ -204,7 +204,7 @@ export function StepManager({
                 <RateBar label="Unsubscribed" count={s.unsubscribed} total={s.sent} color="bg-red-400" />
               </div>
             )}
-            {s && s.sent > 0 && type === "broadcast" && step.send_at && (
+            {s && s.sent > 0 && type !== "drip" && step.send_at && (
               <p className="text-[10px] text-neutral-400">Sent {formatLocal(step.send_at, "MMM d, h:mm a")}</p>
             )}
 
@@ -280,7 +280,7 @@ function NewStepForm({
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!subject.trim() || !body.trim()) return;
-    if (type === "broadcast" && !sendAt) return;
+    if (type !== "drip" && !sendAt) return;
     setSaving(true);
     const supabase = createClient();
     await supabase.from("email_sequence_steps").insert({
@@ -288,7 +288,7 @@ function NewStepForm({
       step_order: nextOrder,
       subject: subject.trim(),
       body: body.trim(),
-      send_at: type === "broadcast" ? new Date(sendAt).toISOString() : null,
+      send_at: type !== "drip" ? new Date(sendAt).toISOString() : null,
       delay_amount: type === "drip" ? Number(delayAmount) : null,
       delay_unit: type === "drip" ? delayUnit : null,
     });
@@ -311,7 +311,7 @@ function NewStepForm({
             Preview: {body.replace(/\{\{\s*first_name\s*\}\}/gi, "Jamie").replace(/\{\{\s*last_name\s*\}\}/gi, "Example")}
           </p>
         )}
-        {type === "broadcast" ? (
+        {type !== "drip" ? (
           <div>
             <Label htmlFor="new-step-send-at">Send at (Eastern time)</Label>
             <Input id="new-step-send-at" type="datetime-local" value={sendAt} onChange={(e) => setSendAt(e.target.value)} />

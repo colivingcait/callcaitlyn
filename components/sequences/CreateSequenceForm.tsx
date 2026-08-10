@@ -7,12 +7,14 @@ import { Button, Input, Textarea, Select, Card, Label } from "@/components/ui";
 import { Plus } from "lucide-react";
 import type { Tag } from "@/types/database";
 
+type CreateType = "broadcast" | "drip" | "batch";
+
 export function CreateSequenceForm({ tags, ownerId }: { tags: Tag[]; ownerId: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [type, setType] = useState<"broadcast" | "drip">("broadcast");
+  const [type, setType] = useState<CreateType>("broadcast");
   const [tagId, setTagId] = useState(tags[0]?.id ?? "");
   const [creatingTag, setCreatingTag] = useState(false);
   const [newTagName, setNewTagName] = useState("");
@@ -20,10 +22,18 @@ export function CreateSequenceForm({ tags, ownerId }: { tags: Tag[]; ownerId: st
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  // Batch-only fields - a batch email is just a broadcast sequence with
+  // one step, created in a single combined step instead of the usual
+  // "create the sequence, then separately add a step" flow.
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [sendTiming, setSendTiming] = useState<"now" | "later">("now");
+  const [sendAt, setSendAt] = useState("");
+
   if (!open) {
     return (
       <Button size="sm" onClick={() => setOpen(true)}>
-        <Plus size={15} /> New sequence
+        <Plus size={15} /> New email
       </Button>
     );
   }
@@ -45,25 +55,48 @@ export function CreateSequenceForm({ tags, ownerId }: { tags: Tag[]; ownerId: st
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim() || !tagId) return;
+    if (type === "batch") {
+      if (!subject.trim() || !body.trim()) return;
+      if (sendTiming === "later" && !sendAt) return;
+    }
     setSaving(true);
     setError("");
     const supabase = createClient();
+
     const { data, error: insertError } = await supabase
       .from("email_sequences")
       .insert({ owner_id: ownerId, name: name.trim(), description: description.trim() || null, type, target_tag_id: tagId })
       .select("id")
       .single();
-    setSaving(false);
+
     if (insertError || !data) {
-      setError(insertError?.message ?? "Couldn't create the sequence.");
+      setSaving(false);
+      setError(insertError?.message ?? "Couldn't create the email.");
       return;
     }
+
+    if (type === "batch") {
+      const { error: stepError } = await supabase.from("email_sequence_steps").insert({
+        sequence_id: data.id,
+        step_order: 0,
+        subject: subject.trim(),
+        body: body.trim(),
+        send_at: sendTiming === "now" ? new Date().toISOString() : new Date(sendAt).toISOString(),
+      });
+      if (stepError) {
+        setSaving(false);
+        setError(stepError.message);
+        return;
+      }
+    }
+
+    setSaving(false);
     router.push(`/sequences/${data.id}`);
   }
 
   return (
     <Card className="space-y-3">
-      <h2 className="text-sm font-semibold text-neutral-700">New sequence</h2>
+      <h2 className="text-sm font-semibold text-neutral-700">New email</h2>
       <form onSubmit={handleCreate} className="space-y-3">
         <div>
           <Label htmlFor="seq-name">Name</Label>
@@ -76,15 +109,16 @@ export function CreateSequenceForm({ tags, ownerId }: { tags: Tag[]; ownerId: st
             rows={2}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="What this sequence is for, strategy notes, etc."
+            placeholder="What this is for, strategy notes, etc."
           />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label htmlFor="seq-type">Type</Label>
-            <Select id="seq-type" value={type} onChange={(e) => setType(e.target.value as "broadcast" | "drip")}>
-              <option value="broadcast">Scheduled (fixed dates)</option>
-              <option value="drip">Drip (interval, per-contact)</option>
+            <Select id="seq-type" value={type} onChange={(e) => setType(e.target.value as CreateType)}>
+              <option value="broadcast">Sequence (Scheduled Date)</option>
+              <option value="drip">Drip</option>
+              <option value="batch">Batch Email (one-off)</option>
             </Select>
           </div>
           <div>
@@ -113,14 +147,58 @@ export function CreateSequenceForm({ tags, ownerId }: { tags: Tag[]; ownerId: st
           </div>
         </div>
         <p className="text-xs text-neutral-400">
-          {type === "broadcast"
-            ? "Each step fires on a fixed date/time, to whoever currently has this tag."
-            : "Each contact starts their own clock the moment they get this tag; steps fire at a delay relative to that."}
+          {type === "broadcast" && "Each step fires on a fixed date/time, to whoever currently has this tag."}
+          {type === "drip" && "Each contact starts their own clock the moment they get this tag; steps fire at a delay relative to that."}
+          {type === "batch" && "One email, sent once, to whoever currently has this tag - no ongoing steps."}
         </p>
+
+        {type === "batch" && (
+          <div className="space-y-3 border-t border-neutral-100 pt-3">
+            <div>
+              <Label htmlFor="batch-subject">Subject</Label>
+              <Input id="batch-subject" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject" />
+            </div>
+            <div>
+              <Label htmlFor="batch-body">Body</Label>
+              <Textarea
+                id="batch-body"
+                rows={5}
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder="Email body — use {{first_name}} to personalize"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="batch-timing">Send</Label>
+                <Select id="batch-timing" value={sendTiming} onChange={(e) => setSendTiming(e.target.value as "now" | "later")}>
+                  <option value="now">Now (within ~15 min)</option>
+                  <option value="later">Schedule for later</option>
+                </Select>
+              </div>
+              {sendTiming === "later" && (
+                <div>
+                  <Label htmlFor="batch-send-at">Send at (Eastern time)</Label>
+                  <Input id="batch-send-at" type="datetime-local" value={sendAt} onChange={(e) => setSendAt(e.target.value)} />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {error && <p className="text-xs text-red-600">{error}</p>}
         <div className="flex gap-2">
-          <Button type="submit" size="sm" disabled={saving || !name.trim() || !tagId}>
-            {saving ? "Creating…" : "Create & add steps"}
+          <Button
+            type="submit"
+            size="sm"
+            disabled={
+              saving ||
+              !name.trim() ||
+              !tagId ||
+              (type === "batch" && (!subject.trim() || !body.trim() || (sendTiming === "later" && !sendAt)))
+            }
+          >
+            {saving ? "Creating…" : type === "batch" ? "Create & send" : "Create & add steps"}
           </Button>
           <Button type="button" variant="secondary" size="sm" onClick={() => setOpen(false)}>
             Cancel

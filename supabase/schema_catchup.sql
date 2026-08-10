@@ -2,7 +2,7 @@
 -- SCHEMA CATCH-UP SCRIPT
 -- ============================================================================
 -- Run this ONCE in the Supabase SQL Editor. It re-applies everything from
--- migrations 0001 through 0022 in an idempotent, safe-to-rerun form, so it
+-- migrations 0001 through 0024 in an idempotent, safe-to-rerun form, so it
 -- doesn't matter which individual migration files were or weren't run
 -- historically - anything already present is left untouched, anything
 -- missing gets added. Safe to run multiple times.
@@ -377,6 +377,9 @@ create table if not exists public.email_sequences (
 );
 create index if not exists email_sequences_owner_idx on public.email_sequences(owner_id);
 alter table public.email_sequences add column if not exists description text;
+alter table public.email_sequences drop constraint if exists email_sequences_type_check;
+alter table public.email_sequences add constraint email_sequences_type_check
+  check (type in ('broadcast', 'drip', 'batch'));
 
 create table if not exists public.email_sequence_steps (
   id uuid primary key default gen_random_uuid(),
@@ -654,5 +657,5 @@ create policy "owner full access via send" on public.email_link_clicks
 
 -- ============================================================================
 -- Done. Every table/column/index/policy/trigger/function through migration
--- 0023 now exists, regardless of what did or didn't run before.
+-- 0024 now exists, regardless of what did or didn't run before.
 -- ============================================================================

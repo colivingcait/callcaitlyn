@@ -17,9 +17,9 @@ export default async function SequencesPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-5 px-4 py-6">
       <div>
-        <h1 className="font-serif text-2xl font-semibold text-neutral-900">Sequences</h1>
+        <h1 className="font-serif text-2xl font-semibold text-neutral-900">Emails</h1>
         <p className="mt-0.5 text-sm text-neutral-500">
-          Scheduled event reminders and drip campaigns, both triggered off a tag.
+          Scheduled sequences, drip campaigns, and one-off batch emails, all triggered off a tag.
         </p>
       </div>
 
@@ -35,7 +35,7 @@ export default async function SequencesPage() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-neutral-900">{seq.name}</p>
                   <p className="text-xs text-neutral-400">
-                    {seq.type === "broadcast" ? "Scheduled" : "Drip"}
+                    {seq.type === "broadcast" ? "Scheduled" : seq.type === "batch" ? "Batch email" : "Drip"}
                     {!seq.active && " · Paused"}
                   </p>
                 </div>
@@ -43,7 +43,7 @@ export default async function SequencesPage() {
               </div>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-500">
                 {seq.type === "drip" && <span>{seq.activeEnrolled} enrolled</span>}
-                {seq.type === "broadcast" && seq.nextSendAt && <span>Next send: {formatLocal(seq.nextSendAt, "MMM d, h:mm a")}</span>}
+                {seq.type !== "drip" && seq.nextSendAt && <span>Next send: {formatLocal(seq.nextSendAt, "MMM d, h:mm a")}</span>}
                 {seq.sentTotal > 0 && (
                   <span>
                     {seq.sentTotal} sent · {seq.openRate.toFixed(0)}% opened

@@ -67,10 +67,10 @@ export async function duplicateSequence(sequenceId: string) {
         step_order: s.step_order,
         subject: s.subject,
         body: s.body,
-        // Broadcast dates are absolute, specific to the original run -
+        // Broadcast/batch dates are absolute, specific to the original run -
         // copying verbatim would silently schedule the clone in the past.
         // Drip delays are relative, so they carry over fine.
-        send_at: original.type === "broadcast" ? null : s.send_at,
+        send_at: original.type === "drip" ? s.send_at : null,
         delay_amount: s.delay_amount,
         delay_unit: s.delay_unit,
         active: s.active,

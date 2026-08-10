@@ -255,7 +255,7 @@ export interface GmailAccount {
   updated_at: string;
 }
 
-export type SequenceType = "broadcast" | "drip";
+export type SequenceType = "broadcast" | "drip" | "batch";
 export type SequenceDelayUnit = "hours" | "days";
 export type SequenceEnrollmentStatus = "active" | "paused" | "completed";
 

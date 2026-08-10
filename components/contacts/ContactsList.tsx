@@ -10,7 +10,7 @@ import { Button } from "@/components/ui";
 import { Archive } from "lucide-react";
 import type { ContactWithRelations, Tag } from "@/types/database";
 
-type SequenceOption = { id: string; name: string; type: "broadcast" | "drip" };
+type SequenceOption = { id: string; name: string; type: "broadcast" | "drip" | "batch" };
 type BulkModal = "add-tag" | "remove-tag" | "sequence" | null;
 
 export function ContactsList({

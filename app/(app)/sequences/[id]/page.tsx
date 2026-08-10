@@ -47,16 +47,18 @@ export default async function SequenceDetailPage({ params }: { params: Promise<{
   if (!sequence) notFound();
 
   const [upcomingSteps, dripEnrollments, activity, allContacts] = await Promise.all([
-    sequence.type === "broadcast" ? getUpcomingBroadcastSteps(id, sequence.target_tag_id) : Promise.resolve([]),
+    sequence.type !== "drip" ? getUpcomingBroadcastSteps(id, sequence.target_tag_id) : Promise.resolve([]),
     sequence.type === "drip" ? getDripEnrollmentsDetailed(id) : Promise.resolve([]),
     getRecentSequenceActivity(id, 25),
     sequence.type === "drip" ? listContacts({}) : Promise.resolve([]),
   ]);
 
+  const typeLabel = sequence.type === "broadcast" ? "Sequence (Scheduled Date)" : sequence.type === "batch" ? "Batch email" : "Drip";
+
   return (
     <div className="mx-auto max-w-3xl space-y-5 px-4 py-6">
       <Link href="/sequences" className="flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-700">
-        <ChevronLeft size={16} /> Sequences
+        <ChevronLeft size={16} /> Emails
       </Link>
 
       <div className="flex items-start justify-between gap-3">
@@ -64,7 +66,7 @@ export default async function SequenceDetailPage({ params }: { params: Promise<{
           <h1 className="font-serif text-2xl font-semibold text-neutral-900">{sequence.name}</h1>
           {sequence.description && <p className="mt-0.5 text-sm text-neutral-500">{sequence.description}</p>}
           <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-neutral-500">
-            {sequence.type === "broadcast" ? "Scheduled" : "Drip"}
+            {typeLabel}
             {sequence.tags && <Badge color={sequence.tags.color}>{sequence.tags.name}</Badge>}
             {!sequence.active && <Badge className="bg-neutral-100 text-neutral-600">Paused</Badge>}
           </p>
@@ -101,7 +103,7 @@ export default async function SequenceDetailPage({ params }: { params: Promise<{
         <StepManager sequenceId={sequence.id} type={sequence.type} steps={steps} stats={stats} linkBreakdown={linkBreakdown} />
       </div>
 
-      {sequence.type === "broadcast" ? (
+      {sequence.type !== "drip" ? (
         <div>
           <h2 className="mb-3 text-sm font-semibold text-neutral-700">Upcoming sends</h2>
           <UpcomingBroadcastPanel steps={upcomingSteps} />
