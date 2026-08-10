@@ -41,16 +41,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true });
   }
 
+  // Two separate Eventbrite accounts (House Hacking, Women's REI) share
+  // this one endpoint - each account's own webhook subscription carries a
+  // distinguishing ?account= param on its URL (see README), which picks
+  // the right Private Token to fetch that account's order data with. No
+  // param = the original/House Hacking account, so the existing webhook
+  // URL she already has configured keeps working unchanged.
+  const isWomensRei = request.nextUrl.searchParams.get("account") === "womens_rei";
+  const apiToken = isWomensRei ? process.env.EVENTBRITE_WOMENS_REI_API_TOKEN : process.env.EVENTBRITE_API_TOKEN;
+
   const admin = createAdminClient();
 
   try {
-    const order = await fetchOrderWithAttendees(apiUrl);
+    const order = await fetchOrderWithAttendees(apiUrl, apiToken);
     if (!order) {
       return NextResponse.json({ received: true });
     }
 
     const eventId = typeof order.event_id === "string" ? order.event_id : null;
-    const eventName = eventId ? await fetchEventName(eventId) : null;
+    const eventName = eventId ? await fetchEventName(eventId, apiToken) : null;
     const attendees = parseEventbriteAttendees(order);
 
     for (const attendee of attendees) {
@@ -83,6 +92,10 @@ export async function POST(request: NextRequest) {
       }
 
       await addTagByName(admin, OWNER_ID, contact.id, "Meetup");
+      // House Hacking events already get told apart via the journey-stage
+      // question below (only they ask it) - Women's REI events don't ask
+      // that question, so they need their own explicit tag instead.
+      if (isWomensRei) await addTagByName(admin, OWNER_ID, contact.id, "Women's REI");
       await applyJourneyStageAnswer(admin, OWNER_ID, contact.id, attendee.journeyStage, contact.wasCreated);
 
       const occurredAt = typeof order.created === "string" ? order.created : new Date().toISOString();
@@ -98,6 +111,7 @@ export async function POST(request: NextRequest) {
         metadata: {
           eventbrite_attendee_id: attendee.attendeeId,
           eventbrite_order_id: order.id,
+          eventbrite_account: isWomensRei ? "womens_rei" : "house_hacking",
           event_id: eventId,
           event_name: eventName,
           journey_stage: attendee.journeyStage,

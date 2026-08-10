@@ -211,6 +211,19 @@ Eventbrite webhooks only send a link to the changed resource, not the data itsel
 4. Add `EVENTBRITE_API_TOKEN` and `EVENTBRITE_WEBHOOK_SECRET` to Vercel, redeploy.
 5. Register for one of your own events as a test and confirm it shows up on the right contact, tagged "Meetup".
 
+**Second Eventbrite account (Women's REI)**: if the Women's REI meetups run through a genuinely separate Eventbrite account rather than just a different event in the same one, that account needs its own webhook subscription and its own API token — Eventbrite auth is scoped per-account, so one token can't fetch another account's order data.
+
+1. In the **Women's REI account's own** Account Settings → Developer Links → API Keys, copy its Private Token → this is `EVENTBRITE_WOMENS_REI_API_TOKEN`.
+2. In that same account's Account Settings → Developer Links → Webhooks → Add Webhook, same as step 2 above, but the Payload URL gets an extra `&account=womens_rei`:
+   ```
+   https://callcaitlyn.com/api/webhooks/eventbrite?secret=YOUR_SECRET&account=womens_rei
+   ```
+   (same secret as the House Hacking account's webhook — only the `account` param differs)
+3. Add `EVENTBRITE_WOMENS_REI_API_TOKEN` to Vercel, redeploy.
+4. Register for a Women's REI event as a test and confirm the contact gets tagged "Meetup" **and** "Women's REI", with the lead source showing the real event name.
+
+The original House Hacking webhook URL (without `&account=`) doesn't need to change — it keeps using `EVENTBRITE_API_TOKEN` exactly as before.
+
 ## Setting up Jotform (in-person meetup check-in)
 
 For the iPad kiosk form: matches by email/phone against existing contacts (so people who already registered on Eventbrite, or are already in the CRM, get updated instead of duplicated), tags them "Meetup", updates their **last event attended** date, and logs the submission — including the "how did you hear about us" and "house hacking journey" answers — on their timeline. Run the migration below first (adds the last-event-attended fields), then:
