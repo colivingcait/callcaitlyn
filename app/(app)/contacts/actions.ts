@@ -6,6 +6,8 @@ import { sendQuoText } from "@/lib/quo/send-message";
 import { sendGmailMessage, textToHtml } from "@/lib/google/send-email";
 import { upsertActivity } from "@/lib/crm/activities";
 import { updateEngagementTag } from "@/lib/crm/engagement";
+import { findOrCreateContact, addTagByName } from "@/lib/crm/find-or-create-contact";
+import type { ParsedContactRow } from "@/lib/crm/bulk-import-contacts";
 
 export async function sendTextToContact(contactId: string, toNumber: string, body: string) {
   const supabase = await createClient();
@@ -62,4 +64,40 @@ export async function sendEmailToContact(contactId: string, toEmail: string, sub
   // sequence firing several at once shouldn't look like sudden engagement).
 
   return { ok: true as const };
+}
+
+export async function bulkImportContacts(rows: ParsedContactRow[], tagName: string | null) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const admin = createAdminClient();
+  let created = 0;
+  let matched = 0;
+  let failed = 0;
+
+  // Sequential, not Promise.all - findOrCreateContact re-reads the full
+  // contact list each call to check for a match, so running these
+  // concurrently risks two rows for the same person both missing each
+  // other and creating duplicates.
+  for (const row of rows) {
+    const result = await findOrCreateContact(admin, user.id, {
+      email: row.email,
+      phone: row.phone,
+      firstName: row.firstName,
+      lastName: row.lastName,
+      leadSource: "CSV import",
+    });
+    if (!result) {
+      failed++;
+      continue;
+    }
+    if (result.wasCreated) created++;
+    else matched++;
+    if (tagName) await addTagByName(admin, user.id, result.id, tagName);
+  }
+
+  return { ok: true as const, created, matched, failed };
 }

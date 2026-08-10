@@ -2,6 +2,8 @@ import { listContacts, listStages, listTags } from "@/lib/data/contacts";
 import { listSequencesWithSummary } from "@/lib/data/sequences";
 import { ContactsList } from "@/components/contacts/ContactsList";
 import { ContactFilters } from "@/components/contacts/ContactFilters";
+import { BulkImportContactsButton } from "@/components/contacts/BulkImportContactsButton";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function ContactsPage({
   searchParams,
@@ -9,6 +11,10 @@ export default async function ContactsPage({
   searchParams: Promise<{ q?: string; stage?: string; tag?: string; type?: string }>;
 }) {
   const params = await searchParams;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const [contacts, stages, tags, sequences] = await Promise.all([
     listContacts({ q: params.q, stageId: params.stage, tagId: params.tag, type: params.type }),
     listStages(),
@@ -18,9 +24,12 @@ export default async function ContactsPage({
 
   return (
     <div className="mx-auto max-w-3xl">
-      <div className="px-4 pt-6 pb-2">
-        <h1 className="font-serif text-2xl font-semibold text-neutral-900">Contacts</h1>
-        <p className="mt-0.5 text-sm text-neutral-500">{contacts.length} people</p>
+      <div className="flex items-start justify-between gap-3 px-4 pt-6 pb-2">
+        <div>
+          <h1 className="font-serif text-2xl font-semibold text-neutral-900">Contacts</h1>
+          <p className="mt-0.5 text-sm text-neutral-500">{contacts.length} people</p>
+        </div>
+        {user && <BulkImportContactsButton tags={tags} ownerId={user.id} />}
       </div>
       <ContactFilters stages={stages} tags={tags} />
       <div className="bg-white">
