@@ -28,7 +28,7 @@ Exciting news! By popular demand, we're adding a second monthly meetup — this 
 
 Quick recap of what's now on the calendar every month:
 
-Women's Real Estate Investing — 4th Tuesday, 6:30-9pm, topics rotate monthly. The room you already know.
+Women's Real Estate Investing — 4th Tuesday, 6:30-9pm, topics rotate monthly. Next one is August 25. The room you already know.
 
 House Hacking Atlanta — 2nd Tuesday, 6:30-9pm, brand new. First one is September 8: Financing a House Hack.
 
@@ -74,7 +74,7 @@ New Realm Brewery, 550 Somerset Terrace NE #101, Atlanta, GA 30306
 
 <a href="https://www.eventbrite.com/cc/house-hacking-atl-4861227">Register →</a>
 
-And a reminder while it's on your mind — the Women's Real Estate Investing meetup runs the 4th Tuesday of every month, same place. Worth getting on your calendar too.
+And a reminder while it's on your mind — the Women's Real Estate Investing meetup is coming up September 22, same place. Worth getting on your calendar too.
 
 Caitlyn Verdugo
 
@@ -138,7 +138,7 @@ Every door is an opportunity. 🚪$$, '2026-09-09 10:00:00'),
 -- ---------- EVENT 2: Finding the Deal - Tue Oct 13, 2026 (save-the-date slot -> Women's REI) ----------
 (5, $$This month's Women's REI meetup$$, $$Hi {{first_name}},
 
-Quick reminder — our Women's Real Estate Investing meetup is coming up this month, 4th Tuesday as always, 6:30-9pm at New Realm Brewery.
+Quick reminder — our Women's Real Estate Investing meetup is coming up September 22, 6:30-9pm at New Realm Brewery.
 
 Topics rotate every month, so it's never the same room twice — sometimes it's financing, sometimes it's a specific deal someone in the group is working through, sometimes it's just open Q&A. Come with whatever's actually on your mind.
 
@@ -233,7 +233,7 @@ Yes — a house where the only way to reach the rentable space is through your l
 More on this here:
 <a href="https://www.househackingatl.com/what-makes-a-good-house-hack">What makes a good house hack →</a>
 
-Speaking of the room — our Women's Real Estate Investing meetup is up next, 4th Tuesday, same place. If you haven't been, it's a smaller, more discussion-driven group than House Hacking's — worth trying if you want more airtime for your specific questions.
+Speaking of the room — our Women's Real Estate Investing meetup is coming up October 27, same place. If you haven't been, it's a smaller, more discussion-driven group than House Hacking's — worth trying if you want more airtime for your specific questions.
 
 <a href="https://www.eventbrite.com/cc/women-real-estate-investors-atl-monthly-meetups-4833857?utm-campaign=social&utm-content=creatorshare&utm-medium=discovery&utm-term=odclsxcollection&utm-source=cp&aff=escb">Register →</a>
 
@@ -250,7 +250,7 @@ Every door is an opportunity. 🚪$$, '2026-10-14 10:00:00'),
 -- ---------- EVENT 3: Protecting Your House Hack - Tue Nov 10, 2026 (save-the-date slot -> Women's REI) ----------
 (10, $$This month's Women's REI meetup$$, $$Hi {{first_name}},
 
-This month's Women's Real Estate Investing meetup is coming up — 4th Tuesday, 6:30-9pm, New Realm Brewery.
+Our Women's Real Estate Investing meetup is coming up October 27 — 6:30-9pm, New Realm Brewery.
 
 It's a smaller room than House Hacking on purpose. No explaining yourself, no being the only woman asking the question — just real conversation about whatever's actually on people's minds that month.
 
@@ -361,7 +361,7 @@ Every door is an opportunity. 🚪$$, '2026-11-11 10:00:00'),
 -- ---------- EVENT 4: Screening Tenants - Tue Dec 8, 2026 (save-the-date slot -> Women's REI) ----------
 (15, $$This month's Women's REI meetup$$, $$Hi {{first_name}},
 
-Our Women's Real Estate Investing meetup is up again this month — 4th Tuesday, 6:30-9pm, New Realm Brewery.
+Our Women's Real Estate Investing meetup is coming up November 24 — 6:30-9pm, New Realm Brewery.
 
 Some of the best deal talk I know of happens in this room first, before it happens anywhere else. New topic every month, same core group of women showing up for each other.
 
@@ -456,7 +456,7 @@ Hold the standard. Not because they're a bad person — because the moment you m
 More on this here:
 <a href="https://www.househackingatl.com/finding-good-housemates">How to find good housemates →</a>
 
-Speaking of the room — Women's Real Estate Investing is up next, 4th Tuesday, same place. Bring your actual questions — nothing's off limits at this one.
+Speaking of the room — Women's Real Estate Investing is coming up December 22, same place. Bring your actual questions — nothing's off limits at this one.
 
 <a href="https://www.eventbrite.com/cc/women-real-estate-investors-atl-monthly-meetups-4833857?utm-campaign=social&utm-content=creatorshare&utm-medium=discovery&utm-term=odclsxcollection&utm-source=cp&aff=escb">Register →</a>
 
@@ -473,7 +473,7 @@ Every door is an opportunity. 🚪$$, '2026-12-09 10:00:00'),
 -- ---------- EVENT 5: House Hacking Panel - Tue Jan 12, 2027 (save-the-date slot -> Women's REI) ----------
 (20, $$This month's Women's REI meetup$$, $$Hi {{first_name}},
 
-Women's Real Estate Investing is coming up this month — 4th Tuesday, 6:30-9pm, New Realm Brewery.
+Women's Real Estate Investing is coming up December 22 — 6:30-9pm, New Realm Brewery.
 
 If House Hacking Atlanta is where you learn the mechanics, this is where a lot of women actually build the confidence to act on it. Different topic every month, always relevant to whoever's in the room that night.
 
@@ -566,7 +566,7 @@ Almost universally, yes. Renting out part of your home is still an unusual thing
 More on this here:
 <a href="https://www.househackingatl.com/house-stacking">House stacking: what happens after the first one →</a>
 
-Speaking of the room — our Women's Real Estate Investing meetup is up next, 4th Tuesday, same place. Bring your actual questions — nothing's off limits at this one.
+Speaking of the room — our Women's Real Estate Investing meetup is coming up January 26, same place. Bring your actual questions — nothing's off limits at this one.
 
 <a href="https://www.eventbrite.com/cc/women-real-estate-investors-atl-monthly-meetups-4833857?utm-campaign=social&utm-content=creatorshare&utm-medium=discovery&utm-term=odclsxcollection&utm-source=cp&aff=escb">Register →</a>
 
@@ -583,7 +583,7 @@ Every door is an opportunity. 🚪$$, '2027-01-13 10:00:00'),
 -- ---------- EVENT 6: Inspecting Your Future - Tue Feb 9, 2027 (save-the-date slot -> Women's REI) ----------
 (25, $$This month's Women's REI meetup$$, $$Hi {{first_name}},
 
-Women's Real Estate Investing is up again this month — 4th Tuesday, 6:30-9pm, New Realm Brewery.
+Women's Real Estate Investing is coming up January 26 — 6:30-9pm, New Realm Brewery.
 
 Smaller room, deeper conversation — this one leans more discussion than lecture, and the topic changes every month based on what the group actually needs.
 
@@ -678,7 +678,7 @@ Moisture evidence people had stopped noticing. None of it is automatically disqu
 More on this here:
 <a href="https://www.househackingatl.com/house-hack-walkthrough">What we look for on a house hack walkthrough →</a>
 
-Speaking of the room — Women's Real Estate Investing is up next, 4th Tuesday, same place. Some of the best deal talk I know of happens in that room first.
+Speaking of the room — Women's Real Estate Investing is coming up February 23, same place. Some of the best deal talk I know of happens in that room first.
 
 <a href="https://www.eventbrite.com/cc/women-real-estate-investors-atl-monthly-meetups-4833857?utm-campaign=social&utm-content=creatorshare&utm-medium=discovery&utm-term=odclsxcollection&utm-source=cp&aff=escb">Register →</a>
 
@@ -695,7 +695,7 @@ Every door is an opportunity. 🚪$$, '2027-02-10 10:00:00'),
 -- ---------- EVENT 7: Numbers Workshop - Tue Mar 9, 2027 (save-the-date slot -> Women's REI) ----------
 (30, $$This month's Women's REI meetup$$, $$Hi {{first_name}},
 
-Women's Real Estate Investing meets again this month — 4th Tuesday, 6:30-9pm, New Realm Brewery.
+Women's Real Estate Investing meets again February 23 — 6:30-9pm, New Realm Brewery.
 
 Same core group of women showing up for each other, new topic every time. Come with whatever's actually on your mind that month.
 
@@ -804,7 +804,7 @@ Every door is an opportunity. 🚪$$, '2027-03-10 10:00:00'),
 -- ---------- EVENT 8: Adding Value to Your House Hack - Tue Apr 13, 2027 (save-the-date slot -> Women's REI) ----------
 (35, $$This month's Women's REI meetup$$, $$Hi {{first_name}},
 
-Women's Real Estate Investing is up again — 4th Tuesday, 6:30-9pm, New Realm Brewery.
+Women's Real Estate Investing is coming up March 23 — 6:30-9pm, New Realm Brewery.
 
 If you've been meaning to check it out, this is a good month to start. Bring your actual questions — nothing's off limits at this one.
 
@@ -899,7 +899,7 @@ Frequently, yes — and this is where people get surprised. Unpermitted finished
 More on this here:
 <a href="https://www.househackingatl.com/what-is-appreciation">Does a basement conversion actually raise your value? →</a>
 
-Speaking of the room — our Women's Real Estate Investing meetup is up next, 4th Tuesday, same place. Same core group of women showing up for each other, new topic every time.
+Speaking of the room — our Women's Real Estate Investing meetup is coming up April 27, same place. Same core group of women showing up for each other, new topic every time.
 
 <a href="https://www.eventbrite.com/cc/women-real-estate-investors-atl-monthly-meetups-4833857?utm-campaign=social&utm-content=creatorshare&utm-medium=discovery&utm-term=odclsxcollection&utm-source=cp&aff=escb">Register →</a>
 
