@@ -5,14 +5,24 @@ import { formatDistanceToNow } from "date-fns";
 import { Clock } from "lucide-react";
 import { DialerCallModal } from "@/components/dialer/DialerCallModal";
 import { fullName, formatPhone, initials } from "@/lib/utils";
-import type { DialerContact } from "@/lib/data/dialer";
+import type { DialerContact, DialerMode } from "@/lib/data/dialer";
 import type { PipelineStage } from "@/types/database";
 
-export function DialerQueue({ contacts, stages }: { contacts: DialerContact[]; stages: PipelineStage[] }) {
+export function DialerQueue({
+  contacts,
+  stages,
+  mode,
+  emptyMessage = "Nobody left to call — you're caught up.",
+}: {
+  contacts: DialerContact[];
+  stages: PipelineStage[];
+  mode: DialerMode;
+  emptyMessage?: string;
+}) {
   const [selected, setSelected] = useState<DialerContact | null>(null);
 
   if (contacts.length === 0) {
-    return <p className="px-4 py-10 text-center text-sm text-neutral-400">Nobody left to call — you&apos;re caught up.</p>;
+    return <p className="px-4 py-10 text-center text-sm text-neutral-400">{emptyMessage}</p>;
   }
 
   return (
@@ -42,7 +52,7 @@ export function DialerQueue({ contacts, stages }: { contacts: DialerContact[]; s
         </button>
       ))}
 
-      {selected && <DialerCallModal contact={selected} stages={stages} onClose={() => setSelected(null)} />}
+      {selected && <DialerCallModal contact={selected} stages={stages} mode={mode} onClose={() => setSelected(null)} />}
     </div>
   );
 }

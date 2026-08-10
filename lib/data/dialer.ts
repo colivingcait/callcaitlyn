@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Contact } from "@/types/database";
 
+export type DialerMode = "new-lead" | "event-followup";
+
 export type DialerContact = Pick<
   Contact,
   | "id"
@@ -75,6 +77,46 @@ export async function listDialerQueue(): Promise<{ contacts: DialerContact[]; er
     if (aSnoozed !== bSnoozed) return aSnoozed ? 1 : -1;
     if (aSnoozed && bSnoozed) return new Date(a.dialer_snoozed_at!).getTime() - new Date(b.dialer_snoozed_at!).getTime();
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+
+  return { contacts: sorted, error: null };
+}
+
+// A second, independent queue: people who actually attended (last_event_at
+// is only set by a real Jotform check-in, distinct from just registering)
+// and haven't had a follow-up call logged since. Deliberately separate
+// tracking from the New Lead queue above - someone can and should appear
+// here even after already being called at registration, since it's a
+// genuinely different touchpoint.
+export async function listEventFollowupQueue(): Promise<{ contacts: DialerContact[]; error: string | null }> {
+  const supabase = await createClient();
+
+  const { data: candidates, error } = await supabase
+    .from("contacts")
+    .select(
+      "id, first_name, last_name, phone, lead_source, last_event_name, last_event_at, created_at, event_followup_snoozed_at, stage_id",
+    )
+    .eq("archived", false)
+    .not("last_event_at", "is", null)
+    .is("event_followup_contacted_at", null)
+    .not("phone", "is", null);
+
+  if (error) return { contacts: [], error: error.message };
+  if (!candidates || candidates.length === 0) return { contacts: [], error: null };
+
+  // Reuse the same DialerContact/DialerCard shape (dialer_snoozed_at) so
+  // the UI components stay agnostic of which queue they're rendering.
+  const mapped = candidates.map((c) => ({
+    ...c,
+    dialer_snoozed_at: c.event_followup_snoozed_at,
+  })) as DialerContact[];
+
+  const sorted = mapped.sort((a, b) => {
+    const aSnoozed = !!a.dialer_snoozed_at;
+    const bSnoozed = !!b.dialer_snoozed_at;
+    if (aSnoozed !== bSnoozed) return aSnoozed ? 1 : -1;
+    if (aSnoozed && bSnoozed) return new Date(a.dialer_snoozed_at!).getTime() - new Date(b.dialer_snoozed_at!).getTime();
+    return new Date(b.last_event_at as string).getTime() - new Date(a.last_event_at as string).getTime();
   });
 
   return { contacts: sorted, error: null };

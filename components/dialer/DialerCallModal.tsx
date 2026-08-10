@@ -3,21 +3,29 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { openQuoCall } from "@/lib/quo/call-link";
-import { markDialerConnected, markDialerSnoozed, saveDialerNotes } from "@/app/(app)/dialer/actions";
+import {
+  markDialerConnected,
+  markDialerSnoozed,
+  markEventFollowupConnected,
+  markEventFollowupSnoozed,
+  saveDialerNotes,
+} from "@/app/(app)/dialer/actions";
 import { Button, Select, Textarea } from "@/components/ui";
 import { formatDistanceToNow } from "date-fns";
 import { X, PhoneCall, Clock } from "lucide-react";
 import { fullName, formatPhone } from "@/lib/utils";
 import type { PipelineStage } from "@/types/database";
-import type { DialerContact } from "@/lib/data/dialer";
+import type { DialerContact, DialerMode } from "@/lib/data/dialer";
 
 export function DialerCallModal({
   contact,
   stages,
+  mode,
   onClose,
 }: {
   contact: DialerContact;
   stages: PipelineStage[];
+  mode: DialerMode;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -35,8 +43,13 @@ export function DialerCallModal({
 
   async function handleOutcome(outcome: "connected" | "no-answer") {
     setMarking(true);
-    if (outcome === "connected") await markDialerConnected(contact.id);
-    else await markDialerSnoozed(contact.id);
+    if (mode === "event-followup") {
+      if (outcome === "connected") await markEventFollowupConnected(contact.id);
+      else await markEventFollowupSnoozed(contact.id);
+    } else {
+      if (outcome === "connected") await markDialerConnected(contact.id);
+      else await markDialerSnoozed(contact.id);
+    }
     setMarking(false);
     router.refresh();
     onClose();

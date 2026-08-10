@@ -23,6 +23,23 @@ export async function markDialerConnected(contactId: string) {
     .eq("id", contactId);
 }
 
+// Same idea as markDialerSnoozed/markDialerConnected above, but for the
+// separate post-event follow-up queue - independent tracking columns so
+// calling someone at registration doesn't also mark their (not-yet-
+// happened) post-event follow-up as done, or vice versa.
+export async function markEventFollowupSnoozed(contactId: string) {
+  const supabase = await createClient();
+  await supabase.from("contacts").update({ event_followup_snoozed_at: new Date().toISOString() }).eq("id", contactId);
+}
+
+export async function markEventFollowupConnected(contactId: string) {
+  const supabase = await createClient();
+  await supabase
+    .from("contacts")
+    .update({ event_followup_contacted_at: new Date().toISOString(), event_followup_snoozed_at: null })
+    .eq("id", contactId);
+}
+
 // Optional reclassify + notes after a Connected call. The real call data
 // (duration, recording, transcript) arrives separately and asynchronously
 // via Quo's webhook straight onto the contact's activity timeline - this

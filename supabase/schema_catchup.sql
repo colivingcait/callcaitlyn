@@ -2,7 +2,7 @@
 -- SCHEMA CATCH-UP SCRIPT
 -- ============================================================================
 -- Run this ONCE in the Supabase SQL Editor. It re-applies everything from
--- migrations 0001 through 0024 in an idempotent, safe-to-rerun form, so it
+-- migrations 0001 through 0025 in an idempotent, safe-to-rerun form, so it
 -- doesn't matter which individual migration files were or weren't run
 -- historically - anything already present is left untouched, anything
 -- missing gets added. Safe to run multiple times.
@@ -122,6 +122,9 @@ alter table public.contacts add column if not exists quo_synced_at timestamptz;
 alter table public.contacts add column if not exists dialer_contacted_at timestamptz;
 alter table public.contacts add column if not exists dialer_snoozed_at timestamptz;
 create index if not exists contacts_dialer_idx on public.contacts(owner_id, dialer_contacted_at) where archived = false;
+alter table public.contacts add column if not exists event_followup_contacted_at timestamptz;
+alter table public.contacts add column if not exists event_followup_snoozed_at timestamptz;
+create index if not exists contacts_event_followup_idx on public.contacts(owner_id, event_followup_contacted_at) where archived = false;
 
 -- ---------------------------------------------------------------------------
 -- contact_tags
@@ -573,6 +576,8 @@ begin
     quo_synced_at = coalesce(k.quo_synced_at, m.quo_synced_at),
     dialer_contacted_at = greatest(k.dialer_contacted_at, m.dialer_contacted_at),
     dialer_snoozed_at = greatest(k.dialer_snoozed_at, m.dialer_snoozed_at),
+    event_followup_contacted_at = greatest(k.event_followup_contacted_at, m.event_followup_contacted_at),
+    event_followup_snoozed_at = greatest(k.event_followup_snoozed_at, m.event_followup_snoozed_at),
     notes = nullif(trim(both E'\n' from
       coalesce(k.notes, '') ||
       case when m.notes is not null and m.notes <> '' then
@@ -657,5 +662,5 @@ create policy "owner full access via send" on public.email_link_clicks
 
 -- ============================================================================
 -- Done. Every table/column/index/policy/trigger/function through migration
--- 0024 now exists, regardless of what did or didn't run before.
+-- 0025 now exists, regardless of what did or didn't run before.
 -- ============================================================================
