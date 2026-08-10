@@ -8,12 +8,13 @@ import { BulkTagModal } from "@/components/contacts/BulkTagModal";
 import { BulkSequenceModal } from "@/components/contacts/BulkSequenceModal";
 import { BulkStageModal } from "@/components/contacts/BulkStageModal";
 import { BulkLeadSourceModal } from "@/components/contacts/BulkLeadSourceModal";
+import { BulkTypeModal } from "@/components/contacts/BulkTypeModal";
 import { Button } from "@/components/ui";
 import { Archive } from "lucide-react";
 import type { ContactWithRelations, PipelineStage, Tag } from "@/types/database";
 
 type SequenceOption = { id: string; name: string; type: "broadcast" | "drip" | "batch" };
-type BulkModal = "add-tag" | "remove-tag" | "sequence" | "stage" | "source" | null;
+type BulkModal = "add-tag" | "remove-tag" | "sequence" | "stage" | "source" | "type" | null;
 
 export function ContactsList({
   contacts,
@@ -123,6 +124,9 @@ export function ContactsList({
                 <Button size="sm" variant="secondary" onClick={() => setModal("source")}>
                   Change source
                 </Button>
+                <Button size="sm" variant="secondary" onClick={() => setModal("type")}>
+                  Change type
+                </Button>
                 <Button size="sm" variant="secondary" onClick={() => setModal("sequence")}>
                   Sequence…
                 </Button>
@@ -150,6 +154,7 @@ export function ContactsList({
       {modal === "source" && (
         <BulkLeadSourceModal contactIds={selectedIds} onClose={() => setModal(null)} onDone={afterAction} />
       )}
+      {modal === "type" && <BulkTypeModal contactIds={selectedIds} onClose={() => setModal(null)} onDone={afterAction} />}
     </div>
   );
 }
