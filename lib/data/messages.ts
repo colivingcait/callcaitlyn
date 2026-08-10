@@ -1,7 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Activity } from "@/types/database";
+import type { Activity, ContactWithRelations } from "@/types/database";
 
-type ContactSummary = { id: string; first_name: string; last_name: string; phone: string | null };
+type ContactSummary = Pick<
+  ContactWithRelations,
+  "id" | "first_name" | "last_name" | "phone" | "contact_type" | "timeline" | "pipeline_stages" | "contact_tags"
+>;
 
 export type Conversation = {
   contact: ContactSummary;
@@ -16,7 +19,7 @@ export async function listConversations(): Promise<Conversation[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("activities")
-    .select("*, contacts(id, first_name, last_name, phone)")
+    .select("*, contacts(id, first_name, last_name, phone, contact_type, timeline, pipeline_stages(*), contact_tags(tags(*)))")
     .in("type", ["call", "text"])
     .order("occurred_at", { ascending: false })
     .limit(300);
@@ -44,4 +47,19 @@ export async function getContactThread(contactId: string) {
     .in("type", ["call", "text"])
     .order("occurred_at", { ascending: true });
   return (data ?? []) as Activity[];
+}
+
+export type TextableContact = { id: string; first_name: string; last_name: string; phone: string | null };
+
+// For the "new message" contact picker - anyone without a phone number
+// can't be texted, so there's no point surfacing them there.
+export async function listTextableContacts(): Promise<TextableContact[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("contacts")
+    .select("id, first_name, last_name, phone")
+    .eq("archived", false)
+    .not("phone", "is", null)
+    .order("first_name", { ascending: true });
+  return (data ?? []) as TextableContact[];
 }
