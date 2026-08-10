@@ -2,7 +2,7 @@
 -- SCHEMA CATCH-UP SCRIPT
 -- ============================================================================
 -- Run this ONCE in the Supabase SQL Editor. It re-applies everything from
--- migrations 0001 through 0025 in an idempotent, safe-to-rerun form, so it
+-- migrations 0001 through 0026 in an idempotent, safe-to-rerun form, so it
 -- doesn't matter which individual migration files were or weren't run
 -- historically - anything already present is left untouched, anything
 -- missing gets added. Safe to run multiple times.
@@ -125,6 +125,9 @@ create index if not exists contacts_dialer_idx on public.contacts(owner_id, dial
 alter table public.contacts add column if not exists event_followup_contacted_at timestamptz;
 alter table public.contacts add column if not exists event_followup_snoozed_at timestamptz;
 create index if not exists contacts_event_followup_idx on public.contacts(owner_id, event_followup_contacted_at) where archived = false;
+alter table public.contacts drop constraint if exists contacts_contact_type_check;
+alter table public.contacts add constraint contacts_contact_type_check
+  check (contact_type in ('buyer', 'seller', 'both', 'investor', 'renter', 'referral_partner', 'vendor', 'past_client', 'sphere', 'attendee', 'other'));
 
 -- ---------------------------------------------------------------------------
 -- contact_tags
@@ -662,5 +665,5 @@ create policy "owner full access via send" on public.email_link_clicks
 
 -- ============================================================================
 -- Done. Every table/column/index/policy/trigger/function through migration
--- 0025 now exists, regardless of what did or didn't run before.
+-- 0026 now exists, regardless of what did or didn't run before.
 -- ============================================================================

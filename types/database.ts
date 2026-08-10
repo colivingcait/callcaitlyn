@@ -12,6 +12,7 @@ export type ContactType =
   | "vendor"
   | "past_client"
   | "sphere"
+  | "attendee"
   | "other";
 
 export type Timeline =

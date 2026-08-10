@@ -4,6 +4,7 @@ import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Clock } from "lucide-react";
 import { DialerCallModal } from "@/components/dialer/DialerCallModal";
+import { Badge } from "@/components/ui";
 import { fullName, formatPhone, initials } from "@/lib/utils";
 import type { DialerContact, DialerMode } from "@/lib/data/dialer";
 import type { PipelineStage } from "@/types/database";
@@ -37,7 +38,16 @@ export function DialerQueue({
             {initials(contact.first_name, contact.last_name)}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate font-medium text-neutral-900">{fullName(contact)}</p>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <p className="truncate font-medium text-neutral-900">{fullName(contact)}</p>
+              {mode === "new-registration" && contact.isNew !== undefined && (
+                <Badge
+                  className={`shrink-0 px-1.5 py-0 text-[10px] ${contact.isNew ? "bg-brand-50 text-brand-700" : "bg-neutral-100 text-neutral-600"}`}
+                >
+                  {contact.isNew ? "New" : "Returning"}
+                </Badge>
+              )}
+            </div>
             <p className="truncate text-xs text-neutral-500">{formatPhone(contact.phone)}</p>
             <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-neutral-400">
               {contact.lead_source && <span className="truncate">{contact.lead_source}</span>}

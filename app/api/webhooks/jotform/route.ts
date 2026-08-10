@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
       firstName: firstName || null,
       lastName: lastNameParts.join(" ") || null,
       leadSource: submission.howHeard ?? "Jotform (in-person event)",
+      contactType: "attendee",
     });
 
     if (!contact) {

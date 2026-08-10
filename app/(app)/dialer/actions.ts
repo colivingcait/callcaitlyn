@@ -11,11 +11,27 @@ export async function markDialerSnoozed(contactId: string) {
   await supabase.from("contacts").update({ dialer_snoozed_at: new Date().toISOString() }).eq("id", contactId);
 }
 
-// "Connected" - removes the contact from the dialer queue for good, right
-// away. Reclassifying/adding notes is a separate follow-up step (see
-// saveDialerNotes below) so closing that modal without filling it in
-// doesn't leave them stuck back on the call list.
+// "Connected" - clears this contact off the New Registrations queue for
+// their current registration. Reclassifying/adding notes is a separate
+// follow-up step (see saveDialerNotes below) so closing that modal
+// without filling it in doesn't leave them stuck back on the call list.
+// If they register again later, this timestamp is older than the new
+// registration, so they naturally reappear - "contacted" means "since
+// their last registration," not "forever."
 export async function markDialerConnected(contactId: string) {
+  const supabase = await createClient();
+  await supabase
+    .from("contacts")
+    .update({ dialer_contacted_at: new Date().toISOString(), dialer_snoozed_at: null })
+    .eq("id", contactId);
+}
+
+// "Dismiss" - same underlying effect as Connected (clears this specific
+// registration off the queue), but means "no action needed" rather than
+// "I called them" - for repeat registrants she doesn't want to reach out
+// to every time (vendors, etc.). Separate name so the intent is clear in
+// the code even though the data change is identical.
+export async function markDialerDismissed(contactId: string) {
   const supabase = await createClient();
   await supabase
     .from("contacts")

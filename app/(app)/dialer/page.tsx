@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listDialerQueue, listEventFollowupQueue } from "@/lib/data/dialer";
+import { listNewRegistrationsQueue, listEventFollowupQueue } from "@/lib/data/dialer";
 import { listStages } from "@/lib/data/contacts";
 import { DialerQueue } from "@/components/dialer/DialerQueue";
 import { cn } from "@/lib/utils";
@@ -8,14 +8,11 @@ export default async function DialerPage({ searchParams }: { searchParams: Promi
   const { tab } = await searchParams;
   const activeTab = tab === "followup" ? "followup" : "new";
 
-  const [{ contacts: newLeads, error: newLeadsError }, { contacts: followups, error: followupError }, stages] = await Promise.all([
-    listDialerQueue(),
-    listEventFollowupQueue(),
-    listStages(),
-  ]);
+  const [{ contacts: registrations, error: registrationsError }, { contacts: followups, error: followupError }, stages] =
+    await Promise.all([listNewRegistrationsQueue(), listEventFollowupQueue(), listStages()]);
 
-  const contacts = activeTab === "followup" ? followups : newLeads;
-  const error = activeTab === "followup" ? followupError : newLeadsError;
+  const contacts = activeTab === "followup" ? followups : registrations;
+  const error = activeTab === "followup" ? followupError : registrationsError;
 
   return (
     <div className="mx-auto max-w-2xl overflow-x-hidden">
@@ -24,7 +21,7 @@ export default async function DialerPage({ searchParams }: { searchParams: Promi
         <p className="mt-0.5 text-sm text-neutral-500">
           {activeTab === "followup"
             ? "People who attended - call to follow up while it's fresh."
-            : "New leads who haven't been called yet - reach them fast."}
+            : "Everyone with an untouched registration - new and returning both."}
         </p>
       </div>
 
@@ -36,7 +33,7 @@ export default async function DialerPage({ searchParams }: { searchParams: Promi
             activeTab === "new" ? "border-brand-600 text-brand-700" : "border-transparent text-neutral-500",
           )}
         >
-          New leads ({newLeads.length})
+          New registrations ({registrations.length})
         </Link>
         <Link
           href="/dialer?tab=followup"
@@ -59,7 +56,7 @@ export default async function DialerPage({ searchParams }: { searchParams: Promi
       <DialerQueue
         contacts={contacts}
         stages={stages}
-        mode={activeTab === "followup" ? "event-followup" : "new-lead"}
+        mode={activeTab === "followup" ? "event-followup" : "new-registration"}
         emptyMessage={
           activeTab === "followup" ? "No one's waiting on a follow-up call." : "Nobody left to call — you're caught up."
         }

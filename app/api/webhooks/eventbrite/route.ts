@@ -61,7 +61,15 @@ export async function POST(request: NextRequest) {
         phone: attendee.phone,
         firstName: attendee.firstName,
         lastName: attendee.lastName,
-        leadSource: "Eventbrite",
+        // Specific event name, not just "Eventbrite" - lets the two
+        // audiences (House Hacking vs Women's REI) be told apart at a
+        // glance instead of everyone reading as one generic source.
+        leadSource: eventName ?? "Eventbrite",
+        // Only ever applied to brand-new contacts (findOrCreateContact
+        // never overwrites an existing contact's real type) - a neutral
+        // "came from a meetup, not yet classified" starting point instead
+        // of the generic "other".
+        contactType: "attendee",
       });
       if (!contact) continue;
 

@@ -6,11 +6,12 @@ import { openQuoCall } from "@/lib/quo/call-link";
 import {
   markDialerConnected,
   markDialerSnoozed,
+  markDialerDismissed,
   markEventFollowupConnected,
   markEventFollowupSnoozed,
   saveDialerNotes,
 } from "@/app/(app)/dialer/actions";
-import { Button, Select, Textarea } from "@/components/ui";
+import { Button, Select, Textarea, Badge } from "@/components/ui";
 import { formatDistanceToNow } from "date-fns";
 import { X, PhoneCall, Clock } from "lucide-react";
 import { fullName, formatPhone } from "@/lib/utils";
@@ -55,6 +56,14 @@ export function DialerCallModal({
     onClose();
   }
 
+  async function handleDismiss() {
+    setMarking(true);
+    await markDialerDismissed(contact.id);
+    setMarking(false);
+    router.refresh();
+    onClose();
+  }
+
   async function handleSave() {
     setSaving(true);
     await saveDialerNotes(contact.id, stageId || null, note);
@@ -68,7 +77,14 @@ export function DialerCallModal({
       <div className="w-full max-w-sm rounded-t-2xl bg-white p-5 shadow-xl sm:rounded-2xl">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="font-serif text-xl font-semibold text-neutral-900">{fullName(contact)}</p>
+            <div className="flex items-center gap-2">
+              <p className="font-serif text-xl font-semibold text-neutral-900">{fullName(contact)}</p>
+              {mode === "new-registration" && contact.isNew !== undefined && (
+                <Badge className={contact.isNew ? "bg-brand-50 text-brand-700" : "bg-neutral-100 text-neutral-600"}>
+                  {contact.isNew ? "New" : "Returning"}
+                </Badge>
+              )}
+            </div>
             <p className="text-sm text-neutral-500">{formatPhone(contact.phone)}</p>
           </div>
           <button onClick={onClose} className="shrink-0 rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100">
@@ -91,6 +107,16 @@ export function DialerCallModal({
         >
           <PhoneCall size={18} /> Call {contact.first_name} now
         </button>
+
+        {mode === "new-registration" && !called && (
+          <button
+            onClick={handleDismiss}
+            disabled={marking}
+            className="mt-2 w-full text-center text-xs font-medium text-neutral-400 hover:text-neutral-600 disabled:opacity-50"
+          >
+            {marking ? "Dismissing…" : "Dismiss — no action needed this time"}
+          </button>
+        )}
 
         {called && (
           <div className="mt-3">
