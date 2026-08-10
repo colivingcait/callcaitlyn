@@ -4,6 +4,7 @@ import { listStages, listTags } from "@/lib/data/contacts";
 import { StageManager } from "@/components/settings/StageManager";
 import { TagManager } from "@/components/settings/TagManager";
 import { GmailConnect } from "@/components/settings/GmailConnect";
+import { QuoSyncBackfill } from "@/components/settings/QuoSyncBackfill";
 import { Card, Button } from "@/components/ui";
 import { Mail } from "lucide-react";
 
@@ -53,6 +54,11 @@ export default async function SettingsPage({
           timeline automatically. New calls/texts/emails also get read by AI, which suggests stage/timeline
           updates for you to approve on the contact page. Calendly is built, just needs setup (see the README).
         </p>
+        <p className="text-sm text-neutral-500">
+          New and edited contacts with a phone number now push automatically into Quo, so calls and texts there
+          show a name instead of a raw number. Run this once to backfill everyone already in the CRM.
+        </p>
+        <QuoSyncBackfill />
       </Card>
     </div>
   );

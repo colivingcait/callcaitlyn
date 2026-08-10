@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { syncContactToQuoAction } from "@/app/(app)/contacts/actions";
 import { contactSchema, type ContactFormValues } from "@/lib/validation/contact";
 import { Button, Input, Label, Select, Textarea, Card } from "@/components/ui";
 import { CONTACT_TYPE_LABELS, TIMELINE_LABELS, REPRESENTING_LABELS, cn } from "@/lib/utils";
@@ -158,6 +159,8 @@ export function ContactForm({
           .insert(selectedTagIds.map((tagId) => ({ contact_id: contactId, tag_id: tagId })));
       }
     }
+
+    if (contactId && payload.phone) void syncContactToQuoAction(contactId);
 
     router.push(`/contacts/${contactId}`);
     router.refresh();

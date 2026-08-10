@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { phonesMatch } from "@/lib/phone";
+import { syncContactToQuo } from "@/lib/quo/sync-contact";
 
 // Shared across integrations (Quo, Calendly, Eventbrite, Jotform): find an
 // existing contact by email and/or phone, or create a bare one so nothing
@@ -16,6 +17,11 @@ export async function findOrCreateContact(
     lastName?: string | null;
     leadSource: string;
     contactType?: string;
+    // Bulk imports process rows one at a time already (for dedup safety -
+    // see the caller) and a Quo API round-trip per row risks timing out a
+    // big CSV. Skip it there; the one-time backfill button in Settings
+    // catches every contact this leaves un-synced.
+    skipQuoSync?: boolean;
   },
 ): Promise<{ id: string; wasCreated: boolean } | null> {
   const email = input.email?.trim().toLowerCase() || null;
@@ -35,6 +41,15 @@ export async function findOrCreateContact(
   });
   if (match) {
     await enrichContact(admin, match, { email, phone, firstName: input.firstName, lastName: input.lastName });
+    if (phone && !input.skipQuoSync) {
+      await syncContactToQuo(admin, {
+        id: match.id,
+        first_name: input.firstName?.trim() || match.first_name,
+        last_name: input.lastName?.trim() || match.last_name,
+        phone,
+        email,
+      });
+    }
     return { id: match.id, wasCreated: false };
   }
 
@@ -62,6 +77,17 @@ export async function findOrCreateContact(
     .single();
 
   if (error || !created) return null;
+
+  if (phone && !input.skipQuoSync) {
+    await syncContactToQuo(admin, {
+      id: created.id,
+      first_name: input.firstName?.trim() || email || phone || "Unknown",
+      last_name: input.lastName?.trim() || "",
+      phone,
+      email,
+    });
+  }
+
   return { id: created.id, wasCreated: true };
 }
 
