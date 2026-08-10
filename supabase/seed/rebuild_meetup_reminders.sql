@@ -1,11 +1,15 @@
 -- One-time content rebuild, not a schema migration. Run once, after
 -- house_hacking_sequences.sql and add_womens_rei_mentions.sql have already
--- been run. Replaces all 40 steps of the "Meetup Reminders" sequence:
+-- been run. Replaces all steps of the "Meetup Reminders" sequence with 42:
 -- previously every email promoted House Hacking only; now the same single
 -- list gets a mix, roughly 65% House Hacking / 35% Women's REI, with every
--- email's sign-off linking both. Send dates are unchanged from the
--- original build (same Tue/Wed cadence, same two holiday overrides) - only
--- which topic each slot leads with, and the closing signature, changed.
+-- email's sign-off linking both. House Hacking send dates are unchanged
+-- from the original build (same Tue/Wed cadence, same two holiday
+-- overrides) - only which topic each slot leads with, and the closing
+-- signature, changed. Two new steps (Aug 18 and Aug 24) promote the
+-- specific August 25 Women's REI meetup (Anika Uboh, "Inside a 250-Home
+-- Neighborhood") ahead of the recurring, topic-agnostic mentions used for
+-- every occurrence after that one.
 --
 -- Deleting and re-inserting is safe here: this sequence's first send date
 -- is still in the future as of when this script is written, so no real
@@ -44,7 +48,48 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2026-08-12 10:00:00'),
 
-(1, $$Two meetups now — here's how they're different$$, $$Hi {{first_name}},
+-- ---------- AUGUST 25 WOMEN'S REI MEETUP: Inside a 250-Home Neighborhood ----------
+(1, $$This month's Women's REI meetup: Inside a 250-Home Neighborhood$$, $$Hi {{first_name}},
+
+Ladies, it's time to think bigger! This month's Women's Real Estate Investing meetup is coming up August 25, and it's a good one — an inside look at the making of a 250-home neighborhood.
+
+Most real estate investors focus on rentals and flips. What if one larger-scale development could outperform dozens of individual investments?
+
+Developer and entrepreneur Anika Uboh is joining us to share the story behind developing and selling a 250-home residential community in the suburbs of Atlanta — the strategy, partnerships, capital, and leadership it took to pull off, and the lessons investors at every stage can apply to their own journey.
+
+Anika is a real estate developer, civil and environmental engineer, and entrepreneur who co-developed and sold that 250-home neighborhood. She's also the founder of EntrepreneurHER and the JUBOH Foundation, where she empowers women through education, leadership, and entrepreneurship.
+
+Tuesday, August 25, 6:30-9pm, New Realm Brewery, 550 Somerset Terrace NE #101, Atlanta, GA 30306.
+
+<a href="https://www.eventbrite.com/cc/women-real-estate-investors-atl-monthly-meetups-4833857?utm-campaign=social&utm-content=creatorshare&utm-medium=discovery&utm-term=odclsxcollection&utm-source=cp&aff=escb">Register →</a>
+
+Caitlyn Verdugo
+
+<a href="https://www.eventbrite.com/cc/house-hacking-atl-4861227">House Hacking Meetup — 2nd Tuesdays →</a>
+<a href="https://www.eventbrite.com/cc/women-real-estate-investors-atl-monthly-meetups-4833857?utm-campaign=social&utm-content=creatorshare&utm-medium=discovery&utm-term=odclsxcollection&utm-source=cp&aff=escb">Women's REI Meetup — 4th Tuesdays →</a>
+<a href="https://facebook.com/groups/househackingatl">Join the Facebook group →</a>
+
+Every door is an opportunity. 🚪$$, '2026-08-18 10:00:00'),
+
+(2, $$Tomorrow: Inside a 250-Home Neighborhood$$, $$Hi {{first_name}},
+
+Tomorrow! Inside the Making of a 250-Home Neighborhood — our Women's Real Estate Investing meetup, 6:30pm.
+
+Developer Anika Uboh will walk us through developing and selling a 250-home residential community in the Atlanta suburbs — the strategy, the partnerships, the capital, and what it took to lead. Whether you're years from anything this size or just curious what's possible beyond a single rental, there's something here for you.
+
+New Realm Brewery, 550 Somerset Terrace NE #101, Atlanta, GA 30306. Doors 6:30, program 7:00, open networking after.
+
+<a href="https://www.eventbrite.com/cc/women-real-estate-investors-atl-monthly-meetups-4833857?utm-campaign=social&utm-content=creatorshare&utm-medium=discovery&utm-term=odclsxcollection&utm-source=cp&aff=escb">Register →</a>
+
+Caitlyn Verdugo
+
+<a href="https://www.eventbrite.com/cc/house-hacking-atl-4861227">House Hacking Meetup — 2nd Tuesdays →</a>
+<a href="https://www.eventbrite.com/cc/women-real-estate-investors-atl-monthly-meetups-4833857?utm-campaign=social&utm-content=creatorshare&utm-medium=discovery&utm-term=odclsxcollection&utm-source=cp&aff=escb">Women's REI Meetup — 4th Tuesdays →</a>
+<a href="https://facebook.com/groups/househackingatl">Join the Facebook group →</a>
+
+Every door is an opportunity. 🚪$$, '2026-08-24 10:00:00'),
+
+(3, $$Two meetups now — here's how they're different$$, $$Hi {{first_name}},
 
 Following up on the news — we're now running two monthly meetups instead of one, and I wanted to lay out how they're different so you know which one (or both!) is for you.
 
@@ -62,7 +107,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2026-08-26 10:00:00'),
 
-(2, $$Next Tuesday — the first House Hacking meetup$$, $$Hi {{first_name}},
+(4, $$Next Tuesday — the first House Hacking meetup$$, $$Hi {{first_name}},
 
 The first-ever House Hacking Atlanta meetup is next Tuesday — Financing a House Hack, September 8, 6:30pm.
 
@@ -85,7 +130,7 @@ Caitlyn Verdugo
 Every door is an opportunity. 🚪$$, '2026-09-02 10:00:00'),
 
 -- ---------- EVENT 1: Financing a House Hack - Tue Sep 8, 2026 ----------
-(3, $$Tonight: Financing a House Hack$$, $$Hi {{first_name}},
+(5, $$Tonight: Financing a House Hack$$, $$Hi {{first_name}},
 
 Tonight! Financing a House Hack.
 
@@ -109,7 +154,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2026-09-08 10:00:00'),
 
-(4, $$Last night: the 5% down conversation$$, $$Hi {{first_name}},
+(6, $$Last night: the 5% down conversation$$, $$Hi {{first_name}},
 
 What a good night. Thanks to everyone who came out — and to the folks who stuck around talking well past nine!
 
@@ -136,7 +181,7 @@ Caitlyn Verdugo
 Every door is an opportunity. 🚪$$, '2026-09-09 10:00:00'),
 
 -- ---------- EVENT 2: Finding the Deal - Tue Oct 13, 2026 (save-the-date slot -> Women's REI) ----------
-(5, $$This month's Women's REI meetup$$, $$Hi {{first_name}},
+(7, $$This month's Women's REI meetup$$, $$Hi {{first_name}},
 
 Quick reminder — our Women's Real Estate Investing meetup is coming up September 22, 6:30-9pm at New Realm Brewery.
 
@@ -154,7 +199,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2026-09-16 10:00:00'),
 
-(6, $$Finding the Deal — next House Hacking Atlanta meetup$$, $$Hi {{first_name}},
+(8, $$Finding the Deal — next House Hacking Atlanta meetup$$, $$Hi {{first_name}},
 
 Two weeks out — Finding the Deal, Tuesday October 13.
 
@@ -178,7 +223,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2026-09-30 10:00:00'),
 
-(7, $$Next Tuesday — Finding the Deal$$, $$Hi {{first_name}},
+(9, $$Next Tuesday — Finding the Deal$$, $$Hi {{first_name}},
 
 Finding the Deal is next Tuesday, and I'd love for you to come.
 
@@ -198,7 +243,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2026-10-07 10:00:00'),
 
-(8, $$Tonight: Finding the Deal$$, $$Hi {{first_name}},
+(10, $$Tonight: Finding the Deal$$, $$Hi {{first_name}},
 
 Tonight! Finding the Deal.
 
@@ -220,7 +265,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2026-10-13 10:00:00'),
 
-(9, $$Last night: the houses that don't work$$, $$Hi {{first_name}},
+(11, $$Last night: the houses that don't work$$, $$Hi {{first_name}},
 
 What a great night — thank you so much to everyone who came out!
 
@@ -248,7 +293,7 @@ Caitlyn Verdugo
 Every door is an opportunity. 🚪$$, '2026-10-14 10:00:00'),
 
 -- ---------- EVENT 3: Protecting Your House Hack - Tue Nov 10, 2026 (save-the-date slot -> Women's REI) ----------
-(10, $$This month's Women's REI meetup$$, $$Hi {{first_name}},
+(12, $$This month's Women's REI meetup$$, $$Hi {{first_name}},
 
 Our Women's Real Estate Investing meetup is coming up October 27 — 6:30-9pm, New Realm Brewery.
 
@@ -266,7 +311,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2026-10-14 10:00:00'),
 
-(11, $$Protecting Your House Hack — next House Hacking Atlanta meetup$$, $$Hi {{first_name}},
+(13, $$Protecting Your House Hack — next House Hacking Atlanta meetup$$, $$Hi {{first_name}},
 
 Two weeks out — Protecting Your House Hack, Tuesday November 10.
 
@@ -290,7 +335,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2026-10-28 10:00:00'),
 
-(12, $$Next Tuesday — Protecting Your House Hack$$, $$Hi {{first_name}},
+(14, $$Next Tuesday — Protecting Your House Hack$$, $$Hi {{first_name}},
 
 Protecting Your House Hack is next Tuesday, and I'd love for you to come.
 
@@ -310,7 +355,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2026-11-04 10:00:00'),
 
-(13, $$Tonight: Protecting Your House Hack$$, $$Hi {{first_name}},
+(15, $$Tonight: Protecting Your House Hack$$, $$Hi {{first_name}},
 
 Tonight! Protecting Your House Hack.
 
@@ -332,7 +377,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2026-11-10 10:00:00'),
 
-(14, $$Last night: the coverage gap nobody checks$$, $$Hi {{first_name}},
+(16, $$Last night: the coverage gap nobody checks$$, $$Hi {{first_name}},
 
 What a great night — thank you so much to everyone who came out!
 
@@ -359,7 +404,7 @@ Caitlyn Verdugo
 Every door is an opportunity. 🚪$$, '2026-11-11 10:00:00'),
 
 -- ---------- EVENT 4: Screening Tenants - Tue Dec 8, 2026 (save-the-date slot -> Women's REI) ----------
-(15, $$This month's Women's REI meetup$$, $$Hi {{first_name}},
+(17, $$This month's Women's REI meetup$$, $$Hi {{first_name}},
 
 Our Women's Real Estate Investing meetup is coming up November 24 — 6:30-9pm, New Realm Brewery.
 
@@ -377,7 +422,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2026-11-11 10:00:00'),
 
-(16, $$Screening Tenants — next House Hacking Atlanta meetup$$, $$Hi {{first_name}},
+(18, $$Screening Tenants — next House Hacking Atlanta meetup$$, $$Hi {{first_name}},
 
 Two weeks out — Screening Tenants, Tuesday December 8.
 
@@ -401,7 +446,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2026-11-24 10:00:00'),
 
-(17, $$Next Tuesday — Screening Tenants$$, $$Hi {{first_name}},
+(19, $$Next Tuesday — Screening Tenants$$, $$Hi {{first_name}},
 
 Screening Tenants is next Tuesday, and I'd love for you to come.
 
@@ -421,7 +466,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2026-12-02 10:00:00'),
 
-(18, $$Tonight: Screening Tenants$$, $$Hi {{first_name}},
+(20, $$Tonight: Screening Tenants$$, $$Hi {{first_name}},
 
 Tonight! Screening Tenants.
 
@@ -443,7 +488,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2026-12-08 10:00:00'),
 
-(19, $$Last night: the most expensive instinct in this business$$, $$Hi {{first_name}},
+(21, $$Last night: the most expensive instinct in this business$$, $$Hi {{first_name}},
 
 What a good night — thanks to everyone who came out, especially in December!
 
@@ -471,7 +516,7 @@ Caitlyn Verdugo
 Every door is an opportunity. 🚪$$, '2026-12-09 10:00:00'),
 
 -- ---------- EVENT 5: House Hacking Panel - Tue Jan 12, 2027 (save-the-date slot -> Women's REI) ----------
-(20, $$This month's Women's REI meetup$$, $$Hi {{first_name}},
+(22, $$This month's Women's REI meetup$$, $$Hi {{first_name}},
 
 Women's Real Estate Investing is coming up December 22 — 6:30-9pm, New Realm Brewery.
 
@@ -489,7 +534,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2026-12-16 10:00:00'),
 
-(21, $$House Hacking Panel — next House Hacking Atlanta meetup$$, $$Hi {{first_name}},
+(23, $$House Hacking Panel — next House Hacking Atlanta meetup$$, $$Hi {{first_name}},
 
 Two weeks out — House Hacking Panel, Tuesday January 12.
 
@@ -513,7 +558,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2027-01-05 10:00:00'),
 
-(22, $$Thursday — House Hacking Panel$$, $$Hi {{first_name}},
+(24, $$Thursday — House Hacking Panel$$, $$Hi {{first_name}},
 
 House Hacking Panel is this Thursday, and I'd love for you to come.
 
@@ -533,7 +578,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2027-01-07 10:00:00'),
 
-(23, $$Tonight: House Hacking Panel$$, $$Hi {{first_name}},
+(25, $$Tonight: House Hacking Panel$$, $$Hi {{first_name}},
 
 Tonight! House Hacking Panel.
 
@@ -555,7 +600,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2027-01-12 10:00:00'),
 
-(24, $$Last night: real numbers, real deals$$, $$Hi {{first_name}},
+(26, $$Last night: real numbers, real deals$$, $$Hi {{first_name}},
 
 What a night! Thank you to our panelists for being genuinely open about their house hacking stories — what they paid, what they rent for, what lessons they learned and the parts that didn't go according to plan.
 
@@ -581,7 +626,7 @@ Caitlyn Verdugo
 Every door is an opportunity. 🚪$$, '2027-01-13 10:00:00'),
 
 -- ---------- EVENT 6: Inspecting Your Future - Tue Feb 9, 2027 (save-the-date slot -> Women's REI) ----------
-(25, $$This month's Women's REI meetup$$, $$Hi {{first_name}},
+(27, $$This month's Women's REI meetup$$, $$Hi {{first_name}},
 
 Women's Real Estate Investing is coming up January 26 — 6:30-9pm, New Realm Brewery.
 
@@ -599,7 +644,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2027-01-13 10:00:00'),
 
-(26, $$Inspecting Your Future — next House Hacking Atlanta meetup$$, $$Hi {{first_name}},
+(28, $$Inspecting Your Future — next House Hacking Atlanta meetup$$, $$Hi {{first_name}},
 
 Two weeks out — Inspecting Your Future, Tuesday February 9.
 
@@ -623,7 +668,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2027-01-27 10:00:00'),
 
-(27, $$Next Tuesday — Inspecting Your Future$$, $$Hi {{first_name}},
+(29, $$Next Tuesday — Inspecting Your Future$$, $$Hi {{first_name}},
 
 Inspecting Your Future is next Tuesday, and I'd love for you to come.
 
@@ -643,7 +688,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2027-02-03 10:00:00'),
 
-(28, $$Tonight: Inspecting Your Future$$, $$Hi {{first_name}},
+(30, $$Tonight: Inspecting Your Future$$, $$Hi {{first_name}},
 
 Tonight! Inspecting Your Future.
 
@@ -665,7 +710,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2027-02-09 10:00:00'),
 
-(29, $$Last night: what's actually behind that basement wall$$, $$Hi {{first_name}},
+(31, $$Last night: what's actually behind that basement wall$$, $$Hi {{first_name}},
 
 What a good night — thanks to everyone who came out.
 
@@ -693,7 +738,7 @@ Caitlyn Verdugo
 Every door is an opportunity. 🚪$$, '2027-02-10 10:00:00'),
 
 -- ---------- EVENT 7: Numbers Workshop - Tue Mar 9, 2027 (save-the-date slot -> Women's REI) ----------
-(30, $$This month's Women's REI meetup$$, $$Hi {{first_name}},
+(32, $$This month's Women's REI meetup$$, $$Hi {{first_name}},
 
 Women's Real Estate Investing meets again February 23 — 6:30-9pm, New Realm Brewery.
 
@@ -711,7 +756,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2027-02-10 10:00:00'),
 
-(31, $$Numbers Workshop — bring a listing — next House Hacking Atlanta meetup$$, $$Hi {{first_name}},
+(33, $$Numbers Workshop — bring a listing — next House Hacking Atlanta meetup$$, $$Hi {{first_name}},
 
 Two weeks out — Numbers Workshop — bring a listing, Tuesday March 9.
 
@@ -735,7 +780,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2027-02-24 10:00:00'),
 
-(32, $$Next Tuesday — Numbers Workshop$$, $$Hi {{first_name}},
+(34, $$Next Tuesday — Numbers Workshop$$, $$Hi {{first_name}},
 
 Numbers Workshop is next Tuesday, and I'd love for you to come.
 
@@ -755,7 +800,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2027-03-03 10:00:00'),
 
-(33, $$Tonight: Numbers Workshop$$, $$Hi {{first_name}},
+(35, $$Tonight: Numbers Workshop$$, $$Hi {{first_name}},
 
 Tonight! Numbers Workshop — bring a listing.
 
@@ -777,7 +822,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2027-03-09 10:00:00'),
 
-(34, $$Last night: running the numbers together$$, $$Hi {{first_name}},
+(36, $$Last night: running the numbers together$$, $$Hi {{first_name}},
 
 That was a fun one! Thanks to everyone who brought a listing and let the room pick it apart — and to the people who found out their deal didn't work, which is genuinely the most valuable outcome of the night.
 
@@ -802,7 +847,7 @@ Caitlyn Verdugo
 Every door is an opportunity. 🚪$$, '2027-03-10 10:00:00'),
 
 -- ---------- EVENT 8: Adding Value to Your House Hack - Tue Apr 13, 2027 (save-the-date slot -> Women's REI) ----------
-(35, $$This month's Women's REI meetup$$, $$Hi {{first_name}},
+(37, $$This month's Women's REI meetup$$, $$Hi {{first_name}},
 
 Women's Real Estate Investing is coming up March 23 — 6:30-9pm, New Realm Brewery.
 
@@ -820,7 +865,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2027-03-17 10:00:00'),
 
-(36, $$Adding Value to Your House Hack — next House Hacking Atlanta meetup$$, $$Hi {{first_name}},
+(38, $$Adding Value to Your House Hack — next House Hacking Atlanta meetup$$, $$Hi {{first_name}},
 
 Two weeks out — Adding Value to Your House Hack, Tuesday April 13.
 
@@ -844,7 +889,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2027-03-31 10:00:00'),
 
-(37, $$Next Tuesday — Adding Value to Your House Hack$$, $$Hi {{first_name}},
+(39, $$Next Tuesday — Adding Value to Your House Hack$$, $$Hi {{first_name}},
 
 Adding Value to Your House Hack is next Tuesday, and I'd love for you to come.
 
@@ -864,7 +909,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2027-04-07 10:00:00'),
 
-(38, $$Tonight: Adding Value to Your House Hack$$, $$Hi {{first_name}},
+(40, $$Tonight: Adding Value to Your House Hack$$, $$Hi {{first_name}},
 
 Tonight! Adding Value to Your House Hack.
 
@@ -886,7 +931,7 @@ Caitlyn Verdugo
 
 Every door is an opportunity. 🚪$$, '2027-04-13 10:00:00'),
 
-(39, $$Last night: does the basement actually add value?$$, $$Hi {{first_name}},
+(41, $$Last night: does the basement actually add value?$$, $$Hi {{first_name}},
 
 What a great night — thank you so much to everyone who came out!
 
