@@ -39,6 +39,7 @@ export function DealCelebrationModal({
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const isStandaloneEdit = mode === "edit" && !initial?.contact_id;
   const [clientName, setClientName] = useState(initial?.client_name ?? "");
   const [status, setStatus] = useState<DealStatus>(initial?.status ?? (mode === "under_contract" ? "pending" : "won"));
@@ -70,6 +71,7 @@ export function DealCelebrationModal({
 
   async function handleSave() {
     setSaving(true);
+    setError("");
     const supabase = createClient();
     const fields: Record<string, unknown> = {
       address: address || null,
@@ -99,11 +101,28 @@ export function DealCelebrationModal({
 
     if (dealId) {
       if (mode === "edit") fields.status = status;
-      await supabase.from("deals").update(fields).eq("id", dealId);
+      // .select() forces Supabase to return the updated row(s) - with RLS,
+      // an update that matches zero rows (wrong owner, stale id, etc.)
+      // otherwise succeeds silently with an empty result instead of
+      // erroring, which would hide a real failure from her entirely.
+      const { data, error: saveError } = await supabase.from("deals").update(fields).eq("id", dealId).select("id");
+      setSaving(false);
+      if (saveError) {
+        setError(saveError.message);
+        return;
+      }
+      if (!data || data.length === 0) {
+        setError("Nothing was saved - this deal couldn't be found or you may not have permission to edit it.");
+        return;
+      }
     } else {
-      await supabase.from("deals").insert({ owner_id: ownerId, contact_id: contactId, status, ...fields });
+      const { error: insertError } = await supabase.from("deals").insert({ owner_id: ownerId, contact_id: contactId, status, ...fields });
+      setSaving(false);
+      if (insertError) {
+        setError(insertError.message);
+        return;
+      }
     }
-    setSaving(false);
     router.refresh();
     onClose();
   }
@@ -340,6 +359,8 @@ export function DealCelebrationModal({
             />
           </div>
         </div>
+
+        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
 
         <div className="mt-5 flex gap-3">
           <Button onClick={handleSave} disabled={saving} className="flex-1">
