@@ -626,7 +626,33 @@ alter table public.push_subscriptions enable row level security;
 drop policy if exists "owner full access" on public.push_subscriptions;
 create policy "owner full access" on public.push_subscriptions for all using (owner_id = auth.uid()) with check (owner_id = auth.uid());
 
+-- ---------------------------------------------------------------------------
+-- email_link_clicks
+-- ---------------------------------------------------------------------------
+create table if not exists public.email_link_clicks (
+  id uuid primary key default gen_random_uuid(),
+  send_id uuid not null references public.email_sequence_sends(id) on delete cascade,
+  url text not null,
+  clicked_at timestamptz not null default now()
+);
+create index if not exists email_link_clicks_send_idx on public.email_link_clicks(send_id);
+create index if not exists email_link_clicks_url_idx on public.email_link_clicks(url);
+alter table public.email_link_clicks enable row level security;
+drop policy if exists "owner full access via send" on public.email_link_clicks;
+create policy "owner full access via send" on public.email_link_clicks
+  for all
+  using (exists (
+    select 1 from public.email_sequence_sends snd
+    join public.email_sequences s on s.id = snd.sequence_id
+    where snd.id = send_id and s.owner_id = auth.uid()
+  ))
+  with check (exists (
+    select 1 from public.email_sequence_sends snd
+    join public.email_sequences s on s.id = snd.sequence_id
+    where snd.id = send_id and s.owner_id = auth.uid()
+  ));
+
 -- ============================================================================
 -- Done. Every table/column/index/policy/trigger/function through migration
--- 0022 now exists, regardless of what did or didn't run before.
+-- 0023 now exists, regardless of what did or didn't run before.
 -- ============================================================================

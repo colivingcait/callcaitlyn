@@ -120,6 +120,71 @@ export async function getSequenceStepStats(sequenceId: string): Promise<Map<stri
   return byStep;
 }
 
+export type LinkClickBreakdown = {
+  url: string;
+  count: number;
+  contacts: { id: string; first_name: string; last_name: string }[];
+};
+
+type RawLinkClick = {
+  url: string;
+  email_sequence_sends: {
+    step_id: string;
+    contacts: { id: string; first_name: string; last_name: string } | null;
+  };
+};
+
+// Per-step (per email) breakdown of which specific link got clicked, how
+// often, and by whom - StepStats.clicked only knows "did they click
+// something in this email," this is the detail needed to see which link
+// in a multi-link email (e.g. a signature with 3 links) actually gets
+// used, and by which contacts specifically.
+export async function getStepLinkBreakdown(sequenceId: string): Promise<Map<string, LinkClickBreakdown[]>> {
+  const supabase = await createClient();
+  const { data: clicks } = await supabase
+    .from("email_link_clicks")
+    .select("url, email_sequence_sends!inner(step_id, sequence_id, contacts(id, first_name, last_name))")
+    .eq("email_sequence_sends.sequence_id", sequenceId);
+
+  const byStep = new Map<string, Map<string, LinkClickBreakdown>>();
+  for (const row of (clicks ?? []) as unknown as RawLinkClick[]) {
+    const stepId = row.email_sequence_sends.step_id;
+    const contact = row.email_sequence_sends.contacts;
+    const stepMap = byStep.get(stepId) ?? new Map<string, LinkClickBreakdown>();
+    const entry = stepMap.get(row.url) ?? { url: row.url, count: 0, contacts: [] };
+    entry.count += 1;
+    if (contact && !entry.contacts.some((c) => c.id === contact.id)) entry.contacts.push(contact);
+    stepMap.set(row.url, entry);
+    byStep.set(stepId, stepMap);
+  }
+
+  const result = new Map<string, LinkClickBreakdown[]>();
+  for (const [stepId, urlMap] of byStep) {
+    result.set(
+      stepId,
+      [...urlMap.values()].sort((a, b) => b.count - a.count),
+    );
+  }
+  return result;
+}
+
+// All-time rollup across every step in the sequence - e.g. for a sequence
+// that mixes content between two different links across its emails, which
+// one actually wins overall rather than just in a single send.
+export async function getSequenceLinkRollup(sequenceId: string): Promise<{ url: string; count: number }[]> {
+  const supabase = await createClient();
+  const { data: clicks } = await supabase
+    .from("email_link_clicks")
+    .select("url, email_sequence_sends!inner(sequence_id)")
+    .eq("email_sequence_sends.sequence_id", sequenceId);
+
+  const counts = new Map<string, number>();
+  for (const row of (clicks ?? []) as unknown as { url: string }[]) {
+    counts.set(row.url, (counts.get(row.url) ?? 0) + 1);
+  }
+  return [...counts.entries()].map(([url, count]) => ({ url, count })).sort((a, b) => b.count - a.count);
+}
+
 export type SequenceRollup = {
   totalSteps: number;
   totalSent: number;

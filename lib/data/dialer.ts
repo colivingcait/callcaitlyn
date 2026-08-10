@@ -15,20 +15,36 @@ export type DialerContact = Pick<
   | "stage_id"
 >;
 
-// "Not yet contacted" = no outbound call/text on file at all (whether
-// logged by Quo or sent from the CRM) and never marked Connected from a
-// prior dialer pass. Never-attempted contacts sort newest-first (speed to
-// lead - call new registrants while the interest is fresh); anyone
-// snoozed (rang out / voicemail / too short to count) drops below all of
-// those, oldest-snoozed-first so retries cycle through in order, but
-// stays on the list instead of disappearing.
+// The dialer is deliberately narrow: it's a "call new people as they come
+// in" tool, not a general call-list. Scoped to contacts still sitting in
+// the New Lead stage (the pipeline's first stage, sort_order 0 - the same
+// stage findOrCreateContact assigns on creation) with a phone number and
+// no outbound call/text on file yet, who've never been marked Connected
+// from a prior dialer pass. Moving a contact to any other stage removes
+// them immediately, same as merging them into another contact (a
+// duplicate's row - and its stage - stops existing once merged). Never-
+// attempted contacts sort newest-first (speed to lead - call new
+// registrants while the interest is fresh); anyone snoozed (rang out /
+// voicemail / too short to count) drops below all of those, oldest-
+// snoozed-first so retries cycle through in order, but stays on the list
+// instead of disappearing.
 export async function listDialerQueue(): Promise<{ contacts: DialerContact[]; error: string | null }> {
   const supabase = await createClient();
+
+  const { data: firstStage, error: stageError } = await supabase
+    .from("pipeline_stages")
+    .select("id")
+    .order("sort_order", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (stageError) return { contacts: [], error: stageError.message };
+  if (!firstStage) return { contacts: [], error: null };
 
   const { data: candidates, error: candidatesError } = await supabase
     .from("contacts")
     .select("id, first_name, last_name, phone, lead_source, last_event_name, last_event_at, created_at, dialer_snoozed_at, stage_id")
     .eq("archived", false)
+    .eq("stage_id", firstStage.id)
     .is("dialer_contacted_at", null)
     .not("phone", "is", null);
 

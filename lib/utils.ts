@@ -36,6 +36,18 @@ export function formatPhone(phone?: string | null) {
   return phone;
 }
 
+// A tracked link's full URL is usually too long to show in a compact list -
+// hostname + path is enough to recognize which link it is at a glance.
+export function shortenUrl(url: string) {
+  try {
+    const u = new URL(url);
+    const path = u.pathname === "/" ? "" : u.pathname.replace(/\/$/, "");
+    return `${u.hostname.replace(/^www\./, "")}${path}`;
+  } catch {
+    return url;
+  }
+}
+
 export const TIMELINE_LABELS: Record<string, string> = {
   asap: "ASAP",
   "1_3_months": "1–3 months",

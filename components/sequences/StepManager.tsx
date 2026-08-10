@@ -7,9 +7,10 @@ import { sendTestStepEmail } from "@/app/(app)/sequences/actions";
 import { Button, Input, Textarea, Select, Card, Label, Badge } from "@/components/ui";
 import { RateBar } from "@/components/sequences/RateBar";
 import { formatLocal } from "@/lib/format-time";
+import { fullName, shortenUrl } from "@/lib/utils";
 import { ArrowUp, ArrowDown, Trash2, Plus, Pause, Play, Send } from "lucide-react";
 import type { EmailSequenceStep, SequenceType } from "@/types/database";
-import type { StepStats } from "@/lib/data/sequences";
+import type { StepStats, LinkClickBreakdown } from "@/lib/data/sequences";
 
 function toDatetimeLocal(value: string | null) {
   if (!value) return "";
@@ -46,11 +47,13 @@ export function StepManager({
   type,
   steps,
   stats,
+  linkBreakdown,
 }: {
   sequenceId: string;
   type: SequenceType;
   steps: EmailSequenceStep[];
   stats: Map<string, StepStats>;
+  linkBreakdown: Map<string, LinkClickBreakdown[]>;
 }) {
   const router = useRouter();
   const sorted = [...steps].sort((a, b) => a.step_order - b.step_order);
@@ -92,6 +95,7 @@ export function StepManager({
     <div className="space-y-3">
       {sorted.map((step, i) => {
         const s = stats.get(step.id);
+        const links = linkBreakdown.get(step.id) ?? [];
         return (
           <Card key={step.id} className="space-y-2">
             <div className="flex items-start justify-between gap-2">
@@ -202,6 +206,32 @@ export function StepManager({
             )}
             {s && s.sent > 0 && type === "broadcast" && step.send_at && (
               <p className="text-[10px] text-neutral-400">Sent {formatLocal(step.send_at, "MMM d, h:mm a")}</p>
+            )}
+
+            {links.length > 0 && (
+              <div className="space-y-1.5 border-t border-neutral-100 pt-2">
+                <p className="text-xs font-medium text-neutral-500">Link clicks</p>
+                {links.map((l) => (
+                  <div key={l.url}>
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <a
+                        href={l.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="min-w-0 flex-1 truncate text-brand-600 hover:underline"
+                      >
+                        {shortenUrl(l.url)}
+                      </a>
+                      <span className="shrink-0 text-neutral-400">{l.count}×</span>
+                    </div>
+                    {l.contacts.length > 0 && (
+                      <p className="mt-0.5 truncate text-[11px] text-neutral-400">
+                        {l.contacts.map((c) => fullName(c)).join(", ")}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
             )}
           </Card>
         );

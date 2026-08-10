@@ -9,12 +9,15 @@ import {
   getDripEnrollmentsDetailed,
   getRecentSequenceActivity,
   getSequenceExclusions,
+  getStepLinkBreakdown,
+  getSequenceLinkRollup,
 } from "@/lib/data/sequences";
 import { listContacts, listTags } from "@/lib/data/contacts";
 import { StepManager } from "@/components/sequences/StepManager";
 import { SequenceToggle } from "@/components/sequences/SequenceToggle";
 import { SequenceSettingsPanel } from "@/components/sequences/SequenceSettingsPanel";
 import { SequenceOverviewStats } from "@/components/sequences/SequenceOverviewStats";
+import { LinkPerformancePanel } from "@/components/sequences/LinkPerformancePanel";
 import { UpcomingBroadcastPanel } from "@/components/sequences/UpcomingBroadcastPanel";
 import { EnrollmentManager } from "@/components/sequences/EnrollmentManager";
 import { RecentActivityFeed } from "@/components/sequences/RecentActivityFeed";
@@ -31,13 +34,15 @@ export default async function SequenceDetailPage({ params }: { params: Promise<{
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [sequence, steps, stats, rollup, exclusions, tags] = await Promise.all([
+  const [sequence, steps, stats, rollup, exclusions, tags, linkBreakdown, linkRollup] = await Promise.all([
     getSequence(id),
     getSequenceSteps(id),
     getSequenceStepStats(id),
     getSequenceRollup(id),
     getSequenceExclusions(id),
     listTags(),
+    getStepLinkBreakdown(id),
+    getSequenceLinkRollup(id),
   ]);
   if (!sequence) notFound();
 
@@ -89,9 +94,11 @@ export default async function SequenceDetailPage({ params }: { params: Promise<{
         <SequenceOverviewStats rollup={rollup} />
       </div>
 
+      {linkRollup.length > 0 && <LinkPerformancePanel links={linkRollup} />}
+
       <div>
         <h2 className="mb-3 text-sm font-semibold text-neutral-700">Steps</h2>
-        <StepManager sequenceId={sequence.id} type={sequence.type} steps={steps} stats={stats} />
+        <StepManager sequenceId={sequence.id} type={sequence.type} steps={steps} stats={stats} linkBreakdown={linkBreakdown} />
       </div>
 
       {sequence.type === "broadcast" ? (
