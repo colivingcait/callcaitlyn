@@ -29,6 +29,7 @@ export function BulkImportContactsModal({
   const [tagId, setTagId] = useState(tags[0]?.id ?? "");
   const [creatingTag, setCreatingTag] = useState(false);
   const [newTagName, setNewTagName] = useState("");
+  const [leadSource, setLeadSource] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<{ created: number; matched: number; failed: number } | null>(null);
@@ -69,7 +70,7 @@ export function BulkImportContactsModal({
     setSaving(true);
     setError("");
     const tagName = tags.find((t) => t.id === tagId)?.name ?? null;
-    const outcome = await bulkImportContacts(validRows, tagName);
+    const outcome = await bulkImportContacts(validRows, tagName, leadSource.trim() || "CSV import");
     setSaving(false);
     if (!outcome.ok) {
       setError(outcome.error);
@@ -175,6 +176,20 @@ export function BulkImportContactsModal({
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            <div>
+              <Label htmlFor="import-lead-source">Lead source (how did they come in?)</Label>
+              <Input
+                id="import-lead-source"
+                placeholder="e.g. Eventbrite - House Hacking Meetup"
+                value={leadSource}
+                onChange={(e) => setLeadSource(e.target.value)}
+              />
+              <p className="mt-1 text-xs text-neutral-400">
+                Only applied to brand-new contacts — anyone already on file keeps their original lead source. Anyone
+                imported with a phone number shows up in the Dialer automatically.
+              </p>
             </div>
 
             <div>

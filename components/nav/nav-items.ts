@@ -1,9 +1,10 @@
-import { Home, MessageCircle, Users, KanbanSquare, DollarSign, Mail, Settings } from "lucide-react";
+import { Home, MessageCircle, Users, KanbanSquare, DollarSign, Mail, Settings, PhoneCall } from "lucide-react";
 
 export const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: Home },
   { href: "/messages", label: "Messages", icon: MessageCircle },
   { href: "/contacts", label: "Contacts", icon: Users },
+  { href: "/dialer", label: "Dialer", icon: PhoneCall },
   { href: "/pipeline", label: "Pipeline", icon: KanbanSquare },
   { href: "/commissions", label: "Commissions", icon: DollarSign },
   { href: "/sequences", label: "Sequences", icon: Mail },

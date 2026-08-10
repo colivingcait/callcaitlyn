@@ -66,7 +66,7 @@ export async function sendEmailToContact(contactId: string, toEmail: string, sub
   return { ok: true as const };
 }
 
-export async function bulkImportContacts(rows: ParsedContactRow[], tagName: string | null) {
+export async function bulkImportContacts(rows: ParsedContactRow[], tagName: string | null, leadSource: string) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -88,7 +88,7 @@ export async function bulkImportContacts(rows: ParsedContactRow[], tagName: stri
       phone: row.phone,
       firstName: row.firstName,
       lastName: row.lastName,
-      leadSource: "CSV import",
+      leadSource,
     });
     if (!result) {
       failed++;
@@ -100,4 +100,20 @@ export async function bulkImportContacts(rows: ParsedContactRow[], tagName: stri
   }
 
   return { ok: true as const, created, matched, failed };
+}
+
+// Folds `mergeId` into `keepId` - calls, texts, deals, tasks, notes, tags,
+// and sequence history all move over, then the duplicate row is deleted.
+// See supabase/migrations/0020_merge_contacts.sql for exactly what moves.
+export async function mergeContacts(keepId: string, mergeId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const { error } = await supabase.rpc("merge_contacts", { keep_id: keepId, merge_id: mergeId, actor_id: user.id });
+  if (error) return { ok: false as const, error: error.message };
+
+  return { ok: true as const };
 }

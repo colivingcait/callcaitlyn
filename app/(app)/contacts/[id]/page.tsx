@@ -7,6 +7,7 @@ import {
   getContactInsights,
   getContactDeals,
   listStages,
+  listMergeCandidates,
 } from "@/lib/data/contacts";
 import { fullName, formatPhone, initials, CONTACT_TYPE_LABELS, TIMELINE_LABELS } from "@/lib/utils";
 import { formatLocal } from "@/lib/format-time";
@@ -17,6 +18,7 @@ import { ActivityTimeline } from "@/components/contacts/ActivityTimeline";
 import { AddActivityForm } from "@/components/contacts/AddActivityForm";
 import { TaskList } from "@/components/contacts/TaskList";
 import { ArchiveButton } from "@/components/contacts/ArchiveButton";
+import { MergeContactButton } from "@/components/contacts/MergeContactButton";
 import { AiInsightCard } from "@/components/contacts/AiInsightCard";
 import { DealsList } from "@/components/contacts/DealsList";
 import { RepresentingBadge } from "@/components/contacts/RepresentingBadge";
@@ -28,13 +30,14 @@ import { Pencil, MapPin, DollarSign, Clock, Tag as TagIcon, CalendarHeart, Home 
 
 export default async function ContactDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [contact, activities, tasks, stages, insights, deals] = await Promise.all([
+  const [contact, activities, tasks, stages, insights, deals, mergeCandidates] = await Promise.all([
     getContact(id),
     getContactActivities(id),
     getContactTasks(id),
     listStages(),
     getContactInsights(id),
     getContactDeals(id),
+    listMergeCandidates(),
   ]);
 
   if (!contact) notFound();
@@ -190,7 +193,8 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
         <ActivityTimeline activities={activities} />
       </div>
 
-      <div className="mt-8 border-t border-neutral-100 pt-4">
+      <div className="mt-8 flex items-center gap-2 border-t border-neutral-100 pt-4">
+        <MergeContactButton contactId={contact.id} contactName={fullName(contact)} candidates={mergeCandidates} />
         <ArchiveButton contactId={contact.id} />
       </div>
     </div>

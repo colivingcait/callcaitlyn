@@ -13,6 +13,21 @@ export async function listTags() {
   return (data ?? []) as Tag[];
 }
 
+export type MergeCandidate = { id: string; first_name: string; last_name: string; phone: string | null; email: string | null };
+
+// Lightweight list for the "merge into…" picker - every non-archived
+// contact, not just the current filtered view, so a duplicate can be
+// merged into its match regardless of what filters happen to be active.
+export async function listMergeCandidates(): Promise<MergeCandidate[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("contacts")
+    .select("id, first_name, last_name, phone, email")
+    .eq("archived", false)
+    .order("first_name", { ascending: true });
+  return (data ?? []) as MergeCandidate[];
+}
+
 export type ContactSort = "updated_desc" | "created_desc" | "name_asc" | "follow_up_asc" | "tag_asc";
 
 export async function listContacts(filters: {
