@@ -226,6 +226,10 @@ For the iPad kiosk form: matches by email/phone against existing contacts (so pe
 
 Field-label matching for name/email/phone/etc. is fuzzy (matches on keywords like "name", "email", "phone", "hear", "journey"/"stage") since Jotform doesn't send predictable field IDs — if a submission doesn't match up correctly, the full raw text is saved in `metadata.raw_pretty` so we can adjust it.
 
+**Two check-in forms (House Hacking + Women's REI)**: both kiosk forms point at the exact same webhook URL/secret above — Jotform sends the source form's ID on every submission, which is enough to tell them apart without a second URL. Grab each form's ID from its Jotform URL (`form.jotform.com/{THIS_NUMBER}`), then set `JOTFORM_HOUSE_HACKING_FORM_ID` and `JOTFORM_WOMENS_REI_FORM_ID` in Vercel. Once set, each form's check-ins get their own event name (shown on the contact page and driving the post-event follow-up dialer) and their own tag ("House Hacking" / "Women's REI") instead of a generic "In-person meetup" label. Leaving these unset is fine too — check-ins still work, just without the specific label.
+
+Only the Jotform in-person check-in sets a contact's **last event attended** date — Eventbrite registering does not, since registering isn't attending. That field (and the post-event follow-up dialer it drives) is meant to answer "did they actually show up," which only a kiosk check-in confirms.
+
 ### House hacking journey stage → pipeline mapping
 
 Both Jotform and Eventbrite ask "Where are you at in your house hacking journey?" with four options, and both feed the same shared logic (`lib/crm/journey-stage.ts`):

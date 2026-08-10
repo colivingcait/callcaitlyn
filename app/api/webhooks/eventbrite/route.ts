@@ -4,7 +4,6 @@ import { fetchOrderWithAttendees, fetchEventName } from "@/lib/eventbrite/client
 import { parseEventbriteAttendees } from "@/lib/eventbrite/parse-event";
 import { findOrCreateContact, addTagByName } from "@/lib/crm/find-or-create-contact";
 import { upsertActivity } from "@/lib/crm/activities";
-import { recordEventAttendance } from "@/lib/crm/events";
 import { applyJourneyStageAnswer } from "@/lib/crm/journey-stage";
 import { notifyNewLead } from "@/lib/push/send-push";
 
@@ -95,7 +94,11 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      await recordEventAttendance(admin, contact.id, eventName ?? "Eventbrite event", occurredAt);
+      // Deliberately does NOT call recordEventAttendance - registering for
+      // an event isn't attending it, and last_event_at/last_event_name is
+      // meant to reflect real attendance (it's what the post-event
+      // follow-up dialer is scoped off of). The Jotform in-person check-in
+      // is the only source of truth for actual attendance.
     }
   } catch (err) {
     console.error("Error processing Eventbrite webhook", action, err);

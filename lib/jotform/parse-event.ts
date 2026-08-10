@@ -9,6 +9,7 @@
 
 export type ParsedJotformSubmission = {
   submissionId: string | null;
+  formId: string | null;
   name: string | null;
   email: string | null;
   phone: string | null;
@@ -41,16 +42,22 @@ function findByLabel(pairs: { label: string; value: string }[], ...keywords: str
 
 export function parseJotformSubmission(formData: FormData): ParsedJotformSubmission {
   const submissionId = (formData.get("submissionID") as string | null) ?? null;
+  // Jotform includes the source form's ID on every submission regardless
+  // of which form it came from - lets one shared webhook tell two
+  // different kiosk forms (e.g. House Hacking vs Women's REI check-in)
+  // apart. See JOTFORM_*_FORM_ID in the webhook route.
+  const formId = (formData.get("formID") as string | null) ?? null;
   const pretty = (formData.get("pretty") as string | null) ?? null;
 
   if (!pretty) {
-    return { submissionId, name: null, email: null, phone: null, howHeard: null, journeyStage: null, pretty: null };
+    return { submissionId, formId, name: null, email: null, phone: null, howHeard: null, journeyStage: null, pretty: null };
   }
 
   const pairs = splitPretty(pretty);
 
   return {
     submissionId,
+    formId,
     name: findByLabel(pairs, "name"),
     email: findByLabel(pairs, "email"),
     phone: findByLabel(pairs, "phone"),

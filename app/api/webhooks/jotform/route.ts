@@ -8,6 +8,21 @@ import { applyJourneyStageAnswer } from "@/lib/crm/journey-stage";
 
 const OWNER_ID = process.env.CRM_OWNER_USER_ID;
 
+// Two physical kiosk forms (House Hacking meetups, Women's REI meetups)
+// share this one webhook - Jotform sends the source form's ID on every
+// submission, so mapping it to a name/tag here is enough to tell them
+// apart without needing two separate webhook URLs or secrets. An
+// unmapped form ID (nothing configured yet, or a third form later) falls
+// back to a generic label rather than failing.
+const FORM_EVENTS: Record<string, { eventName: string; tag: string }> = {
+  ...(process.env.JOTFORM_HOUSE_HACKING_FORM_ID
+    ? { [process.env.JOTFORM_HOUSE_HACKING_FORM_ID]: { eventName: "House Hacking Meetup", tag: "House Hacking" } }
+    : {}),
+  ...(process.env.JOTFORM_WOMENS_REI_FORM_ID
+    ? { [process.env.JOTFORM_WOMENS_REI_FORM_ID]: { eventName: "Women's REI Meetup", tag: "Women's REI" } }
+    : {}),
+};
+
 export async function POST(request: NextRequest) {
   // Same approach as Eventbrite: Jotform doesn't offer webhook signature
   // verification, so this is secured with a self-chosen secret in the URL.
@@ -55,11 +70,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
+    const formEvent = submission.formId ? FORM_EVENTS[submission.formId] : undefined;
+    const eventName = formEvent?.eventName ?? "In-person meetup";
+
     await addTagByName(admin, OWNER_ID, contact.id, "Meetup");
+    if (formEvent) await addTagByName(admin, OWNER_ID, contact.id, formEvent.tag);
     await applyJourneyStageAnswer(admin, OWNER_ID, contact.id, submission.journeyStage, contact.wasCreated);
 
     const occurredAt = new Date().toISOString();
-    const bodyParts = ["Checked in at an in-person meetup (Jotform kiosk)"];
+    const bodyParts = [`Checked in at ${eventName} (Jotform kiosk)`];
     if (submission.journeyStage) bodyParts.push(`House hacking journey: ${submission.journeyStage}`);
 
     await upsertActivity(admin, OWNER_ID, contact.id, "jotform", "jotform_submission_id", submission.submissionId, {
@@ -69,13 +88,15 @@ export async function POST(request: NextRequest) {
       body: bodyParts.join(" — "),
       metadata: {
         jotform_submission_id: submission.submissionId,
+        jotform_form_id: submission.formId,
+        event_name: eventName,
         journey_stage: submission.journeyStage,
         how_heard: submission.howHeard,
         raw_pretty: submission.pretty,
       },
     });
 
-    await recordEventAttendance(admin, contact.id, "In-person meetup", occurredAt);
+    await recordEventAttendance(admin, contact.id, eventName, occurredAt);
   } catch (err) {
     console.error("Error processing Jotform webhook", err);
   }
