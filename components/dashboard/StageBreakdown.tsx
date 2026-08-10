@@ -21,9 +21,9 @@ export function StageBreakdown({
             href={`/pipeline?stage=${stage.id}`}
             className="block rounded-xl p-2 -mx-2 hover:bg-neutral-50"
           >
-            <div className="mb-1 flex items-center justify-between text-sm">
-              <span className="font-medium text-neutral-700">{stage.name}</span>
-              <span className="text-neutral-400">{count}</span>
+            <div className="mb-1 flex items-center justify-between gap-2 text-sm">
+              <span className="min-w-0 flex-1 truncate font-medium text-neutral-700">{stage.name}</span>
+              <span className="shrink-0 text-neutral-400">{count}</span>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-100">
               <div

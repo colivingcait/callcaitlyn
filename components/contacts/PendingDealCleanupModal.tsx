@@ -70,9 +70,9 @@ export function PendingDealCleanupModal({
                 type="checkbox"
                 checked={selected.has(deal.id)}
                 onChange={() => toggle(deal.id)}
-                className="h-4 w-4 rounded border-neutral-300"
+                className="h-4 w-4 shrink-0 rounded border-neutral-300"
               />
-              {deal.address || deal.client_name || "Untitled deal"}
+              <span className="min-w-0 truncate">{deal.address || deal.client_name || "Untitled deal"}</span>
             </label>
           ))}
         </div>

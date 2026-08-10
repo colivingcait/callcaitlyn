@@ -62,8 +62,8 @@ export function EnrollmentManager({
       )}
       {enrollments.map((e) => (
         <Card key={e.id} className="flex items-center justify-between gap-3">
-          <div>
-            <p className="font-medium text-neutral-900">{e.contact ? fullName(e.contact) : "Unknown contact"}</p>
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-medium text-neutral-900">{e.contact ? fullName(e.contact) : "Unknown contact"}</p>
             <p className="text-xs text-neutral-500">
               Step {Math.min(e.current_step + 1, e.totalSteps)} of {e.totalSteps}
               {e.status === "completed" && " · Completed"}

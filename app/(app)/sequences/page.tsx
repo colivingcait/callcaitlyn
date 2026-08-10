@@ -31,15 +31,15 @@ export default async function SequencesPage() {
         {sequences.map((seq) => (
           <Link key={seq.id} href={`/sequences/${seq.id}`}>
             <Card className="space-y-2 hover:bg-neutral-50">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-medium text-neutral-900">{seq.name}</p>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-neutral-900">{seq.name}</p>
                   <p className="text-xs text-neutral-400">
                     {seq.type === "broadcast" ? "Scheduled" : "Drip"}
                     {!seq.active && " · Paused"}
                   </p>
                 </div>
-                {seq.tags && <Badge color={seq.tags.color}>{seq.tags.name}</Badge>}
+                {seq.tags && <Badge className="max-w-[8rem] shrink-0 truncate" color={seq.tags.color}>{seq.tags.name}</Badge>}
               </div>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-500">
                 {seq.type === "drip" && <span>{seq.activeEnrolled} enrolled</span>}

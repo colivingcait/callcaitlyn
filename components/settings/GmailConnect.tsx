@@ -39,10 +39,10 @@ export function GmailConnect({
     <div className="space-y-2">
       {connectedEmail ? (
         <div className="flex items-center justify-between gap-3">
-          <p className="flex items-center gap-1.5 text-sm text-emerald-700">
-            <Check size={15} /> Connected as {connectedEmail}
+          <p className="flex min-w-0 items-center gap-1.5 text-sm text-emerald-700">
+            <Check size={15} className="shrink-0" /> <span className="truncate">Connected as {connectedEmail}</span>
           </p>
-          <Button variant="secondary" size="sm" onClick={handleDisconnect} disabled={disconnecting}>
+          <Button variant="secondary" size="sm" className="shrink-0" onClick={handleDisconnect} disabled={disconnecting}>
             {disconnecting ? "Disconnecting…" : "Disconnect"}
           </Button>
         </div>

@@ -60,7 +60,7 @@ export function DealsList({
           <ul className="space-y-0.5">
             {deals.map((deal) => (
               <li key={deal.id} className="flex items-center gap-2 text-xs text-neutral-500">
-                <span>
+                <span className="min-w-0 flex-1 truncate">
                   {deal.status === "pending" && <span className="font-medium text-amber-600">Pending · </span>}
                   {formatLocal(deal.closed_at, "MMM d, yyyy")}
                   {deal.address && ` · ${deal.address}`}

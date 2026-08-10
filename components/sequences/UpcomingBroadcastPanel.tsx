@@ -13,8 +13,8 @@ export function UpcomingBroadcastPanel({ steps }: { steps: UpcomingBroadcastStep
         const daysAway = Math.ceil((new Date(step.send_at!).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
         return (
           <Card key={step.id} className="flex items-center justify-between gap-3">
-            <div>
-              <p className="font-medium text-neutral-900">{step.subject}</p>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium text-neutral-900">{step.subject}</p>
               <p className="text-xs text-neutral-500">
                 {formatLocal(step.send_at!, "EEE, MMM d 'at' h:mm a")} (Eastern) ·{" "}
                 {daysAway <= 0 ? "today" : `in ${daysAway} day${daysAway === 1 ? "" : "s"}`}

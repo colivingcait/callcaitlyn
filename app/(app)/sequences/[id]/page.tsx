@@ -121,7 +121,7 @@ export default async function SequenceDetailPage({ params }: { params: Promise<{
           <Card className="divide-y divide-neutral-100 p-0">
             {exclusions.map((ex, i) => (
               <div key={i} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
-                <div>
+                <div className="min-w-0 flex-1 truncate">
                   <span className="text-neutral-700">{ex.contacts ? fullName(ex.contacts) : "Unknown"}</span>
                   {ex.unsubscribedFromStep && (
                     <span className="ml-2 text-xs text-neutral-400">after &ldquo;{ex.unsubscribedFromStep}&rdquo;</span>

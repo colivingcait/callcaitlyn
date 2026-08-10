@@ -52,17 +52,17 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-50 text-lg font-semibold text-brand-700">
             {initials(contact.first_name, contact.last_name)}
           </div>
-          <div>
-            <h1 className="flex items-center gap-2 font-serif text-2xl font-semibold text-neutral-900">
-              {fullName(contact)}
+          <div className="min-w-0">
+            <h1 className="flex flex-wrap items-center gap-2 font-serif text-2xl font-semibold text-neutral-900">
+              <span className="truncate">{fullName(contact)}</span>
               <RepresentingBadge representing={contact.representing} />
             </h1>
-            <p className="text-sm text-neutral-500">{formatPhone(contact.phone) || contact.email}</p>
+            <p className="truncate text-sm text-neutral-500">{formatPhone(contact.phone) || contact.email}</p>
             {likelihood && (
               <div className="mt-1">
                 <LikelihoodBadge likelihood={likelihood} />
@@ -70,7 +70,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
             )}
           </div>
         </div>
-        <Link href={`/contacts/${contact.id}/edit`}>
+        <Link href={`/contacts/${contact.id}/edit`} className="shrink-0">
           <Button variant="secondary" size="sm">
             <Pencil size={14} /> Edit
           </Button>
