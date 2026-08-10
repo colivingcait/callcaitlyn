@@ -108,16 +108,6 @@ export function DialerCallModal({
           <PhoneCall size={18} /> Call {contact.first_name} now
         </button>
 
-        {mode === "new-registration" && !called && (
-          <button
-            onClick={handleDismiss}
-            disabled={marking}
-            className="mt-2 w-full text-center text-xs font-medium text-neutral-400 hover:text-neutral-600 disabled:opacity-50"
-          >
-            {marking ? "Dismissing…" : "Dismiss — no action needed this time"}
-          </button>
-        )}
-
         {called && (
           <div className="mt-3">
             <p className="mb-1.5 text-center text-xs text-neutral-400">How&apos;d it go?</p>
@@ -152,6 +142,18 @@ export function DialerCallModal({
             {saving ? "Saving…" : "Save"}
           </Button>
         </div>
+
+        {mode === "new-registration" && (
+          <div className="mt-5 border-t border-neutral-100 pt-4">
+            <button
+              onClick={handleDismiss}
+              disabled={marking}
+              className="w-full rounded-xl border border-neutral-200 py-2.5 text-center text-sm font-medium text-neutral-500 hover:bg-neutral-50 disabled:opacity-50"
+            >
+              {marking ? "Dismissing…" : "Dismiss — no action needed this time"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
