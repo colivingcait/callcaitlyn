@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Phone, Mail } from "lucide-react";
+import { ArrowLeft, Mail } from "lucide-react";
+import { CallButton } from "@/components/CallButton";
 import { getContact, getContactInsights, listStages } from "@/lib/data/contacts";
 import { getContactThread } from "@/lib/data/messages";
 import { fullName, formatPhone, initials } from "@/lib/utils";
@@ -44,11 +45,7 @@ export default async function MessageThreadPage({ params }: { params: Promise<{ 
               <p className="truncate text-xs text-neutral-400">{formatPhone(contact.phone)}</p>
             </div>
           </Link>
-          {contact.phone && (
-            <a href={`tel:${contact.phone}`} className="rounded-full p-2 text-neutral-500 hover:bg-neutral-100">
-              <Phone size={18} />
-            </a>
-          )}
+          {contact.phone && <CallButton phone={contact.phone} />}
           {contact.email && (
             <a href={`mailto:${contact.email}`} className="rounded-full p-2 text-neutral-500 hover:bg-neutral-100">
               <Mail size={18} />

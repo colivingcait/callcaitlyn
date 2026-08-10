@@ -1,68 +1,57 @@
 import { createClient } from "@/lib/supabase/server";
-import type { ContactWithRelations } from "@/types/database";
+import type { Contact } from "@/types/database";
 
 export type DialerContact = Pick<
-  ContactWithRelations,
+  Contact,
   | "id"
   | "first_name"
   | "last_name"
   | "phone"
   | "lead_source"
-  | "contact_type"
-  | "stage_id"
-  | "pipeline_stages"
-  | "contact_tags"
+  | "last_event_name"
+  | "last_event_at"
   | "created_at"
-> & { lastCallAt: string | null; callCount: number };
+  | "dialer_snoozed_at"
+  | "stage_id"
+>;
 
-// The dialer's queue: everyone with a phone number, not-yet-contacted
-// leads first (newest registrations on top, for speed-to-lead), already-
-// contacted people below that (least-recently-called first, so anyone
-// going stale on follow-up naturally rises back toward the top of that
-// group). Nobody drops off the list just because they've been called -
-// see the original ask: a no-answer/voicemail moves to the bottom, it
-// doesn't disappear.
-export async function listDialerContacts(): Promise<DialerContact[]> {
+// "Not yet contacted" = no outbound call/text on file at all (whether
+// logged by Quo or sent from the CRM) and never marked Connected from a
+// prior dialer pass. Never-attempted contacts sort newest-first (speed to
+// lead - call new registrants while the interest is fresh); anyone
+// snoozed (rang out / voicemail / too short to count) drops below all of
+// those, oldest-snoozed-first so retries cycle through in order, but
+// stays on the list instead of disappearing.
+export async function listDialerQueue(): Promise<DialerContact[]> {
   const supabase = await createClient();
-  const { data: contacts } = await supabase
+
+  const { data: candidates } = await supabase
     .from("contacts")
-    .select(
-      "id, first_name, last_name, phone, lead_source, contact_type, stage_id, created_at, pipeline_stages(*), contact_tags(tags(*))",
-    )
+    .select("id, first_name, last_name, phone, lead_source, last_event_name, last_event_at, created_at, dialer_snoozed_at, stage_id")
     .eq("archived", false)
-    .not("phone", "is", null)
-    .order("created_at", { ascending: false });
+    .is("dialer_contacted_at", null)
+    .not("phone", "is", null);
 
-  const list = (contacts ?? []) as unknown as DialerContact[];
-  if (list.length === 0) return [];
+  if (!candidates || candidates.length === 0) return [];
 
-  const ids = list.map((c) => c.id);
-  const { data: calls } = await supabase
+  const { data: contacted } = await supabase
     .from("activities")
-    .select("contact_id, occurred_at")
-    .eq("type", "call")
-    .in("contact_id", ids)
-    .order("occurred_at", { ascending: false });
+    .select("contact_id")
+    .in("type", ["call", "text"])
+    .eq("direction", "outbound")
+    .in(
+      "contact_id",
+      candidates.map((c) => c.id),
+    );
 
-  const lastCallByContact = new Map<string, string>();
-  const callCountByContact = new Map<string, number>();
-  for (const row of calls ?? []) {
-    callCountByContact.set(row.contact_id, (callCountByContact.get(row.contact_id) ?? 0) + 1);
-    if (!lastCallByContact.has(row.contact_id)) lastCallByContact.set(row.contact_id, row.occurred_at);
-  }
+  const alreadyContacted = new Set((contacted ?? []).map((a) => a.contact_id));
+  const queue = candidates.filter((c) => !alreadyContacted.has(c.id)) as DialerContact[];
 
-  const withCalls: DialerContact[] = list.map((c) => ({
-    ...c,
-    lastCallAt: lastCallByContact.get(c.id) ?? null,
-    callCount: callCountByContact.get(c.id) ?? 0,
-  }));
-
-  const notContacted = withCalls
-    .filter((c) => !c.lastCallAt)
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  const contacted = withCalls
-    .filter((c) => c.lastCallAt)
-    .sort((a, b) => new Date(a.lastCallAt as string).getTime() - new Date(b.lastCallAt as string).getTime());
-
-  return [...notContacted, ...contacted];
+  return queue.sort((a, b) => {
+    const aSnoozed = !!a.dialer_snoozed_at;
+    const bSnoozed = !!b.dialer_snoozed_at;
+    if (aSnoozed !== bSnoozed) return aSnoozed ? 1 : -1;
+    if (aSnoozed && bSnoozed) return new Date(a.dialer_snoozed_at!).getTime() - new Date(b.dialer_snoozed_at!).getTime();
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
 }

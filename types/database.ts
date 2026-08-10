@@ -126,6 +126,9 @@ export interface Contact {
   ai_last_status_note: string | null;
   ai_last_analyzed_at: string | null;
   unsubscribe_token: string;
+  quo_synced_at: string | null;
+  dialer_contacted_at: string | null;
+  dialer_snoozed_at: string | null;
   created_at: string;
   updated_at: string;
 }

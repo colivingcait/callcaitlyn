@@ -56,6 +56,12 @@ begin
     ai_last_status_note = case when m.ai_last_analyzed_at is not null and (k.ai_last_analyzed_at is null or m.ai_last_analyzed_at > k.ai_last_analyzed_at)
                             then m.ai_last_status_note else k.ai_last_status_note end,
     ai_last_analyzed_at = greatest(k.ai_last_analyzed_at, m.ai_last_analyzed_at),
+    quo_synced_at = coalesce(k.quo_synced_at, m.quo_synced_at),
+    -- Whichever side was more recently called/snoozed wins - a duplicate
+    -- created after the "real" contact was already dialed shouldn't reset
+    -- them back to looking untouched in the dialer queue.
+    dialer_contacted_at = greatest(k.dialer_contacted_at, m.dialer_contacted_at),
+    dialer_snoozed_at = greatest(k.dialer_snoozed_at, m.dialer_snoozed_at),
     notes = nullif(trim(both E'\n' from
       coalesce(k.notes, '') ||
       case when m.notes is not null and m.notes <> '' then
