@@ -2,6 +2,11 @@ import { google } from "googleapis";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAuthorizedGmailClient } from "@/lib/google/oauth";
 
+// Single-owner app - the "From" name is always hers. Without this, the raw
+// MIME From header is just the bare address, and mail clients show that
+// instead of a name.
+const SENDER_NAME = "Caitlyn Verdugo";
+
 function encodeSubject(subject: string) {
   // RFC 2047 encoded-word, so non-ASCII subjects (names, punctuation) don't
   // get mangled - plain ASCII subjects pass through unchanged either way.
@@ -16,7 +21,7 @@ function buildRawMessage(
   extraHeaders?: Record<string, string>,
 ) {
   const message = [
-    `From: ${from}`,
+    `From: "${SENDER_NAME}" <${from}>`,
     `To: ${to}`,
     `Subject: ${encodeSubject(subject)}`,
     "MIME-Version: 1.0",
