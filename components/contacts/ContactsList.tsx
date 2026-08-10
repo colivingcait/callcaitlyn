@@ -6,20 +6,26 @@ import { createClient } from "@/lib/supabase/client";
 import { ContactRow } from "@/components/contacts/ContactRow";
 import { BulkTagModal } from "@/components/contacts/BulkTagModal";
 import { BulkSequenceModal } from "@/components/contacts/BulkSequenceModal";
+import { BulkStageModal } from "@/components/contacts/BulkStageModal";
+import { BulkLeadSourceModal } from "@/components/contacts/BulkLeadSourceModal";
 import { Button } from "@/components/ui";
 import { Archive } from "lucide-react";
-import type { ContactWithRelations, Tag } from "@/types/database";
+import type { ContactWithRelations, PipelineStage, Tag } from "@/types/database";
 
 type SequenceOption = { id: string; name: string; type: "broadcast" | "drip" | "batch" };
-type BulkModal = "add-tag" | "remove-tag" | "sequence" | null;
+type BulkModal = "add-tag" | "remove-tag" | "sequence" | "stage" | "source" | null;
 
 export function ContactsList({
   contacts,
   tags,
+  stages,
+  ownerId,
   sequences,
 }: {
   contacts: ContactWithRelations[];
   tags: Tag[];
+  stages: PipelineStage[];
+  ownerId: string;
   sequences: SequenceOption[];
 }) {
   const router = useRouter();
@@ -59,6 +65,7 @@ export function ContactsList({
   }
 
   const selectedIds = [...selected];
+  const selectedContacts = contacts.filter((c) => selected.has(c.id));
   const dripSequences = sequences.filter((s) => s.type === "drip");
 
   return (
@@ -110,6 +117,12 @@ export function ContactsList({
                 <Button size="sm" variant="secondary" onClick={() => setModal("remove-tag")}>
                   Remove tag
                 </Button>
+                <Button size="sm" variant="secondary" onClick={() => setModal("stage")}>
+                  Change stage
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => setModal("source")}>
+                  Change source
+                </Button>
                 <Button size="sm" variant="secondary" onClick={() => setModal("sequence")}>
                   Sequence…
                 </Button>
@@ -130,6 +143,12 @@ export function ContactsList({
       )}
       {modal === "sequence" && (
         <BulkSequenceModal sequences={dripSequences} contactIds={selectedIds} onClose={() => setModal(null)} onDone={afterAction} />
+      )}
+      {modal === "stage" && (
+        <BulkStageModal contacts={selectedContacts} stages={stages} ownerId={ownerId} onClose={() => setModal(null)} onDone={afterAction} />
+      )}
+      {modal === "source" && (
+        <BulkLeadSourceModal contactIds={selectedIds} onClose={() => setModal(null)} onDone={afterAction} />
       )}
     </div>
   );

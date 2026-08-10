@@ -8,26 +8,8 @@ import { createClient } from "@/lib/supabase/client";
 import { syncContactToQuoAction } from "@/app/(app)/contacts/actions";
 import { contactSchema, type ContactFormValues } from "@/lib/validation/contact";
 import { Button, Input, Label, Select, Textarea, Card } from "@/components/ui";
-import { CONTACT_TYPE_LABELS, TIMELINE_LABELS, REPRESENTING_LABELS, cn } from "@/lib/utils";
+import { CONTACT_TYPE_LABELS, TIMELINE_LABELS, REPRESENTING_LABELS, LEAD_SOURCES, cn } from "@/lib/utils";
 import type { ContactWithRelations, PipelineStage, Tag } from "@/types/database";
-
-const LEAD_SOURCES = [
-  "Referral",
-  "Past Client",
-  "Sphere",
-  "Zillow",
-  "Realtor.com",
-  "Website",
-  "Open House",
-  "Sign Call",
-  "Meetup / Event",
-  "Eventbrite",
-  "Jotform",
-  "Calendly",
-  "Social Media",
-  "Cold Call / Prospecting",
-  "Other",
-];
 
 export function ContactForm({
   contact,

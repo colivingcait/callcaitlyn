@@ -1,4 +1,4 @@
-import { listContacts, listStages, listTags, listSegments, type ContactSort } from "@/lib/data/contacts";
+import { listContacts, listStages, listTags, listLeadSources, listSegments, type ContactSort } from "@/lib/data/contacts";
 import { listSequencesWithSummary } from "@/lib/data/sequences";
 import { ContactsList } from "@/components/contacts/ContactsList";
 import { ContactFilters } from "@/components/contacts/ContactFilters";
@@ -16,6 +16,7 @@ export default async function ContactsPage({
     type?: string;
     timeline?: string;
     representing?: string;
+    source?: string;
     phone?: string;
     sort?: string;
   }>;
@@ -25,7 +26,7 @@ export default async function ContactsPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const [contacts, stages, tags, sequences, segments] = await Promise.all([
+  const [contacts, stages, tags, leadSources, sequences, segments] = await Promise.all([
     listContacts({
       q: params.q,
       stageId: params.stage,
@@ -33,11 +34,13 @@ export default async function ContactsPage({
       type: params.type,
       timeline: params.timeline,
       representing: params.representing,
+      leadSource: params.source,
       hasPhone: params.phone === "1",
       sort: params.sort as ContactSort | undefined,
     }),
     listStages(),
     listTags(),
+    listLeadSources(),
     listSequencesWithSummary(),
     listSegments(),
   ]);
@@ -51,12 +54,14 @@ export default async function ContactsPage({
         </div>
         {user && <BulkImportContactsButton tags={tags} ownerId={user.id} />}
       </div>
-      <ContactFilters stages={stages} tags={tags} />
+      <ContactFilters stages={stages} tags={tags} leadSources={leadSources} />
       {user && <SegmentBar segments={segments} ownerId={user.id} />}
       <div className="bg-white">
         <ContactsList
           contacts={contacts}
           tags={tags}
+          stages={stages}
+          ownerId={user?.id ?? ""}
           sequences={sequences.map((s) => ({ id: s.id, name: s.name, type: s.type }))}
         />
       </div>

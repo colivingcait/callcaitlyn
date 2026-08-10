@@ -91,3 +91,21 @@ export const PROPERTY_TYPE_LABELS: Record<string, string> = {
   co_living: "Co-living",
   other: "Other",
 };
+
+export const LEAD_SOURCES = [
+  "Referral",
+  "Past Client",
+  "Sphere",
+  "Zillow",
+  "Realtor.com",
+  "Website",
+  "Open House",
+  "Sign Call",
+  "Meetup / Event",
+  "Eventbrite",
+  "Jotform",
+  "Calendly",
+  "Social Media",
+  "Cold Call / Prospecting",
+  "Other",
+];

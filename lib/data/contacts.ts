@@ -37,6 +37,7 @@ export async function listContacts(filters: {
   type?: string;
   timeline?: string;
   representing?: string;
+  leadSource?: string;
   hasPhone?: boolean;
   sort?: ContactSort;
 }) {
@@ -47,6 +48,7 @@ export async function listContacts(filters: {
   if (filters.type) query = query.eq("contact_type", filters.type);
   if (filters.timeline) query = query.eq("timeline", filters.timeline);
   if (filters.representing) query = query.eq("representing", filters.representing);
+  if (filters.leadSource) query = query.eq("lead_source", filters.leadSource);
   if (filters.hasPhone) query = query.not("phone", "is", null);
   if (filters.q) {
     const q = filters.q.trim();
@@ -88,6 +90,19 @@ export async function listContacts(filters: {
   }
 
   return contacts;
+}
+
+// lead_source is free text (not FK'd to a lookup table - see ContactForm's
+// LEAD_SOURCES suggestion list), so "distinct values" has to be computed
+// here rather than via a join. Used to populate the source filter dropdown
+// with whatever values actually exist on real contacts, including ones
+// typed in by hand or brought in via CSV import that aren't in the
+// suggestion list.
+export async function listLeadSources() {
+  const supabase = await createClient();
+  const { data } = await supabase.from("contacts").select("lead_source").eq("archived", false).not("lead_source", "is", null);
+  const values = new Set((data ?? []).map((c) => c.lead_source as string).filter((s) => s.trim().length > 0));
+  return [...values].sort((a, b) => a.localeCompare(b));
 }
 
 export async function listSegments() {

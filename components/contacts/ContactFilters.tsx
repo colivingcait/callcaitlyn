@@ -15,7 +15,7 @@ const SORT_OPTIONS: { value: string; label: string }[] = [
   { value: "tag_asc", label: "Tag (A-Z)" },
 ];
 
-export function ContactFilters({ stages, tags }: { stages: PipelineStage[]; tags: Tag[] }) {
+export function ContactFilters({ stages, tags, leadSources }: { stages: PipelineStage[]; tags: Tag[]; leadSources: string[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -89,6 +89,18 @@ export function ContactFilters({ stages, tags }: { stages: PipelineStage[]; tags
           {tags.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name}
+            </option>
+          ))}
+        </Select>
+        <Select
+          className="w-auto shrink-0"
+          defaultValue={searchParams.get("source") ?? ""}
+          onChange={(e) => updateParam("source", e.target.value)}
+        >
+          <option value="">All sources</option>
+          {leadSources.map((s) => (
+            <option key={s} value={s}>
+              {s}
             </option>
           ))}
         </Select>
