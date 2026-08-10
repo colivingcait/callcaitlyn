@@ -79,11 +79,14 @@ export async function POST(request: NextRequest) {
 
       const occurredAt = typeof order.created === "string" ? order.created : new Date().toISOString();
 
+      const bodyParts = [`Registered${eventName ? ` for ${eventName}` : " for an event"} via Eventbrite`];
+      if (attendee.journeyStage) bodyParts.push(`House hacking journey: ${attendee.journeyStage}`);
+
       await upsertActivity(admin, OWNER_ID, contact.id, "eventbrite", "eventbrite_attendee_id", attendee.attendeeId, {
         type: "meeting",
         direction: "none",
         occurred_at: occurredAt,
-        body: `Registered${eventName ? ` for ${eventName}` : " for an event"} via Eventbrite`,
+        body: bodyParts.join(" — "),
         metadata: {
           eventbrite_attendee_id: attendee.attendeeId,
           eventbrite_order_id: order.id,
