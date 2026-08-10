@@ -9,6 +9,7 @@ import {
   markDialerDismissed,
   markEventFollowupConnected,
   markEventFollowupSnoozed,
+  markEventFollowupDismissed,
   saveDialerNotes,
 } from "@/app/(app)/dialer/actions";
 import { Button, Select, Textarea, Badge } from "@/components/ui";
@@ -58,7 +59,8 @@ export function DialerCallModal({
 
   async function handleDismiss() {
     setMarking(true);
-    await markDialerDismissed(contact.id);
+    if (mode === "event-followup") await markEventFollowupDismissed(contact.id);
+    else await markDialerDismissed(contact.id);
     setMarking(false);
     router.refresh();
     onClose();
@@ -143,17 +145,19 @@ export function DialerCallModal({
           </Button>
         </div>
 
-        {mode === "new-registration" && (
-          <div className="mt-5 border-t border-neutral-100 pt-4">
-            <button
-              onClick={handleDismiss}
-              disabled={marking}
-              className="w-full rounded-xl border border-neutral-200 py-2.5 text-center text-sm font-medium text-neutral-500 hover:bg-neutral-50 disabled:opacity-50"
-            >
-              {marking ? "Dismissing…" : "Dismiss — no action needed this time"}
-            </button>
-          </div>
-        )}
+        <div className="mt-5 border-t border-neutral-100 pt-4">
+          <button
+            onClick={handleDismiss}
+            disabled={marking}
+            className="w-full rounded-xl border border-neutral-200 py-2.5 text-center text-sm font-medium text-neutral-500 hover:bg-neutral-50 disabled:opacity-50"
+          >
+            {marking
+              ? "Dismissing…"
+              : mode === "event-followup"
+                ? "Dismiss — no follow-up needed"
+                : "Dismiss — no action needed this time"}
+          </button>
+        </div>
       </div>
     </div>
   );

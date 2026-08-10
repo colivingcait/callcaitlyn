@@ -56,6 +56,18 @@ export async function markEventFollowupConnected(contactId: string) {
     .eq("id", contactId);
 }
 
+// "Dismiss" for the event-followup queue - same idea as markDialerDismissed
+// above: means "no follow-up needed" (already handled elsewhere, not worth
+// a call) rather than "I called them," but clears this contact off the
+// queue the same way a completed follow-up would.
+export async function markEventFollowupDismissed(contactId: string) {
+  const supabase = await createClient();
+  await supabase
+    .from("contacts")
+    .update({ event_followup_contacted_at: new Date().toISOString(), event_followup_snoozed_at: null })
+    .eq("id", contactId);
+}
+
 // Optional reclassify + notes after a Connected call. The real call data
 // (duration, recording, transcript) arrives separately and asynchronously
 // via Quo's webhook straight onto the contact's activity timeline - this
