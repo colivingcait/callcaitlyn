@@ -4,8 +4,16 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Search } from "lucide-react";
 import { Input, Select } from "@/components/ui";
-import { CONTACT_TYPE_LABELS } from "@/lib/utils";
+import { CONTACT_TYPE_LABELS, TIMELINE_LABELS, REPRESENTING_LABELS } from "@/lib/utils";
 import type { PipelineStage, Tag } from "@/types/database";
+
+const SORT_OPTIONS: { value: string; label: string }[] = [
+  { value: "updated_desc", label: "Recently updated" },
+  { value: "created_desc", label: "Recently added" },
+  { value: "name_asc", label: "Name (A-Z)" },
+  { value: "follow_up_asc", label: "Follow-up date" },
+  { value: "tag_asc", label: "Tag (A-Z)" },
+];
 
 export function ContactFilters({ stages, tags }: { stages: PipelineStage[]; tags: Tag[] }) {
   const router = useRouter();
@@ -36,6 +44,17 @@ export function ContactFilters({ stages, tags }: { stages: PipelineStage[]; tags
         />
       </div>
       <div className="flex gap-2 overflow-x-auto">
+        <Select
+          className="w-auto shrink-0"
+          defaultValue={searchParams.get("sort") ?? "updated_desc"}
+          onChange={(e) => updateParam("sort", e.target.value)}
+        >
+          {SORT_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              Sort: {o.label}
+            </option>
+          ))}
+        </Select>
         <Select
           className="w-auto shrink-0"
           defaultValue={searchParams.get("stage") ?? ""}
@@ -69,6 +88,30 @@ export function ContactFilters({ stages, tags }: { stages: PipelineStage[]; tags
           {tags.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name}
+            </option>
+          ))}
+        </Select>
+        <Select
+          className="w-auto shrink-0"
+          defaultValue={searchParams.get("timeline") ?? ""}
+          onChange={(e) => updateParam("timeline", e.target.value)}
+        >
+          <option value="">All timelines</option>
+          {Object.entries(TIMELINE_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </Select>
+        <Select
+          className="w-auto shrink-0"
+          defaultValue={searchParams.get("representing") ?? ""}
+          onChange={(e) => updateParam("representing", e.target.value)}
+        >
+          <option value="">Buyer/Seller (any)</option>
+          {Object.entries(REPRESENTING_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
             </option>
           ))}
         </Select>

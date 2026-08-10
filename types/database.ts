@@ -75,6 +75,24 @@ export interface Tag {
   created_at: string;
 }
 
+export interface ContactFilterState {
+  q?: string;
+  stage?: string;
+  tag?: string;
+  type?: string;
+  timeline?: string;
+  representing?: string;
+  sort?: string;
+}
+
+export interface ContactSegment {
+  id: string;
+  owner_id: string;
+  name: string;
+  filters: ContactFilterState;
+  created_at: string;
+}
+
 export interface Contact {
   id: string;
   owner_id: string;

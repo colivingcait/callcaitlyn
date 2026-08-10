@@ -1,25 +1,35 @@
-import { listContacts, listStages, listTags } from "@/lib/data/contacts";
+import { listContacts, listStages, listTags, listSegments, type ContactSort } from "@/lib/data/contacts";
 import { listSequencesWithSummary } from "@/lib/data/sequences";
 import { ContactsList } from "@/components/contacts/ContactsList";
 import { ContactFilters } from "@/components/contacts/ContactFilters";
+import { SegmentBar } from "@/components/contacts/SegmentBar";
 import { BulkImportContactsButton } from "@/components/contacts/BulkImportContactsButton";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function ContactsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; stage?: string; tag?: string; type?: string }>;
+  searchParams: Promise<{ q?: string; stage?: string; tag?: string; type?: string; timeline?: string; representing?: string; sort?: string }>;
 }) {
   const params = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const [contacts, stages, tags, sequences] = await Promise.all([
-    listContacts({ q: params.q, stageId: params.stage, tagId: params.tag, type: params.type }),
+  const [contacts, stages, tags, sequences, segments] = await Promise.all([
+    listContacts({
+      q: params.q,
+      stageId: params.stage,
+      tagId: params.tag,
+      type: params.type,
+      timeline: params.timeline,
+      representing: params.representing,
+      sort: params.sort as ContactSort | undefined,
+    }),
     listStages(),
     listTags(),
     listSequencesWithSummary(),
+    listSegments(),
   ]);
 
   return (
@@ -32,6 +42,7 @@ export default async function ContactsPage({
         {user && <BulkImportContactsButton tags={tags} ownerId={user.id} />}
       </div>
       <ContactFilters stages={stages} tags={tags} />
+      {user && <SegmentBar segments={segments} ownerId={user.id} />}
       <div className="bg-white">
         <ContactsList
           contacts={contacts}

@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { ContactRow } from "@/components/contacts/ContactRow";
 import { BulkTagModal } from "@/components/contacts/BulkTagModal";
 import { BulkSequenceModal } from "@/components/contacts/BulkSequenceModal";
 import { Button } from "@/components/ui";
+import { Archive } from "lucide-react";
 import type { ContactWithRelations, Tag } from "@/types/database";
 
 type SequenceOption = { id: string; name: string; type: "broadcast" | "drip" };
@@ -24,6 +26,8 @@ export function ContactsList({
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [modal, setModal] = useState<BulkModal>(null);
+  const [confirmingArchive, setConfirmingArchive] = useState(false);
+  const [archiving, setArchiving] = useState(false);
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -37,12 +41,21 @@ export function ContactsList({
   function exitSelection() {
     setSelecting(false);
     setSelected(new Set());
+    setConfirmingArchive(false);
   }
 
   function afterAction() {
     setModal(null);
     exitSelection();
     router.refresh();
+  }
+
+  async function handleArchive() {
+    setArchiving(true);
+    const supabase = createClient();
+    await supabase.from("contacts").update({ archived: true }).in("id", selectedIds);
+    setArchiving(false);
+    afterAction();
   }
 
   const selectedIds = [...selected];
@@ -57,7 +70,14 @@ export function ContactsList({
         >
           {selecting ? "Cancel" : "Select"}
         </button>
-        {selecting && <span className="text-xs text-neutral-400">{selected.size} selected</span>}
+        {selecting && (
+          <button
+            onClick={() => (selected.size === contacts.length ? setSelected(new Set()) : setSelected(new Set(contacts.map((c) => c.id))))}
+            className="text-xs font-medium text-neutral-400 hover:text-neutral-600"
+          >
+            {selected.size === contacts.length ? "Deselect all" : `Select all ${contacts.length}`}
+          </button>
+        )}
       </div>
 
       {contacts.length === 0 ? (
@@ -71,16 +91,33 @@ export function ContactsList({
       {selecting && selected.size > 0 && (
         <div className="fixed inset-x-0 bottom-16 z-40 border-t border-neutral-200 bg-white p-3 shadow-lg md:bottom-0">
           <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-2">
-            <span className="mr-1 text-sm font-medium text-neutral-700">{selected.size} selected</span>
-            <Button size="sm" variant="secondary" onClick={() => setModal("add-tag")}>
-              Add tag
-            </Button>
-            <Button size="sm" variant="secondary" onClick={() => setModal("remove-tag")}>
-              Remove tag
-            </Button>
-            <Button size="sm" variant="secondary" onClick={() => setModal("sequence")}>
-              Add to sequence
-            </Button>
+            {confirmingArchive ? (
+              <>
+                <span className="text-sm text-neutral-700">Archive {selected.size} contact{selected.size === 1 ? "" : "s"}?</span>
+                <Button size="sm" variant="danger" onClick={handleArchive} disabled={archiving}>
+                  {archiving ? "Archiving…" : "Confirm"}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setConfirmingArchive(false)} disabled={archiving}>
+                  Cancel
+                </Button>
+              </>
+            ) : (
+              <>
+                <span className="mr-1 text-sm font-medium text-neutral-700">{selected.size} selected</span>
+                <Button size="sm" variant="secondary" onClick={() => setModal("add-tag")}>
+                  Add tag
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => setModal("remove-tag")}>
+                  Remove tag
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => setModal("sequence")}>
+                  Sequence…
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setConfirmingArchive(true)}>
+                  <Archive size={14} /> Archive
+                </Button>
+              </>
+            )}
           </div>
         </div>
       )}
