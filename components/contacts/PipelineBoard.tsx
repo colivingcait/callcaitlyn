@@ -47,18 +47,20 @@ export function PipelineBoard({
         })}
       </div>
 
-      {/* Desktop: kanban columns */}
-      <div className="hidden gap-4 overflow-x-auto px-6 pb-6 md:flex">
+      {/* Desktop: kanban columns, wrapping into new rows instead of an
+          ever-widening single row - visible stage count shouldn't force
+          horizontal scrolling to see the rest of the board. */}
+      <div className="hidden gap-4 px-6 pb-6 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {stages.map((stage) => {
           const items = byStage.get(stage.id) ?? [];
           return (
-            <div key={stage.id} className="flex w-72 shrink-0 flex-col">
+            <div key={stage.id} className="flex flex-col">
               <div className="mb-3 flex items-center gap-2 px-1">
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: stage.color }} />
                 <h3 className="text-sm font-semibold text-neutral-800">{stage.name}</h3>
                 <span className="text-xs text-neutral-400">{items.length}</span>
               </div>
-              <div className="flex-1 space-y-2 overflow-y-auto rounded-2xl bg-neutral-100/60 p-2">
+              <div className="max-h-[32rem] space-y-2 overflow-y-auto rounded-2xl bg-neutral-100/60 p-2">
                 {items.length === 0 ? (
                   <p className="py-6 text-center text-xs text-neutral-400">Empty</p>
                 ) : (
