@@ -6,6 +6,7 @@ import { findOrCreateContact, addTagByName } from "@/lib/crm/find-or-create-cont
 import { upsertActivity } from "@/lib/crm/activities";
 import { recordEventAttendance } from "@/lib/crm/events";
 import { applyJourneyStageAnswer } from "@/lib/crm/journey-stage";
+import { notifyNewLead } from "@/lib/push/send-push";
 
 const OWNER_ID = process.env.CRM_OWNER_USER_ID;
 
@@ -64,6 +65,15 @@ export async function POST(request: NextRequest) {
         leadSource: "Eventbrite",
       });
       if (!contact) continue;
+
+      if (contact.wasCreated) {
+        const name = [attendee.firstName, attendee.lastName].filter(Boolean).join(" ") || attendee.email;
+        await notifyNewLead(admin, OWNER_ID, {
+          title: "New event sign-up",
+          body: `${name} registered${eventName ? ` for ${eventName}` : ""} via Eventbrite`,
+          url: `/contacts/${contact.id}`,
+        });
+      }
 
       await addTagByName(admin, OWNER_ID, contact.id, "Meetup");
       await applyJourneyStageAnswer(admin, OWNER_ID, contact.id, attendee.journeyStage, contact.wasCreated);

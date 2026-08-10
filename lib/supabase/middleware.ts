@@ -51,7 +51,8 @@ export async function updateSession(request: NextRequest) {
   const isPublicAsset =
     request.nextUrl.pathname.startsWith("/manifest.json") ||
     request.nextUrl.pathname.startsWith("/_next") ||
-    request.nextUrl.pathname.startsWith("/favicon");
+    request.nextUrl.pathname.startsWith("/favicon") ||
+    request.nextUrl.pathname.startsWith("/sw.js");
 
   if (isAuthCallback || isWebhook) {
     return response;

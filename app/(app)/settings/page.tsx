@@ -5,6 +5,7 @@ import { StageManager } from "@/components/settings/StageManager";
 import { TagManager } from "@/components/settings/TagManager";
 import { GmailConnect } from "@/components/settings/GmailConnect";
 import { QuoSyncBackfill } from "@/components/settings/QuoSyncBackfill";
+import { PushNotifications } from "@/components/settings/PushNotifications";
 import { Card, Button } from "@/components/ui";
 import { Mail } from "lucide-react";
 
@@ -45,6 +46,11 @@ export default async function SettingsPage({
             <Mail size={14} /> Manage sequences
           </Button>
         </Link>
+      </Card>
+
+      <Card className="space-y-3">
+        <h2 className="text-sm font-semibold text-neutral-700">Notifications</h2>
+        <PushNotifications vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY} />
       </Card>
 
       <Card className="space-y-2 bg-neutral-50">

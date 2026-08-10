@@ -4,6 +4,7 @@ import { verifyCalendlySignature } from "@/lib/calendly/verify-signature";
 import { parseCalendlyInvitee } from "@/lib/calendly/parse-event";
 import { findOrCreateContact } from "@/lib/crm/find-or-create-contact";
 import { upsertActivity } from "@/lib/crm/activities";
+import { notifyNewLead } from "@/lib/push/send-push";
 
 const OWNER_ID = process.env.CRM_OWNER_USER_ID;
 
@@ -49,6 +50,15 @@ export async function POST(request: NextRequest) {
 
       if (contact) {
         const canceled = eventType === "invitee.canceled";
+
+        if (contact.wasCreated && !canceled) {
+          await notifyNewLead(admin, OWNER_ID, {
+            title: "New lead via Calendly",
+            body: `${invitee.firstName ?? invitee.name ?? invitee.email} booked ${invitee.eventName ?? "a meeting"}`,
+            url: `/contacts/${contact.id}`,
+          });
+        }
+
         await upsertActivity(admin, OWNER_ID, contact.id, "calendly", "calendly_invitee_uri", invitee.inviteeUri, {
           type: "meeting",
           direction: "none",
