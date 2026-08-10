@@ -2,9 +2,9 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Search } from "lucide-react";
+import { Search, Phone } from "lucide-react";
 import { Input, Select } from "@/components/ui";
-import { CONTACT_TYPE_LABELS, TIMELINE_LABELS, REPRESENTING_LABELS } from "@/lib/utils";
+import { CONTACT_TYPE_LABELS, TIMELINE_LABELS, REPRESENTING_LABELS, cn } from "@/lib/utils";
 import type { PipelineStage, Tag } from "@/types/database";
 
 const SORT_OPTIONS: { value: string; label: string }[] = [
@@ -21,6 +21,7 @@ export function ContactFilters({ stages, tags }: { stages: PipelineStage[]; tags
   const searchParams = useSearchParams();
   const [q, setQ] = useState(searchParams.get("q") ?? "");
   const [, startTransition] = useTransition();
+  const hasPhone = searchParams.get("phone") === "1";
 
   function updateParam(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -115,6 +116,16 @@ export function ContactFilters({ stages, tags }: { stages: PipelineStage[]; tags
             </option>
           ))}
         </Select>
+        <button
+          type="button"
+          onClick={() => updateParam("phone", hasPhone ? "" : "1")}
+          className={cn(
+            "flex shrink-0 items-center gap-1.5 rounded-xl border px-3.5 py-2.5 text-sm font-medium",
+            hasPhone ? "border-brand-500 bg-brand-50 text-brand-700" : "border-neutral-200 text-neutral-600 hover:bg-neutral-50",
+          )}
+        >
+          <Phone size={14} /> Has phone
+        </button>
       </div>
     </div>
   );

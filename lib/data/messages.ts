@@ -3,7 +3,7 @@ import type { Activity, ContactWithRelations } from "@/types/database";
 
 type ContactSummary = Pick<
   ContactWithRelations,
-  "id" | "first_name" | "last_name" | "phone" | "contact_type" | "timeline" | "pipeline_stages" | "contact_tags"
+  "id" | "first_name" | "last_name" | "phone" | "contact_type" | "timeline" | "pipeline_stages" | "contact_tags" | "archived"
 >;
 
 export type Conversation = {
@@ -15,11 +15,18 @@ export type Conversation = {
 // query, and this dataset (one agent's calls/texts) is small enough that
 // fetching a reasonably large recent window and grouping in JS is simpler
 // and fast enough than a custom SQL view/RPC.
-export async function listConversations(): Promise<Conversation[]> {
+//
+// Hidden (archived) contacts - spam/trash leads - are excluded by default,
+// reusing the same `archived` flag the rest of the app already treats as
+// "soft trash." Pass hidden: true to see the hidden list instead.
+export async function listConversations(opts?: { hidden?: boolean }): Promise<Conversation[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("activities")
-    .select("*, contacts(id, first_name, last_name, phone, contact_type, timeline, pipeline_stages(*), contact_tags(tags(*)))")
+    .select(
+      "*, contacts!inner(id, first_name, last_name, phone, contact_type, timeline, archived, pipeline_stages(*), contact_tags(tags(*)))",
+    )
+    .eq("contacts.archived", !!opts?.hidden)
     .in("type", ["call", "text"])
     .order("occurred_at", { ascending: false })
     .limit(300);

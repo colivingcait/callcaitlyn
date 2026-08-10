@@ -22,6 +22,7 @@ export async function listContacts(filters: {
   type?: string;
   timeline?: string;
   representing?: string;
+  hasPhone?: boolean;
   sort?: ContactSort;
 }) {
   const supabase = await createClient();
@@ -31,6 +32,7 @@ export async function listContacts(filters: {
   if (filters.type) query = query.eq("contact_type", filters.type);
   if (filters.timeline) query = query.eq("timeline", filters.timeline);
   if (filters.representing) query = query.eq("representing", filters.representing);
+  if (filters.hasPhone) query = query.not("phone", "is", null);
   if (filters.q) {
     const q = filters.q.trim();
     query = query.or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%,email.ilike.%${q}%,phone.ilike.%${q}%`);

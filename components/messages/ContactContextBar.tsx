@@ -20,7 +20,7 @@ export function ContactContextBar({ contact, stages }: { contact: ContactWithRel
     <div className="space-y-1.5 border-b border-neutral-100 bg-neutral-50/60 px-3 py-2">
       <div className="flex flex-wrap items-center gap-1.5">
         {stage && (
-          <Badge className="px-2 py-0.5 text-[11px]" color={stage.color}>
+          <Badge className="max-w-[10rem] truncate px-2 py-0.5 text-[11px]" color={stage.color}>
             {stage.name}
           </Badge>
         )}
@@ -32,7 +32,7 @@ export function ContactContextBar({ contact, stages }: { contact: ContactWithRel
           </span>
         )}
         {contact.contact_tags.map((ct) => (
-          <Badge key={ct.tags.id} color={ct.tags.color} className="px-2 py-0.5 text-[11px]">
+          <Badge key={ct.tags.id} color={ct.tags.color} className="max-w-[10rem] truncate px-2 py-0.5 text-[11px]">
             {ct.tags.name}
           </Badge>
         ))}

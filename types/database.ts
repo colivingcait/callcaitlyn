@@ -82,6 +82,7 @@ export interface ContactFilterState {
   type?: string;
   timeline?: string;
   representing?: string;
+  phone?: string;
   sort?: string;
 }
 

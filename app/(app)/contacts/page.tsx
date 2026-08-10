@@ -9,7 +9,16 @@ import { createClient } from "@/lib/supabase/server";
 export default async function ContactsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; stage?: string; tag?: string; type?: string; timeline?: string; representing?: string; sort?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    stage?: string;
+    tag?: string;
+    type?: string;
+    timeline?: string;
+    representing?: string;
+    phone?: string;
+    sort?: string;
+  }>;
 }) {
   const params = await searchParams;
   const supabase = await createClient();
@@ -24,6 +33,7 @@ export default async function ContactsPage({
       type: params.type,
       timeline: params.timeline,
       representing: params.representing,
+      hasPhone: params.phone === "1",
       sort: params.sort as ContactSort | undefined,
     }),
     listStages(),

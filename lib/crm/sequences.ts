@@ -16,6 +16,13 @@ function baseUrl() {
   return (process.env.APP_BASE_URL ?? "https://www.callcaitlyn.com").replace(/\/$/, "");
 }
 
+// Sending many near-identical emails back-to-back from one Gmail account in
+// a single cron tick looks like a spam burst to receiving mail servers, even
+// though every send is individually authenticated. Cap how many actually go
+// out per run - the cron re-runs every 15 minutes, so a big batch (e.g. a
+// bulk tag add) trickles out over time instead of landing all at once.
+const MAX_SENDS_PER_RUN = 20;
+
 export function applyMergeFields(text: string, contact: { first_name: string; last_name: string }) {
   return text
     .replace(/\{\{\s*first_name\s*\}\}/gi, contact.first_name || "")
@@ -108,7 +115,7 @@ async function sendStepToContact(
   return claimed.id;
 }
 
-async function processBroadcastSequence(admin: SupabaseClient, ownerId: string, sequence: EmailSequence) {
+async function processBroadcastSequence(admin: SupabaseClient, ownerId: string, sequence: EmailSequence, budget: { remaining: number }) {
   if (!sequence.target_tag_id) return;
   const { data: steps } = await admin
     .from("email_sequence_steps")
@@ -130,12 +137,14 @@ async function processBroadcastSequence(admin: SupabaseClient, ownerId: string, 
 
   for (const step of dueSteps) {
     for (const contact of contacts) {
-      await sendStepToContact(admin, ownerId, sequence, step, contact);
+      if (budget.remaining <= 0) return;
+      const sendId = await sendStepToContact(admin, ownerId, sequence, step, contact);
+      if (sendId) budget.remaining -= 1;
     }
   }
 }
 
-async function processDripSequence(admin: SupabaseClient, ownerId: string, sequence: EmailSequence) {
+async function processDripSequence(admin: SupabaseClient, ownerId: string, sequence: EmailSequence, budget: { remaining: number }) {
   const { data: steps } = await admin
     .from("email_sequence_steps")
     .select("*")
@@ -150,6 +159,7 @@ async function processDripSequence(admin: SupabaseClient, ownerId: string, seque
     .eq("status", "active");
 
   for (const enrollment of enrollments ?? []) {
+    if (budget.remaining <= 0) return;
     const contact = enrollment.contacts as unknown as SequenceContact | null;
     if (!contact || contact.archived) continue;
 
@@ -166,6 +176,7 @@ async function processDripSequence(admin: SupabaseClient, ownerId: string, seque
 
     const sendId = await sendStepToContact(admin, ownerId, sequence, step, contact);
     if (sendId) {
+      budget.remaining -= 1;
       const isLastStep = enrollment.current_step + 1 >= steps.length;
       await admin
         .from("email_sequence_enrollments")
@@ -176,9 +187,11 @@ async function processDripSequence(admin: SupabaseClient, ownerId: string, seque
 }
 
 export async function processDueSequences(admin: SupabaseClient, ownerId: string) {
+  const budget = { remaining: MAX_SENDS_PER_RUN };
   const { data: sequences } = await admin.from("email_sequences").select("*").eq("owner_id", ownerId).eq("active", true);
   for (const sequence of (sequences ?? []) as EmailSequence[]) {
-    if (sequence.type === "broadcast") await processBroadcastSequence(admin, ownerId, sequence);
-    else await processDripSequence(admin, ownerId, sequence);
+    if (budget.remaining <= 0) break;
+    if (sequence.type === "broadcast") await processBroadcastSequence(admin, ownerId, sequence, budget);
+    else await processDripSequence(admin, ownerId, sequence, budget);
   }
 }

@@ -9,6 +9,7 @@ import { CallLogEntry } from "@/components/messages/CallLogEntry";
 import { ThreadComposer } from "@/components/messages/ThreadComposer";
 import { ScrollToBottomOnLoad } from "@/components/messages/ScrollToBottomOnLoad";
 import { ContactContextBar } from "@/components/messages/ContactContextBar";
+import { ConversationActions } from "@/components/messages/ConversationActions";
 import { AiInsightCard } from "@/components/contacts/AiInsightCard";
 import { createClient } from "@/lib/supabase/server";
 
@@ -28,7 +29,7 @@ export default async function MessageThreadPage({ params }: { params: Promise<{ 
   if (!contact) notFound();
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col">
+    <div className="mx-auto flex max-w-2xl flex-col overflow-x-hidden">
       <div className="sticky top-0 z-10 bg-white/95 backdrop-blur">
         <div className="flex items-center gap-3 border-b border-neutral-200 px-3 py-2.5">
           <Link href="/messages" aria-label="Back to messages" className="text-neutral-500">
@@ -53,6 +54,7 @@ export default async function MessageThreadPage({ params }: { params: Promise<{ 
               <Mail size={18} />
             </a>
           )}
+          <ConversationActions contactId={contact.id} hidden={contact.archived} afterDelete="back-to-messages" />
         </div>
         <ContactContextBar contact={contact} stages={stages} />
       </div>
