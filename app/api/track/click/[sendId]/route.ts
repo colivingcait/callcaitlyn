@@ -1,5 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { updateEngagementTag } from "@/lib/crm/engagement";
+
+const OWNER_ID = process.env.CRM_OWNER_USER_ID;
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ sendId: string }> }) {
   const { sendId } = await params;
@@ -8,7 +11,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   const isValidTarget = !!target && /^https?:\/\//.test(target);
 
-  const { data: send } = await admin.from("email_sequence_sends").select("click_count, clicked_at").eq("id", sendId).maybeSingle();
+  const { data: send } = await admin
+    .from("email_sequence_sends")
+    .select("contact_id, click_count, clicked_at")
+    .eq("id", sendId)
+    .maybeSingle();
   if (send) {
     await admin
       .from("email_sequence_sends")
@@ -20,6 +27,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (isValidTarget) {
       await admin.from("email_link_clicks").insert({ send_id: sendId, url: target });
     }
+    // A click is a strong, hard-to-fake engagement signal on its own - see
+    // hasRecentEmailEngagement in lib/crm/engagement.ts.
+    if (OWNER_ID) await updateEngagementTag(admin, OWNER_ID, send.contact_id).catch(() => {});
   }
 
   // Only ever redirects to a link that was actually in the email body
