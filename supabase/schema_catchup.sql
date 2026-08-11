@@ -151,7 +151,7 @@ create table if not exists public.activities (
   body text,
   occurred_at timestamptz not null default now(),
   source text not null default 'manual'
-    check (source in ('manual', 'quo', 'gmail', 'calendly', 'eventbrite', 'jotform', 'ai', 'system')),
+    check (source in ('manual', 'quo', 'gmail', 'calendly', 'eventbrite', 'jotform', 'house_hacking_site', 'ai', 'system')),
   metadata jsonb not null default '{}',
   created_at timestamptz not null default now()
 );

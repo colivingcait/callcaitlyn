@@ -44,6 +44,7 @@ export type ActivitySource =
   | "calendly"
   | "eventbrite"
   | "jotform"
+  | "house_hacking_site"
   | "ai"
   | "system";
 

@@ -258,6 +258,30 @@ The stage is only ever set on a **brand-new** contact — an existing contact's 
 
 Eventbrite's custom registration question is fetched from the attendee's `answers` array (matched by the question text containing "journey" or "house hacking") — this field shape isn't confirmed against a real payload yet, so if it doesn't come through, the full raw order is saved in the activity's `metadata.raw` for us to check.
 
+## Setting up the House Hacking site (website signups)
+
+`househackingatl.com` is a separately-hosted, fully static Next.js site (its own repo, no database) - its signup forms used to `fetch()` straight to Kit's public form API from the browser. This endpoint replaces that: the site's form components POST to the CRM directly instead, and the CRM does the work Kit used to do (nothing - Kit only collected email addresses; this also creates/updates the contact, tags them, and enrolls them in the same sequences as an in-person meetup attendee).
+
+1. **Run the new migration**: [`supabase/migrations/0027_house_hacking_site_activity_source.sql`](./supabase/migrations/0027_house_hacking_site_activity_source.sql).
+2. Nothing else is required to deploy - `HOUSE_HACKING_SITE_ORIGINS` only needs setting in Vercel if the site's domain ever changes from the default baked into the code.
+3. On the site's side, each form component's Kit `fetch()` call gets replaced with:
+   ```
+   POST https://www.callcaitlyn.com/api/webhooks/house-hacking-site
+   Content-Type: application/json
+
+   {
+     "name": "Jane Doe",       // optional, but strongly recommended - every email in the
+                                // House Hacking Content sequence greets by {{first_name}}
+     "email": "jane@example.com",  // required
+     "phone": "4045551234",    // optional
+     "source": "gated_download",   // "gated_download" | "newsletter" | "listing_alerts"
+     "sourceDetail": "Financing a House Hack guide"  // optional, e.g. which of the 5 guides
+   }
+   ```
+   Response is always `{ "received": true }` on success (even for a duplicate submission - it updates the existing contact/activity instead of erroring).
+
+Every signup gets tagged **"Meetup"** (the same tag Eventbrite/Jotform apply) plus **"House Hacking Site"**, matched/merged against existing contacts by email the same way every other source is, and logged to their timeline. The "Meetup" tag is what enrolls them in both the **Meetup Reminders** and **House Hacking Content** sequences automatically - a site signup gets the exact same nurture as someone who registered for or attended an event in person.
+
 ## Setting up Gmail (sync, sending, and sequences)
 
 Unlike the other integrations, Gmail requires a real OAuth connection (not a webhook), and only syncs mail **to/from contacts already in the CRM** — no marketing/spam classification needed, since the contact's email address itself is the filter. New leads from your inbox still need to be added to the CRM by hand; this isn't a lead-discovery tool.
