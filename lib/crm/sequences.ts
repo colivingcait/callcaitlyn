@@ -20,8 +20,27 @@ function baseUrl() {
 // a single cron tick looks like a spam burst to receiving mail servers, even
 // though every send is individually authenticated. Cap how many actually go
 // out per run - the cron re-runs every 15 minutes, so a big batch (e.g. a
-// bulk tag add) trickles out over time instead of landing all at once.
-const MAX_SENDS_PER_RUN = 20;
+// bulk tag add, or several site signups within a few minutes of each other)
+// trickles out over time instead of landing all at once. Lowered from 20 to
+// 8 after Google started bulk-sender-blocking a batch of same-instant
+// "Welcome" drip sends on 2026-08-11 - see the spacing delay below too.
+const MAX_SENDS_PER_RUN = 8;
+
+// Even at a lowered per-run cap, awaiting sends back-to-back in a tight loop
+// still fires them within the same second or two - the same templated-bulk
+// pattern Google's spam filter flagged. A few seconds of real spacing (with
+// jitter, so it doesn't look like a fixed bot interval either) between each
+// send is cheap insurance against the same block recurring.
+const MIN_SEND_SPACING_MS = 2500;
+const SEND_SPACING_JITTER_MS = 1500;
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function spaceSends() {
+  await sleep(MIN_SEND_SPACING_MS + Math.floor(Math.random() * SEND_SPACING_JITTER_MS));
+}
 
 export function applyMergeFields(text: string, contact: { first_name: string; last_name: string }) {
   return text
@@ -139,7 +158,10 @@ async function processBroadcastSequence(admin: SupabaseClient, ownerId: string, 
     for (const contact of contacts) {
       if (budget.remaining <= 0) return;
       const sendId = await sendStepToContact(admin, ownerId, sequence, step, contact);
-      if (sendId) budget.remaining -= 1;
+      if (sendId) {
+        budget.remaining -= 1;
+        if (budget.remaining > 0) await spaceSends();
+      }
     }
   }
 }
@@ -182,6 +204,7 @@ async function processDripSequence(admin: SupabaseClient, ownerId: string, seque
         .from("email_sequence_enrollments")
         .update({ current_step: enrollment.current_step + 1, status: isLastStep ? "completed" : "active" })
         .eq("id", enrollment.id);
+      if (budget.remaining > 0) await spaceSends();
     }
   }
 }
