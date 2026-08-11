@@ -8,8 +8,6 @@ import { StageBreakdown } from "@/components/dashboard/StageBreakdown";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { PeriodToggle } from "@/components/dashboard/PeriodToggle";
 import { Card } from "@/components/ui";
-import { isPast } from "date-fns";
-import { isTodayLocal } from "@/lib/format-time";
 
 export default async function DashboardPage({
   searchParams,
@@ -24,15 +22,9 @@ export default async function DashboardPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ stages, stageCounts, totalActive, followUps, activities }, metrics] = await Promise.all([
-    getDashboardData(),
-    getMetrics(period),
-  ]);
+  const [{ stages, stageCounts, totalActive, followUps, activities, newLeadsWeek, newLeadsMonth }, metrics] =
+    await Promise.all([getDashboardData(), getMetrics(period)]);
 
-  const todayCount = followUps.filter((c) => c.next_follow_up_at && isTodayLocal(c.next_follow_up_at)).length;
-  const overdueCount = followUps.filter(
-    (c) => c.next_follow_up_at && isPast(new Date(c.next_follow_up_at)) && !isTodayLocal(c.next_follow_up_at),
-  ).length;
   const hotCount = stages.find((s) => s.name.toLowerCase().includes("hot"))
     ? stageCounts.get(stages.find((s) => s.name.toLowerCase().includes("hot"))!.id) ?? 0
     : 0;
@@ -45,8 +37,8 @@ export default async function DashboardPage({
       <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatTile label="Active Leads" value={totalActive} />
         <StatTile label="Hot / Ready" value={hotCount} tone="good" />
-        <StatTile label="Due Today" value={todayCount} tone="warning" />
-        <StatTile label="Overdue" value={overdueCount} tone="critical" />
+        <StatTile label="New Leads (Week)" value={newLeadsWeek} tone="warning" />
+        <StatTile label="New Leads (Month)" value={newLeadsMonth} tone="good" />
       </div>
 
       {user && (
