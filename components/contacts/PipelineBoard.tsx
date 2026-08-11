@@ -35,7 +35,7 @@ export function PipelineBoard({
                 </span>
                 <span className="text-neutral-400">{items.length}</span>
               </summary>
-              <div className="space-y-2 border-t border-neutral-100 p-3">
+              <div className="max-h-[24rem] space-y-2 overflow-y-auto border-t border-neutral-100 p-3">
                 {items.length === 0 ? (
                   <p className="py-2 text-center text-xs text-neutral-400">No contacts in this stage.</p>
                 ) : (
