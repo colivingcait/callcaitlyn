@@ -1,4 +1,4 @@
-import { Home, MessageCircle, Users, KanbanSquare, DollarSign, Mail, Settings, PhoneCall } from "lucide-react";
+import { Home, MessageCircle, Users, KanbanSquare, DollarSign, Mail, BarChart3, Settings, PhoneCall } from "lucide-react";
 
 export const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: Home },
@@ -7,15 +7,16 @@ export const NAV_ITEMS = [
   { href: "/pipeline", label: "Pipeline", icon: KanbanSquare },
   { href: "/commissions", label: "Commissions", icon: DollarSign },
   { href: "/sequences", label: "Emails", icon: Mail },
+  { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-// Bottom nav (mobile) drops Settings, Commissions, and Sequences to keep
-// tap targets wide - all three are occasional-use, reachable from Settings
-// on mobile instead. Desktop sidebar keeps the full list since there's
-// room there. Dialer is a phone-in-hand workflow, so it's mobile-only -
-// added here instead of to the desktop NAV_ITEMS list.
+// Bottom nav (mobile) drops Settings, Commissions, Sequences, and Reports
+// to keep tap targets wide - all are occasional-use, reachable from
+// Settings on mobile instead. Desktop sidebar keeps the full list since
+// there's room there. Dialer is a phone-in-hand workflow, so it's
+// mobile-only - added here instead of to the desktop NAV_ITEMS list.
 export const MOBILE_NAV_ITEMS = [
-  ...NAV_ITEMS.filter((item) => !["/settings", "/commissions", "/sequences"].includes(item.href)),
+  ...NAV_ITEMS.filter((item) => !["/settings", "/commissions", "/sequences", "/reports"].includes(item.href)),
   { href: "/dialer", label: "Dialer", icon: PhoneCall },
 ];

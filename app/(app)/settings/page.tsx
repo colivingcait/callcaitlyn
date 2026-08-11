@@ -7,7 +7,7 @@ import { GmailConnect } from "@/components/settings/GmailConnect";
 import { QuoSyncBackfill } from "@/components/settings/QuoSyncBackfill";
 import { PushNotifications } from "@/components/settings/PushNotifications";
 import { Card, Button } from "@/components/ui";
-import { Mail } from "lucide-react";
+import { Mail, BarChart3 } from "lucide-react";
 
 export default async function SettingsPage({
   searchParams,
@@ -28,6 +28,12 @@ export default async function SettingsPage({
   return (
     <div className="mx-auto max-w-2xl space-y-5 px-4 py-6">
       <h1 className="font-serif text-2xl font-semibold text-neutral-900">Settings</h1>
+
+      <Link href="/reports" className="block md:hidden">
+        <Button variant="secondary" size="sm">
+          <BarChart3 size={14} /> View reports
+        </Button>
+      </Link>
 
       {user && <StageManager stages={stages} ownerId={user.id} />}
       {user && <TagManager tags={tags} ownerId={user.id} />}

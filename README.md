@@ -311,12 +311,11 @@ If you set up sequences before this upgrade, run [`supabase/migrations/0018_sequ
 
 ### Ideas worth adding as a realtor/event manager (not yet built, flagged for later)
 
-- **Referral-source ROI** — `lead_source` is tracked per contact; a future report can show which sources actually convert to closings, so you know where to spend marketing effort.
 - **Showing feedback capture** — a lightweight form logged as a `showing` activity right after each showing, so feedback doesn't live in your head or a text thread.
 - **Past-client drip** — a Scheduled or Drip sequence tagged off "Closed - Client" would cover this now; just needs setting up, not new code.
-- **Duplicate detection** — warn when a new contact's phone/email matches an existing one, so leads from different channels (website, Eventbrite, sign call) don't fragment into duplicates.
 - **"Sphere" nurture cadence** — a separate lighter-touch cadence for sphere/referral-partner contacts vs. active buyers/sellers, since they need a different follow-up rhythm. A Drip sequence targeting a "Sphere" tag would work today.
-- **Email-based engagement tagging** — open/click tracking now exists (see Email sequences above) but only feeds sequence reports, not the "Engaged" tag itself; wiring synced/sequence email activity into `lib/crm/engagement.ts` would extend that tag beyond calls/texts.
+
+Built since this list was written: **Referral-source ROI** (a `/reports` page shows contacts, conversions, and gross commission per lead source), **duplicate detection** (the add/edit contact form warns on a matching phone/email), and **email-based engagement tagging** (a link click, or the same email opened more than once, now also triggers the "Engaged" tag — not just calls/texts).
 
 ## Project structure
 
