@@ -84,7 +84,7 @@ export function AiInsightCard({
     <Card className="space-y-3 border-brand-100 bg-brand-50/40">
       <div className="flex items-start gap-2">
         <Sparkles size={16} className="mt-0.5 shrink-0 text-brand-600" />
-        <p className="text-sm text-neutral-800">{insight.summary}</p>
+        <p className="min-w-0 break-words text-sm text-neutral-800">{insight.summary}</p>
       </div>
 
       {(suggestedStage || insight.suggested_timeline) && (

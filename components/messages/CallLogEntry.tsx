@@ -32,7 +32,7 @@ export function CallLogEntry({ activity }: { activity: Activity }) {
         {transcript && (
           <details>
             <summary className="cursor-pointer text-xs font-medium text-brand-600">Transcript</summary>
-            <p className="mt-1 max-w-xs whitespace-pre-wrap rounded-xl bg-neutral-50 p-2.5 text-left text-xs text-neutral-600">
+            <p className="mt-1 max-w-xs break-words whitespace-pre-wrap rounded-xl bg-neutral-50 p-2.5 text-left text-xs text-neutral-600">
               {transcript}
             </p>
           </details>
