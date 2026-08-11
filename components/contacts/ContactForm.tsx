@@ -1,24 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { syncContactToQuoAction } from "@/app/(app)/contacts/actions";
 import { contactSchema, type ContactFormValues } from "@/lib/validation/contact";
 import { Button, Input, Label, Select, Textarea, Card } from "@/components/ui";
-import { CONTACT_TYPE_LABELS, TIMELINE_LABELS, REPRESENTING_LABELS, LEAD_SOURCES, cn } from "@/lib/utils";
+import { CONTACT_TYPE_LABELS, TIMELINE_LABELS, REPRESENTING_LABELS, LEAD_SOURCES, cn, fullName } from "@/lib/utils";
+import { phonesMatch } from "@/lib/phone";
 import type { ContactWithRelations, PipelineStage, Tag } from "@/types/database";
+import type { MergeCandidate } from "@/lib/data/contacts";
 
 export function ContactForm({
   contact,
   stages,
   tags,
+  existingContacts = [],
 }: {
   contact?: ContactWithRelations;
   stages: PipelineStage[];
   tags: Tag[];
+  existingContacts?: MergeCandidate[];
 }) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
@@ -70,6 +76,22 @@ export function ContactForm({
 
   const representing = watch("representing");
   const showListingFields = representing === "seller" || representing === "both";
+
+  const watchedEmail = watch("email");
+  const watchedPhone = watch("phone");
+  const duplicate = useMemo(() => {
+    const email = watchedEmail?.trim().toLowerCase() || null;
+    const phone = watchedPhone?.trim() || null;
+    if (!email && !phone) return null;
+    return (
+      existingContacts.find((c) => {
+        if (c.id === contact?.id) return false;
+        const emailMatch = email && c.email && c.email.trim().toLowerCase() === email;
+        const phoneMatch = phone && phonesMatch(c.phone, phone);
+        return emailMatch || phoneMatch;
+      }) ?? null
+    );
+  }, [watchedEmail, watchedPhone, existingContacts, contact?.id]);
 
   async function onSubmit(values: ContactFormValues) {
     setSubmitting(true);
@@ -182,6 +204,18 @@ export function ContactForm({
           <Label htmlFor="secondary_phone">Secondary phone</Label>
           <Input id="secondary_phone" type="tel" {...register("secondary_phone")} />
         </div>
+        {duplicate && (
+          <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+            <p>
+              This phone/email matches an existing contact:{" "}
+              <Link href={`/contacts/${duplicate.id}`} target="_blank" className="font-medium underline">
+                {fullName(duplicate) || duplicate.phone || duplicate.email}
+              </Link>
+              . Saving will create a separate contact — check it&apos;s not the same person first.
+            </p>
+          </div>
+        )}
       </Card>
 
       <Card className="space-y-4">
