@@ -76,13 +76,6 @@ export default async function DashboardPage({
               ownerId={user.id}
               metricKey="conversion_rate"
             />
-            <MetricCard
-              label={period === "week" ? "Commission (week)" : "Commission (month)"}
-              result={metrics.commission}
-              kind="currency"
-              ownerId={user.id}
-              metricKey="commission_goal"
-            />
           </div>
         </div>
       )}

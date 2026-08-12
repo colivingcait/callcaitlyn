@@ -36,7 +36,7 @@ export async function getDashboardData() {
       .from("activities")
       .select("*, contacts(first_name, last_name)")
       .order("occurred_at", { ascending: false })
-      .limit(10),
+      .limit(5),
     // Same rolling 7/30-day windows the Accountability metrics use, rather
     // than calendar week/month boundaries - keeps "this week" meaning the
     // same thing everywhere on the dashboard. Filtered on lead_date, not
