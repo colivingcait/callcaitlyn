@@ -16,6 +16,7 @@ export type Metrics = {
   contactedPct: MetricResult; // %, higher is better
   followUpRate: MetricResult; // %, higher is better
   conversionRate: MetricResult; // %, higher is better
+  commission: MetricResult; // $, higher is better
 };
 
 const PERIOD_DAYS: Record<Period, number> = { week: 7, month: 30 };
@@ -138,6 +139,27 @@ async function conversionRateFor(
   return (wonIds.size / contacts.length) * 100;
 }
 
+// Gross commission, not net - net requires walking every deal in a cap
+// year in closing-date order (see lib/crm/commission.ts's computeDeals
+// comment), which only gives a correct number across the full history, not
+// a single week/month window in isolation. Same tradeoff the lead-source
+// report already makes.
+async function commissionFor(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  start: string,
+  end: string,
+): Promise<number | null> {
+  const { data: deals } = await supabase
+    .from("deals")
+    .select("gross_commission")
+    .eq("status", "won")
+    .gte("closed_at", start)
+    .lt("closed_at", end);
+
+  if (!deals || deals.length === 0) return 0;
+  return deals.reduce((sum, d) => sum + (d.gross_commission ?? 0), 0);
+}
+
 export async function getMetrics(period: Period): Promise<Metrics> {
   const supabase = await createClient();
   const days = PERIOD_DAYS[period];
@@ -166,6 +188,8 @@ export async function getMetrics(period: Period): Promise<Metrics> {
     followUpPrevious,
     conversionCurrent,
     conversionPrevious,
+    commissionCurrent,
+    commissionPrevious,
   ] = await Promise.all([
     speedToLeadFor(supabase, currentStart, currentEnd),
     speedToLeadFor(supabase, previousStart, previousEnd),
@@ -175,6 +199,8 @@ export async function getMetrics(period: Period): Promise<Metrics> {
     followUpRateFor(supabase, previousStart, previousEnd),
     conversionRateFor(supabase, currentStart, currentEnd),
     conversionRateFor(supabase, previousStart, previousEnd),
+    commissionFor(supabase, currentStart, currentEnd),
+    commissionFor(supabase, previousStart, previousEnd),
   ]);
 
   function build(current: number | null, previous: number | null, key: MetricKey, lowerIsBetter: boolean): MetricResult {
@@ -195,5 +221,6 @@ export async function getMetrics(period: Period): Promise<Metrics> {
     contactedPct: build(contactedCurrent, contactedPrevious, "contacted_pct", false),
     followUpRate: build(followUpCurrent, followUpPrevious, "follow_up_rate", false),
     conversionRate: build(conversionCurrent, conversionPrevious, "conversion_rate", false),
+    commission: build(commissionCurrent, commissionPrevious, "commission_goal", false),
   };
 }

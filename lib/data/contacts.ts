@@ -28,7 +28,7 @@ export async function listMergeCandidates(): Promise<MergeCandidate[]> {
   return (data ?? []) as MergeCandidate[];
 }
 
-export type ContactSort = "updated_desc" | "created_desc" | "name_asc" | "follow_up_asc" | "tag_asc";
+export type ContactSort = "updated_desc" | "created_desc" | "lead_date_desc" | "name_asc" | "follow_up_asc" | "tag_asc";
 
 export async function listContacts(filters: {
   q?: string;
@@ -39,6 +39,11 @@ export async function listContacts(filters: {
   representing?: string;
   leadSource?: string;
   hasPhone?: boolean;
+  missingPhone?: boolean;
+  // Drill-down from the dashboard's New Leads tile - contacts whose
+  // lead_date falls within the last N days, not created_at (see lead_date's
+  // comment in the migration for why those can differ).
+  leadDateWithinDays?: number;
   sort?: ContactSort;
 }) {
   const supabase = await createClient();
@@ -50,6 +55,10 @@ export async function listContacts(filters: {
   if (filters.representing) query = query.eq("representing", filters.representing);
   if (filters.leadSource) query = query.eq("lead_source", filters.leadSource);
   if (filters.hasPhone) query = query.not("phone", "is", null);
+  if (filters.missingPhone) query = query.is("phone", null);
+  if (filters.leadDateWithinDays) {
+    query = query.gte("lead_date", new Date(Date.now() - filters.leadDateWithinDays * 24 * 60 * 60 * 1000).toISOString());
+  }
   if (filters.q) {
     const q = filters.q.trim();
     query = query.or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%,email.ilike.%${q}%,phone.ilike.%${q}%`);
@@ -60,6 +69,7 @@ export async function listContacts(filters: {
   // are sorted in JS after the fetch instead of in the query.
   const sort = filters.sort ?? "updated_desc";
   if (sort === "created_desc") query = query.order("created_at", { ascending: false });
+  else if (sort === "lead_date_desc") query = query.order("lead_date", { ascending: false });
   else if (sort !== "name_asc" && sort !== "follow_up_asc" && sort !== "tag_asc") query = query.order("updated_at", { ascending: false });
 
   const { data } = await query;

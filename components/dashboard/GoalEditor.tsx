@@ -41,6 +41,7 @@ export function GoalEditor({
   if (editing) {
     return (
       <form onSubmit={handleSave} className="mt-2 flex items-center gap-1.5">
+        {unit === "$" && <span className="text-[11px] text-neutral-400">$</span>}
         <input
           type="number"
           step="any"
@@ -49,7 +50,7 @@ export function GoalEditor({
           onChange={(e) => setValue(e.target.value)}
           className="w-16 rounded-lg border border-neutral-200 px-1.5 py-0.5 text-xs"
         />
-        <span className="text-[11px] text-neutral-400">{unit}</span>
+        {unit !== "$" && <span className="text-[11px] text-neutral-400">{unit}</span>}
         <button type="submit" disabled={saving} className="text-[11px] font-medium text-brand-600">
           Save
         </button>
@@ -66,7 +67,7 @@ export function GoalEditor({
       className="mt-2 flex items-center gap-1 text-[11px] text-neutral-400 hover:text-neutral-600"
     >
       <Target size={11} />
-      {currentGoal != null ? `Goal: ${currentGoal}${unit}` : "Set a goal"}
+      {currentGoal != null ? `Goal: ${unit === "$" ? `$${currentGoal}` : `${currentGoal}${unit}`}` : "Set a goal"}
     </button>
   );
 }

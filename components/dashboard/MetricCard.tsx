@@ -1,11 +1,12 @@
 import { ArrowUp, ArrowDown, Minus, CheckCircle2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { GoalEditor } from "@/components/dashboard/GoalEditor";
 import type { MetricResult } from "@/lib/data/metrics";
 import type { MetricKey } from "@/types/database";
 
-function formatValue(value: number | null, kind: "hours" | "percent"): string {
+function formatValue(value: number | null, kind: "hours" | "percent" | "currency"): string {
   if (value == null) return "—";
+  if (kind === "currency") return formatCurrency(value);
   if (kind === "percent") return `${Math.round(value)}%`;
   if (value < 1) return `${Math.round(value * 60)}m`;
   return `${value.toFixed(1)}h`;
@@ -20,7 +21,7 @@ export function MetricCard({
 }: {
   label: string;
   result: MetricResult;
-  kind: "hours" | "percent";
+  kind: "hours" | "percent" | "currency";
   ownerId: string;
   metricKey: MetricKey;
 }) {

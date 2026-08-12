@@ -237,7 +237,7 @@ export interface ContactWithRelations extends Contact {
   contact_tags: { tags: Tag }[];
 }
 
-export type MetricKey = "speed_to_lead" | "contacted_pct" | "follow_up_rate" | "conversion_rate";
+export type MetricKey = "speed_to_lead" | "contacted_pct" | "follow_up_rate" | "conversion_rate" | "commission_goal";
 
 export interface MetricGoal {
   id: string;

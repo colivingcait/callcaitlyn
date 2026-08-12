@@ -21,7 +21,8 @@ export function ContactFilters({ stages, tags, leadSources }: { stages: Pipeline
   const searchParams = useSearchParams();
   const [q, setQ] = useState(searchParams.get("q") ?? "");
   const [, startTransition] = useTransition();
-  const hasPhone = searchParams.get("phone") === "1";
+  const phoneFilter = searchParams.get("phone"); // "1" = has phone, "0" = no phone, unset = any
+  const nextPhoneFilter = phoneFilter === "1" ? "0" : phoneFilter === "0" ? "" : "1";
 
   function updateParam(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -130,13 +131,15 @@ export function ContactFilters({ stages, tags, leadSources }: { stages: Pipeline
         </Select>
         <button
           type="button"
-          onClick={() => updateParam("phone", hasPhone ? "" : "1")}
+          onClick={() => updateParam("phone", nextPhoneFilter)}
           className={cn(
             "flex shrink-0 items-center gap-1.5 rounded-xl border px-3.5 py-2.5 text-sm font-medium",
-            hasPhone ? "border-brand-500 bg-brand-50 text-brand-700" : "border-neutral-200 text-neutral-600 hover:bg-neutral-50",
+            phoneFilter === "1" && "border-brand-500 bg-brand-50 text-brand-700",
+            phoneFilter === "0" && "border-amber-500 bg-amber-50 text-amber-700",
+            !phoneFilter && "border-neutral-200 text-neutral-600 hover:bg-neutral-50",
           )}
         >
-          <Phone size={14} /> Has phone
+          <Phone size={14} /> {phoneFilter === "1" ? "Has phone" : phoneFilter === "0" ? "No phone" : "Any phone"}
         </button>
       </div>
     </div>

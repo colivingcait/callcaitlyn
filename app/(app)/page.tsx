@@ -37,7 +37,7 @@ export default async function DashboardPage({
       <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatTile label="Active Leads" value={totalActive} />
         <StatTile label="Hot / Ready" value={hotCount} tone="good" />
-        <StatTile label="New Leads (Week)" value={newLeadsWeek} tone="warning" href="/reports?period=week#new-leads" />
+        <StatTile label="New Leads (Week)" value={newLeadsWeek} tone="warning" href="/contacts?newSince=7&sort=lead_date_desc" />
         <StatTile label="New Leads (Month)" value={newLeadsMonth} tone="good" href="/reports?period=month#new-leads" />
       </div>
 
@@ -75,6 +75,13 @@ export default async function DashboardPage({
               kind="percent"
               ownerId={user.id}
               metricKey="conversion_rate"
+            />
+            <MetricCard
+              label={period === "week" ? "Commission (week)" : "Commission (month)"}
+              result={metrics.commission}
+              kind="currency"
+              ownerId={user.id}
+              metricKey="commission_goal"
             />
           </div>
         </div>

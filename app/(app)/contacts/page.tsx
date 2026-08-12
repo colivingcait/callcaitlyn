@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { X } from "lucide-react";
 import { listContacts, listStages, listTags, listLeadSources, listSegments, type ContactSort } from "@/lib/data/contacts";
 import { listSequencesWithSummary } from "@/lib/data/sequences";
 import { ContactsList } from "@/components/contacts/ContactsList";
@@ -19,9 +21,11 @@ export default async function ContactsPage({
     source?: string;
     phone?: string;
     sort?: string;
+    newSince?: string;
   }>;
 }) {
   const params = await searchParams;
+  const newSinceDays = params.newSince ? Number(params.newSince) : undefined;
   const supabase = await createClient();
   const {
     data: { user },
@@ -36,6 +40,8 @@ export default async function ContactsPage({
       representing: params.representing,
       leadSource: params.source,
       hasPhone: params.phone === "1",
+      missingPhone: params.phone === "0",
+      leadDateWithinDays: newSinceDays,
       sort: params.sort as ContactSort | undefined,
     }),
     listStages(),
@@ -54,6 +60,16 @@ export default async function ContactsPage({
         </div>
         {user && <BulkImportContactsButton tags={tags} ownerId={user.id} />}
       </div>
+      {newSinceDays && (
+        <div className="mx-4 mb-2 flex items-center justify-between gap-2 rounded-xl bg-amber-50 px-3.5 py-2.5 text-sm text-amber-800">
+          <span>
+            Showing new leads from the last {newSinceDays} day{newSinceDays === 1 ? "" : "s"}
+          </span>
+          <Link href="/contacts" className="flex shrink-0 items-center gap-1 font-medium hover:underline">
+            <X size={13} /> Clear
+          </Link>
+        </div>
+      )}
       <ContactFilters stages={stages} tags={tags} leadSources={leadSources} />
       {user && <SegmentBar segments={segments} ownerId={user.id} />}
       <div className="bg-white">
