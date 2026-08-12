@@ -1,6 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Period } from "@/lib/data/metrics";
 import { CONTACT_TYPE_LABELS } from "@/lib/utils";
+import { phonesMatch } from "@/lib/phone";
+import { computeDeals, summarizeDeals, listCapYears, capYearLabel } from "@/lib/crm/commission";
+import type { Deal } from "@/types/database";
 
 const PERIOD_DAYS: Record<Period, number> = { week: 7, month: 30 };
 
@@ -296,4 +299,363 @@ export async function getSourceTrend(): Promise<SourceTrendData> {
     .sort((a, b) => b.total - a.total);
 
   return { monthLabels: months.map((m) => m.label), rows };
+}
+
+export type TagSegmentRow = { tagName: string; color: string; count: number };
+export type TagSegmentData = { rows: TagSegmentRow[]; untaggedCount: number };
+
+export async function getTagSegments(): Promise<TagSegmentData> {
+  const supabase = await createClient();
+  const [{ data: tags }, { data: contactTags }, { data: contacts }] = await Promise.all([
+    supabase.from("tags").select("id, name, color"),
+    supabase.from("contact_tags").select("contact_id, tag_id"),
+    supabase.from("contacts").select("id").eq("archived", false),
+  ]);
+
+  const activeContactIds = new Set((contacts ?? []).map((c) => c.id));
+  const countByTagId = new Map<string, number>();
+  const taggedContactIds = new Set<string>();
+  for (const ct of contactTags ?? []) {
+    if (!activeContactIds.has(ct.contact_id)) continue;
+    countByTagId.set(ct.tag_id, (countByTagId.get(ct.tag_id) ?? 0) + 1);
+    taggedContactIds.add(ct.contact_id);
+  }
+
+  const rows = (tags ?? [])
+    .map((t) => ({ tagName: t.name, color: t.color, count: countByTagId.get(t.id) ?? 0 }))
+    .filter((r) => r.count > 0)
+    .sort((a, b) => b.count - a.count);
+
+  return { rows, untaggedCount: activeContactIds.size - taggedContactIds.size };
+}
+
+export type JourneyStageRow = { label: string; count: number };
+
+// Only tells apart the 3 buckets the House Hacking journey question's
+// tags actually distinguish (see lib/crm/journey-stage.ts) - "House
+// Hacker" alone covers both "looking for my next one" and "not actively
+// looking right now" since both answers apply the same tags.
+export async function getJourneyStageBreakdown(): Promise<JourneyStageRow[]> {
+  const supabase = await createClient();
+  const [{ data: tags }, { data: contactTags }, { data: contacts }] = await Promise.all([
+    supabase.from("tags").select("id, name"),
+    supabase.from("contact_tags").select("contact_id, tag_id"),
+    supabase.from("contacts").select("id").eq("archived", false),
+  ]);
+
+  const tagIdByName = new Map((tags ?? []).map((t) => [t.name, t.id]));
+  const houseHackingId = tagIdByName.get("House Hacking");
+  const houseHackerId = tagIdByName.get("House Hacker");
+  const firstTimeBuyerId = tagIdByName.get("First-Time Buyer");
+
+  const tagIdsByContact = new Map<string, Set<string>>();
+  for (const ct of contactTags ?? []) {
+    if (!tagIdsByContact.has(ct.contact_id)) tagIdsByContact.set(ct.contact_id, new Set());
+    tagIdsByContact.get(ct.contact_id)!.add(ct.tag_id);
+  }
+
+  let researching = 0;
+  let firstTime = 0;
+  let alreadyHouseHacking = 0;
+  for (const c of contacts ?? []) {
+    const contactTagIds = tagIdsByContact.get(c.id);
+    if (!contactTagIds || !houseHackingId || !contactTagIds.has(houseHackingId)) continue;
+    if (houseHackerId && contactTagIds.has(houseHackerId)) alreadyHouseHacking += 1;
+    else if (firstTimeBuyerId && contactTagIds.has(firstTimeBuyerId)) firstTime += 1;
+    else researching += 1;
+  }
+
+  return [
+    { label: "Just researching", count: researching },
+    { label: "Looking for first house hack", count: firstTime },
+    { label: "Already house hacking", count: alreadyHouseHacking },
+  ];
+}
+
+export type CommissionRateTrendMonth = { key: string; label: string; avgRate: number | null; dealCount: number };
+
+export async function getCommissionRateTrend(): Promise<CommissionRateTrendMonth[]> {
+  const supabase = await createClient();
+  const months = lastNMonths(6);
+  const { data: deals } = await supabase
+    .from("deals")
+    .select("gross_commission, sale_price, closed_at")
+    .eq("status", "won")
+    .gte("closed_at", months[0].start.toISOString());
+
+  return months.map((m) => {
+    const inMonth = (deals ?? []).filter((d) => {
+      const t = new Date(d.closed_at).getTime();
+      return t >= m.start.getTime() && t < m.end.getTime();
+    });
+    const rates = inMonth
+      .filter((d) => d.sale_price && d.gross_commission)
+      .map((d) => (d.gross_commission! / d.sale_price!) * 100);
+    return {
+      key: m.key,
+      label: m.label,
+      avgRate: rates.length > 0 ? rates.reduce((a, b) => a + b, 0) / rates.length : null,
+      dealCount: inMonth.length,
+    };
+  });
+}
+
+export type CapYearComparisonRow = {
+  capYear: string;
+  label: string;
+  totalDeals: number;
+  totalGCI: number;
+  netCommissionIncome: number;
+};
+
+// Walks ALL won deals through computeDeals (not just the visible years) -
+// the KW/KWRI cap tracking is cumulative per cap year, so a year's net
+// figure would be wrong if computed in isolation. Same approach the
+// Commissions page itself uses.
+export async function getCapYearComparison(): Promise<CapYearComparisonRow[]> {
+  const supabase = await createClient();
+  const { data: deals } = await supabase.from("deals").select("*").eq("status", "won");
+  const dealRows = (deals ?? []) as Deal[];
+  const computed = computeDeals(dealRows);
+  const years = listCapYears(dealRows).slice(0, 3);
+
+  return years.map((year) => {
+    const yearDeals = computed.filter((d) => d.capYear === year);
+    const stats = summarizeDeals(yearDeals);
+    return {
+      capYear: year,
+      label: capYearLabel(year),
+      totalDeals: stats.totalDeals,
+      totalGCI: stats.totalGCI,
+      netCommissionIncome: stats.netCommissionIncome,
+    };
+  });
+}
+
+export type TaskTrendMonth = { key: string; label: string; created: number; completed: number };
+
+// "Completed" counts whichever month the task was actually finished in,
+// not the month it was created - a task created in April and finished in
+// May should show up as May's follow-through, not get lost in April's
+// count.
+export async function getTaskCompletionTrend(): Promise<TaskTrendMonth[]> {
+  const supabase = await createClient();
+  const months = lastNMonths(6);
+  const { data: tasks } = await supabase
+    .from("tasks")
+    .select("created_at, completed_at")
+    .gte("created_at", months[0].start.toISOString());
+
+  return months.map((m) => {
+    const created = (tasks ?? []).filter((t) => {
+      const t2 = new Date(t.created_at).getTime();
+      return t2 >= m.start.getTime() && t2 < m.end.getTime();
+    }).length;
+    const completed = (tasks ?? []).filter((t) => {
+      if (!t.completed_at) return false;
+      const t2 = new Date(t.completed_at).getTime();
+      return t2 >= m.start.getTime() && t2 < m.end.getTime();
+    }).length;
+    return { key: m.key, label: m.label, created, completed };
+  });
+}
+
+export type StaleLeadBucket = { label: string; minDays: number; count: number };
+
+// "Quiet" is measured from the contact's last logged activity, or their
+// lead_date if they have none yet - deliberately independent of
+// next_follow_up_at, since this is meant to catch people nobody ever set a
+// follow-up date for in the first place, not duplicate the follow-up list.
+// Only active-stage contacts count - a Past Client or Trash contact going
+// quiet is expected, not a missed lead.
+export async function getStaleLeadsReport(): Promise<StaleLeadBucket[]> {
+  const supabase = await createClient();
+  const [{ data: stages }, { data: contacts }, { data: activities }] = await Promise.all([
+    supabase.from("pipeline_stages").select("id, is_closed_won, is_closed_lost, is_trash"),
+    supabase.from("contacts").select("id, stage_id, lead_date").eq("archived", false),
+    supabase.from("activities").select("contact_id, occurred_at"),
+  ]);
+
+  const activeStageIds = new Set(
+    (stages ?? []).filter((s) => !s.is_closed_won && !s.is_closed_lost && !s.is_trash).map((s) => s.id),
+  );
+
+  const lastActivityByContact = new Map<string, string>();
+  for (const a of activities ?? []) {
+    const existing = lastActivityByContact.get(a.contact_id);
+    if (!existing || new Date(a.occurred_at) > new Date(existing)) lastActivityByContact.set(a.contact_id, a.occurred_at);
+  }
+
+  const now = Date.now();
+  let d30 = 0;
+  let d60 = 0;
+  let d90 = 0;
+  for (const c of contacts ?? []) {
+    if (!c.stage_id || !activeStageIds.has(c.stage_id)) continue;
+    const last = lastActivityByContact.get(c.id) ?? c.lead_date;
+    const days = (now - new Date(last).getTime()) / (24 * 60 * 60 * 1000);
+    if (days >= 90) d90 += 1;
+    else if (days >= 60) d60 += 1;
+    else if (days >= 30) d30 += 1;
+  }
+
+  return [
+    { label: "30-59 days quiet", minDays: 30, count: d30 },
+    { label: "60-89 days quiet", minDays: 60, count: d60 },
+    { label: "90+ days quiet", minDays: 90, count: d90 },
+  ];
+}
+
+export type DuplicateRiskPair = {
+  aId: string;
+  aName: string;
+  bId: string;
+  bName: string;
+  matchedOn: "email" | "phone";
+};
+
+// Exact matches only (same normalization findOrCreateContact/ContactForm
+// already use) - anything caught here is a real duplicate that slipped
+// past the creation-time warning, not a fuzzy guess. O(n^2) is fine at
+// solo-agent scale (hundreds to low thousands of contacts); would need
+// rethinking well before that stops being true.
+export async function getDuplicateRiskPairs(): Promise<DuplicateRiskPair[]> {
+  const supabase = await createClient();
+  const { data: contacts } = await supabase
+    .from("contacts")
+    .select("id, first_name, last_name, email, phone")
+    .eq("archived", false);
+
+  const list = contacts ?? [];
+  const pairs: DuplicateRiskPair[] = [];
+  const seenPairKeys = new Set<string>();
+
+  for (let i = 0; i < list.length; i++) {
+    for (let j = i + 1; j < list.length; j++) {
+      const a = list[i];
+      const b = list[j];
+      const emailMatch = !!(a.email && b.email && a.email.trim().toLowerCase() === b.email.trim().toLowerCase());
+      const phoneMatch = !!(a.phone && b.phone && phonesMatch(a.phone, b.phone));
+      if (!emailMatch && !phoneMatch) continue;
+
+      const key = [a.id, b.id].sort().join(":");
+      if (seenPairKeys.has(key)) continue;
+      seenPairKeys.add(key);
+
+      pairs.push({
+        aId: a.id,
+        aName: `${a.first_name} ${a.last_name}`.trim(),
+        bId: b.id,
+        bName: `${b.first_name} ${b.last_name}`.trim(),
+        matchedOn: emailMatch ? "email" : "phone",
+      });
+    }
+  }
+
+  return pairs;
+}
+
+export type SequenceEngagementRow = {
+  id: string;
+  name: string;
+  sentTotal: number;
+  openRate: number;
+  clickRate: number;
+  unsubRate: number;
+};
+
+export async function getSequenceEngagementReport(): Promise<SequenceEngagementRow[]> {
+  const supabase = await createClient();
+  const [{ data: sequences }, { data: sends }] = await Promise.all([
+    supabase.from("email_sequences").select("id, name"),
+    supabase.from("email_sequence_sends").select("sequence_id, opened_at, clicked_at, unsubscribed_at"),
+  ]);
+
+  const statsBySeq = new Map<string, { sent: number; opened: number; clicked: number; unsubscribed: number }>();
+  for (const s of sends ?? []) {
+    const cur = statsBySeq.get(s.sequence_id) ?? { sent: 0, opened: 0, clicked: 0, unsubscribed: 0 };
+    cur.sent += 1;
+    if (s.opened_at) cur.opened += 1;
+    if (s.clicked_at) cur.clicked += 1;
+    if (s.unsubscribed_at) cur.unsubscribed += 1;
+    statsBySeq.set(s.sequence_id, cur);
+  }
+
+  return (sequences ?? [])
+    .map((seq) => {
+      const s = statsBySeq.get(seq.id) ?? { sent: 0, opened: 0, clicked: 0, unsubscribed: 0 };
+      return {
+        id: seq.id,
+        name: seq.name,
+        sentTotal: s.sent,
+        openRate: s.sent ? (s.opened / s.sent) * 100 : 0,
+        clickRate: s.sent ? (s.clicked / s.sent) * 100 : 0,
+        unsubRate: s.sent ? (s.unsubscribed / s.sent) * 100 : 0,
+      };
+    })
+    .filter((r) => r.sentTotal > 0)
+    .sort((a, b) => b.sentTotal - a.sentTotal);
+}
+
+export type ShowRateMonth = { key: string; label: string; registrations: number; checkIns: number; showRate: number | null };
+export type ShowRateSeries = { series: string; months: ShowRateMonth[] };
+
+// Eventbrite and Jotform don't share an event identifier - Eventbrite's
+// event_name is the real per-occurrence title ("Financing a House Hack"),
+// Jotform's is a static per-kiosk label ("House Hacking Meetup"). They
+// can only be joined by which of the two known series (house_hacking /
+// womens_rei) they belong to, bucketed by month - not matched to a
+// specific occurrence. Since a registration's occurred_at is the ORDER
+// date (which can be weeks before the event) while a check-in's is the
+// actual event day, a registration near a month boundary can land in a
+// different month than its own check-in - this is a directional trend,
+// not a precise per-event show rate.
+export async function getMeetupShowRate(): Promise<ShowRateSeries[]> {
+  const supabase = await createClient();
+  const months = lastNMonths(6);
+  const { data: activities } = await supabase
+    .from("activities")
+    .select("source, occurred_at, metadata")
+    .in("source", ["eventbrite", "jotform"])
+    .gte("occurred_at", months[0].start.toISOString());
+
+  function classify(a: { source: string; metadata: Record<string, unknown> | null }): "house_hacking" | "womens_rei" | null {
+    if (a.source === "eventbrite") {
+      const account = a.metadata?.eventbrite_account;
+      if (account === "womens_rei") return "womens_rei";
+      if (account === "house_hacking") return "house_hacking";
+      return null;
+    }
+    if (a.source === "jotform") {
+      const name = a.metadata?.event_name;
+      if (name === "Women's REI Meetup") return "womens_rei";
+      if (name === "House Hacking Meetup") return "house_hacking";
+      return null;
+    }
+    return null;
+  }
+
+  const seriesDefs = [
+    { key: "house_hacking" as const, label: "House Hacking" },
+    { key: "womens_rei" as const, label: "Women's REI" },
+  ];
+
+  return seriesDefs.map((def) => ({
+    series: def.label,
+    months: months.map((m) => {
+      const inMonth = (activities ?? []).filter((a) => {
+        const t = new Date(a.occurred_at).getTime();
+        return t >= m.start.getTime() && t < m.end.getTime() && classify(a) === def.key;
+      });
+      const registrations = inMonth.filter((a) => a.source === "eventbrite").length;
+      const checkIns = inMonth.filter((a) => a.source === "jotform").length;
+      return {
+        key: m.key,
+        label: m.label,
+        registrations,
+        checkIns,
+        showRate: registrations > 0 ? (checkIns / registrations) * 100 : null,
+      };
+    }),
+  }));
 }
