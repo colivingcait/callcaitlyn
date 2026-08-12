@@ -73,16 +73,30 @@ export async function POST(request: NextRequest) {
       eventType === "call.transcript.completed"
     ) {
       const call = parseQuoCall(body);
-      const contactId = await patchActivityMetadata(admin, OWNER_ID, "quo", "quo_call_id", call.quoCallId, {
+      // Distinct key per event type, alongside the original call.completed
+      // event's `raw` - so if a field guess above is still wrong for
+      // recording/summary specifically, the real payload is saved to fix
+      // it from, the same way `raw` already covers the initial call.
+      const rawKey =
+        eventType === "call.recording.completed"
+          ? "raw_recording_event"
+          : eventType === "call.summary.completed"
+            ? "raw_summary_event"
+            : "raw_transcript_event";
+      const result = await patchActivityMetadata(admin, OWNER_ID, "quo", "quo_call_id", call.quoCallId, {
         recording_url: call.recordingUrl ?? undefined,
         summary: call.summary ?? undefined,
         transcript: call.transcript ?? undefined,
+        [rawKey]: body,
       });
       const content = call.transcript ?? call.summary;
-      if (contactId && content) {
-        await analyzeContactActivity(admin, OWNER_ID, contactId, {
+      if (result && content) {
+        await analyzeContactActivity(admin, OWNER_ID, result.contactId, {
           type: "call",
-          direction: call.direction,
+          // These follow-up payloads don't carry the original call's
+          // direction themselves (confirmed on the transcript shape) - use
+          // whatever was recorded on the original call.completed activity.
+          direction: result.direction,
           content,
         });
       }

@@ -55,18 +55,32 @@ export function parseQuoCall(body: AnyRecord): ParsedQuoCall {
   const to = asString(obj.to) ?? firstOf(obj.to) ?? firstOf((obj.participants as AnyRecord | undefined)?.to);
   const media = obj.media as AnyRecord[] | undefined;
   const recording = obj.recording as AnyRecord | undefined;
-  const transcript = obj.transcript as unknown;
+
+  // call.transcript.completed's data.object IS the transcript itself, not
+  // a call with a nested .transcript field - confirmed against a real
+  // payload 2026-08-12: { object: "callTranscript", callId, dialogue: [...],
+  // duration, status }. call.recording/summary.completed likely follow the
+  // same callXxx/callId sub-resource pattern but haven't been confirmed the
+  // same way yet - if a summary still doesn't show up, get a real payload
+  // for that event type too and adjust the summary line below.
+  const isTranscriptObject = obj.object === "callTranscript";
+  const isSummaryObject = obj.object === "callSummary";
+  const transcriptSource = isTranscriptObject ? obj : (obj.transcript as unknown);
 
   return {
-    quoCallId: asString(obj.id),
+    // The main call.completed event's call has its ID at `id`; the
+    // transcript/summary/recording sub-resource events reference it via
+    // `callId` instead - falling back covers both without needing to know
+    // which event type this is.
+    quoCallId: asString(obj.id) ?? asString(obj.callId),
     direction,
     counterpartNumber: direction === "outbound" ? to : from,
     durationSeconds: typeof obj.duration === "number" ? obj.duration : null,
     status: asString(obj.status),
     occurredAt: asString(obj.completedAt) ?? asString(obj.createdAt) ?? new Date().toISOString(),
     recordingUrl: asString(media?.[0]?.url) ?? asString(recording?.url) ?? asString(obj.recordingUrl),
-    summary: asString(obj.summary) ?? asString(obj.aiSummary),
-    transcript: parseTranscript(transcript),
+    summary: asString(obj.summary) ?? asString(obj.aiSummary) ?? (isSummaryObject ? asString(obj.content) ?? asString(obj.text) : null),
+    transcript: parseTranscript(transcriptSource),
   };
 }
 

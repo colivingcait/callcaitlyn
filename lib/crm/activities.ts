@@ -63,7 +63,7 @@ export async function patchActivityMetadata(
   if (!idValue) return null;
   const { data: existing } = await admin
     .from("activities")
-    .select("id, contact_id, metadata, body")
+    .select("id, contact_id, metadata, body, direction")
     .eq("owner_id", ownerId)
     .eq("source", source)
     .eq(`metadata->>${idField}`, idValue)
@@ -82,5 +82,9 @@ export async function patchActivityMetadata(
     })
     .eq("id", existing.id);
 
-  return existing.contact_id as string;
+  // Follow-up events (a transcript/summary/recording completing) don't
+  // carry the original call's direction themselves - handing back the
+  // original activity's so callers don't have to guess it from a payload
+  // shape that doesn't actually include it.
+  return { contactId: existing.contact_id as string, direction: existing.direction as ActivityDirection };
 }
