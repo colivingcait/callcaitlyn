@@ -12,7 +12,7 @@ export function SpeedToLeadReport({ buckets, period }: { buckets: SpeedToLeadBuc
     <div id="speed-to-lead" className="space-y-3 scroll-mt-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-neutral-700">Speed to lead distribution</h2>
-        <PeriodToggle period={period} basePath="/reports" />
+        <PeriodToggle period={period} basePath="/reports/performance" />
       </div>
       {total === 0 ? (
         <p className="text-sm text-neutral-500">No new leads in this period.</p>

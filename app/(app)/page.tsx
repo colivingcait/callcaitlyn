@@ -38,7 +38,7 @@ export default async function DashboardPage({
         <StatTile label="Active Leads" value={totalActive} />
         <StatTile label="Hot / Ready" value={hotCount} tone="good" />
         <StatTile label="New Leads (Week)" value={newLeadsWeek} tone="warning" href="/contacts?newSince=7&sort=lead_date_desc" />
-        <StatTile label="New Leads (Month)" value={newLeadsMonth} tone="good" href="/reports?period=month#new-leads" />
+        <StatTile label="New Leads (Month)" value={newLeadsMonth} tone="good" href="/reports/leads?period=month#new-leads" />
       </div>
 
       {user && (

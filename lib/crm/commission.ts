@@ -37,10 +37,16 @@ export function capYearKey(date: Date): string {
   return `${start.getUTCFullYear()}`;
 }
 
+// Displayed as a single calendar year, not the literal Dec-Nov span - a
+// pre-2026 cap year keyed "2024" (running Dec 2024 - Nov 2025) shows as
+// "2025" since that's where 11 of its 12 months actually fall, matching
+// how she thinks of "my 2025 numbers" day to day. The 2026 extended
+// transition year (and everything after) already keys off its dominant
+// calendar year, so it needs no adjustment.
 export function capYearLabel(key: string): string {
   const year = Number(key);
   if (year >= 2026) return `${year}`;
-  return `Dec ${year} – Nov ${year + 1}`;
+  return `${year + 1}`;
 }
 
 export interface DealComputedFields {

@@ -11,7 +11,7 @@ export function NewLeadsReport({ data, period }: { data: NewLeadsReportData; per
     <div id="new-leads" className="space-y-3 scroll-mt-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-neutral-700">New leads</h2>
-        <PeriodToggle period={period} basePath="/reports" />
+        <PeriodToggle period={period} basePath="/reports/leads" />
       </div>
 
       <StatTile label={period === "week" ? "New leads this week" : "New leads this month"} value={data.total} tone="warning" />
