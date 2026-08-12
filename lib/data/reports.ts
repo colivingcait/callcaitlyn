@@ -597,65 +597,83 @@ export async function getSequenceEngagementReport(): Promise<SequenceEngagementR
     .sort((a, b) => b.sentTotal - a.sentTotal);
 }
 
-export type ShowRateMonth = { key: string; label: string; registrations: number; checkIns: number; showRate: number | null };
-export type ShowRateSeries = { series: string; months: ShowRateMonth[] };
+export type StageDistributionRow = { stageName: string; color: string; count: number };
 
-// Eventbrite and Jotform don't share an event identifier - Eventbrite's
-// event_name is the real per-occurrence title ("Financing a House Hack"),
-// Jotform's is a static per-kiosk label ("House Hacking Meetup"). They
-// can only be joined by which of the two known series (house_hacking /
-// womens_rei) they belong to, bucketed by month - not matched to a
-// specific occurrence. Since a registration's occurred_at is the ORDER
-// date (which can be weeks before the event) while a check-in's is the
-// actual event day, a registration near a month boundary can land in a
-// different month than its own check-in - this is a directional trend,
-// not a precise per-event show rate.
-export async function getMeetupShowRate(): Promise<ShowRateSeries[]> {
+export async function getStageDistribution(): Promise<StageDistributionRow[]> {
   const supabase = await createClient();
-  const months = lastNMonths(6);
-  const { data: activities } = await supabase
-    .from("activities")
-    .select("source, occurred_at, metadata")
-    .in("source", ["eventbrite", "jotform"])
-    .gte("occurred_at", months[0].start.toISOString());
+  const [{ data: stages }, { data: contacts }] = await Promise.all([
+    supabase.from("pipeline_stages").select("id, name, color, sort_order").order("sort_order", { ascending: true }),
+    supabase.from("contacts").select("stage_id").eq("archived", false),
+  ]);
 
-  function classify(a: { source: string; metadata: Record<string, unknown> | null }): "house_hacking" | "womens_rei" | null {
-    if (a.source === "eventbrite") {
-      const account = a.metadata?.eventbrite_account;
-      if (account === "womens_rei") return "womens_rei";
-      if (account === "house_hacking") return "house_hacking";
-      return null;
-    }
-    if (a.source === "jotform") {
-      const name = a.metadata?.event_name;
-      if (name === "Women's REI Meetup") return "womens_rei";
-      if (name === "House Hacking Meetup") return "house_hacking";
-      return null;
-    }
-    return null;
+  const countByStage = new Map<string, number>();
+  for (const c of contacts ?? []) {
+    if (!c.stage_id) continue;
+    countByStage.set(c.stage_id, (countByStage.get(c.stage_id) ?? 0) + 1);
   }
 
-  const seriesDefs = [
-    { key: "house_hacking" as const, label: "House Hacking" },
-    { key: "womens_rei" as const, label: "Women's REI" },
-  ];
+  return (stages ?? []).map((s) => ({ stageName: s.name, color: s.color, count: countByStage.get(s.id) ?? 0 }));
+}
 
-  return seriesDefs.map((def) => ({
-    series: def.label,
-    months: months.map((m) => {
-      const inMonth = (activities ?? []).filter((a) => {
-        const t = new Date(a.occurred_at).getTime();
-        return t >= m.start.getTime() && t < m.end.getTime() && classify(a) === def.key;
-      });
-      const registrations = inMonth.filter((a) => a.source === "eventbrite").length;
-      const checkIns = inMonth.filter((a) => a.source === "jotform").length;
-      return {
-        key: m.key,
-        label: m.label,
-        registrations,
-        checkIns,
-        showRate: registrations > 0 ? (checkIns / registrations) * 100 : null,
-      };
-    }),
-  }));
+export type FollowUpRateTrendMonth = { key: string; label: string; rate: number | null };
+
+// Same relevance filter as followUpRateFor in lib/data/metrics.ts (tasks
+// tied to an archived contact don't count), extended to a 6-month trend
+// instead of one week/month number.
+export async function getFollowUpRateTrend(): Promise<FollowUpRateTrendMonth[]> {
+  const supabase = await createClient();
+  const months = lastNMonths(6);
+
+  const [{ data: archivedContacts }, { data: tasks }] = await Promise.all([
+    supabase.from("contacts").select("id").eq("archived", true),
+    supabase.from("tasks").select("contact_id, due_at, completed_at").gte("due_at", months[0].start.toISOString()),
+  ]);
+  const archivedIds = new Set((archivedContacts ?? []).map((c) => c.id));
+
+  return months.map((m) => {
+    const relevant = (tasks ?? []).filter((t) => {
+      if (!t.due_at) return false;
+      const t2 = new Date(t.due_at).getTime();
+      const inRange = t2 >= m.start.getTime() && t2 < m.end.getTime();
+      const notArchived = !t.contact_id || !archivedIds.has(t.contact_id);
+      return inRange && notArchived;
+    });
+    if (relevant.length === 0) return { key: m.key, label: m.label, rate: null };
+    const completed = relevant.filter((t) => t.completed_at).length;
+    return { key: m.key, label: m.label, rate: (completed / relevant.length) * 100 };
+  });
+}
+
+export type EngagementBucket = { label: string; count: number };
+
+// All-time, across every sequence a contact has ever received mail from -
+// not scoped to current enrollment, since "has this person ever engaged
+// with an email from us" is the useful question here, not just their
+// current sequence.
+export async function getLeadEngagementBreakdown(): Promise<EngagementBucket[]> {
+  const supabase = await createClient();
+  const { data: sends } = await supabase.from("email_sequence_sends").select("contact_id, opened_at, clicked_at");
+
+  const byContact = new Map<string, { opened: boolean; clicked: boolean }>();
+  for (const s of sends ?? []) {
+    const cur = byContact.get(s.contact_id) ?? { opened: false, clicked: false };
+    if (s.opened_at) cur.opened = true;
+    if (s.clicked_at) cur.clicked = true;
+    byContact.set(s.contact_id, cur);
+  }
+
+  let never = 0;
+  let openedOnly = 0;
+  let clicked = 0;
+  for (const v of byContact.values()) {
+    if (v.clicked) clicked += 1;
+    else if (v.opened) openedOnly += 1;
+    else never += 1;
+  }
+
+  return [
+    { label: "Never opened", count: never },
+    { label: "Opened, never clicked", count: openedOnly },
+    { label: "Clicked at least once", count: clicked },
+  ];
 }

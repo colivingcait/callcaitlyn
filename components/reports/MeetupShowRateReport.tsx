@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui";
 import { formatPercent } from "@/lib/utils";
-import type { ShowRateSeries } from "@/lib/data/reports";
+import type { ShowRateSeries } from "@/lib/data/events-report";
 
 export function MeetupShowRateReport({ series }: { series: ShowRateSeries[] }) {
   const hasAnyData = series.some((s) => s.months.some((m) => m.registrations > 0 || m.checkIns > 0));
