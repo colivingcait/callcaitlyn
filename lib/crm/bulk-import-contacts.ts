@@ -4,6 +4,7 @@ export interface ParsedContactRow {
   lastName: string | null;
   email: string | null;
   phone: string | null;
+  leadDate: string | null;
   errors: string[];
 }
 
@@ -34,6 +35,17 @@ const HEADER_ALIASES: Record<string, string> = {
   "attendee phone number": "phone",
   mobile: "phone",
   cell: "phone",
+  date: "leadDate",
+  "lead date": "leadDate",
+  "booking date": "leadDate",
+  "order date": "leadDate",
+  "registration date": "leadDate",
+  "signup date": "leadDate",
+  "sign up date": "leadDate",
+  "date registered": "leadDate",
+  "date added": "leadDate",
+  "created date": "leadDate",
+  created: "leadDate",
 };
 
 function normalizeHeader(h: string) {
@@ -118,7 +130,18 @@ export function parseBulkContacts(text: string): { rows: ParsedContactRow[]; unm
     if (!email && !phone) errors.push("No email or phone - can't match or create a contact without one");
     if (!firstName && !lastName) errors.push("No name");
 
-    rows.push({ line: i + 1, firstName, lastName, email, phone, errors });
+    let leadDate: string | null = null;
+    const leadDateRaw = byField.leadDate || null;
+    if (leadDateRaw) {
+      const parsed = new Date(leadDateRaw);
+      if (Number.isNaN(parsed.getTime())) {
+        errors.push(`Doesn't look like a valid date: "${leadDateRaw}"`);
+      } else {
+        leadDate = parsed.toISOString();
+      }
+    }
+
+    rows.push({ line: i + 1, firstName, lastName, email, phone, leadDate, errors });
   }
 
   return { rows, unmatchedHeaders };

@@ -17,6 +17,12 @@ export async function findOrCreateContact(
     lastName?: string | null;
     leadSource: string;
     contactType?: string;
+    // The lead's real original date (booking/signup/registration), distinct
+    // from created_at (when this row was inserted). Only ever passed by CSV
+    // import, where the two can legitimately differ - every other source
+    // creates the contact the same moment the lead came in, so leaving this
+    // unset lets the column default to created_at.
+    leadDate?: string | null;
     // Bulk imports process rows one at a time already (for dedup safety -
     // see the caller) and a Quo API round-trip per row risks timing out a
     // big CSV. Skip it there; the one-time backfill button in Settings
@@ -41,6 +47,12 @@ export async function findOrCreateContact(
   });
   if (match) {
     await enrichContact(admin, match, { email, phone, firstName: input.firstName, lastName: input.lastName });
+    // A re-imported CSV (now carrying a date column that didn't exist on
+    // the first import) is the intended way to backfill a wrong lead_date
+    // on a contact created before this field existed - a deliberate,
+    // user-initiated correction, not a silent overwrite from an unrelated
+    // source (every other integration leaves leadDate unset).
+    if (input.leadDate) await admin.from("contacts").update({ lead_date: input.leadDate }).eq("id", match.id);
     if (phone && !input.skipQuoSync) {
       await syncContactToQuo(admin, {
         id: match.id,
@@ -72,6 +84,7 @@ export async function findOrCreateContact(
       contact_type: input.contactType ?? "other",
       lead_source: input.leadSource,
       stage_id: firstStage?.id ?? null,
+      ...(input.leadDate ? { lead_date: input.leadDate } : {}),
     })
     .select("id")
     .single();

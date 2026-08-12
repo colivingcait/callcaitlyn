@@ -133,6 +133,7 @@ export interface Contact {
   dialer_snoozed_at: string | null;
   event_followup_contacted_at: string | null;
   event_followup_snoozed_at: string | null;
+  lead_date: string;
   created_at: string;
   updated_at: string;
 }

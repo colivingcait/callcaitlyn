@@ -30,6 +30,7 @@ export const contactSchema = z.object({
     .optional(),
   stage_id: z.string().uuid().nullable().optional(),
   lead_source: z.string().optional(),
+  lead_date: z.string().optional(),
   budget_min: z.union([z.coerce.number(), z.nan()]).optional(),
   budget_max: z.union([z.coerce.number(), z.nan()]).optional(),
   areas_of_interest: z.string().optional(),

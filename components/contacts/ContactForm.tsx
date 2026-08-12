@@ -53,6 +53,7 @@ export function ContactForm({
           listing_timeline: contact.listing_timeline,
           stage_id: contact.stage_id,
           lead_source: contact.lead_source ?? "",
+          lead_date: contact.lead_date ? contact.lead_date.slice(0, 10) : "",
           budget_min: contact.budget_min ?? undefined,
           budget_max: contact.budget_max ?? undefined,
           areas_of_interest: (contact.areas_of_interest ?? []).join(", "),
@@ -120,6 +121,10 @@ export function ContactForm({
       listing_timeline: values.listing_timeline || null,
       stage_id: values.stage_id || null,
       lead_source: values.lead_source || null,
+      // Never sent as null - the column is not-null (defaults to
+      // created_at/now()). Omitting it on create lets the DB default apply;
+      // on edit it just leaves whatever was already there untouched.
+      ...(values.lead_date ? { lead_date: new Date(values.lead_date).toISOString() } : {}),
       budget_min: values.budget_min && !Number.isNaN(values.budget_min) ? values.budget_min : null,
       budget_max: values.budget_max && !Number.isNaN(values.budget_max) ? values.budget_max : null,
       areas_of_interest: values.areas_of_interest
@@ -263,6 +268,15 @@ export function ContactForm({
               ))}
             </datalist>
           </div>
+        </div>
+        <div>
+          <Label htmlFor="lead_date">Lead date</Label>
+          <Input id="lead_date" type="date" {...register("lead_date")} />
+          <p className="mt-1 text-xs text-neutral-400">
+            When this lead actually came in (defaults to today for a new contact) - separate from when it was added
+            to the CRM, so a backfilled CSV contact can keep its real original date. Drives the New Leads counts on
+            the Dashboard and Reports.
+          </p>
         </div>
         <div>
           <Label htmlFor="timeline">Timeline</Label>

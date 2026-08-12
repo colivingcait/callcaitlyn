@@ -92,6 +92,7 @@ export async function bulkImportContacts(rows: ParsedContactRow[], tagName: stri
       firstName: row.firstName,
       lastName: row.lastName,
       leadSource,
+      leadDate: row.leadDate,
       skipQuoSync: true,
     });
     if (!result) {

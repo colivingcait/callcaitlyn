@@ -10,7 +10,7 @@ import { X, AlertTriangle, Upload } from "lucide-react";
 import { parseBulkContacts, type ParsedContactRow } from "@/lib/crm/bulk-import-contacts";
 import type { Tag } from "@/types/database";
 
-const TEMPLATE = "First Name\tLast Name\tEmail\tPhone";
+const TEMPLATE = "First Name\tLast Name\tEmail\tPhone\tDate";
 
 export function BulkImportContactsModal({
   tags,
@@ -126,8 +126,12 @@ export function BulkImportContactsModal({
               className="font-mono text-xs"
             />
             <p className="text-xs text-neutral-400">
-              Recognized headers: First Name, Last Name (or a single Name/Full Name column), Email, Phone. Extra
-              columns are ignored. Each row needs a name and at least an email or phone.
+              Recognized headers: First Name, Last Name (or a single Name/Full Name column), Email, Phone, and an
+              optional Date column (booking/signup/registration date &mdash; any of &ldquo;Date&rdquo;, &ldquo;Booking
+              Date&rdquo;, &ldquo;Registration Date&rdquo;, &ldquo;Signup Date&rdquo;, &ldquo;Date Added&rdquo; work).
+              Extra columns are ignored. Each row needs a name and at least an email or phone. Without a Date
+              column, imported contacts are dated today &mdash; if that&apos;s wrong, re-import the same file later
+              with a Date column added and existing contacts get corrected instead of duplicated.
             </p>
             <Button onClick={handleParse} disabled={!text.trim()}>
               Preview
@@ -164,6 +168,7 @@ export function BulkImportContactsModal({
                     <th className="px-2 py-1.5 font-medium">Name</th>
                     <th className="px-2 py-1.5 font-medium">Email</th>
                     <th className="px-2 py-1.5 font-medium">Phone</th>
+                    <th className="px-2 py-1.5 font-medium">Date</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -172,6 +177,9 @@ export function BulkImportContactsModal({
                       <td className="px-2 py-1.5">{fullName({ first_name: r.firstName ?? "", last_name: r.lastName }) || "—"}</td>
                       <td className="px-2 py-1.5">{r.email ?? "—"}</td>
                       <td className="px-2 py-1.5">{r.phone ?? "—"}</td>
+                      <td className="px-2 py-1.5">
+                        {r.leadDate ? new Date(r.leadDate).toLocaleDateString() : <span className="text-neutral-300">Today</span>}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

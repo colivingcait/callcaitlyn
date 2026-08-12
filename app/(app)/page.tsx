@@ -37,8 +37,8 @@ export default async function DashboardPage({
       <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatTile label="Active Leads" value={totalActive} />
         <StatTile label="Hot / Ready" value={hotCount} tone="good" />
-        <StatTile label="New Leads (Week)" value={newLeadsWeek} tone="warning" />
-        <StatTile label="New Leads (Month)" value={newLeadsMonth} tone="good" />
+        <StatTile label="New Leads (Week)" value={newLeadsWeek} tone="warning" href="/reports?period=week#new-leads" />
+        <StatTile label="New Leads (Month)" value={newLeadsMonth} tone="good" href="/reports?period=month#new-leads" />
       </div>
 
       {user && (

@@ -39,9 +39,12 @@ export async function getDashboardData() {
       .limit(10),
     // Same rolling 7/30-day windows the Accountability metrics use, rather
     // than calendar week/month boundaries - keeps "this week" meaning the
-    // same thing everywhere on the dashboard.
-    supabase.from("contacts").select("id", { count: "exact", head: true }).eq("archived", false).gte("created_at", daysAgo(7)),
-    supabase.from("contacts").select("id", { count: "exact", head: true }).eq("archived", false).gte("created_at", daysAgo(30)),
+    // same thing everywhere on the dashboard. Filtered on lead_date, not
+    // created_at - a bulk CSV import inserts everything "now", which would
+    // otherwise make a backfilled contact from months ago look like a
+    // brand-new lead this week.
+    supabase.from("contacts").select("id", { count: "exact", head: true }).eq("archived", false).gte("lead_date", daysAgo(7)),
+    supabase.from("contacts").select("id", { count: "exact", head: true }).eq("archived", false).gte("lead_date", daysAgo(30)),
   ]);
 
   const stageCounts = new Map<string, number>();

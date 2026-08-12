@@ -1,4 +1,45 @@
 import { createClient } from "@/lib/supabase/server";
+import type { Period } from "@/lib/data/metrics";
+
+const PERIOD_DAYS: Record<Period, number> = { week: 7, month: 30 };
+
+function daysAgo(n: number) {
+  return new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString();
+}
+
+export type NewLeadsBySource = { source: string; count: number };
+
+export type NewLeadsReportData = {
+  total: number;
+  bySource: NewLeadsBySource[];
+};
+
+// Filtered on lead_date (the lead's real original date), not created_at (when
+// the row was inserted) - a bulk CSV import inserts everything "now", which
+// would otherwise make a months-old backfilled contact look like it just
+// came in this week. Same rolling window as the dashboard's tiles and the
+// Accountability metrics, so "this week" means the same thing everywhere.
+export async function getNewLeadsReport(period: Period): Promise<NewLeadsReportData> {
+  const supabase = await createClient();
+  const { data: contacts } = await supabase
+    .from("contacts")
+    .select("lead_source")
+    .eq("archived", false)
+    .gte("lead_date", daysAgo(PERIOD_DAYS[period]));
+
+  const countBySource = new Map<string, number>();
+  for (const c of contacts ?? []) {
+    const source = c.lead_source?.trim() || "Unknown";
+    countBySource.set(source, (countBySource.get(source) ?? 0) + 1);
+  }
+
+  return {
+    total: contacts?.length ?? 0,
+    bySource: [...countBySource.entries()]
+      .map(([source, count]) => ({ source, count }))
+      .sort((a, b) => b.count - a.count),
+  };
+}
 
 export type LeadSourceReportRow = {
   source: string;
