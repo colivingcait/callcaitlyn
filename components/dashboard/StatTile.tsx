@@ -4,11 +4,13 @@ import { cn } from "@/lib/utils";
 export function StatTile({
   label,
   value,
+  subValue,
   tone = "default",
   href,
 }: {
   label: string;
   value: number | string;
+  subValue?: string;
   tone?: "default" | "warning" | "critical" | "good";
   href?: string;
 }) {
@@ -26,6 +28,7 @@ export function StatTile({
       >
         {value}
       </p>
+      {subValue && <p className="mt-0.5 text-xs font-medium text-neutral-400">{subValue}</p>}
     </>
   );
 

@@ -8,10 +8,12 @@ export function CommissionStats({
   stats,
   pendingKw = 0,
   pendingKwri = 0,
+  pendingNetCommission = 0,
 }: {
   stats: CommissionStatsType;
   pendingKw?: number;
   pendingKwri?: number;
+  pendingNetCommission?: number;
 }) {
   const kwRemaining = Math.max(KW_CAP - stats.totalKW, 0);
   const kwriRemaining = Math.max(KWRI_CAP - stats.totalKWRI, 0);
@@ -24,7 +26,12 @@ export function CommissionStats({
         <StatTile label="Deals closed" value={stats.totalDeals} />
         <StatTile label="Total volume" value={formatCurrency(stats.totalVolume)} />
         <StatTile label="Total GCI" value={formatCurrency(stats.totalGCI)} />
-        <StatTile label="Net commission" value={formatCurrency(stats.netCommissionIncome)} tone="good" />
+        <StatTile
+          label="Net commission"
+          value={formatCurrency(stats.netCommissionIncome)}
+          subValue={pendingNetCommission > 0 ? `+${formatCurrency(pendingNetCommission)} under contract` : undefined}
+          tone="good"
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

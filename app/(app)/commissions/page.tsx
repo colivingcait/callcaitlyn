@@ -44,7 +44,12 @@ export default async function CommissionsPage({
       </div>
 
       <CapYearToggle years={years} current={currentYear} />
-      <CommissionStats stats={stats} pendingKw={pending.reduce((s, d) => s + d.kwFee, 0)} pendingKwri={pending.reduce((s, d) => s + d.kwriFee, 0)} />
+      <CommissionStats
+        stats={stats}
+        pendingKw={pending.reduce((s, d) => s + d.kwFee, 0)}
+        pendingKwri={pending.reduce((s, d) => s + d.kwriFee, 0)}
+        pendingNetCommission={pending.reduce((s, d) => s + d.netCommission, 0)}
+      />
 
       {pending.length > 0 && (
         <div>
