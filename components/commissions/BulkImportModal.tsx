@@ -58,9 +58,13 @@ export function BulkImportModal({ onClose }: { onClose: () => void }) {
         misc_fee: r.miscFee,
         oz_fee: r.ozFee,
         manual_split: manualSplit,
-        ...(manualSplit
-          ? { kw_fee: r.kwFee, kwri_fee: r.kwriFee, fmls_fee: r.fmlsFee, tc_fee: r.tcFee, referral_fee: r.referralFee }
-          : { referral_pct: r.referralPct, on_fmls: r.onFmls }),
+        // Referral is always a percentage of gross, independent of the
+        // manual/calculated toggle (which only covers KW/KWRI/FMLS/TC).
+        // referral_fee is sent too as a legacy dollar fallback for a sheet
+        // that only has a $ column and no % column.
+        referral_pct: r.referralPct,
+        referral_fee: r.referralFee,
+        ...(manualSplit ? { kw_fee: r.kwFee, kwri_fee: r.kwriFee, fmls_fee: r.fmlsFee, tc_fee: r.tcFee } : { on_fmls: r.onFmls }),
         notes: r.notes,
       })),
     );
@@ -108,11 +112,12 @@ export function BulkImportModal({ onClose }: { onClose: () => void }) {
             />
             <p className="text-xs text-neutral-400">
               Recognized headers: Address (or Client Name), Closing Date, Sale Price, Gross Comp, Side, Misc, OZ,
-              Notes, plus{" "}
+              Referral % (or Referral Fees as a $ amount if there&apos;s no % column), Notes, plus{" "}
               {manualSplit
-                ? "KW, KWRI, TC, FMLS, and Referral Fees (all as dollar amounts, used exactly as entered)"
-                : "Referral % and FMLS (Yes/No or a $ amount — zero/No means that deal isn't on FMLS)"}
-              . Address or Client Name and Closing Date are required per row.
+                ? "KW, KWRI, TC, and FMLS (all as dollar amounts, used exactly as entered)"
+                : "FMLS (Yes/No or a $ amount — zero/No means that deal isn't on FMLS)"}
+              . Address or Client Name and Closing Date are required per row. Referral is always taken off gross as
+              a percentage when a % column is present, regardless of the toggle above.
             </p>
             <Button onClick={handleParse} disabled={!text.trim()}>
               Preview
@@ -150,6 +155,7 @@ export function BulkImportModal({ onClose }: { onClose: () => void }) {
                     <th className="px-2 py-1.5 font-medium">Sale Price</th>
                     <th className="px-2 py-1.5 font-medium">Gross Comp</th>
                     <th className="px-2 py-1.5 font-medium">Side</th>
+                    <th className="px-2 py-1.5 font-medium">Referral</th>
                     {manualSplit ? (
                       <>
                         <th className="px-2 py-1.5 font-medium">KW</th>
@@ -170,6 +176,9 @@ export function BulkImportModal({ onClose }: { onClose: () => void }) {
                       <td className="whitespace-nowrap px-2 py-1.5">{formatCurrency(r.salePrice)}</td>
                       <td className="whitespace-nowrap px-2 py-1.5">{formatCurrency(r.grossCommission)}</td>
                       <td className="px-2 py-1.5 capitalize">{r.side ?? "—"}</td>
+                      <td className="whitespace-nowrap px-2 py-1.5">
+                        {r.referralPct != null ? `${r.referralPct}%` : r.referralFee ? formatCurrency(r.referralFee) : "—"}
+                      </td>
                       {manualSplit ? (
                         <>
                           <td className="whitespace-nowrap px-2 py-1.5">{formatCurrency(r.kwFee)}</td>

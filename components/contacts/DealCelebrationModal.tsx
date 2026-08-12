@@ -63,7 +63,6 @@ export function DealCelebrationModal({
   const [kwriFee, setKwriFee] = useState(initial?.kwri_fee?.toString() ?? "");
   const [manualFmlsFee, setManualFmlsFee] = useState(initial?.fmls_fee?.toString() ?? "");
   const [tcFee, setTcFee] = useState(initial?.tc_fee?.toString() ?? "");
-  const [manualReferralFee, setManualReferralFee] = useState(initial?.referral_fee?.toString() ?? "");
   const [leadStartedAt, setLeadStartedAt] = useState(
     (initial?.lead_started_at ?? defaultLeadStartedAt)?.slice(0, 10) ?? "",
   );
@@ -82,6 +81,9 @@ export function DealCelebrationModal({
       misc_fee: miscFee ? Number(miscFee) : 0,
       oz_fee: ozFee ? Number(ozFee) : 0,
       manual_split: manualSplit,
+      // Referral is always a percentage of gross, independent of manual_split
+      // (which only covers KW/KWRI/FMLS/TC).
+      referral_pct: referralPct ? Number(referralPct) : null,
       lead_started_at: leadStartedAt ? new Date(leadStartedAt).toISOString() : null,
       notes: notes || null,
     };
@@ -90,9 +92,7 @@ export function DealCelebrationModal({
       fields.kwri_fee = kwriFee ? Number(kwriFee) : 0;
       fields.fmls_fee = manualFmlsFee ? Number(manualFmlsFee) : 0;
       fields.tc_fee = tcFee ? Number(tcFee) : 0;
-      fields.referral_fee = manualReferralFee ? Number(manualReferralFee) : 0;
     } else {
-      fields.referral_pct = referralPct ? Number(referralPct) : null;
       fields.on_fmls = onFmls;
     }
     if (!isPendingContext) fields.closed_at = new Date(closedAt).toISOString();
@@ -258,6 +258,28 @@ export function DealCelebrationModal({
               />
             </div>
           </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <Label htmlFor="deal-referral-pct">Referral %</Label>
+              <Input
+                id="deal-referral-pct"
+                type="number"
+                step="0.5"
+                value={referralPct}
+                onChange={(e) => setReferralPct(e.target.value)}
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <Label htmlFor="deal-misc-fee">Misc fee</Label>
+              <Input id="deal-misc-fee" type="number" step="10" value={miscFee} onChange={(e) => setMiscFee(e.target.value)} placeholder="0" />
+            </div>
+            <div>
+              <Label htmlFor="deal-oz-fee">OZ fee</Label>
+              <Input id="deal-oz-fee" type="number" step="10" value={ozFee} onChange={(e) => setOzFee(e.target.value)} placeholder="0" />
+            </div>
+          </div>
+          <p className="text-xs text-neutral-400">Referral is always taken off gross as a percentage, whether or not the fees below are entered exactly.</p>
           {(mode === "edit" || mode === "create") && (
             <label className="flex items-center gap-2 text-sm text-neutral-600">
               <input
@@ -287,42 +309,9 @@ export function DealCelebrationModal({
                 <Label htmlFor="deal-tc-fee">TC</Label>
                 <Input id="deal-tc-fee" type="number" step="10" value={tcFee} onChange={(e) => setTcFee(e.target.value)} placeholder="0" />
               </div>
-              <div>
-                <Label htmlFor="deal-referral-fee">Referral $</Label>
-                <Input id="deal-referral-fee" type="number" step="10" value={manualReferralFee} onChange={(e) => setManualReferralFee(e.target.value)} placeholder="0" />
-              </div>
-              <div>
-                <Label htmlFor="deal-misc-fee">Misc fee</Label>
-                <Input id="deal-misc-fee" type="number" step="10" value={miscFee} onChange={(e) => setMiscFee(e.target.value)} placeholder="0" />
-              </div>
-              <div>
-                <Label htmlFor="deal-oz-fee">OZ fee</Label>
-                <Input id="deal-oz-fee" type="number" step="10" value={ozFee} onChange={(e) => setOzFee(e.target.value)} placeholder="0" />
-              </div>
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <Label htmlFor="deal-referral-pct">Referral %</Label>
-                  <Input
-                    id="deal-referral-pct"
-                    type="number"
-                    step="0.5"
-                    value={referralPct}
-                    onChange={(e) => setReferralPct(e.target.value)}
-                    placeholder="0"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="deal-misc-fee">Misc fee</Label>
-                  <Input id="deal-misc-fee" type="number" step="10" value={miscFee} onChange={(e) => setMiscFee(e.target.value)} placeholder="0" />
-                </div>
-                <div>
-                  <Label htmlFor="deal-oz-fee">OZ fee</Label>
-                  <Input id="deal-oz-fee" type="number" step="10" value={ozFee} onChange={(e) => setOzFee(e.target.value)} placeholder="0" />
-                </div>
-              </div>
               <label className="flex items-center gap-2 text-sm text-neutral-600">
                 <input
                   type="checkbox"
@@ -335,7 +324,7 @@ export function DealCelebrationModal({
               <p className="text-xs text-neutral-400">
                 KW (30% to $15k cap), KWRI (3% to $3k cap), and TC ($500) are calculated automatically on the
                 Commissions page based on your sale price and gross commission. FMLS (0.12% of price) only applies
-                if the box above is checked. Referral, misc, and OZ are the only splits you enter directly.
+                if the box above is checked. Misc and OZ are the only other splits you enter directly.
               </p>
             </>
           )}

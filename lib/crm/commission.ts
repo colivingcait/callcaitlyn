@@ -79,7 +79,12 @@ export function computeDeals<T extends Deal>(deals: T[]): (T & DealComputedField
 
   return sorted.map((deal) => {
     const gross = deal.gross_commission ?? 0;
-    const referralFee = deal.manual_split ? (deal.referral_fee ?? 0) : gross * ((deal.referral_pct ?? 0) / 100);
+    // Referral is always a percentage of gross, independent of manual_split
+    // (which only covers whether KW/KWRI/FMLS/TC are entered exactly or
+    // calculated) - referral_pct is the source of truth whenever it's set,
+    // regardless of manual mode. referral_fee is a legacy dollar fallback
+    // for deals entered before referral had its own percent field.
+    const referralFee = deal.referral_pct != null ? gross * (deal.referral_pct / 100) : (deal.referral_fee ?? 0);
     const adjustedGross = gross - referralFee;
 
     const capYear = capYearKey(new Date(deal.closed_at));

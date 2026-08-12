@@ -34,7 +34,6 @@ export function AddPastDealModal({ onClose }: { onClose: () => void }) {
   const [kwriFee, setKwriFee] = useState("");
   const [manualFmlsFee, setManualFmlsFee] = useState("");
   const [tcFee, setTcFee] = useState("");
-  const [manualReferralFee, setManualReferralFee] = useState("");
   const [notes, setNotes] = useState("");
 
   async function handleSave() {
@@ -64,15 +63,17 @@ export function AddPastDealModal({ onClose }: { onClose: () => void }) {
       misc_fee: miscFee ? Number(miscFee) : 0,
       oz_fee: ozFee ? Number(ozFee) : 0,
       manual_split: manualSplit,
+      // Referral is always a percentage of gross, regardless of whether
+      // KW/KWRI/FMLS/TC are being entered manually or calculated below.
+      referral_pct: referralPct ? Number(referralPct) : null,
       ...(manualSplit
         ? {
             kw_fee: kwFee ? Number(kwFee) : 0,
             kwri_fee: kwriFee ? Number(kwriFee) : 0,
             fmls_fee: manualFmlsFee ? Number(manualFmlsFee) : 0,
             tc_fee: tcFee ? Number(tcFee) : 0,
-            referral_fee: manualReferralFee ? Number(manualReferralFee) : 0,
           }
-        : { referral_pct: referralPct ? Number(referralPct) : null, on_fmls: onFmls }),
+        : { on_fmls: onFmls }),
       notes: notes || null,
     });
 
@@ -149,6 +150,21 @@ export function AddPastDealModal({ onClose }: { onClose: () => void }) {
               />
             </div>
           </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <Label htmlFor="past-referral-pct">Referral %</Label>
+              <Input id="past-referral-pct" type="number" step="0.5" value={referralPct} onChange={(e) => setReferralPct(e.target.value)} placeholder="0" />
+            </div>
+            <div>
+              <Label htmlFor="past-misc-fee">Misc fee</Label>
+              <Input id="past-misc-fee" type="number" step="10" value={miscFee} onChange={(e) => setMiscFee(e.target.value)} placeholder="0" />
+            </div>
+            <div>
+              <Label htmlFor="past-oz-fee">OZ fee</Label>
+              <Input id="past-oz-fee" type="number" step="10" value={ozFee} onChange={(e) => setOzFee(e.target.value)} placeholder="0" />
+            </div>
+          </div>
+          <p className="text-xs text-neutral-400">Referral is always taken off gross as a percentage, whether or not the fees below are entered exactly.</p>
           <label className="flex items-center gap-2 text-sm text-neutral-600">
             <input
               type="checkbox"
@@ -176,35 +192,9 @@ export function AddPastDealModal({ onClose }: { onClose: () => void }) {
                 <Label htmlFor="past-tc-fee">TC</Label>
                 <Input id="past-tc-fee" type="number" step="10" value={tcFee} onChange={(e) => setTcFee(e.target.value)} placeholder="0" />
               </div>
-              <div>
-                <Label htmlFor="past-referral-fee">Referral $</Label>
-                <Input id="past-referral-fee" type="number" step="10" value={manualReferralFee} onChange={(e) => setManualReferralFee(e.target.value)} placeholder="0" />
-              </div>
-              <div>
-                <Label htmlFor="past-misc-fee">Misc fee</Label>
-                <Input id="past-misc-fee" type="number" step="10" value={miscFee} onChange={(e) => setMiscFee(e.target.value)} placeholder="0" />
-              </div>
-              <div>
-                <Label htmlFor="past-oz-fee">OZ fee</Label>
-                <Input id="past-oz-fee" type="number" step="10" value={ozFee} onChange={(e) => setOzFee(e.target.value)} placeholder="0" />
-              </div>
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <Label htmlFor="past-referral-pct">Referral %</Label>
-                  <Input id="past-referral-pct" type="number" step="0.5" value={referralPct} onChange={(e) => setReferralPct(e.target.value)} placeholder="0" />
-                </div>
-                <div>
-                  <Label htmlFor="past-misc-fee">Misc fee</Label>
-                  <Input id="past-misc-fee" type="number" step="10" value={miscFee} onChange={(e) => setMiscFee(e.target.value)} placeholder="0" />
-                </div>
-                <div>
-                  <Label htmlFor="past-oz-fee">OZ fee</Label>
-                  <Input id="past-oz-fee" type="number" step="10" value={ozFee} onChange={(e) => setOzFee(e.target.value)} placeholder="0" />
-                </div>
-              </div>
               <label className="flex items-center gap-2 text-sm text-neutral-600">
                 <input
                   type="checkbox"
