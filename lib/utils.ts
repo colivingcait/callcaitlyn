@@ -14,6 +14,18 @@ export function fullName(c: { first_name: string; last_name?: string | null }) {
   return [c.first_name, c.last_name].filter(Boolean).join(" ").trim();
 }
 
+// Stable per-person color (same contact always lands on the same color,
+// across every avatar anywhere in the app) instead of one flat brand color
+// for everyone - makes a conversation list scannable at a glance the way
+// Quo's own colored-initials avatars are.
+const AVATAR_COLORS = ["#0ea5e9", "#8b5cf6", "#f97316", "#22c55e", "#ec4899", "#14b8a6", "#f43f5e", "#6366f1", "#a855f7", "#eab308"];
+
+export function avatarColor(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+}
+
 export function formatCurrency(value: number | null | undefined) {
   if (value == null) return "—";
   return `$${Math.round(value).toLocaleString()}`;

@@ -5,6 +5,7 @@ import { parseQuoCall, parseQuoMessage } from "@/lib/quo/parse-event";
 import { findOrCreateContact } from "@/lib/crm/find-or-create-contact";
 import { upsertActivity, patchActivityMetadata } from "@/lib/crm/activities";
 import { analyzeContactActivity } from "@/lib/ai/analyze-contact";
+import { generateCallSummary } from "@/lib/ai/summarize-call";
 import { updateEngagementTag } from "@/lib/crm/engagement";
 
 const OWNER_ID = process.env.CRM_OWNER_USER_ID;
@@ -83,12 +84,18 @@ export async function POST(request: NextRequest) {
           : eventType === "call.summary.completed"
             ? "raw_summary_event"
             : "raw_transcript_event";
-      const result = await patchActivityMetadata(admin, OWNER_ID, "quo", "quo_call_id", call.quoCallId, {
+      const aiCallSummary =
+        eventType === "call.transcript.completed" && call.transcript ? await generateCallSummary(call.transcript) : null;
+
+      const patch: Record<string, unknown> = {
         recording_url: call.recordingUrl ?? undefined,
         summary: call.summary ?? undefined,
         transcript: call.transcript ?? undefined,
         [rawKey]: body,
-      });
+      };
+      if (aiCallSummary) patch.ai_call_summary = aiCallSummary;
+
+      const result = await patchActivityMetadata(admin, OWNER_ID, "quo", "quo_call_id", call.quoCallId, patch);
       const content = call.transcript ?? call.summary;
       if (result && content) {
         await analyzeContactActivity(admin, OWNER_ID, result.contactId, {

@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn, initials, avatarColor } from "@/lib/utils";
 import { forwardRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
 
 export const Button = forwardRef<
@@ -76,6 +76,30 @@ export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLab
 
 export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return <div className={cn("rounded-2xl border border-neutral-200/70 bg-white p-4 shadow-card", className)} {...props} />;
+}
+
+export function Avatar({
+  id,
+  firstName,
+  lastName,
+  size = 44,
+  className,
+}: {
+  id: string;
+  firstName: string;
+  lastName?: string | null;
+  size?: number;
+  className?: string;
+}) {
+  const color = avatarColor(id);
+  return (
+    <div
+      className={cn("flex shrink-0 items-center justify-center rounded-full font-semibold", className)}
+      style={{ backgroundColor: `${color}1a`, color, width: size, height: size, fontSize: Math.round(size * 0.36) }}
+    >
+      {initials(firstName, lastName)}
+    </div>
+  );
 }
 
 export function Badge({

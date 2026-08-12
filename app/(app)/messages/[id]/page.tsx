@@ -4,7 +4,8 @@ import { ArrowLeft, Mail } from "lucide-react";
 import { CallButton } from "@/components/CallButton";
 import { getContact, getContactInsights, listStages } from "@/lib/data/contacts";
 import { getContactThread } from "@/lib/data/messages";
-import { fullName, formatPhone, initials } from "@/lib/utils";
+import { fullName, formatPhone } from "@/lib/utils";
+import { Avatar } from "@/components/ui";
 import { ChatBubble } from "@/components/messages/ChatBubble";
 import { CallLogEntry } from "@/components/messages/CallLogEntry";
 import { ThreadComposer } from "@/components/messages/ThreadComposer";
@@ -37,9 +38,7 @@ export default async function MessageThreadPage({ params }: { params: Promise<{ 
             <ArrowLeft size={20} />
           </Link>
           <Link href={`/contacts/${contact.id}`} className="flex min-w-0 flex-1 items-center gap-2.5">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-700">
-              {initials(contact.first_name, contact.last_name)}
-            </div>
+            <Avatar id={contact.id} firstName={contact.first_name} lastName={contact.last_name} size={36} />
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-neutral-900">{fullName(contact)}</p>
               <p className="truncate text-xs text-neutral-400">{formatPhone(contact.phone)}</p>
