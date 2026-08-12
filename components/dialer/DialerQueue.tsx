@@ -50,7 +50,9 @@ export function DialerQueue({
             </div>
             <p className="truncate text-xs text-neutral-500">{formatPhone(contact.phone)}</p>
             <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-neutral-400">
-              {contact.lead_source && <span className="truncate">{contact.lead_source}</span>}
+              {mode === "new-registration"
+                ? contact.registrationLabel && <span className="truncate">{contact.registrationLabel}</span>
+                : contact.lead_source && <span className="truncate">{contact.lead_source}</span>}
               {contact.last_event_name && <span className="truncate">· {contact.last_event_name}</span>}
               {contact.dialer_snoozed_at && (
                 <span className="flex items-center gap-0.5 text-amber-600">

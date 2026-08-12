@@ -36,7 +36,7 @@ export async function findOrCreateContact(
 
   const { data: candidates } = await admin
     .from("contacts")
-    .select("id, first_name, last_name, email, phone, secondary_phone")
+    .select("id, first_name, last_name, email, phone, secondary_phone, quo_contact_id")
     .eq("owner_id", ownerId)
     .eq("archived", false);
 
@@ -60,6 +60,7 @@ export async function findOrCreateContact(
         last_name: input.lastName?.trim() || match.last_name,
         phone,
         email,
+        quo_contact_id: match.quo_contact_id,
       });
     }
     return { id: match.id, wasCreated: false };

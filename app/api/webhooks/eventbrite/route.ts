@@ -82,10 +82,15 @@ export async function POST(request: NextRequest) {
       });
       if (!contact) continue;
 
-      if (contact.wasCreated) {
+      // Every registration notifies, not just first-time contacts - a
+      // returning registrant signing up for this month's event is just as
+      // worth knowing about right away as a brand-new lead (she reads these
+      // live and wants to reach out while it's fresh, not just at the "new
+      // contact" moment).
+      {
         const name = [attendee.firstName, attendee.lastName].filter(Boolean).join(" ") || attendee.email;
         await notifyNewLead(admin, OWNER_ID, {
-          title: "New event sign-up",
+          title: contact.wasCreated ? "New event sign-up" : "Event sign-up",
           body: `${name} registered${eventName ? ` for ${eventName}` : ""} via Eventbrite`,
           url: `/contacts/${contact.id}`,
         });

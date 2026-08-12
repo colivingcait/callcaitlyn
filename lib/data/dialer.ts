@@ -20,6 +20,14 @@ export type DialerContact = Pick<
   // registered before (this is their only Eventbrite/Calendly activity
   // on file). Not used by the event-followup queue.
   isNew?: boolean;
+  // New-registrations queue only: the specific event name from their
+  // MOST RECENT registration's activity record, not the contact's static
+  // lead_source - lead_source only gets set once, at first creation, so a
+  // returning registrant's card would otherwise show whatever their very
+  // first source was instead of what they just signed up for. Falls back
+  // to lead_source when the latest registration has no event name on it
+  // (e.g. a Calendly booking).
+  registrationLabel?: string | null;
 };
 
 // "New Registrations": anyone with an untouched Eventbrite or Calendly
@@ -53,7 +61,7 @@ export async function listNewRegistrationsQueue(): Promise<{ contacts: DialerCon
 
   const { data: registrations, error: regError } = await supabase
     .from("activities")
-    .select("contact_id, occurred_at")
+    .select("contact_id, occurred_at, metadata")
     .in("source", ["eventbrite", "calendly"])
     .in(
       "contact_id",
@@ -63,12 +71,17 @@ export async function listNewRegistrationsQueue(): Promise<{ contacts: DialerCon
   if (regError) return { contacts: [], error: regError.message };
 
   const latestRegByContact = new Map<string, string>();
+  const latestEventNameByContact = new Map<string, string | null>();
   const registrationCountByContact = new Map<string, number>();
   for (const row of registrations ?? []) {
     registrationCountByContact.set(row.contact_id, (registrationCountByContact.get(row.contact_id) ?? 0) + 1);
     // First hit per contact wins the "latest" slot since the query is
     // ordered newest-first.
-    if (!latestRegByContact.has(row.contact_id)) latestRegByContact.set(row.contact_id, row.occurred_at);
+    if (!latestRegByContact.has(row.contact_id)) {
+      latestRegByContact.set(row.contact_id, row.occurred_at);
+      const metadata = row.metadata as Record<string, unknown> | null;
+      latestEventNameByContact.set(row.contact_id, typeof metadata?.event_name === "string" ? metadata.event_name : null);
+    }
   }
 
   const eligible = candidates
@@ -81,7 +94,14 @@ export async function listNewRegistrationsQueue(): Promise<{ contacts: DialerCon
       if (c.dialer_contacted_at && new Date(c.dialer_contacted_at) >= new Date(latestReg)) return false;
       return true;
     })
-    .map((c) => ({ ...c, isNew: (registrationCountByContact.get(c.id) ?? 0) <= 1 }) as DialerContact);
+    .map(
+      (c) =>
+        ({
+          ...c,
+          isNew: (registrationCountByContact.get(c.id) ?? 0) <= 1,
+          registrationLabel: latestEventNameByContact.get(c.id) ?? c.lead_source,
+        }) as DialerContact,
+    );
 
   const sorted = eligible.sort((a, b) => {
     const latestA = new Date(latestRegByContact.get(a.id) as string).getTime();

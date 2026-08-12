@@ -135,7 +135,7 @@ export async function syncContactToQuoAction(contactId: string) {
   const admin = createAdminClient();
   const { data: contact } = await admin
     .from("contacts")
-    .select("id, first_name, last_name, phone, email")
+    .select("id, first_name, last_name, phone, email, quo_contact_id")
     .eq("id", contactId)
     .maybeSingle();
   if (contact) await syncContactToQuo(admin, contact);
@@ -154,7 +154,7 @@ export async function backfillQuoSync() {
   const admin = createAdminClient();
   const { data: batch } = await admin
     .from("contacts")
-    .select("id, first_name, last_name, phone, email")
+    .select("id, first_name, last_name, phone, email, quo_contact_id")
     .eq("owner_id", user.id)
     .eq("archived", false)
     .is("quo_synced_at", null)

@@ -13,10 +13,11 @@ function ensureConfigured() {
   return true;
 }
 
-// Fired for genuinely new, real-time leads only (a form submission, a
-// first-time caller/texter) - never for bulk operations like CSV import,
-// which would blast one push per row the same way the sequence-burst
-// spam incident did for email.
+// Fired for real-time, one-at-a-time events only (a form submission, a
+// first-time caller/texter, an event registration whether new or
+// returning) - never for bulk operations like CSV import, which would
+// blast one push per row the same way the sequence-burst spam incident
+// did for email.
 export async function notifyNewLead(
   admin: SupabaseClient,
   ownerId: string,
