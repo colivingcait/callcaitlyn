@@ -59,7 +59,12 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
     <select
       ref={ref}
       className={cn(
-        "w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-base text-neutral-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100",
+        // min-w-0 overrides the browser default of never shrinking a <select>
+        // below its widest option's intrinsic content width - without it, one
+        // long option (an event name, a stage name) can force the select past
+        // its own w-full box and push the whole page into horizontal scroll,
+        // especially inside a flex row where min-width:auto wins by default.
+        "w-full min-w-0 truncate rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-base text-neutral-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100",
         className,
       )}
       {...props}

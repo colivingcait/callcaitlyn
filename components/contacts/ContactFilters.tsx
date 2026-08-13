@@ -99,7 +99,7 @@ export function ContactFilters({
 
       <div className="flex gap-2">
         <Select
-          className="w-auto shrink-0"
+          className="min-w-0 flex-1"
           defaultValue={searchParams.get("sort") ?? "updated_desc"}
           onChange={(e) => updateParam("sort", e.target.value)}
         >
