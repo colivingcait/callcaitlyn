@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { listContacts, type ContactSort } from "@/lib/data/contacts";
-import { fullName, formatPhone } from "@/lib/utils";
+import { listContacts } from "@/lib/data/contacts";
+import { parseContactFilterParams } from "@/lib/crm/contact-filter-params";
+import { formatPhone } from "@/lib/utils";
 
 // One field per column, in order - kept deliberately narrow to what an
 // email/mailing tool (Eventbrite's own contact list import, Mailchimp,
@@ -18,24 +19,11 @@ function csvRow(values: string[]): string {
 }
 
 export async function GET(request: NextRequest) {
-  // Same query params the Contacts page's filters/segments already use -
-  // exporting respects whatever's currently filtered/searched on screen
-  // instead of always dumping the entire contact list.
-  const params = request.nextUrl.searchParams;
-
-  const contacts = await listContacts({
-    q: params.get("q") ?? undefined,
-    stageId: params.get("stage") ?? undefined,
-    tagId: params.get("tag") ?? undefined,
-    type: params.get("type") ?? undefined,
-    timeline: params.get("timeline") ?? undefined,
-    representing: params.get("representing") ?? undefined,
-    leadSource: params.get("source") ?? undefined,
-    hasPhone: params.get("phone") === "1",
-    missingPhone: params.get("phone") === "0",
-    leadDateWithinDays: params.get("newSince") ? Number(params.get("newSince")) : undefined,
-    sort: (params.get("sort") as ContactSort | undefined) ?? undefined,
-  });
+  // Same query params the Contacts page's filters/segments/working queues
+  // already use (parsed by the one shared function both places call) -
+  // exporting respects whatever's currently filtered/searched/grouped on
+  // screen instead of always dumping the entire contact list.
+  const contacts = await listContacts(parseContactFilterParams(request.nextUrl.searchParams));
 
   let csv = csvRow(HEADERS);
   for (const c of contacts) {

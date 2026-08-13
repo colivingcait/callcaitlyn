@@ -2,27 +2,52 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Search, Phone } from "lucide-react";
+import { Search, SlidersHorizontal } from "lucide-react";
 import { Input, Select } from "@/components/ui";
-import { CONTACT_TYPE_LABELS, TIMELINE_LABELS, REPRESENTING_LABELS, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { QUEUES } from "@/lib/crm/contact-queues";
+import { ContactFiltersSheet } from "@/components/contacts/ContactFiltersSheet";
 import type { PipelineStage, Tag } from "@/types/database";
 
 const SORT_OPTIONS: { value: string; label: string }[] = [
   { value: "updated_desc", label: "Recently updated" },
   { value: "created_desc", label: "Recently added" },
+  { value: "created_asc", label: "Oldest added" },
+  { value: "lead_date_desc", label: "Lead date (newest)" },
+  { value: "lead_date_asc", label: "Lead date (oldest)" },
   { value: "name_asc", label: "Name (A-Z)" },
+  { value: "name_desc", label: "Name (Z-A)" },
   { value: "follow_up_asc", label: "Follow-up date" },
+  { value: "likelihood_desc", label: "Likelihood (hot first)" },
   { value: "tag_asc", label: "Tag (A-Z)" },
 ];
 
-export function ContactFilters({ stages, tags, leadSources }: { stages: PipelineStage[]; tags: Tag[]; leadSources: string[] }) {
+// Params the Filters sheet owns - anything else in the URL (q, sort) has
+// its own always-visible control, so it's excluded from the "how many
+// filters are active" badge on the Filters button.
+const SHEET_PARAM_KEYS = [
+  "stage", "type", "tags", "source", "timeline", "representing", "likelihood",
+  "phone", "email", "followup", "notes", "newSince", "leadFrom", "leadTo",
+  "event", "city", "state", "birthdayMonth", "minBudget", "archived", "quoSync", "group",
+];
+
+export function ContactFilters({
+  stages,
+  tags,
+  leadSources,
+  eventNames,
+}: {
+  stages: PipelineStage[];
+  tags: Tag[];
+  leadSources: string[];
+  eventNames: string[];
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [q, setQ] = useState(searchParams.get("q") ?? "");
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [, startTransition] = useTransition();
-  const phoneFilter = searchParams.get("phone"); // "1" = has phone, "0" = no phone, unset = any
-  const nextPhoneFilter = phoneFilter === "1" ? "0" : phoneFilter === "0" ? "" : "1";
 
   function updateParam(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -31,8 +56,18 @@ export function ContactFilters({ stages, tags, leadSources }: { stages: Pipeline
     startTransition(() => router.push(`${pathname}?${params.toString()}`));
   }
 
+  const activeFilterCount = SHEET_PARAM_KEYS.filter((k) => !!searchParams.get(k)).length;
+  const activeQueue = searchParams.get("queue");
+
+  function toggleQueue(value: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (activeQueue === value) params.delete("queue");
+    else params.set("queue", value);
+    startTransition(() => router.push(`${pathname}?${params.toString()}`));
+  }
+
   return (
-    <div className="space-y-3 border-b border-neutral-100 bg-white px-4 py-3">
+    <div className="space-y-2.5 border-b border-neutral-100 bg-white px-4 py-3">
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" size={18} />
         <Input
@@ -45,7 +80,8 @@ export function ContactFilters({ stages, tags, leadSources }: { stages: Pipeline
           className="pl-10"
         />
       </div>
-      <div className="flex gap-2 overflow-x-auto">
+
+      <div className="flex gap-2">
         <Select
           className="w-auto shrink-0"
           defaultValue={searchParams.get("sort") ?? "updated_desc"}
@@ -57,91 +93,40 @@ export function ContactFilters({ stages, tags, leadSources }: { stages: Pipeline
             </option>
           ))}
         </Select>
-        <Select
-          className="w-auto shrink-0"
-          defaultValue={searchParams.get("stage") ?? ""}
-          onChange={(e) => updateParam("stage", e.target.value)}
-        >
-          <option value="">All stages</option>
-          {stages.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </Select>
-        <Select
-          className="w-auto shrink-0"
-          defaultValue={searchParams.get("type") ?? ""}
-          onChange={(e) => updateParam("type", e.target.value)}
-        >
-          <option value="">All types</option>
-          {Object.entries(CONTACT_TYPE_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </Select>
-        <Select
-          className="w-auto shrink-0"
-          defaultValue={searchParams.get("tag") ?? ""}
-          onChange={(e) => updateParam("tag", e.target.value)}
-        >
-          <option value="">All tags</option>
-          {tags.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </Select>
-        <Select
-          className="w-auto shrink-0"
-          defaultValue={searchParams.get("source") ?? ""}
-          onChange={(e) => updateParam("source", e.target.value)}
-        >
-          <option value="">All sources</option>
-          {leadSources.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </Select>
-        <Select
-          className="w-auto shrink-0"
-          defaultValue={searchParams.get("timeline") ?? ""}
-          onChange={(e) => updateParam("timeline", e.target.value)}
-        >
-          <option value="">All timelines</option>
-          {Object.entries(TIMELINE_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </Select>
-        <Select
-          className="w-auto shrink-0"
-          defaultValue={searchParams.get("representing") ?? ""}
-          onChange={(e) => updateParam("representing", e.target.value)}
-        >
-          <option value="">Buyer/Seller (any)</option>
-          {Object.entries(REPRESENTING_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </Select>
         <button
           type="button"
-          onClick={() => updateParam("phone", nextPhoneFilter)}
+          onClick={() => setSheetOpen(true)}
           className={cn(
             "flex shrink-0 items-center gap-1.5 rounded-xl border px-3.5 py-2.5 text-sm font-medium",
-            phoneFilter === "1" && "border-brand-500 bg-brand-50 text-brand-700",
-            phoneFilter === "0" && "border-amber-500 bg-amber-50 text-amber-700",
-            !phoneFilter && "border-neutral-200 text-neutral-600 hover:bg-neutral-50",
+            activeFilterCount > 0 ? "border-brand-500 bg-brand-50 text-brand-700" : "border-neutral-200 text-neutral-600 hover:bg-neutral-50",
           )}
         >
-          <Phone size={14} /> {phoneFilter === "1" ? "Has phone" : phoneFilter === "0" ? "No phone" : "Any phone"}
+          <SlidersHorizontal size={14} /> Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
         </button>
       </div>
+
+      <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+        {QUEUES.map((queue) => (
+          <button
+            key={queue.value}
+            type="button"
+            title={queue.description}
+            onClick={() => toggleQueue(queue.value)}
+            className={cn(
+              "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium",
+              activeQueue === queue.value
+                ? "border-brand-500 bg-brand-50 text-brand-700"
+                : "border-neutral-200 text-neutral-600 hover:bg-neutral-50",
+            )}
+          >
+            {queue.label}
+          </button>
+        ))}
+      </div>
+
+      {sheetOpen && (
+        <ContactFiltersSheet stages={stages} tags={tags} leadSources={leadSources} eventNames={eventNames} onClose={() => setSheetOpen(false)} />
+      )}
     </div>
   );
 }

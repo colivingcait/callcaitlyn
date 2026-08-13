@@ -11,6 +11,8 @@ import { BulkLeadSourceModal } from "@/components/contacts/BulkLeadSourceModal";
 import { BulkTypeModal } from "@/components/contacts/BulkTypeModal";
 import { Button } from "@/components/ui";
 import { Archive } from "lucide-react";
+import { groupContacts } from "@/lib/crm/contact-grouping";
+import type { ContactGroupBy } from "@/lib/crm/contact-filter-params";
 import type { ContactWithRelations, PipelineStage, Tag } from "@/types/database";
 
 type SequenceOption = { id: string; name: string; type: "broadcast" | "drip" | "batch" };
@@ -22,12 +24,14 @@ export function ContactsList({
   stages,
   ownerId,
   sequences,
+  groupBy = "none",
 }: {
   contacts: ContactWithRelations[];
   tags: Tag[];
   stages: PipelineStage[];
   ownerId: string;
   sequences: SequenceOption[];
+  groupBy?: ContactGroupBy;
 }) {
   const router = useRouter();
   const [selecting, setSelecting] = useState(false);
@@ -68,6 +72,7 @@ export function ContactsList({
   const selectedIds = [...selected];
   const selectedContacts = contacts.filter((c) => selected.has(c.id));
   const dripSequences = sequences.filter((s) => s.type === "drip");
+  const groups = groupContacts(contacts, groupBy, stages);
 
   return (
     <div className={selecting && selected.size > 0 ? "pb-24" : undefined}>
@@ -91,8 +96,18 @@ export function ContactsList({
       {contacts.length === 0 ? (
         <p className="px-4 py-10 text-center text-sm text-neutral-400">No contacts match. Try clearing filters or add a new contact.</p>
       ) : (
-        contacts.map((c) => (
-          <ContactRow key={c.id} contact={c} selecting={selecting} selected={selected.has(c.id)} onToggle={() => toggle(c.id)} />
+        groups.map((group) => (
+          <div key={group.key}>
+            {group.label && (
+              <div className="flex items-baseline gap-2 bg-neutral-50 px-4 py-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{group.label}</p>
+                <p className="text-xs text-neutral-400">{group.contacts.length}</p>
+              </div>
+            )}
+            {group.contacts.map((c) => (
+              <ContactRow key={c.id} contact={c} selecting={selecting} selected={selected.has(c.id)} onToggle={() => toggle(c.id)} />
+            ))}
+          </div>
         ))
       )}
 

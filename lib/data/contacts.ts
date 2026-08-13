@@ -1,4 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
+import { computeLikelihood } from "@/lib/crm/likelihood";
+import { filterByQueue } from "@/lib/crm/contact-queue-filter";
+import type { ContactQueue } from "@/lib/crm/contact-queues";
 import type { Activity, AiInsight, ContactSegment, ContactWithRelations, Deal, PipelineStage, Tag, Task } from "@/types/database";
 
 export async function listStages() {
@@ -28,26 +31,61 @@ export async function listMergeCandidates(): Promise<MergeCandidate[]> {
   return (data ?? []) as MergeCandidate[];
 }
 
-export type ContactSort = "updated_desc" | "created_desc" | "lead_date_desc" | "name_asc" | "follow_up_asc" | "tag_asc";
+export type ContactSort =
+  | "updated_desc"
+  | "created_desc"
+  | "created_asc"
+  | "lead_date_desc"
+  | "lead_date_asc"
+  | "name_asc"
+  | "name_desc"
+  | "follow_up_asc"
+  | "tag_asc"
+  | "likelihood_desc";
 
-export async function listContacts(filters: {
+export type ContactListFilters = {
   q?: string;
   stageId?: string;
-  tagId?: string;
+  tagIds?: string[];
   type?: string;
   timeline?: string;
   representing?: string;
   leadSource?: string;
   hasPhone?: boolean;
   missingPhone?: boolean;
+  hasEmail?: boolean;
+  missingEmail?: boolean;
+  hasFollowUp?: boolean;
+  missingFollowUp?: boolean;
+  overdueFollowUp?: boolean;
+  archived?: "active" | "archived" | "all";
+  hasNotes?: boolean;
+  missingNotes?: boolean;
+  birthdayMonth?: number;
+  city?: string;
+  state?: string;
+  minBudget?: number;
+  notSyncedQuo?: boolean;
+  eventName?: string;
+  likelihood?: "high" | "medium" | "low";
+  queue?: ContactQueue;
   // Drill-down from the dashboard's New Leads tile - contacts whose
   // lead_date falls within the last N days, not created_at (see lead_date's
   // comment in the migration for why those can differ).
   leadDateWithinDays?: number;
+  leadDateFrom?: string;
+  leadDateTo?: string;
   sort?: ContactSort;
-}) {
+};
+
+export async function listContacts(filters: ContactListFilters) {
   const supabase = await createClient();
-  let query = supabase.from("contacts").select("*, pipeline_stages(*), contact_tags(tags(*))").eq("archived", false);
+  let query = supabase.from("contacts").select("*, pipeline_stages(*), contact_tags(tags(*))");
+
+  if (filters.archived === "archived") query = query.eq("archived", true);
+  else if (filters.archived === "all") {
+    /* no archived filter at all */
+  } else query = query.eq("archived", false);
 
   if (filters.stageId) query = query.eq("stage_id", filters.stageId);
   if (filters.type) query = query.eq("contact_type", filters.type);
@@ -56,31 +94,68 @@ export async function listContacts(filters: {
   if (filters.leadSource) query = query.eq("lead_source", filters.leadSource);
   if (filters.hasPhone) query = query.not("phone", "is", null);
   if (filters.missingPhone) query = query.is("phone", null);
+  if (filters.hasEmail) query = query.not("email", "is", null);
+  if (filters.missingEmail) query = query.is("email", null);
+  if (filters.hasFollowUp) query = query.not("next_follow_up_at", "is", null);
+  if (filters.missingFollowUp) query = query.is("next_follow_up_at", null);
+  if (filters.overdueFollowUp) query = query.not("next_follow_up_at", "is", null).lt("next_follow_up_at", new Date().toISOString());
+  if (filters.city) query = query.ilike("city", `%${filters.city}%`);
+  if (filters.state) query = query.ilike("state", `%${filters.state}%`);
+  if (filters.minBudget) query = query.gte("budget_max", filters.minBudget);
+  if (filters.notSyncedQuo) query = query.is("quo_synced_at", null);
+  if (filters.eventName) query = query.eq("last_event_name", filters.eventName);
   if (filters.leadDateWithinDays) {
     query = query.gte("lead_date", new Date(Date.now() - filters.leadDateWithinDays * 24 * 60 * 60 * 1000).toISOString());
   }
+  if (filters.leadDateFrom) query = query.gte("lead_date", filters.leadDateFrom);
+  if (filters.leadDateTo) query = query.lte("lead_date", filters.leadDateTo);
   if (filters.q) {
     const q = filters.q.trim();
     query = query.or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%,email.ilike.%${q}%,phone.ilike.%${q}%`);
   }
 
-  // Tag and name/follow-up sorts need the joined data in hand first (a tag
-  // is an array relation, and name is split across two columns), so those
-  // are sorted in JS after the fetch instead of in the query.
+  // Tag, name, follow-up, and likelihood sorts need the joined data (or a
+  // computed value) in hand first, so those are sorted in JS after the
+  // fetch instead of in the query.
   const sort = filters.sort ?? "updated_desc";
+  const jsSort = new Set<ContactSort>(["name_asc", "name_desc", "follow_up_asc", "tag_asc", "likelihood_desc"]);
   if (sort === "created_desc") query = query.order("created_at", { ascending: false });
+  else if (sort === "created_asc") query = query.order("created_at", { ascending: true });
   else if (sort === "lead_date_desc") query = query.order("lead_date", { ascending: false });
-  else if (sort !== "name_asc" && sort !== "follow_up_asc" && sort !== "tag_asc") query = query.order("updated_at", { ascending: false });
+  else if (sort === "lead_date_asc") query = query.order("lead_date", { ascending: true });
+  else if (!jsSort.has(sort)) query = query.order("updated_at", { ascending: false });
 
   const { data } = await query;
   let contacts = (data ?? []) as ContactWithRelations[];
 
-  if (filters.tagId) {
-    contacts = contacts.filter((c) => c.contact_tags.some((ct) => ct.tags.id === filters.tagId));
+  if (filters.tagIds?.length) {
+    const tagIds = filters.tagIds;
+    contacts = contacts.filter((c) => c.contact_tags.some((ct) => tagIds.includes(ct.tags.id)));
+  }
+
+  if (filters.hasNotes) contacts = contacts.filter((c) => !!c.notes?.trim());
+  if (filters.missingNotes) contacts = contacts.filter((c) => !c.notes?.trim());
+  if (filters.birthdayMonth) {
+    contacts = contacts.filter((c) => !!c.birthday && new Date(c.birthday).getUTCMonth() + 1 === filters.birthdayMonth);
+  }
+
+  // Likelihood and the "queue" working lists both need the full stage set
+  // to compute against, so only fetch it when one of those is actually in
+  // play - the common case (no likelihood/queue filter) skips this entirely.
+  if (filters.likelihood || filters.queue) {
+    const stages = await listStages();
+    if (filters.likelihood) {
+      contacts = contacts.filter((c) => computeLikelihood(c, stages) === filters.likelihood);
+    }
+    if (filters.queue) {
+      contacts = await filterByQueue(contacts, filters.queue, stages);
+    }
   }
 
   if (sort === "name_asc") {
     contacts = [...contacts].sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`));
+  } else if (sort === "name_desc") {
+    contacts = [...contacts].sort((a, b) => `${b.first_name} ${b.last_name}`.localeCompare(`${a.first_name} ${a.last_name}`));
   } else if (sort === "follow_up_asc") {
     contacts = [...contacts].sort((a, b) => {
       if (!a.next_follow_up_at && !b.next_follow_up_at) return 0;
@@ -97,9 +172,27 @@ export async function listContacts(filters: {
       if (!tagB) return -1;
       return tagA.localeCompare(tagB);
     });
+  } else if (sort === "likelihood_desc") {
+    const stages = await listStages();
+    const rank = { high: 2, medium: 1, low: 0 } as const;
+    contacts = [...contacts].sort((a, b) => {
+      const la = computeLikelihood(a, stages);
+      const lb = computeLikelihood(b, stages);
+      return (lb ? rank[lb] : -1) - (la ? rank[la] : -1);
+    });
   }
 
   return contacts;
+}
+
+// Populates the "Last event attended" filter dropdown with whatever event
+// names actually exist on real contacts (from Jotform check-ins), same
+// pattern as listLeadSources below.
+export async function listLastEventNames() {
+  const supabase = await createClient();
+  const { data } = await supabase.from("contacts").select("last_event_name").eq("archived", false).not("last_event_name", "is", null);
+  const values = new Set((data ?? []).map((c) => c.last_event_name as string).filter((s) => s.trim().length > 0));
+  return [...values].sort((a, b) => a.localeCompare(b));
 }
 
 // lead_source is free text (not FK'd to a lookup table - see ContactForm's
