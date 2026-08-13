@@ -8,9 +8,12 @@ import { upsertActivity } from "@/lib/crm/activities";
 import { updateEngagementTag } from "@/lib/crm/engagement";
 import { findOrCreateContact, addTagByName } from "@/lib/crm/find-or-create-contact";
 import { syncContactToQuo } from "@/lib/quo/sync-contact";
+import { fetchOrganizationId, fetchRecentOrders } from "@/lib/eventbrite/client";
+import { processEventbriteOrder } from "@/lib/eventbrite/process-order";
 import type { ParsedContactRow } from "@/lib/crm/bulk-import-contacts";
 
 const QUO_BACKFILL_BATCH_SIZE = 25;
+const EVENTBRITE_BACKFILL_LOOKBACK_DAYS = 90;
 
 export async function sendTextToContact(contactId: string, toNumber: string, body: string) {
   const supabase = await createClient();
@@ -178,4 +181,53 @@ export async function backfillQuoSync() {
     .not("phone", "is", null);
 
   return { ok: true as const, synced, failed, remaining: remaining ?? 0 };
+}
+
+// One click in Settings catches up on registrations a broken/missing
+// webhook subscription missed - pulls every placed order from the last 90
+// days on both Eventbrite accounts and runs them through the exact same
+// contact-matching/tagging logic the live webhook uses, just without
+// notifications (see notifyNewLead's comment on why bulk syncs stay silent).
+export async function backfillEventbriteOrders() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const admin = createAdminClient();
+  const changedSince = new Date(Date.now() - EVENTBRITE_BACKFILL_LOOKBACK_DAYS * 24 * 60 * 60 * 1000).toISOString();
+
+  const accounts = [
+    { isWomensRei: false, label: "House Hacking", token: process.env.EVENTBRITE_API_TOKEN },
+    { isWomensRei: true, label: "Women's REI", token: process.env.EVENTBRITE_WOMENS_REI_API_TOKEN },
+  ];
+
+  const results: { label: string; orders: number; contacts: number; error?: string }[] = [];
+
+  for (const account of accounts) {
+    if (!account.token) {
+      results.push({ label: account.label, orders: 0, contacts: 0, error: "No API token configured" });
+      continue;
+    }
+
+    try {
+      const organizationId = await fetchOrganizationId(account.token);
+      if (!organizationId) {
+        results.push({ label: account.label, orders: 0, contacts: 0, error: "Could not look up organization" });
+        continue;
+      }
+
+      const orders = await fetchRecentOrders(organizationId, account.token, changedSince);
+      let contacts = 0;
+      for (const order of orders) {
+        contacts += await processEventbriteOrder(admin, user.id, order, account.isWomensRei, account.token, { notify: false });
+      }
+      results.push({ label: account.label, orders: orders.length, contacts });
+    } catch (err) {
+      results.push({ label: account.label, orders: 0, contacts: 0, error: err instanceof Error ? err.message : "Unknown error" });
+    }
+  }
+
+  return { ok: true as const, results };
 }

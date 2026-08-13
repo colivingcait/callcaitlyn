@@ -36,3 +36,47 @@ export async function fetchEventName(eventId: string, token: string | undefined)
   const name = event?.name as Record<string, unknown> | undefined;
   return typeof name?.text === "string" ? name.text : null;
 }
+
+export async function fetchOrganizationId(token: string | undefined): Promise<string | null> {
+  const data = await eventbriteFetch("https://www.eventbriteapi.com/v3/users/me/organizations/", token);
+  const orgs = data?.organizations as Record<string, unknown>[] | undefined;
+  const id = orgs?.[0]?.id;
+  return typeof id === "string" ? id : null;
+}
+
+// Used for the manual "sync recent registrations" backfill button, not the
+// webhook - pulls every placed order since a given date so registrations
+// missed by a broken/missing webhook subscription can be caught up on
+// demand. Paginated via Eventbrite's continuation-token scheme, capped at
+// 10 pages (2500 orders) so one click can't run away indefinitely.
+export async function fetchRecentOrders(
+  organizationId: string,
+  token: string | undefined,
+  changedSince: string,
+): Promise<Record<string, unknown>[]> {
+  const orders: Record<string, unknown>[] = [];
+  let continuation: string | undefined;
+
+  for (let page = 0; page < 10; page++) {
+    const url = new URL(`https://www.eventbriteapi.com/v3/organizations/${organizationId}/orders/`);
+    url.searchParams.set("status", "placed");
+    url.searchParams.set("changed_since", changedSince);
+    url.searchParams.set("expand", "attendees");
+    if (continuation) url.searchParams.set("continuation", continuation);
+
+    const data = await eventbriteFetch(url.toString(), token);
+    if (!data) break;
+
+    const pageOrders = data.orders as Record<string, unknown>[] | undefined;
+    if (pageOrders?.length) orders.push(...pageOrders);
+
+    const pagination = data.pagination as Record<string, unknown> | undefined;
+    if (pagination?.has_more_items && typeof pagination.continuation === "string") {
+      continuation = pagination.continuation;
+    } else {
+      break;
+    }
+  }
+
+  return orders;
+}

@@ -5,6 +5,7 @@ import { StageManager } from "@/components/settings/StageManager";
 import { TagManager } from "@/components/settings/TagManager";
 import { GmailConnect } from "@/components/settings/GmailConnect";
 import { QuoSyncBackfill } from "@/components/settings/QuoSyncBackfill";
+import { EventbriteSyncBackfill } from "@/components/settings/EventbriteSyncBackfill";
 import { PushNotifications } from "@/components/settings/PushNotifications";
 import { Card, Button } from "@/components/ui";
 import { Mail, BarChart3 } from "lucide-react";
@@ -71,6 +72,13 @@ export default async function SettingsPage({
           show a name instead of a raw number. Run this once to backfill everyone already in the CRM.
         </p>
         <QuoSyncBackfill />
+        <p className="text-sm text-neutral-500">
+          If a webhook was ever misconfigured or missing (like the House Hacking one just was), any registrations
+          it missed won&apos;t show up on their own. Run this to pull the last 90 days of orders from both
+          Eventbrite accounts and catch up anyone who fell through — safe to run anytime, existing contacts just
+          get matched instead of duplicated.
+        </p>
+        <EventbriteSyncBackfill />
       </Card>
     </div>
   );

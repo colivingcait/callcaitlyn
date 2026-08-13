@@ -1,11 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { fetchOrderWithAttendees, fetchEventName } from "@/lib/eventbrite/client";
-import { parseEventbriteAttendees } from "@/lib/eventbrite/parse-event";
-import { findOrCreateContact, addTagByName } from "@/lib/crm/find-or-create-contact";
-import { upsertActivity } from "@/lib/crm/activities";
-import { applyJourneyStageAnswer } from "@/lib/crm/journey-stage";
-import { notifyNewLead } from "@/lib/push/send-push";
+import { fetchOrderWithAttendees } from "@/lib/eventbrite/client";
+import { processEventbriteOrder } from "@/lib/eventbrite/process-order";
 
 const OWNER_ID = process.env.CRM_OWNER_USER_ID;
 
@@ -58,78 +54,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
-    const eventId = typeof order.event_id === "string" ? order.event_id : null;
-    const eventName = eventId ? await fetchEventName(eventId, apiToken) : null;
-    const attendees = parseEventbriteAttendees(order);
-
-    for (const attendee of attendees) {
-      if (!attendee.email) continue;
-
-      const contact = await findOrCreateContact(admin, OWNER_ID, {
-        email: attendee.email,
-        phone: attendee.phone,
-        firstName: attendee.firstName,
-        lastName: attendee.lastName,
-        // Specific event name, not just "Eventbrite" - lets the two
-        // audiences (House Hacking vs Women's REI) be told apart at a
-        // glance instead of everyone reading as one generic source.
-        leadSource: eventName ?? "Eventbrite",
-        // Only ever applied to brand-new contacts (findOrCreateContact
-        // never overwrites an existing contact's real type) - a neutral
-        // "came from a meetup, not yet classified" starting point instead
-        // of the generic "other".
-        contactType: "attendee",
-      });
-      if (!contact) continue;
-
-      // Every registration notifies, not just first-time contacts - a
-      // returning registrant signing up for this month's event is just as
-      // worth knowing about right away as a brand-new lead (she reads these
-      // live and wants to reach out while it's fresh, not just at the "new
-      // contact" moment).
-      {
-        const name = [attendee.firstName, attendee.lastName].filter(Boolean).join(" ") || attendee.email;
-        await notifyNewLead(admin, OWNER_ID, {
-          title: contact.wasCreated ? "New event sign-up" : "Event sign-up",
-          body: `${name} registered${eventName ? ` for ${eventName}` : ""} via Eventbrite`,
-          url: `/contacts/${contact.id}`,
-        });
-      }
-
-      await addTagByName(admin, OWNER_ID, contact.id, "Meetup");
-      // House Hacking events already get told apart via the journey-stage
-      // question below (only they ask it) - Women's REI events don't ask
-      // that question, so they need their own explicit tag instead.
-      if (isWomensRei) await addTagByName(admin, OWNER_ID, contact.id, "Women's REI");
-      await applyJourneyStageAnswer(admin, OWNER_ID, contact.id, attendee.journeyStage, contact.wasCreated);
-
-      const occurredAt = typeof order.created === "string" ? order.created : new Date().toISOString();
-
-      const bodyParts = [`Registered${eventName ? ` for ${eventName}` : " for an event"} via Eventbrite`];
-      if (attendee.journeyStage) bodyParts.push(`House hacking journey: ${attendee.journeyStage}`);
-
-      await upsertActivity(admin, OWNER_ID, contact.id, "eventbrite", "eventbrite_attendee_id", attendee.attendeeId, {
-        type: "meeting",
-        direction: "none",
-        occurred_at: occurredAt,
-        body: bodyParts.join(" — "),
-        metadata: {
-          eventbrite_attendee_id: attendee.attendeeId,
-          eventbrite_order_id: order.id,
-          eventbrite_account: isWomensRei ? "womens_rei" : "house_hacking",
-          event_id: eventId,
-          event_name: eventName,
-          journey_stage: attendee.journeyStage,
-          raw: order,
-        },
-      });
-
-      // Deliberately does NOT call recordEventAttendance - registering for
-      // an event isn't attending it, and last_event_at/last_event_name is
-      // meant to reflect real attendance (it's what the post-event
-      // follow-up dialer is scoped off of). The Jotform in-person check-in
-      // is the only source of truth for actual attendance.
-    }
+    // Every registration notifies, not just first-time contacts - a
+    // returning registrant signing up for this month's event is just as
+    // worth knowing about right away as a brand-new lead (she reads these
+    // live and wants to reach out while it's fresh, not just at the "new
+    // contact" moment).
+    //
+    // Deliberately does NOT call recordEventAttendance - registering for
+    // an event isn't attending it, and last_event_at/last_event_name is
+    // meant to reflect real attendance (it's what the post-event
+    // follow-up dialer is scoped off of). The Jotform in-person check-in
+    // is the only source of truth for actual attendance.
+    await processEventbriteOrder(admin, OWNER_ID, order, isWomensRei, apiToken, { notify: true });
   } catch (err) {
     console.error("Error processing Eventbrite webhook", action, err);
   }
