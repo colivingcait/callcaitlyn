@@ -105,24 +105,29 @@ export function ContactFilters({
         </button>
       </div>
 
-      <div className="flex gap-1.5 overflow-x-auto pb-0.5">
-        {QUEUES.map((queue) => (
-          <button
-            key={queue.value}
-            type="button"
-            title={queue.description}
-            onClick={() => toggleQueue(queue.value)}
-            className={cn(
-              "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium",
-              activeQueue === queue.value
-                ? "border-brand-500 bg-brand-50 text-brand-700"
-                : "border-neutral-200 text-neutral-600 hover:bg-neutral-50",
-            )}
-          >
-            {queue.label}
-          </button>
-        ))}
+      <div className="relative">
+        <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+          {QUEUES.map((queue) => (
+            <button
+              key={queue.value}
+              type="button"
+              onClick={() => toggleQueue(queue.value)}
+              className={cn(
+                "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium",
+                activeQueue === queue.value
+                  ? "border-brand-500 bg-brand-50 text-brand-700"
+                  : "border-neutral-200 text-neutral-600 hover:bg-neutral-50",
+              )}
+            >
+              {queue.label}
+            </button>
+          ))}
+        </div>
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white to-transparent" />
       </div>
+      {activeQueue && (
+        <p className="text-xs text-neutral-400">{QUEUES.find((q) => q.value === activeQueue)?.description}</p>
+      )}
 
       {sheetOpen && (
         <ContactFiltersSheet stages={stages} tags={tags} leadSources={leadSources} eventNames={eventNames} onClose={() => setSheetOpen(false)} />
