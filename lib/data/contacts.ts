@@ -66,7 +66,14 @@ export type ContactListFilters = {
   state?: string;
   minBudget?: number;
   notSyncedQuo?: boolean;
+  // Attended (Jotform check-in ever set last_event_name) - retrospective.
   eventName?: string;
+  // Registered for (an Eventbrite signup exists for this event, whether or
+  // not it's happened/they showed up yet) - prospective. This is the one
+  // that matters for "who do I need to text a reminder to before Thursday's
+  // meetup" since last_event_name stays whatever they last *attended* and
+  // won't reflect an upcoming event they've only registered for.
+  registeredEventName?: string;
   likelihood?: "high" | "medium" | "low";
   queue?: ContactQueue;
   // Drill-down from the dashboard's New Leads tile - contacts whose
@@ -133,6 +140,16 @@ export async function listContacts(filters: ContactListFilters) {
     contacts = contacts.filter((c) => c.contact_tags.some((ct) => tagIds.includes(ct.tags.id)));
   }
 
+  if (filters.registeredEventName) {
+    const { data: registrations } = await supabase
+      .from("activities")
+      .select("contact_id")
+      .eq("source", "eventbrite")
+      .eq("metadata->>event_name", filters.registeredEventName);
+    const registeredIds = new Set((registrations ?? []).map((r) => r.contact_id as string));
+    contacts = contacts.filter((c) => registeredIds.has(c.id));
+  }
+
   if (filters.hasNotes) contacts = contacts.filter((c) => !!c.notes?.trim());
   if (filters.missingNotes) contacts = contacts.filter((c) => !c.notes?.trim());
   if (filters.birthdayMonth) {
@@ -193,6 +210,27 @@ export async function listLastEventNames() {
   const { data } = await supabase.from("contacts").select("last_event_name").eq("archived", false).not("last_event_name", "is", null);
   const values = new Set((data ?? []).map((c) => c.last_event_name as string).filter((s) => s.trim().length > 0));
   return [...values].sort((a, b) => a.localeCompare(b));
+}
+
+// Populates the "Registered for event" filter/quick-select with every
+// distinct event name from real Eventbrite registrations, most recently
+// registered-for first - there's no stored event date to sort by, but the
+// event with the most recent signups is the best available proxy for
+// "the next/current meetup" so it lands at the top of the dropdown.
+export async function listRegisteredEventNames() {
+  const supabase = await createClient();
+  const { data } = await supabase.from("activities").select("occurred_at, metadata").eq("source", "eventbrite");
+
+  const latestByEvent = new Map<string, string>();
+  for (const row of data ?? []) {
+    const eventName = (row.metadata as Record<string, unknown> | null)?.event_name;
+    if (typeof eventName !== "string" || !eventName.trim()) continue;
+    const occurredAt = row.occurred_at as string;
+    const existing = latestByEvent.get(eventName);
+    if (!existing || occurredAt > existing) latestByEvent.set(eventName, occurredAt);
+  }
+
+  return [...latestByEvent.entries()].sort((a, b) => (a[1] < b[1] ? 1 : -1)).map(([name]) => name);
 }
 
 // lead_source is free text (not FK'd to a lookup table - see ContactForm's

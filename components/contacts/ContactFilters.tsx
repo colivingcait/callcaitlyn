@@ -36,11 +36,13 @@ export function ContactFilters({
   tags,
   leadSources,
   eventNames,
+  registeredEventNames,
 }: {
   stages: PipelineStage[];
   tags: Tag[];
   leadSources: string[];
   eventNames: string[];
+  registeredEventNames: string[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -80,6 +82,20 @@ export function ContactFilters({
           className="pl-10"
         />
       </div>
+
+      {registeredEventNames.length > 0 && (
+        <Select
+          defaultValue={searchParams.get("regEvent") ?? ""}
+          onChange={(e) => updateParam("regEvent", e.target.value)}
+        >
+          <option value="">Registered for: any event</option>
+          {registeredEventNames.map((name) => (
+            <option key={name} value={name}>
+              Registered for: {name}
+            </option>
+          ))}
+        </Select>
+      )}
 
       <div className="flex gap-2">
         <Select

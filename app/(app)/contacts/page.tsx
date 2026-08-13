@@ -1,6 +1,14 @@
 import Link from "next/link";
 import { X, Download } from "lucide-react";
-import { listContacts, listStages, listTags, listLeadSources, listLastEventNames, listSegments } from "@/lib/data/contacts";
+import {
+  listContacts,
+  listStages,
+  listTags,
+  listLeadSources,
+  listLastEventNames,
+  listRegisteredEventNames,
+  listSegments,
+} from "@/lib/data/contacts";
 import { listSequencesWithSummary } from "@/lib/data/sequences";
 import { parseContactFilterParams } from "@/lib/crm/contact-filter-params";
 import { ContactsList } from "@/components/contacts/ContactsList";
@@ -26,12 +34,13 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const [contacts, stages, tags, leadSources, eventNames, sequences, segments] = await Promise.all([
+  const [contacts, stages, tags, leadSources, eventNames, registeredEventNames, sequences, segments] = await Promise.all([
     listContacts(filters),
     listStages(),
     listTags(),
     listLeadSources(),
     listLastEventNames(),
+    listRegisteredEventNames(),
     listSequencesWithSummary(),
     listSegments(),
   ]);
@@ -62,7 +71,13 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
           </Link>
         </div>
       )}
-      <ContactFilters stages={stages} tags={tags} leadSources={leadSources} eventNames={eventNames} />
+      <ContactFilters
+        stages={stages}
+        tags={tags}
+        leadSources={leadSources}
+        eventNames={eventNames}
+        registeredEventNames={registeredEventNames}
+      />
       {user && <SegmentBar segments={segments} ownerId={user.id} />}
       <div className="bg-white">
         <ContactsList

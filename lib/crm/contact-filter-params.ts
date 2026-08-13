@@ -27,6 +27,7 @@ export type ContactFilterParams = {
   minBudget?: number;
   notSyncedQuo?: boolean;
   eventName?: string;
+  registeredEventName?: string;
   likelihood?: "high" | "medium" | "low";
   queue?: ContactQueue;
   leadDateWithinDays?: number;
@@ -70,6 +71,7 @@ export function parseContactFilterParams(sp: URLSearchParams): ContactFilterPara
     minBudget: sp.get("minBudget") ? Number(sp.get("minBudget")) : undefined,
     notSyncedQuo: sp.get("quoSync") === "0",
     eventName: sp.get("event") ?? undefined,
+    registeredEventName: sp.get("regEvent") ?? undefined,
     likelihood: (sp.get("likelihood") as ContactFilterParams["likelihood"]) ?? undefined,
     queue: (sp.get("queue") as ContactQueue) ?? undefined,
     leadDateWithinDays: sp.get("newSince") ? Number(sp.get("newSince")) : undefined,
