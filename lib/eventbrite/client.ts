@@ -104,9 +104,13 @@ export async function fetchOrganizationEvents(organizationId: string, token: str
 }
 
 export async function fetchEventOrders(eventId: string, token: string | undefined): Promise<Record<string, unknown>[]> {
+  // No `status` filter here - Eventbrite rejects "placed" as a valid value
+  // for this endpoint's status param (confirmed by a real 400 response, not
+  // a guess this time). Filtering to placed-only happens client-side below
+  // instead, off each order's own `status` field in the response body.
   return paginate(
     `https://www.eventbriteapi.com/v3/events/${eventId}/orders/`,
-    { status: "placed", expand: "attendees" },
+    { expand: "attendees" },
     token,
     "orders",
   );
@@ -131,6 +135,12 @@ export async function fetchRecentOrders(
 
     const eventOrders = await fetchEventOrders(eventId, token);
     for (const order of eventOrders) {
+      // Only every other status (refunded, etc.) is worth excluding here -
+      // an order with no status field at all is kept rather than dropped,
+      // since an unexpected/missing field should never silently exclude a
+      // real registration from the sync.
+      if (typeof order.status === "string" && order.status.toLowerCase() !== "placed") continue;
+
       const created = typeof order.created === "string" ? new Date(order.created).getTime() : NaN;
       if (Number.isNaN(created) || created < cutoff) continue;
       // The event-orders endpoint doesn't always echo event_id on each
