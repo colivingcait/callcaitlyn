@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { X } from "lucide-react";
+import { X, Download } from "lucide-react";
 import { listContacts, listStages, listTags, listLeadSources, listSegments, type ContactSort } from "@/lib/data/contacts";
 import { listSequencesWithSummary } from "@/lib/data/sequences";
 import { ContactsList } from "@/components/contacts/ContactsList";
 import { ContactFilters } from "@/components/contacts/ContactFilters";
 import { SegmentBar } from "@/components/contacts/SegmentBar";
 import { BulkImportContactsButton } from "@/components/contacts/BulkImportContactsButton";
+import { Button } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function ContactsPage({
@@ -26,6 +27,14 @@ export default async function ContactsPage({
 }) {
   const params = await searchParams;
   const newSinceDays = params.newSince ? Number(params.newSince) : undefined;
+  // Export respects whatever's currently filtered/searched, so narrowing to
+  // a tag/segment first (e.g. "House Hacking") and exporting gives exactly
+  // that list to upload into Eventbrite or another mailing tool - not
+  // always the entire contact list.
+  const exportQuery = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value) exportQuery.set(key, value);
+  }
   const supabase = await createClient();
   const {
     data: { user },
@@ -58,7 +67,14 @@ export default async function ContactsPage({
           <h1 className="font-serif text-2xl font-semibold text-neutral-900">Contacts</h1>
           <p className="mt-0.5 text-sm text-neutral-500">{contacts.length} people</p>
         </div>
-        {user && <BulkImportContactsButton tags={tags} ownerId={user.id} />}
+        <div className="flex shrink-0 items-center gap-2">
+          <a href={`/api/contacts/export?${exportQuery.toString()}`}>
+            <Button variant="secondary" size="sm">
+              <Download size={14} /> Export
+            </Button>
+          </a>
+          {user && <BulkImportContactsButton tags={tags} ownerId={user.id} />}
+        </div>
       </div>
       {newSinceDays && (
         <div className="mx-4 mb-2 flex items-center justify-between gap-2 rounded-xl bg-amber-50 px-3.5 py-2.5 text-sm text-amber-800">
