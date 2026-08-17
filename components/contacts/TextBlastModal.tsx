@@ -1,9 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, MessageSquareText } from "lucide-react";
-import { Button, Textarea } from "@/components/ui";
-import { createTextBlast, cancelTextBlast, getTextBlastsForEvent, type TextBlastWithProgress } from "@/app/(app)/contacts/text-blast-actions";
+import { X, MessageSquareText, Send, Users } from "lucide-react";
+import { Button, Textarea, Input } from "@/components/ui";
+import { applyMergeFields, PREVIEW_CONTACT } from "@/lib/crm/merge-fields";
+import {
+  createTextBlast,
+  cancelTextBlast,
+  getTextBlastsForEvent,
+  getTextBlastAudiencePreview,
+  sendTestText,
+  type TextBlastWithProgress,
+} from "@/app/(app)/contacts/text-blast-actions";
 
 // 8 sends per ~15-minute cron tick (see lib/crm/text-blasts.ts) - used only
 // to give a rough "done by around..." estimate, not an exact promise.
@@ -20,6 +28,12 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
   const [result, setResult] = useState<{ ok: true; recipientCount: number } | { ok: false; error: string } | null>(null);
   const [history, setHistory] = useState<TextBlastWithProgress[] | null>(null);
 
+  const [audience, setAudience] = useState<{ count: number; sample: string[] } | null>(null);
+
+  const [testPhone, setTestPhone] = useState(() => (typeof window !== "undefined" ? (localStorage.getItem("textBlastTestPhone") ?? "") : ""));
+  const [testSending, setTestSending] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: true } | { ok: false; error: string } | null>(null);
+
   async function loadHistory() {
     const blasts = await getTextBlastsForEvent(eventName);
     setHistory(blasts);
@@ -27,6 +41,7 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
 
   useEffect(() => {
     loadHistory();
+    getTextBlastAudiencePreview(eventName).then(setAudience);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventName]);
 
@@ -43,10 +58,21 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
     }
   }
 
+  async function sendTest() {
+    localStorage.setItem("textBlastTestPhone", testPhone);
+    setTestSending(true);
+    setTestResult(null);
+    const outcome = await sendTestText(message, testPhone);
+    setTestSending(false);
+    setTestResult(outcome.ok ? { ok: true } : { ok: false, error: outcome.error });
+  }
+
   async function cancel(blastId: string) {
     await cancelTextBlast(blastId);
     loadHistory();
   }
+
+  const preview = message.trim() ? applyMergeFields(message, PREVIEW_CONTACT) : "";
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
@@ -62,6 +88,25 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
         </div>
 
         <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+          {audience && (
+            <div className="flex items-start gap-2 rounded-xl bg-neutral-50 px-3.5 py-2.5 text-xs text-neutral-600">
+              <Users size={14} className="mt-0.5 shrink-0 text-neutral-400" />
+              {audience.count === 0 ? (
+                <span>No registrants with a phone number on file for this event.</span>
+              ) : (
+                <span>
+                  Sending to <span className="font-semibold text-neutral-900">{audience.count}</span> {audience.count === 1 ? "person" : "people"}
+                  {audience.sample.length > 0 && (
+                    <>
+                      : {audience.sample.join(", ")}
+                      {audience.count > audience.sample.length && ` +${audience.count - audience.sample.length} more`}
+                    </>
+                  )}
+                </span>
+              )}
+            </div>
+          )}
+
           <div>
             <Textarea
               value={message}
@@ -70,9 +115,36 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
               rows={4}
             />
             <p className="mt-1.5 text-xs text-neutral-400">
-              Use <code className="rounded bg-neutral-100 px-1 py-0.5">{"{{first_name}}"}</code> to personalize. Goes to everyone registered for
-              this event with a phone number on file, sent gradually over time rather than all at once - see below for an estimate.
+              Use <code className="rounded bg-neutral-100 px-1 py-0.5">{"{{first_name}}"}</code> to personalize. Sent gradually over time rather
+              than all at once - see below for an estimate.
             </p>
+          </div>
+
+          {preview && (
+            <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Preview (sample name)</p>
+              <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-700">{preview}</p>
+            </div>
+          )}
+
+          <div className="space-y-2 border-t border-neutral-100 pt-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Send yourself a test</p>
+            <div className="flex gap-2">
+              <Input
+                value={testPhone}
+                onChange={(e) => setTestPhone(e.target.value)}
+                placeholder="Your phone number"
+                className="flex-1"
+              />
+              <Button variant="secondary" onClick={sendTest} disabled={testSending || !message.trim() || !testPhone.trim()} className="shrink-0">
+                <Send size={14} /> {testSending ? "Sending…" : "Test"}
+              </Button>
+            </div>
+            {testResult && (
+              <p className={testResult.ok ? "text-xs text-brand-700" : "text-xs text-red-600"}>
+                {testResult.ok ? "Test sent - check your phone." : testResult.error}
+              </p>
+            )}
           </div>
 
           {result && (
@@ -83,7 +155,7 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
             </p>
           )}
 
-          <Button onClick={send} disabled={sending || !message.trim()} className="w-full">
+          <Button onClick={send} disabled={sending || !message.trim() || !audience?.count} className="w-full">
             <MessageSquareText size={15} /> {sending ? "Queuing…" : "Send staggered reminder"}
           </Button>
 

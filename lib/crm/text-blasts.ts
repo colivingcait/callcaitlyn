@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendQuoText } from "@/lib/quo/send-message";
-import { applyMergeFields } from "@/lib/crm/sequences";
+import { applyMergeFields } from "@/lib/crm/merge-fields";
 import { upsertActivity } from "@/lib/crm/activities";
 import { updateEngagementTag } from "@/lib/crm/engagement";
 

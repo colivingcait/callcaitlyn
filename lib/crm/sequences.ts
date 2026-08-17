@@ -1,7 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendGmailMessage, textToHtml } from "@/lib/google/send-email";
 import { upsertActivity } from "@/lib/crm/activities";
+import { applyMergeFields } from "@/lib/crm/merge-fields";
 import type { EmailSequence, EmailSequenceStep } from "@/types/database";
+
+export { applyMergeFields };
 
 type SequenceContact = {
   id: string;
@@ -40,12 +43,6 @@ function sleep(ms: number) {
 
 async function spaceSends() {
   await sleep(MIN_SEND_SPACING_MS + Math.floor(Math.random() * SEND_SPACING_JITTER_MS));
-}
-
-export function applyMergeFields(text: string, contact: { first_name: string; last_name: string }) {
-  return text
-    .replace(/\{\{\s*first_name\s*\}\}/gi, contact.first_name || "")
-    .replace(/\{\{\s*last_name\s*\}\}/gi, contact.last_name || "");
 }
 
 // Rewrites every link to route through the click-tracking redirect, and

@@ -1,8 +1,62 @@
 "use server";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendQuoText } from "@/lib/quo/send-message";
+import { applyMergeFields, PREVIEW_CONTACT } from "@/lib/crm/merge-fields";
 import type { TextBlast } from "@/types/database";
+
+type AudienceContact = { id: string; first_name: string; last_name: string; phone: string };
+
+// Shared by the "how many will this reach" preview and the actual send, so
+// the count she sees before sending is guaranteed to match who it actually
+// goes to - the two paths can't drift apart the way the export route
+// almost did before its filter logic got centralized.
+async function resolveEventAudience(admin: SupabaseClient, ownerId: string, eventName: string): Promise<AudienceContact[]> {
+  const { data: registrations } = await admin
+    .from("activities")
+    .select("contact_id")
+    .eq("owner_id", ownerId)
+    .eq("source", "eventbrite")
+    .eq("metadata->>event_name", eventName);
+
+  const contactIds = [...new Set((registrations ?? []).map((r) => r.contact_id as string))];
+  if (contactIds.length === 0) return [];
+
+  const { data: contacts } = await admin
+    .from("contacts")
+    .select("id, first_name, last_name, phone")
+    .in("id", contactIds)
+    .eq("archived", false)
+    .not("phone", "is", null);
+
+  return (contacts ?? []) as AudienceContact[];
+}
+
+export async function getTextBlastAudiencePreview(eventName: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { count: 0, sample: [] as string[] };
+
+  const admin = createAdminClient();
+  const audience = await resolveEventAudience(admin, user.id, eventName);
+  const sample = audience.slice(0, 6).map((c) => c.first_name || "Unnamed");
+
+  return { count: audience.length, sample };
+}
+
+export async function sendTestText(message: string, phone: string) {
+  if (!phone.trim()) return { ok: false as const, error: "Enter a phone number" };
+  if (!message.trim()) return { ok: false as const, error: "Write a message first" };
+
+  const body = applyMergeFields(message, PREVIEW_CONTACT);
+  const result = await sendQuoText(phone.trim(), body);
+  if (!result.ok) return { ok: false as const, error: result.error };
+  return { ok: true as const, sentBody: body };
+}
 
 // Recipients are snapshotted here, at creation time - not re-queried live
 // by the sender - so a blast already trickling out doesn't silently pick
@@ -17,25 +71,8 @@ export async function createTextBlast(eventName: string, message: string) {
   if (!message.trim()) return { ok: false as const, error: "Write a message" };
 
   const admin = createAdminClient();
-
-  const { data: registrations } = await admin
-    .from("activities")
-    .select("contact_id")
-    .eq("owner_id", user.id)
-    .eq("source", "eventbrite")
-    .eq("metadata->>event_name", eventName);
-
-  const contactIds = [...new Set((registrations ?? []).map((r) => r.contact_id as string))];
-  if (contactIds.length === 0) return { ok: false as const, error: "No registrants found for that event" };
-
-  const { data: contacts } = await admin
-    .from("contacts")
-    .select("id, phone")
-    .in("id", contactIds)
-    .eq("archived", false)
-    .not("phone", "is", null);
-
-  if (!contacts?.length) return { ok: false as const, error: "None of the registrants have a phone number on file" };
+  const audience = await resolveEventAudience(admin, user.id, eventName);
+  if (!audience.length) return { ok: false as const, error: "No registrants with a phone number on file for that event" };
 
   const { data: blast, error: blastError } = await admin
     .from("text_blasts")
@@ -44,9 +81,9 @@ export async function createTextBlast(eventName: string, message: string) {
     .single();
   if (blastError || !blast) return { ok: false as const, error: blastError?.message ?? "Failed to create blast" };
 
-  await admin.from("text_blast_recipients").insert(contacts.map((c) => ({ blast_id: blast.id, contact_id: c.id })));
+  await admin.from("text_blast_recipients").insert(audience.map((c) => ({ blast_id: blast.id, contact_id: c.id })));
 
-  return { ok: true as const, blastId: blast.id as string, recipientCount: contacts.length };
+  return { ok: true as const, blastId: blast.id as string, recipientCount: audience.length };
 }
 
 export async function cancelTextBlast(blastId: string) {
