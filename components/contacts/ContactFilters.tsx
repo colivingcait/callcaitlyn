@@ -2,11 +2,12 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Search, SlidersHorizontal } from "lucide-react";
-import { Input, Select } from "@/components/ui";
+import { Search, SlidersHorizontal, MessageSquareText } from "lucide-react";
+import { Input, Select, Button } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { QUEUES } from "@/lib/crm/contact-queues";
 import { ContactFiltersSheet } from "@/components/contacts/ContactFiltersSheet";
+import { TextBlastModal } from "@/components/contacts/TextBlastModal";
 import type { PipelineStage, Tag } from "@/types/database";
 
 const SORT_OPTIONS: { value: string; label: string }[] = [
@@ -49,7 +50,9 @@ export function ContactFilters({
   const searchParams = useSearchParams();
   const [q, setQ] = useState(searchParams.get("q") ?? "");
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [textBlastOpen, setTextBlastOpen] = useState(false);
   const [, startTransition] = useTransition();
+  const registeredEvent = searchParams.get("regEvent");
 
   function updateParam(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -84,17 +87,25 @@ export function ContactFilters({
       </div>
 
       {registeredEventNames.length > 0 && (
-        <Select
-          defaultValue={searchParams.get("regEvent") ?? ""}
-          onChange={(e) => updateParam("regEvent", e.target.value)}
-        >
-          <option value="">Registered for: any event</option>
-          {registeredEventNames.map((name) => (
-            <option key={name} value={name}>
-              Registered for: {name}
-            </option>
-          ))}
-        </Select>
+        <div className="flex gap-2">
+          <Select
+            className="min-w-0 flex-1"
+            defaultValue={searchParams.get("regEvent") ?? ""}
+            onChange={(e) => updateParam("regEvent", e.target.value)}
+          >
+            <option value="">Registered for: any event</option>
+            {registeredEventNames.map((name) => (
+              <option key={name} value={name}>
+                Registered for: {name}
+              </option>
+            ))}
+          </Select>
+          {registeredEvent && (
+            <Button variant="secondary" size="md" className="shrink-0" onClick={() => setTextBlastOpen(true)}>
+              <MessageSquareText size={15} /> Text
+            </Button>
+          )}
+        </div>
       )}
 
       <div className="flex gap-2">
@@ -147,6 +158,9 @@ export function ContactFilters({
 
       {sheetOpen && (
         <ContactFiltersSheet stages={stages} tags={tags} leadSources={leadSources} eventNames={eventNames} onClose={() => setSheetOpen(false)} />
+      )}
+      {textBlastOpen && registeredEvent && (
+        <TextBlastModal eventName={registeredEvent} onClose={() => setTextBlastOpen(false)} />
       )}
     </div>
   );

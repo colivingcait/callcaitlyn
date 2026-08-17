@@ -96,6 +96,28 @@ export interface ContactSegment {
   created_at: string;
 }
 
+export type TextBlastStatus = "sending" | "completed" | "canceled";
+export type TextBlastRecipientStatus = "pending" | "sent" | "failed" | "skipped";
+
+export interface TextBlast {
+  id: string;
+  owner_id: string;
+  event_name: string;
+  message: string;
+  status: TextBlastStatus;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface TextBlastRecipient {
+  id: string;
+  blast_id: string;
+  contact_id: string;
+  status: TextBlastRecipientStatus;
+  sent_at: string | null;
+  error: string | null;
+}
+
 export interface Contact {
   id: string;
   owner_id: string;
