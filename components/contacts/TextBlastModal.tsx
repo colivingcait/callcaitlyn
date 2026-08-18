@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 import { X, MessageSquareText, Send, Users } from "lucide-react";
 import { Button, Textarea, Input } from "@/components/ui";
 import { applyMergeFields, PREVIEW_CONTACT } from "@/lib/crm/merge-fields";
+import { dayBeforeReminderTemplate, dayOfReminderTemplate } from "@/lib/crm/event-text-templates";
 import {
   createTextBlast,
   cancelTextBlast,
   getTextBlastsForEvent,
   getTextBlastAudiencePreview,
+  getEventAccount,
   sendTestText,
   type TextBlastWithProgress,
 } from "@/app/(app)/contacts/text-blast-actions";
@@ -31,6 +33,7 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
   const [audience, setAudience] = useState<{ count: number; sample: string[] } | null>(null);
   const [excludeRecent, setExcludeRecent] = useState(false);
   const [excludeDays, setExcludeDays] = useState(1);
+  const [eventAccount, setEventAccount] = useState<string | null>(null);
 
   const [testPhone, setTestPhone] = useState(() => (typeof window !== "undefined" ? (localStorage.getItem("textBlastTestPhone") ?? "") : ""));
   const [testSending, setTestSending] = useState(false);
@@ -53,6 +56,7 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
   useEffect(() => {
     loadHistory();
     loadAudience();
+    getEventAccount(eventName).then(setEventAccount);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventName, excludeRecent, excludeDays]);
 
@@ -138,14 +142,22 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
             </p>
           </div>
 
-          <div>
+          <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" size="sm" onClick={() => setMessage(dayBeforeReminderTemplate(eventAccount, eventName))}>
+                Day-before template
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => setMessage(dayOfReminderTemplate(eventAccount, eventName))}>
+                Day-of template
+              </Button>
+            </div>
             <Textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Hey {{first_name}}, quick reminder about tomorrow's meetup..."
               rows={4}
             />
-            <p className="mt-1.5 text-xs text-neutral-400">
+            <p className="text-xs text-neutral-400">
               Use <code className="rounded bg-neutral-100 px-1 py-0.5">{"{{first_name}}"}</code> to personalize. Sent gradually over time rather
               than all at once - see below for an estimate.
             </p>

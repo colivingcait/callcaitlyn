@@ -14,7 +14,7 @@ import {
   saveDialerNotes,
 } from "@/app/(app)/dialer/actions";
 import { sendTextToContact } from "@/app/(app)/contacts/actions";
-import { newRegistrationTemplate, returningRegistrationTemplate } from "@/lib/crm/dialer-text-templates";
+import { newRegistrationTemplate, returningRegistrationTemplate } from "@/lib/crm/event-text-templates";
 import { Button, Select, Textarea, Badge } from "@/components/ui";
 import { formatDistanceToNow } from "date-fns";
 import { X, PhoneCall, MessageSquareText, History, Clock } from "lucide-react";

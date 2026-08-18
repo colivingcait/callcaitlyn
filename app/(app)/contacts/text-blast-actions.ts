@@ -51,6 +51,23 @@ async function resolveEventAudience(
   return (contacts ?? []) as AudienceContact[];
 }
 
+// Which Eventbrite account (womens_rei/house_hacking) this event belongs
+// to, for picking the right meetup name in the reminder templates - same
+// reliable signal used to fix the dialer's welcome-text mislabeling, not a
+// guess off the event name text (see lib/crm/event-text-templates.ts).
+export async function getEventAccount(eventName: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("activities")
+    .select("metadata")
+    .eq("source", "eventbrite")
+    .eq("metadata->>event_name", eventName)
+    .limit(1)
+    .maybeSingle();
+  const metadata = data?.metadata as Record<string, unknown> | null;
+  return typeof metadata?.eventbrite_account === "string" ? metadata.eventbrite_account : null;
+}
+
 export async function getTextBlastAudiencePreview(eventName: string, registeredBefore?: string) {
   const supabase = await createClient();
   const {

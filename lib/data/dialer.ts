@@ -35,7 +35,7 @@ export type DialerContact = Pick<
   // signal for which meetup a registration belongs to; the event NAME
   // text can't be trusted for that (an event like "Inside the Making of a
   // 250-Home Neighborhood" doesn't contain "women" even when it's a
-  // Women's REI event) - see lib/crm/dialer-text-templates.ts.
+  // Women's REI event) - see lib/crm/event-text-templates.ts.
   registrationAccount?: string | null;
 };
 

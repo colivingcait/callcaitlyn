@@ -23,3 +23,16 @@ export function returningRegistrationTemplate(firstName: string, account: string
   const group = eventGroupLabel(account, eventName);
   return `Hey ${firstName}, this is Caitlyn Verdugo, one of the organizers for ${group}. Just got your registration for this month's meetup - looking forward to seeing you again!`;
 }
+
+// Bulk-blast reminder templates - contain the literal {{first_name}} token
+// (not a real name) since applyMergeFields runs later, once per recipient,
+// during the actual staggered send.
+export function dayBeforeReminderTemplate(account: string | null | undefined, eventName: string | null | undefined): string {
+  const group = eventGroupLabel(account, eventName);
+  return `Hi {{first_name}}, this is Caitlyn Verdugo - just a reminder that ${group} is tomorrow! Looking forward to seeing you there. 🙂`;
+}
+
+export function dayOfReminderTemplate(account: string | null | undefined, eventName: string | null | undefined): string {
+  const group = eventGroupLabel(account, eventName);
+  return `Hi {{first_name}}, this is Caitlyn Verdugo - quick reminder that ${group} is today! Can't wait to see you there. 🙂`;
+}
