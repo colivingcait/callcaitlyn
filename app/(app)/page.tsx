@@ -1,5 +1,6 @@
 import { getDashboardData } from "@/lib/data/dashboard";
 import { getMetrics, type Period } from "@/lib/data/metrics";
+import { listInProgressTextBlasts } from "@/lib/data/text-blasts";
 import { createClient } from "@/lib/supabase/server";
 import { StatTile } from "@/components/dashboard/StatTile";
 import { FollowUpList } from "@/components/dashboard/FollowUpList";
@@ -7,6 +8,7 @@ import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { StageBreakdown } from "@/components/dashboard/StageBreakdown";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { PeriodToggle } from "@/components/dashboard/PeriodToggle";
+import { TextBlastStatusCard } from "@/components/dashboard/TextBlastStatusCard";
 import { Card } from "@/components/ui";
 
 export default async function DashboardPage({
@@ -22,8 +24,8 @@ export default async function DashboardPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ stages, stageCounts, totalActive, followUps, activities, newLeadsWeek, newLeadsMonth }, metrics] =
-    await Promise.all([getDashboardData(), getMetrics(period)]);
+  const [{ stages, stageCounts, totalActive, followUps, activities, newLeadsWeek, newLeadsMonth }, metrics, inProgressBlasts] =
+    await Promise.all([getDashboardData(), getMetrics(period), listInProgressTextBlasts()]);
 
   const hotCount = stages.find((s) => s.name.toLowerCase().includes("hot"))
     ? stageCounts.get(stages.find((s) => s.name.toLowerCase().includes("hot"))!.id) ?? 0
@@ -77,6 +79,12 @@ export default async function DashboardPage({
               metricKey="conversion_rate"
             />
           </div>
+        </div>
+      )}
+
+      {inProgressBlasts.length > 0 && (
+        <div className="mt-8">
+          <TextBlastStatusCard blasts={inProgressBlasts} />
         </div>
       )}
 

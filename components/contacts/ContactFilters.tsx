@@ -50,7 +50,10 @@ export function ContactFilters({
   const searchParams = useSearchParams();
   const [q, setQ] = useState(searchParams.get("q") ?? "");
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [textBlastOpen, setTextBlastOpen] = useState(false);
+  // Lets a link elsewhere (the Dashboard's in-progress blast card) jump
+  // straight into the compose modal instead of landing on the filtered
+  // list and making her click Text again.
+  const [textBlastOpen, setTextBlastOpen] = useState(() => searchParams.get("openBlast") === "1");
   const [, startTransition] = useTransition();
   const registeredEvent = searchParams.get("regEvent");
 

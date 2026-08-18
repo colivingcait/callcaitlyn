@@ -5,6 +5,7 @@ import { X, MessageSquareText, Send, Users } from "lucide-react";
 import { Button, Textarea, Input } from "@/components/ui";
 import { applyMergeFields, PREVIEW_CONTACT } from "@/lib/crm/merge-fields";
 import { dayBeforeReminderTemplate, dayOfReminderTemplate, weekBeforeReminderTemplate } from "@/lib/crm/event-text-templates";
+import { estimatedTextBlastMinutes } from "@/lib/crm/text-blast-timing";
 import {
   createTextBlast,
   cancelTextBlast,
@@ -14,15 +15,6 @@ import {
   sendTestText,
   type TextBlastWithProgress,
 } from "@/app/(app)/contacts/text-blast-actions";
-
-// 8 sends per ~15-minute cron tick (see lib/crm/text-blasts.ts) - used only
-// to give a rough "done by around..." estimate, not an exact promise.
-const SENDS_PER_RUN = 8;
-const RUN_INTERVAL_MINUTES = 15;
-
-function estimatedMinutes(recipientCount: number) {
-  return Math.ceil(recipientCount / SENDS_PER_RUN) * RUN_INTERVAL_MINUTES;
-}
 
 export function TextBlastModal({ eventName, onClose }: { eventName: string; onClose: () => void }) {
   const [message, setMessage] = useState("");
@@ -196,7 +188,7 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
           {result && (
             <p className={result.ok ? "text-sm text-brand-700" : "text-sm text-red-600"}>
               {result.ok
-                ? `Queued for ${result.recipientCount} recipient${result.recipientCount === 1 ? "" : "s"} - should finish sending in roughly ${estimatedMinutes(result.recipientCount)} minutes.`
+                ? `Queued for ${result.recipientCount} recipient${result.recipientCount === 1 ? "" : "s"} - should finish sending in roughly ${estimatedTextBlastMinutes(result.recipientCount)} minutes.`
                 : result.error}
             </p>
           )}

@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendQuoText } from "@/lib/quo/send-message";
 import { applyMergeFields, PREVIEW_CONTACT } from "@/lib/crm/merge-fields";
-import type { TextBlast } from "@/types/database";
+import { withProgress, type TextBlastWithProgress } from "@/lib/crm/text-blasts";
 
 type AudienceContact = { id: string; first_name: string; last_name: string; phone: string };
 
@@ -132,7 +132,7 @@ export async function cancelTextBlast(blastId: string) {
   await admin.from("text_blasts").update({ status: "canceled", completed_at: new Date().toISOString() }).eq("id", blastId).eq("owner_id", user.id);
 }
 
-export type TextBlastWithProgress = TextBlast & { total: number; sent: number; failed: number; skipped: number; pending: number };
+export type { TextBlastWithProgress };
 
 export async function getTextBlastsForEvent(eventName: string): Promise<TextBlastWithProgress[]> {
   const supabase = await createClient();
@@ -152,15 +152,5 @@ export async function getTextBlastsForEvent(eventName: string): Promise<TextBlas
       blasts.map((b) => b.id),
     );
 
-  return blasts.map((b) => {
-    const rows = (recipients ?? []).filter((r) => r.blast_id === b.id);
-    return {
-      ...b,
-      total: rows.length,
-      sent: rows.filter((r) => r.status === "sent").length,
-      failed: rows.filter((r) => r.status === "failed").length,
-      skipped: rows.filter((r) => r.status === "skipped").length,
-      pending: rows.filter((r) => r.status === "pending").length,
-    } as TextBlastWithProgress;
-  });
+  return withProgress(blasts, recipients ?? []);
 }

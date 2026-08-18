@@ -3,13 +3,34 @@ import { sendQuoText } from "@/lib/quo/send-message";
 import { applyMergeFields } from "@/lib/crm/merge-fields";
 import { upsertActivity } from "@/lib/crm/activities";
 import { updateEngagementTag } from "@/lib/crm/engagement";
+import { TEXT_BLAST_SENDS_PER_RUN } from "@/lib/crm/text-blast-timing";
+import type { TextBlast } from "@/types/database";
+
+export type TextBlastWithProgress = TextBlast & { total: number; sent: number; failed: number; skipped: number; pending: number };
+
+// Shared by the blast modal's "previous sends for this event" list and the
+// Dashboard's "in progress" card, so the two views of the same numbers
+// can't disagree with each other.
+export function withProgress(blasts: TextBlast[], recipients: { blast_id: string; status: string }[]): TextBlastWithProgress[] {
+  return blasts.map((b) => {
+    const rows = recipients.filter((r) => r.blast_id === b.id);
+    return {
+      ...b,
+      total: rows.length,
+      sent: rows.filter((r) => r.status === "sent").length,
+      failed: rows.filter((r) => r.status === "failed").length,
+      skipped: rows.filter((r) => r.status === "skipped").length,
+      pending: rows.filter((r) => r.status === "pending").length,
+    };
+  });
+}
 
 // Same spacing rationale as lib/crm/sequences.ts (see its comment) - a
 // burst of near-identical texts from one number in a tight loop is exactly
 // the kind of traffic that gets a business SMS number flagged by carriers,
 // so this caps how many actually send per cron tick and puts real jittered
 // delay between them rather than firing the whole recipient list at once.
-const MAX_SENDS_PER_RUN = 8;
+const MAX_SENDS_PER_RUN = TEXT_BLAST_SENDS_PER_RUN;
 const MIN_SEND_SPACING_MS = 2500;
 const SEND_SPACING_JITTER_MS = 1500;
 
