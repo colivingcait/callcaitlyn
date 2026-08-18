@@ -36,3 +36,8 @@ export function dayOfReminderTemplate(account: string | null | undefined, eventN
   const group = eventGroupLabel(account, eventName);
   return `Hi {{first_name}}, this is Caitlyn Verdugo - quick reminder that ${group} is today! Can't wait to see you there. 🙂`;
 }
+
+export function weekBeforeReminderTemplate(account: string | null | undefined, eventName: string | null | undefined): string {
+  const group = eventGroupLabel(account, eventName);
+  return `Hi {{first_name}}, this is Caitlyn Verdugo - just checking in ahead of ${group} next week! Are you still planning on joining us? Let me know if anything's changed. 🙂`;
+}

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { X, MessageSquareText, Send, Users } from "lucide-react";
 import { Button, Textarea, Input } from "@/components/ui";
 import { applyMergeFields, PREVIEW_CONTACT } from "@/lib/crm/merge-fields";
-import { dayBeforeReminderTemplate, dayOfReminderTemplate } from "@/lib/crm/event-text-templates";
+import { dayBeforeReminderTemplate, dayOfReminderTemplate, weekBeforeReminderTemplate } from "@/lib/crm/event-text-templates";
 import {
   createTextBlast,
   cancelTextBlast,
@@ -144,6 +144,9 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
 
           <div className="space-y-2">
             <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" size="sm" onClick={() => setMessage(weekBeforeReminderTemplate(eventAccount, eventName))}>
+                Week-before template
+              </Button>
               <Button variant="secondary" size="sm" onClick={() => setMessage(dayBeforeReminderTemplate(eventAccount, eventName))}>
                 Day-before template
               </Button>
