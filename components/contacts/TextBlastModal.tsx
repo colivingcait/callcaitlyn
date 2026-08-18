@@ -29,25 +29,36 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
   const [history, setHistory] = useState<TextBlastWithProgress[] | null>(null);
 
   const [audience, setAudience] = useState<{ count: number; sample: string[] } | null>(null);
+  const [excludeRecent, setExcludeRecent] = useState(false);
+  const [excludeDays, setExcludeDays] = useState(1);
 
   const [testPhone, setTestPhone] = useState(() => (typeof window !== "undefined" ? (localStorage.getItem("textBlastTestPhone") ?? "") : ""));
   const [testSending, setTestSending] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: true } | { ok: false; error: string } | null>(null);
+
+  function registeredBeforeCutoff(): string | undefined {
+    if (!excludeRecent || !excludeDays || excludeDays <= 0) return undefined;
+    return new Date(Date.now() - excludeDays * 24 * 60 * 60 * 1000).toISOString();
+  }
 
   async function loadHistory() {
     const blasts = await getTextBlastsForEvent(eventName);
     setHistory(blasts);
   }
 
+  function loadAudience() {
+    getTextBlastAudiencePreview(eventName, registeredBeforeCutoff()).then(setAudience);
+  }
+
   useEffect(() => {
     loadHistory();
-    getTextBlastAudiencePreview(eventName).then(setAudience);
+    loadAudience();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eventName]);
+  }, [eventName, excludeRecent, excludeDays]);
 
   async function send() {
     setSending(true);
-    const outcome = await createTextBlast(eventName, message);
+    const outcome = await createTextBlast(eventName, message, registeredBeforeCutoff());
     setSending(false);
     if (outcome.ok) {
       setResult({ ok: true, recipientCount: outcome.recipientCount });
@@ -106,6 +117,26 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
               )}
             </div>
           )}
+
+          <div className="space-y-1.5">
+            <label className="flex items-center gap-2 text-xs text-neutral-600">
+              <input type="checkbox" checked={excludeRecent} onChange={(e) => setExcludeRecent(e.target.checked)} className="accent-brand-600" />
+              Exclude anyone who registered in the last
+              <input
+                type="number"
+                min={1}
+                value={excludeDays}
+                onChange={(e) => setExcludeDays(Math.max(1, Number(e.target.value) || 1))}
+                disabled={!excludeRecent}
+                className="w-12 rounded-lg border border-neutral-200 px-1.5 py-1 text-center disabled:opacity-50"
+              />
+              day{excludeDays === 1 ? "" : "s"}
+            </label>
+            <p className="text-[11px] text-neutral-400">
+              Meetups reuse the same event name every month, so &ldquo;registered for this event&rdquo; can include people who just signed up for
+              a future date - use this to leave them out of a reminder about one that already happened.
+            </p>
+          </div>
 
           <div>
             <Textarea

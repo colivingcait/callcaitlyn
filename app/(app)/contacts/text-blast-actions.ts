@@ -13,13 +13,30 @@ type AudienceContact = { id: string; first_name: string; last_name: string; phon
 // the count she sees before sending is guaranteed to match who it actually
 // goes to - the two paths can't drift apart the way the export route
 // almost did before its filter logic got centralized.
-async function resolveEventAudience(admin: SupabaseClient, ownerId: string, eventName: string): Promise<AudienceContact[]> {
-  const { data: registrations } = await admin
+//
+// registeredBefore excludes anyone whose registration for this event
+// happened at/after that cutoff - meetups recur under the same Eventbrite
+// event name every month, so "registered for event X" alone pulls in
+// EVERY occurrence's registrants ever, including someone who just signed
+// up today for next month's date. Without this, a reminder about an event
+// that already happened would also land on people who don't need a
+// reminder yet (they registered for a future date, not the one being
+// reminded about).
+async function resolveEventAudience(
+  admin: SupabaseClient,
+  ownerId: string,
+  eventName: string,
+  registeredBefore?: string,
+): Promise<AudienceContact[]> {
+  let query = admin
     .from("activities")
     .select("contact_id")
     .eq("owner_id", ownerId)
     .eq("source", "eventbrite")
     .eq("metadata->>event_name", eventName);
+  if (registeredBefore) query = query.lt("occurred_at", registeredBefore);
+
+  const { data: registrations } = await query;
 
   const contactIds = [...new Set((registrations ?? []).map((r) => r.contact_id as string))];
   if (contactIds.length === 0) return [];
@@ -34,7 +51,7 @@ async function resolveEventAudience(admin: SupabaseClient, ownerId: string, even
   return (contacts ?? []) as AudienceContact[];
 }
 
-export async function getTextBlastAudiencePreview(eventName: string) {
+export async function getTextBlastAudiencePreview(eventName: string, registeredBefore?: string) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -42,7 +59,7 @@ export async function getTextBlastAudiencePreview(eventName: string) {
   if (!user) return { count: 0, sample: [] as string[] };
 
   const admin = createAdminClient();
-  const audience = await resolveEventAudience(admin, user.id, eventName);
+  const audience = await resolveEventAudience(admin, user.id, eventName, registeredBefore);
   const sample = audience.slice(0, 6).map((c) => c.first_name || "Unnamed");
 
   return { count: audience.length, sample };
@@ -61,7 +78,7 @@ export async function sendTestText(message: string, phone: string) {
 // Recipients are snapshotted here, at creation time - not re-queried live
 // by the sender - so a blast already trickling out doesn't silently pick
 // up a new registration that comes in an hour into the send.
-export async function createTextBlast(eventName: string, message: string) {
+export async function createTextBlast(eventName: string, message: string, registeredBefore?: string) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -71,7 +88,7 @@ export async function createTextBlast(eventName: string, message: string) {
   if (!message.trim()) return { ok: false as const, error: "Write a message" };
 
   const admin = createAdminClient();
-  const audience = await resolveEventAudience(admin, user.id, eventName);
+  const audience = await resolveEventAudience(admin, user.id, eventName, registeredBefore);
   if (!audience.length) return { ok: false as const, error: "No registrants with a phone number on file for that event" };
 
   const { data: blast, error: blastError } = await admin

@@ -28,6 +28,15 @@ export type DialerContact = Pick<
   // to lead_source when the latest registration has no event name on it
   // (e.g. a Calendly booking).
   registrationLabel?: string | null;
+  // New-registrations queue only: "womens_rei" | "house_hacking" | null,
+  // from the same registration's metadata.eventbrite_account (set at
+  // ingestion by which Eventbrite account the webhook/backfill fired
+  // under - see lib/eventbrite/process-order.ts). This is the reliable
+  // signal for which meetup a registration belongs to; the event NAME
+  // text can't be trusted for that (an event like "Inside the Making of a
+  // 250-Home Neighborhood" doesn't contain "women" even when it's a
+  // Women's REI event) - see lib/crm/dialer-text-templates.ts.
+  registrationAccount?: string | null;
 };
 
 // "New Registrations": anyone with an untouched Eventbrite or Calendly
@@ -72,6 +81,7 @@ export async function listNewRegistrationsQueue(): Promise<{ contacts: DialerCon
 
   const latestRegByContact = new Map<string, string>();
   const latestEventNameByContact = new Map<string, string | null>();
+  const latestEventAccountByContact = new Map<string, string | null>();
   const registrationCountByContact = new Map<string, number>();
   for (const row of registrations ?? []) {
     registrationCountByContact.set(row.contact_id, (registrationCountByContact.get(row.contact_id) ?? 0) + 1);
@@ -81,6 +91,7 @@ export async function listNewRegistrationsQueue(): Promise<{ contacts: DialerCon
       latestRegByContact.set(row.contact_id, row.occurred_at);
       const metadata = row.metadata as Record<string, unknown> | null;
       latestEventNameByContact.set(row.contact_id, typeof metadata?.event_name === "string" ? metadata.event_name : null);
+      latestEventAccountByContact.set(row.contact_id, typeof metadata?.eventbrite_account === "string" ? metadata.eventbrite_account : null);
     }
   }
 
@@ -100,6 +111,7 @@ export async function listNewRegistrationsQueue(): Promise<{ contacts: DialerCon
           ...c,
           isNew: (registrationCountByContact.get(c.id) ?? 0) <= 1,
           registrationLabel: latestEventNameByContact.get(c.id) ?? c.lead_source,
+          registrationAccount: latestEventAccountByContact.get(c.id) ?? null,
         }) as DialerContact,
     );
 

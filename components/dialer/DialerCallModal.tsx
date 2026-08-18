@@ -103,6 +103,7 @@ export function DialerCallModal({
   }
 
   const eventName = mode === "new-registration" ? contact.registrationLabel : contact.last_event_name;
+  const eventAccount = mode === "new-registration" ? contact.registrationAccount : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
@@ -166,7 +167,7 @@ export function DialerCallModal({
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => openTexting(newRegistrationTemplate(contact.first_name, eventName))}
+                    onClick={() => openTexting(newRegistrationTemplate(contact.first_name, eventAccount, eventName))}
                   >
                     <MessageSquareText size={13} /> Welcome / intro
                   </Button>
@@ -175,7 +176,7 @@ export function DialerCallModal({
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => openTexting(returningRegistrationTemplate(contact.first_name, eventName))}
+                    onClick={() => openTexting(returningRegistrationTemplate(contact.first_name, eventAccount, eventName))}
                   >
                     <MessageSquareText size={13} /> Welcome back
                   </Button>
