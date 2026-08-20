@@ -30,7 +30,12 @@ export async function upsertActivity(
 
     if (existing) {
       await admin.from("activities").update({ body: fields.body, metadata: fields.metadata }).eq("id", existing.id);
-      return existing.id as string;
+      // wasCreated: false lets a redelivered webhook (Eventbrite/Quo/etc.
+      // resending the same event id) tell "this exact registration/call/
+      // text already exists" apart from a genuinely new one - callers use
+      // it to gate one-time side effects like a push notification, so a
+      // retried delivery doesn't re-notify every time it's redelivered.
+      return { id: existing.id as string, wasCreated: false };
     }
   }
 
@@ -49,7 +54,7 @@ export async function upsertActivity(
     .select("id")
     .maybeSingle();
 
-  return created?.id as string | undefined;
+  return { id: created?.id as string | undefined, wasCreated: true };
 }
 
 export async function patchActivityMetadata(

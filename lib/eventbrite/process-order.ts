@@ -37,15 +37,6 @@ export async function processEventbriteOrder(
     });
     if (!contact) continue;
 
-    if (opts.notify) {
-      const name = [attendee.firstName, attendee.lastName].filter(Boolean).join(" ") || attendee.email;
-      await notifyNewLead(admin, ownerId, {
-        title: contact.wasCreated ? "New event sign-up" : "Event sign-up",
-        body: `${name} registered${eventName ? ` for ${eventName}` : ""} via Eventbrite`,
-        url: `/contacts/${contact.id}`,
-      });
-    }
-
     await addTagByName(admin, ownerId, contact.id, "Meetup");
     if (isWomensRei) await addTagByName(admin, ownerId, contact.id, "Women's REI");
     await applyJourneyStageAnswer(admin, ownerId, contact.id, attendee.journeyStage, contact.wasCreated);
@@ -54,7 +45,7 @@ export async function processEventbriteOrder(
     const bodyParts = [`Registered${eventName ? ` for ${eventName}` : " for an event"} via Eventbrite`];
     if (attendee.journeyStage) bodyParts.push(`House hacking journey: ${attendee.journeyStage}`);
 
-    await upsertActivity(admin, ownerId, contact.id, "eventbrite", "eventbrite_attendee_id", attendee.attendeeId, {
+    const activity = await upsertActivity(admin, ownerId, contact.id, "eventbrite", "eventbrite_attendee_id", attendee.attendeeId, {
       type: "meeting",
       direction: "none",
       occurred_at: occurredAt,
@@ -69,6 +60,21 @@ export async function processEventbriteOrder(
         raw: order,
       },
     });
+
+    // Only notify the first time this exact registration is processed -
+    // Eventbrite redelivers a webhook it considers failed/timed out on its
+    // own retry schedule, and without this check each redelivery fired a
+    // fresh "registered" push for the same signup, hours apart, forever.
+    // wasCreated is false on every redelivery since upsertActivity finds
+    // the row it already wrote the first time.
+    if (opts.notify && activity.wasCreated) {
+      const name = [attendee.firstName, attendee.lastName].filter(Boolean).join(" ") || attendee.email;
+      await notifyNewLead(admin, ownerId, {
+        title: contact.wasCreated ? "New event sign-up" : "Event sign-up",
+        body: `${name} registered${eventName ? ` for ${eventName}` : ""} via Eventbrite`,
+        url: `/contacts/${contact.id}`,
+      });
+    }
 
     processed++;
   }
