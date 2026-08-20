@@ -79,6 +79,28 @@ export async function listNewRegistrationsQueue(): Promise<{ contacts: DialerCon
     .order("occurred_at", { ascending: false });
   if (regError) return { contacts: [], error: regError.message };
 
+  // Real outreach (a call or text actually sent) counts as "contacted" the
+  // same as clicking the dialer's Connected/No-answer buttons does -
+  // otherwise texting someone straight from the dialer's new compose box,
+  // or a call that Quo's own webhook later logs, never clears them from
+  // this queue since dialer_contacted_at only gets set by that one button.
+  const { data: outreach, error: outreachError } = await supabase
+    .from("activities")
+    .select("contact_id, occurred_at")
+    .in("type", ["call", "text"])
+    .eq("direction", "outbound")
+    .in(
+      "contact_id",
+      candidates.map((c) => c.id),
+    )
+    .order("occurred_at", { ascending: false });
+  if (outreachError) return { contacts: [], error: outreachError.message };
+
+  const latestOutreachByContact = new Map<string, string>();
+  for (const row of outreach ?? []) {
+    if (!latestOutreachByContact.has(row.contact_id)) latestOutreachByContact.set(row.contact_id, row.occurred_at);
+  }
+
   const latestRegByContact = new Map<string, string>();
   const latestEventNameByContact = new Map<string, string | null>();
   const latestEventAccountByContact = new Map<string, string | null>();
@@ -101,8 +123,14 @@ export async function listNewRegistrationsQueue(): Promise<{ contacts: DialerCon
       if (!latestReg) return false;
       // "contacted" only counts if it happened at or after their most
       // recent registration - an old touch from before they registered
-      // again doesn't cover the new registration.
-      if (c.dialer_contacted_at && new Date(c.dialer_contacted_at) >= new Date(latestReg)) return false;
+      // again doesn't cover the new registration. Either signal counts:
+      // the manual Connected/No-answer button (dialer_contacted_at) or a
+      // real text/call actually logged since then.
+      const regTime = new Date(latestReg).getTime();
+      const contactedAt = c.dialer_contacted_at ? new Date(c.dialer_contacted_at).getTime() : null;
+      const outreachAt = latestOutreachByContact.has(c.id) ? new Date(latestOutreachByContact.get(c.id)!).getTime() : null;
+      if (contactedAt !== null && contactedAt >= regTime) return false;
+      if (outreachAt !== null && outreachAt >= regTime) return false;
       return true;
     })
     .map(
