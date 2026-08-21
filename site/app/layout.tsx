@@ -21,16 +21,16 @@ const fraunces = Fraunces({
 export const metadata: Metadata = {
   title: {
     template: "%s | Caitlyn Verdugo",
-    default: "Caitlyn Verdugo — House Hacking, Co-Living & Women's REI in Atlanta",
+    default: "Caitlyn Verdugo — A Realtor Who Thinks Like an Investor",
   },
   description:
-    "Hub for Caitlyn Verdugo's Atlanta real estate community — House Hacking ATL, CoLivingCait, and Atlanta Women Investors.",
+    "Atlanta Realtor specializing in coliving, house hacking, and buy/sell for investors — 7 years experience, 5.0 on Zillow.",
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#cc4a37",
+  themeColor: "#1C1815",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

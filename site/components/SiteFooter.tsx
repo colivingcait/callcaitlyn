@@ -9,10 +9,23 @@ export function SiteFooter() {
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <div className="grid gap-8 sm:grid-cols-3">
           <div>
-            <p className="font-serif text-lg font-semibold text-neutral-900">Caitlyn Verdugo</p>
-            <p className="mt-2 max-w-xs text-sm text-neutral-500">
-              Real estate, house hacking, and community-building in Atlanta.
+            <p className="font-serif text-lg font-semibold text-neutral-900">
+              Caitlyn <span className="italic text-brand-500">Verdugo</span>
             </p>
+            <p className="mt-2 max-w-xs text-sm text-neutral-500">
+              A Realtor who thinks like an investor — coliving, house hacking, and buy/sell across the Atlanta metro.
+            </p>
+          </div>
+
+          <div>
+            <p className="text-sm font-semibold text-neutral-900">Site</p>
+            <ul className="mt-3 space-y-2 text-sm text-neutral-500">
+              <li><Link href="/about" className="hover:text-neutral-900">About</Link></li>
+              <li><Link href="/coliving" className="hover:text-neutral-900">Coliving</Link></li>
+              <li><Link href="/house-hacking" className="hover:text-neutral-900">House Hacking</Link></li>
+              <li><Link href="/work-with-me" className="hover:text-neutral-900">Work With Me</Link></li>
+              <li><Link href="/contact" className="hover:text-neutral-900">Contact</Link></li>
+            </ul>
           </div>
 
           <div>
@@ -25,15 +38,6 @@ export function SiteFooter() {
                   </a>
                 </li>
               ))}
-            </ul>
-          </div>
-
-          <div>
-            <p className="text-sm font-semibold text-neutral-900">Site</p>
-            <ul className="mt-3 space-y-2 text-sm text-neutral-500">
-              <li><Link href="/about" className="hover:text-neutral-900">About</Link></li>
-              <li><Link href="/events" className="hover:text-neutral-900">Events</Link></li>
-              <li><Link href="/contact" className="hover:text-neutral-900">Contact</Link></li>
             </ul>
           </div>
         </div>

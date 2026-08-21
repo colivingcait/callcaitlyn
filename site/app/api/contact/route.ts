@@ -1,11 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { Resend } from "resend";
 
-const INTEREST_LABELS: Record<string, string> = {
-  house_hacking: "House hacking",
-  coliving: "Coliving / room rental",
-  womens_investors: "Atlanta Women Investors",
-  other: "Something else",
+const SUBJECTS: Record<string, string> = {
+  general: "New contact form message",
+  buy: "New buyer inquiry",
+  sell: "New seller inquiry",
 };
 
 export async function POST(request: NextRequest) {
@@ -25,15 +24,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  const name = typeof body.name === "string" ? body.name.trim() : "";
   const email = typeof body.email === "string" ? body.email.trim() : "";
-  const phone = typeof body.phone === "string" ? body.phone.trim() : "";
-  const interest = typeof body.interest === "string" ? body.interest : "other";
-  const message = typeof body.message === "string" ? body.message.trim() : "";
+  const formType = typeof body.formType === "string" && body.formType in SUBJECTS ? body.formType : "general";
+  const fields = Array.isArray(body.fields)
+    ? (body.fields as Array<{ label?: unknown; value?: unknown }>)
+        .map((f) => ({ label: typeof f.label === "string" ? f.label : "", value: typeof f.value === "string" ? f.value.trim() : "" }))
+        .filter((f) => f.label && f.value)
+    : [];
 
-  if (!name || !email) {
-    return NextResponse.json({ error: "Name and email are required" }, { status: 400 });
+  if (!email) {
+    return NextResponse.json({ error: "Email is required" }, { status: 400 });
   }
+
+  const nameField = fields.find((f) => /name/i.test(f.label));
 
   const resend = new Resend(apiKey);
 
@@ -41,17 +44,8 @@ export async function POST(request: NextRequest) {
     from: fromEmail,
     to: toEmail,
     replyTo: email,
-    subject: `New contact form message from ${name}`,
-    text: [
-      `Name: ${name}`,
-      `Email: ${email}`,
-      phone && `Phone: ${phone}`,
-      `Interested in: ${INTEREST_LABELS[interest] ?? interest}`,
-      "",
-      message || "(no message)",
-    ]
-      .filter(Boolean)
-      .join("\n"),
+    subject: nameField ? `${SUBJECTS[formType]} from ${nameField.value}` : SUBJECTS[formType],
+    text: fields.map((f) => `${f.label}: ${f.value}`).join("\n"),
   });
 
   if (error) {

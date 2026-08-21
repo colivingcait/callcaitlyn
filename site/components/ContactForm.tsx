@@ -5,6 +5,13 @@ import { Button, Input, Label, Select, Textarea } from "@/components/ui";
 
 type Status = "idle" | "sending" | "sent" | "error";
 
+const INTEREST_LABELS: Record<string, string> = {
+  house_hacking: "House hacking",
+  coliving: "Coliving / room rental",
+  buy_sell: "Buying or selling",
+  other: "Something else",
+};
+
 export function ContactForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -23,7 +30,17 @@ export function ContactForm() {
       const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, phone, interest, message }),
+        body: JSON.stringify({
+          formType: "general",
+          email,
+          fields: [
+            { label: "Name", value: name },
+            { label: "Email", value: email },
+            { label: "Phone", value: phone },
+            { label: "Interested in", value: INTEREST_LABELS[interest] ?? interest },
+            { label: "Message", value: message || "(no message)" },
+          ],
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Something went wrong");
@@ -81,7 +98,7 @@ export function ContactForm() {
         <Select id="interest" value={interest} onChange={(e) => setInterest(e.target.value)}>
           <option value="house_hacking">House hacking (buying my first property)</option>
           <option value="coliving">Coliving / room rental</option>
-          <option value="womens_investors">Atlanta Women Investors</option>
+          <option value="buy_sell">Buying or selling</option>
           <option value="other">Something else</option>
         </Select>
       </div>
@@ -99,8 +116,8 @@ export function ContactForm() {
 
       {status === "error" && <p className="text-sm text-red-600">{errorMessage}</p>}
 
-      <Button type="submit" size="lg" className="w-full" disabled={status === "sending"}>
-        {status === "sending" ? "Sending…" : "Send message"}
+      <Button type="submit" size="lg" variant="dark" className="w-full" disabled={status === "sending"}>
+        {status === "sending" ? "Sending…" : "Send Message"}
       </Button>
     </form>
   );

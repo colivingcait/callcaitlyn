@@ -1,80 +1,128 @@
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowRight, Home, Users2, Handshake, Gem, Sparkles, DollarSign, CheckCircle2 } from "lucide-react";
 import { Card } from "@/components/ui";
-import { INITIATIVES } from "@/lib/initiatives";
+import { Eyebrow, StatPill, TestimonialCard, IconFeatureRow, IconFeature, DarkCta } from "@/components/blocks";
+import { STATS, TESTIMONIALS, DIFFERENTIATORS } from "@/lib/content";
+
+const DIFFERENTIATOR_ICONS = [Gem, Home, Sparkles, DollarSign, CheckCircle2];
+
+const HELP_CARDS = [
+  {
+    icon: Users2,
+    title: "Coliving",
+    body: "A growing portfolio of coliving homes across metro Atlanta — sourced, renovated, furnished, and operated in-house.",
+    href: "/coliving",
+  },
+  {
+    icon: Home,
+    title: "House Hacking",
+    body: "Buy a property, live in part of it, and let the rent from the rest cover your mortgage. My specialty.",
+    href: "/house-hacking",
+  },
+  {
+    icon: Handshake,
+    title: "Work With Me",
+    body: "Buying, selling, or investing — a Realtor who evaluates every property like it's going in her own portfolio.",
+    href: "/work-with-me",
+  },
+];
 
 export default function HomePage() {
   return (
     <>
-      <section className="mx-auto max-w-6xl px-4 pb-16 pt-14 sm:px-6 sm:pt-20">
+      <section className="mx-auto max-w-6xl px-4 pb-16 pt-16 sm:px-6 sm:pt-20">
         <div className="max-w-2xl">
-          <p className="text-sm font-medium uppercase tracking-wide text-brand-600">Atlanta, GA</p>
-          <h1 className="mt-3 font-serif text-4xl font-semibold leading-tight text-neutral-900 sm:text-5xl">
-            Hi, I&apos;m Caitlyn Verdugo.
+          <Eyebrow>Atlanta Real Estate</Eyebrow>
+          <h1 className="mt-4 font-serif text-4xl font-semibold leading-tight text-neutral-900 sm:text-5xl">
+            A Realtor who thinks like <span className="italic text-brand-500">an investor.</span>
           </h1>
           <p className="mt-5 text-lg text-neutral-600">
-            I help people buy their first house hack, build a coliving portfolio, and find the community
-            (especially other women investors) to do it with. Here&apos;s where all of that lives.
+            I&apos;m Caitlyn — I help people buy their first house hack, build a coliving portfolio, and buy or
+            sell with someone who&apos;s done all three herself.
           </p>
+          <div className="mt-6 flex flex-wrap gap-2">
+            {STATS.map((stat) => (
+              <StatPill key={stat}>{stat}</StatPill>
+            ))}
+          </div>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href="/contact"
-              className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-brand-700"
+              className="inline-flex items-center gap-2 rounded-md bg-ink px-5 py-3 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-neutral-800"
             >
-              Get in touch
-              <ArrowRight size={16} />
+              Schedule a Call
+              <ArrowRight size={15} />
             </Link>
             <Link
-              href="/about"
-              className="inline-flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-5 py-3 text-sm font-medium text-neutral-800 transition hover:bg-neutral-50"
+              href="/work-with-me"
+              className="inline-flex items-center gap-2 rounded-md border border-ink px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink transition hover:bg-ink hover:text-white"
             >
-              More about me
+              Work With Me
             </Link>
           </div>
         </div>
       </section>
 
-      <section className="border-y border-neutral-200/70 bg-white">
+      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+        <Eyebrow>How I Can Help</Eyebrow>
+        <h2 className="mt-3 font-serif text-2xl font-semibold text-neutral-900 sm:text-3xl">
+          Three ways to work with me, <span className="italic text-brand-500">one investor mindset.</span>
+        </h2>
+        <div className="mt-8 grid gap-5 sm:grid-cols-3">
+          {HELP_CARDS.map(({ icon: Icon, title, body, href }) => (
+            <Card key={title} className="flex flex-col p-6">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+                <Icon size={22} />
+              </div>
+              <h3 className="mt-4 font-serif text-lg font-semibold text-neutral-900">{title}</h3>
+              <p className="mt-2 flex-1 text-sm text-neutral-600">{body}</p>
+              <Link href={href} className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:underline">
+                Learn more
+                <ArrowRight size={15} />
+              </Link>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <section className="border-y border-neutral-200/70 bg-cream">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-          <h2 className="font-serif text-2xl font-semibold text-neutral-900 sm:text-3xl">What I&apos;m building</h2>
-          <p className="mt-2 max-w-2xl text-neutral-600">
-            Three things, all under one roof — pick the one that fits where you&apos;re at.
-          </p>
-          <div className="mt-8 grid gap-5 sm:grid-cols-3">
-            {INITIATIVES.map((item) => (
-              <Card key={item.url} className="flex flex-col p-6">
-                <h3 className="font-serif text-lg font-semibold text-neutral-900">{item.name}</h3>
-                <p className="mt-2 flex-1 text-sm text-neutral-600">{item.tagline}</p>
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:underline"
-                >
-                  Visit site
-                  <ArrowUpRight size={15} />
-                </a>
-              </Card>
-            ))}
+          <Eyebrow>Why Work With Me</Eyebrow>
+          <h2 className="mt-3 font-serif text-2xl font-semibold text-neutral-900 sm:text-3xl">
+            You&apos;re not working with a traditional Realtor. <span className="italic text-brand-500">That changes everything.</span>
+          </h2>
+          <div className="mt-8">
+            <IconFeatureRow>
+              {DIFFERENTIATORS.map((item, i) => (
+                <IconFeature key={item.title} icon={DIFFERENTIATOR_ICONS[i]} title={item.title}>
+                  {item.body}
+                </IconFeature>
+              ))}
+            </IconFeatureRow>
           </div>
         </div>
       </section>
 
-      <section className="border-t border-neutral-200/70 bg-brand-600">
-        <div className="mx-auto max-w-6xl px-4 py-14 text-center sm:px-6">
-          <h2 className="font-serif text-2xl font-semibold text-white sm:text-3xl">
-            Not sure which one fits you yet?
-          </h2>
-          <p className="mt-3 text-brand-50">Tell me what you&apos;re working on and I&apos;ll point you the right way.</p>
-          <Link
-            href="/contact"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-medium text-brand-700 transition hover:bg-brand-50"
-          >
-            Get in touch
-            <ArrowRight size={16} />
-          </Link>
+      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+        <Eyebrow align="center">What Clients Are Saying</Eyebrow>
+        <h2 className="mt-3 text-center font-serif text-2xl font-semibold text-neutral-900 sm:text-3xl">
+          Real reviews from <span className="italic text-brand-500">real clients.</span>
+        </h2>
+        <div className="mt-8 grid gap-5 sm:grid-cols-2">
+          {TESTIMONIALS.slice(0, 2).map((t) => (
+            <TestimonialCard key={t.quote} quote={t.quote} source={t.source} />
+          ))}
         </div>
       </section>
+
+      <DarkCta
+        eyebrow="Ready?"
+        heading="Your next move starts with"
+        emphasis="one conversation."
+        subtext="Whether it's coliving, house hacking, or a straight buy or sell — let's talk it through."
+        ctaLabel="Schedule a Call"
+        ctaHref="/contact"
+      />
     </>
   );
 }
