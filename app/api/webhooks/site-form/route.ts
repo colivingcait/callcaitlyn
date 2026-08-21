@@ -107,6 +107,12 @@ export async function POST(request: NextRequest) {
   const phone = typeof body.phone === "string" && body.phone.trim() ? body.phone.trim() : null;
   const message = typeof body.message === "string" ? body.message.trim() : null;
   const fields = body.fields && typeof body.fields === "object" ? (body.fields as Record<string, unknown>) : null;
+  // Extra tags from the caller, on top of whatever FORM_CONFIGS sets for
+  // this site+form. Only ever reached server-to-server (a site's own API
+  // route, not a browser) - lets e.g. CoLivingCait's richer per-topic
+  // ConvertKit-style taxonomy map straight through without a FORM_CONFIGS
+  // entry per topic.
+  const extraTags = Array.isArray(body.tags) ? body.tags.filter((t): t is string => typeof t === "string" && t.trim().length > 0) : [];
 
   const admin = createAdminClient();
 
@@ -132,7 +138,8 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    for (const tag of config?.tags ?? []) {
+    const tags = new Set([...(config?.tags ?? []), ...extraTags]);
+    for (const tag of tags) {
       await addTagByName(admin, OWNER_ID, contact.id, tag);
     }
 
