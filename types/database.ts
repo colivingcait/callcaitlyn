@@ -45,6 +45,7 @@ export type ActivitySource =
   | "eventbrite"
   | "jotform"
   | "house_hacking_site"
+  | "site_form"
   | "ai"
   | "system";
 
