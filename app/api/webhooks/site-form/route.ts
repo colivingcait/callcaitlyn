@@ -11,12 +11,15 @@ const OWNER_ID = process.env.CRM_OWNER_USER_ID;
 // House Hacking ATL (that site has its own dedicated route, already live -
 // see app/api/webhooks/house-hacking-site/route.ts). Adding a new form here
 // means adding one FORM_CONFIGS entry, not a new route file.
-type SiteKey = "atlanta_women_investors" | "womens_coliving_summit" | "colivingcait";
+type SiteKey = "atlanta_women_investors" | "womens_coliving_summit" | "colivingcait" | "callcaitlyn";
 
 const SITE_CONFIGS: Record<SiteKey, { defaultOrigins: string[]; envVar: string }> = {
   atlanta_women_investors: { defaultOrigins: ["https://atlantawomeninvestors.com", "https://www.atlantawomeninvestors.com"], envVar: "AWI_SITE_ORIGINS" },
   womens_coliving_summit: { defaultOrigins: ["https://womenscolivingsummit.com", "https://www.womenscolivingsummit.com"], envVar: "WCS_SITE_ORIGINS" },
   colivingcait: { defaultOrigins: ["https://colivingcait.com", "https://www.colivingcait.com"], envVar: "COLIVINGCAIT_SITE_ORIGINS" },
+  // The public hub site (callcaitlyn.com / www) - a separate Vercel project
+  // and branch (claude/public-site-ybextf) from this CRM.
+  callcaitlyn: { defaultOrigins: ["https://callcaitlyn.com", "https://www.callcaitlyn.com"], envVar: "CALLCAITLYN_SITE_ORIGINS" },
 };
 
 // Keyed by "site:form" so the same form name (e.g. "newsletter") can carry a
@@ -38,6 +41,9 @@ const FORM_CONFIGS: Record<string, { leadSource: string; tags: string[]; contact
   "colivingcait:lead_magnet": { leadSource: "CoLivingCait (Lead Magnet)", tags: [] },
   "colivingcait:calculator": { leadSource: "CoLivingCait (Calculator)", tags: [] },
   "colivingcait:newsletter": { leadSource: "CoLivingCait (Newsletter)", tags: [] },
+
+  "callcaitlyn:contact": { leadSource: "CallCaitlyn.com (Contact Form)", tags: [] },
+  "callcaitlyn:work_with_me": { leadSource: "CallCaitlyn.com (Work With Me)", tags: [] },
 };
 
 function allowedOrigins(site: SiteKey): string[] {
