@@ -15,7 +15,10 @@ type LeadPayload = {
   fields: Record<string, string>;
 };
 
-function useLeadSubmit(formType: "buy" | "sell") {
+// "work_with_me" is the CRM's pre-labeled form key for this page - the
+// buy/sell distinction rides along as a field instead of a separate form
+// key, so both inquiries get the nicer label instead of a generic one.
+function useLeadSubmit(inquiryType: "Buy" | "Sell") {
   const [status, setStatus] = useState<Status>("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -26,7 +29,12 @@ function useLeadSubmit(formType: "buy" | "sell") {
       const res = await fetch(CRM_SITE_FORM_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ site: CRM_SITE_KEY, form: formType, ...payload }),
+        body: JSON.stringify({
+          site: CRM_SITE_KEY,
+          form: "work_with_me",
+          ...payload,
+          fields: { "Inquiry type": inquiryType, ...payload.fields },
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Something went wrong");
@@ -57,7 +65,7 @@ export function BuyForm() {
   const [lookingFor, setLookingFor] = useState("");
   const [priceRange, setPriceRange] = useState("");
   const [notes, setNotes] = useState("");
-  const { status, errorMessage, submit } = useLeadSubmit("buy");
+  const { status, errorMessage, submit } = useLeadSubmit("Buy");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -146,7 +154,7 @@ export function SellForm() {
   const [address, setAddress] = useState("");
   const [considering, setConsidering] = useState("");
   const [notes, setNotes] = useState("");
-  const { status, errorMessage, submit } = useLeadSubmit("sell");
+  const { status, errorMessage, submit } = useLeadSubmit("Sell");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

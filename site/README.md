@@ -41,11 +41,12 @@ logs the activity, and pushes a notification — see the CRM repo's
 `claude/custom-crm-real-estate-81k3fp`) for the receiving side.
 
 `lib/crm.ts` holds the endpoint URL and this site's `site: "callcaitlyn"`
-key. **That key needs to be registered in the CRM's `SITE_CONFIGS` with
-this site's origin (`https://callcaitlyn.com`, `https://www.callcaitlyn.com`)
-allowed for CORS before submissions will actually succeed** — coordinate
-with whoever is driving the CRM session/branch if forms start failing with
-a CORS error in the browser console.
+key, registered in the CRM's `SITE_CONFIGS` with both `callcaitlyn.com` and
+`www.callcaitlyn.com` allowed for CORS. The general contact form posts
+`form: "contact"`; the two Work With Me forms both post `form:
+"work_with_me"` (the CRM's pre-labeled key for that page), with an
+`"Inquiry type": "Buy" | "Sell"` field carrying the distinction instead of
+a separate form key per inquiry type.
 
 ## Content notes
 
