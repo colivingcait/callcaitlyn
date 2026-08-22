@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui";
+import { CRM_SITE_FORM_URL, CRM_SITE_KEY } from "@/lib/crm";
 
 type Status = "idle" | "sending" | "sent" | "error";
 
@@ -27,27 +28,25 @@ export function ContactForm() {
     setErrorMessage("");
 
     try {
-      const res = await fetch("/api/contact", {
+      const res = await fetch(CRM_SITE_FORM_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          formType: "general",
+          site: CRM_SITE_KEY,
+          form: "contact",
           email,
-          fields: [
-            { label: "Name", value: name },
-            { label: "Email", value: email },
-            { label: "Phone", value: phone },
-            { label: "Interested in", value: INTEREST_LABELS[interest] ?? interest },
-            { label: "Message", value: message || "(no message)" },
-          ],
+          name,
+          phone,
+          message,
+          fields: { interest: INTEREST_LABELS[interest] ?? interest },
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Something went wrong");
       setStatus("sent");
-    } catch (err) {
+    } catch {
       setStatus("error");
-      setErrorMessage(err instanceof Error ? err.message : "Something went wrong");
+      setErrorMessage("Couldn't send that — please try again, or email me directly.");
     }
   }
 

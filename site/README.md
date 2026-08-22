@@ -17,30 +17,35 @@ Me** (buy/sell services, lead forms, service areas), **Contact**.
 ```
 cd site
 npm install
-cp .env.example .env.local   # fill in Resend keys, see below
 npm run dev
 ```
 
+No environment variables needed — this app is fully static (no API routes
+of its own, no database, no secrets).
+
 ## Contact forms
 
-Three forms all POST to `/api/contact`, which sends an email via
-[Resend](https://resend.com) rather than writing to a database — this site
-has no database of its own, unlike the CRM:
+All three forms (`/contact`'s general form, and `/work-with-me`'s "I'm
+Looking to Buy" / "I'm Thinking About Selling" forms) POST directly,
+client-side, to the CRM's shared lead endpoint:
 
-- The general form on `/contact`
-- The "I'm Looking to Buy" / "I'm Thinking About Selling" forms on
-  `/work-with-me`
+```
+POST https://crm.callcaitlyn.com/api/webhooks/site-form
+```
 
-Setup:
+This is a cross-origin request (this site is `callcaitlyn.com`, the CRM is
+`crm.callcaitlyn.com` — a separate Vercel project) rather than a
+same-project API call. The CRM finds-or-creates the contact, tags them,
+logs the activity, and pushes a notification — see the CRM repo's
+`app/api/webhooks/site-form/route.ts` (branch
+`claude/custom-crm-real-estate-81k3fp`) for the receiving side.
 
-1. Create a Resend account and API key.
-2. Verify a sending domain (e.g. `callcaitlyn.com`) under **Domains** — until
-   you do, you can only send from `onboarding@resend.dev` to the email
-   address on your own Resend account, which is fine for local testing but
-   not for real visitor submissions.
-3. Set `RESEND_API_KEY`, `CONTACT_TO_EMAIL`, and `CONTACT_FROM_EMAIL` in
-   Vercel (and `.env.local` for local dev). Without these, submissions fail
-   with a clear error rather than silently disappearing.
+`lib/crm.ts` holds the endpoint URL and this site's `site: "callcaitlyn"`
+key. **That key needs to be registered in the CRM's `SITE_CONFIGS` with
+this site's origin (`https://callcaitlyn.com`, `https://www.callcaitlyn.com`)
+allowed for CORS before submissions will actually succeed** — coordinate
+with whoever is driving the CRM session/branch if forms start failing with
+a CORS error in the browser console.
 
 ## Content notes
 

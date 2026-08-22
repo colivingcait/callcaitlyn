@@ -2,28 +2,38 @@
 
 import { useState } from "react";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui";
+import { CRM_SITE_FORM_URL, CRM_SITE_KEY } from "@/lib/crm";
 
 type Status = "idle" | "sending" | "sent" | "error";
+
+type LeadPayload = {
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  message: string;
+  fields: Record<string, string>;
+};
 
 function useLeadSubmit(formType: "buy" | "sell") {
   const [status, setStatus] = useState<Status>("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
-  async function submit(email: string, fields: { label: string; value: string }[]) {
+  async function submit(payload: LeadPayload) {
     setStatus("sending");
     setErrorMessage("");
     try {
-      const res = await fetch("/api/contact", {
+      const res = await fetch(CRM_SITE_FORM_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ formType, email, fields }),
+        body: JSON.stringify({ site: CRM_SITE_KEY, form: formType, ...payload }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Something went wrong");
       setStatus("sent");
-    } catch (err) {
+    } catch {
       setStatus("error");
-      setErrorMessage(err instanceof Error ? err.message : "Something went wrong");
+      setErrorMessage("Couldn't send that — please try again, or email me directly.");
     }
   }
 
@@ -51,15 +61,14 @@ export function BuyForm() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    submit(email, [
-      { label: "First name", value: firstName },
-      { label: "Last name", value: lastName },
-      { label: "Email", value: email },
-      { label: "Phone", value: phone },
-      { label: "What are you looking for?", value: lookingFor },
-      { label: "Price range", value: priceRange },
-      { label: "Anything else?", value: notes },
-    ]);
+    submit({
+      email,
+      firstName,
+      lastName,
+      phone,
+      message: notes,
+      fields: { "Looking for": lookingFor, "Price range": priceRange },
+    });
   }
 
   if (status === "sent") {
@@ -141,15 +150,14 @@ export function SellForm() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    submit(email, [
-      { label: "First name", value: firstName },
-      { label: "Last name", value: lastName },
-      { label: "Email", value: email },
-      { label: "Phone", value: phone },
-      { label: "Property address", value: address },
-      { label: "What are you considering?", value: considering },
-      { label: "Anything else?", value: notes },
-    ]);
+    submit({
+      email,
+      firstName,
+      lastName,
+      phone,
+      message: notes,
+      fields: { "Property address": address, "Considering": considering },
+    });
   }
 
   if (status === "sent") {
