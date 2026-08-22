@@ -1,31 +1,32 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import { Eyebrow, StatPill } from "@/components/blocks";
+import { LinkButton } from "@/components/ui";
 import { STATS } from "@/lib/content";
 
 export const metadata: Metadata = { title: "About" };
 
 export default function AboutPage() {
   return (
-    <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
-      <Eyebrow>About</Eyebrow>
-      <h1 className="mt-4 font-serif text-3xl font-semibold text-neutral-900 sm:text-4xl">
-        From one house hack to a <span className="italic text-brand-500">whole portfolio.</span>
-      </h1>
+    <section className="mx-auto max-w-3xl px-8 py-20 lg:px-[60px] lg:py-[120px]">
+      <div className="reveal">
+        <Eyebrow>About</Eyebrow>
+        <h1 className="mt-4 text-h2-lg font-medium text-charcoal">
+          From one house hack to a <em>whole portfolio.</em>
+        </h1>
 
-      <div className="mt-6 flex flex-wrap gap-2">
-        {STATS.map((stat) => (
-          <StatPill key={stat}>{stat}</StatPill>
-        ))}
+        <div className="mt-6 flex flex-wrap gap-2">
+          {STATS.map((stat) => (
+            <StatPill key={stat}>{stat}</StatPill>
+          ))}
+        </div>
       </div>
 
-      <div className="mt-8 flex h-40 w-40 items-center justify-center rounded-2xl bg-cream text-4xl font-semibold text-brand-600">
+      <div className="reveal reveal-d1 mt-10 flex h-40 w-40 items-center justify-center border border-brand bg-blush text-4xl font-medium text-gold">
         CV
         <span className="sr-only">Placeholder — replace with a real headshot</span>
       </div>
 
-      <div className="mt-8 space-y-5 text-neutral-700">
+      <div className="reveal reveal-d2 mt-10 space-y-5 text-warmgray">
         <p>
           I moved to Atlanta, got my real estate license, and started investing with a house hack of my
           own — converting a basement into a studio apartment to help cover the mortgage. That one deal
@@ -42,18 +43,14 @@ export default function AboutPage() {
           need a Realtor who actually understands the investor side of a deal, that&apos;s exactly what I&apos;m here
           for.
         </p>
-        <p className="text-sm text-neutral-400">
+        <p className="text-sm text-warmgray-light">
           (Placeholder bio — swap in more of your own story, credentials, and photos here.)
         </p>
       </div>
 
-      <Link
-        href="/contact"
-        className="mt-10 inline-flex items-center gap-2 rounded-md bg-ink px-5 py-3 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-neutral-800"
-      >
+      <LinkButton href="/contact" variant="primary" size="lg" className="reveal reveal-d3 mt-10">
         Let&apos;s Talk
-        <ArrowRight size={15} />
-      </Link>
+      </LinkButton>
     </section>
   );
 }

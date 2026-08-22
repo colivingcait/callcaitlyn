@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ArrowRight, ArrowUpRight, Home, Users, Calculator } from "lucide-react";
-import { Card } from "@/components/ui";
-import { Eyebrow } from "@/components/blocks";
+import { Card, LinkButton, TextLink } from "@/components/ui";
+import { Eyebrow, Glyph } from "@/components/blocks";
 
 export const metadata: Metadata = {
   title: "House Hacking",
@@ -11,17 +9,17 @@ export const metadata: Metadata = {
 
 const STEPS = [
   {
-    icon: Home,
+    glyph: "⌂",
     title: "Buy a property with room to spare",
     body: "A duplex/triplex/fourplex, or a single-family home with a basement, ADU, or extra bedrooms.",
   },
   {
-    icon: Users,
+    glyph: "⊕",
     title: "Rent out what you're not using",
     body: "Long-term tenants, roommates, or a short-term rental — whatever fits the property and your comfort level.",
   },
   {
-    icon: Calculator,
+    glyph: "$",
     title: "Let that rent offset your mortgage",
     body: "Many house hackers cut their housing cost to a fraction of market rent — some cover it entirely.",
   },
@@ -30,12 +28,12 @@ const STEPS = [
 export default function HouseHackingPage() {
   return (
     <>
-      <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
+      <section className="reveal mx-auto max-w-3xl px-8 py-20 lg:px-[60px] lg:py-[120px]">
         <Eyebrow>House Hacking</Eyebrow>
-        <h1 className="mt-4 font-serif text-3xl font-semibold text-neutral-900 sm:text-4xl">
-          Buy a home. Let it <span className="italic text-brand-500">pay for itself.</span>
+        <h1 className="mt-4 text-h2-lg font-medium text-charcoal">
+          Buy a home. Let it <em>pay for itself.</em>
         </h1>
-        <p className="mt-5 text-lg text-neutral-600">
+        <p className="mt-5 text-lg text-warmgray">
           House hacking is buying a property, living in part of it, and renting out the rest — using
           owner-occupant financing (often with a much smaller down payment than a straight investment
           purchase) to get into your first property and your first rental at the same time. It&apos;s the
@@ -43,47 +41,37 @@ export default function HouseHackingPage() {
         </p>
       </section>
 
-      <section className="border-y border-neutral-200/70 bg-cream">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-          <h2 className="font-serif text-2xl font-semibold text-neutral-900">How it works</h2>
-          <div className="mt-8 grid gap-5 sm:grid-cols-3">
-            {STEPS.map(({ icon: Icon, title, body }, i) => (
-              <Card key={title} className="p-6">
-                <div className="text-xs font-semibold uppercase tracking-wide text-brand-600">Step {i + 1}</div>
-                <Icon size={22} className="mt-3 text-brand-500" />
-                <h3 className="mt-3 font-serif text-lg font-semibold text-neutral-900">{title}</h3>
-                <p className="mt-2 text-sm text-neutral-600">{body}</p>
+      <section className="border-y border-soft bg-blush">
+        <div className="mx-auto max-w-page px-8 py-20 lg:px-[60px] lg:py-[120px]">
+          <h2 className="reveal text-h2 font-medium text-charcoal">How it works</h2>
+          <div className="reveal mt-10 grid gap-6 sm:grid-cols-3">
+            {STEPS.map(({ glyph, title, body }, i) => (
+              <Card key={title} tone="white" className="p-8">
+                <div className="eyebrow">Step {i + 1}</div>
+                <Glyph className="mt-3 block text-2xl">{glyph}</Glyph>
+                <h3 className="mt-3 font-heading text-h3 font-medium text-charcoal">{title}</h3>
+                <p className="mt-2 text-sm text-warmgray">{body}</p>
               </Card>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
-        <h2 className="font-serif text-2xl font-semibold text-neutral-900">Why work with me on this</h2>
-        <p className="mt-4 text-neutral-600">
+      <section className="reveal mx-auto max-w-3xl px-8 py-20 lg:px-[60px] lg:py-[120px]">
+        <h2 className="text-h2 font-medium text-charcoal">Why work with me on this</h2>
+        <p className="mt-4 text-warmgray">
           This isn&apos;t a side note to my business — it&apos;s the deal type I spend the most time thinking about.
           I maintain a separate resource site with guides and listing alerts specifically for house
           hackers, and I run in-person meetups on it here in Atlanta.
         </p>
-        <a
-          href="https://househackingatl.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-4 inline-flex items-center gap-1.5 font-medium text-brand-600 hover:underline"
-        >
+        <TextLink href="https://househackingatl.com" target="_blank" rel="noopener noreferrer" className="mt-4">
           Browse guides at House Hacking ATL
-          <ArrowUpRight size={16} />
-        </a>
+        </TextLink>
 
         <div className="mt-10">
-          <Link
-            href="/work-with-me"
-            className="inline-flex items-center gap-2 rounded-md bg-ink px-5 py-3 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-neutral-800"
-          >
+          <LinkButton href="/work-with-me" variant="primary" size="lg">
             Tell Me About Your Budget
-            <ArrowRight size={15} />
-          </Link>
+          </LinkButton>
         </div>
       </section>
     </>

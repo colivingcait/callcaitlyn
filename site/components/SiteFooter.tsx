@@ -5,35 +5,35 @@ export function SiteFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-neutral-200/70 bg-white">
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        <div className="grid gap-8 sm:grid-cols-3">
+    <footer className="border-t border-soft bg-white">
+      <div className="mx-auto max-w-page px-8 py-16 lg:px-[60px]">
+        <div className="grid gap-10 sm:grid-cols-3">
           <div>
-            <p className="font-serif text-lg font-semibold text-neutral-900">
-              Caitlyn <span className="italic text-brand-500">Verdugo</span>
+            <p className="font-heading text-lg font-medium text-charcoal">
+              Caitlyn <em>Verdugo</em>
             </p>
-            <p className="mt-2 max-w-xs text-sm text-neutral-500">
+            <p className="mt-2 max-w-xs font-sans text-sm text-warmgray">
               A Realtor who thinks like an investor — coliving, house hacking, and buy/sell across the Atlanta metro.
             </p>
           </div>
 
           <div>
-            <p className="text-sm font-semibold text-neutral-900">Site</p>
-            <ul className="mt-3 space-y-2 text-sm text-neutral-500">
-              <li><Link href="/about" className="hover:text-neutral-900">About</Link></li>
-              <li><Link href="/coliving" className="hover:text-neutral-900">Coliving</Link></li>
-              <li><Link href="/house-hacking" className="hover:text-neutral-900">House Hacking</Link></li>
-              <li><Link href="/work-with-me" className="hover:text-neutral-900">Work With Me</Link></li>
-              <li><Link href="/contact" className="hover:text-neutral-900">Contact</Link></li>
+            <p className="font-sans text-xs font-medium uppercase tracking-wide text-charcoal">Site</p>
+            <ul className="mt-4 space-y-2 font-sans text-sm text-warmgray">
+              <li><Link href="/about" className="hover:text-gold">About</Link></li>
+              <li><Link href="/coliving" className="hover:text-gold">Coliving</Link></li>
+              <li><Link href="/house-hacking" className="hover:text-gold">House Hacking</Link></li>
+              <li><Link href="/work-with-me" className="hover:text-gold">Work With Me</Link></li>
+              <li><Link href="/contact" className="hover:text-gold">Contact</Link></li>
             </ul>
           </div>
 
           <div>
-            <p className="text-sm font-semibold text-neutral-900">My communities</p>
-            <ul className="mt-3 space-y-2 text-sm text-neutral-500">
+            <p className="font-sans text-xs font-medium uppercase tracking-wide text-charcoal">My communities</p>
+            <ul className="mt-4 space-y-2 font-sans text-sm text-warmgray">
               {INITIATIVES.map((item) => (
                 <li key={item.url}>
-                  <a href={item.url} target="_blank" rel="noopener noreferrer" className="hover:text-neutral-900">
+                  <a href={item.url} target="_blank" rel="noopener noreferrer" className="hover:text-gold">
                     {item.name}
                   </a>
                 </li>
@@ -42,7 +42,7 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <div className="mt-10 border-t border-neutral-100 pt-6 text-xs text-neutral-400">
+        <div className="mt-12 border-t border-soft pt-6 font-sans text-xs text-warmgray-light">
           <p>&copy; {year} Caitlyn Verdugo. All rights reserved.</p>
         </div>
       </div>

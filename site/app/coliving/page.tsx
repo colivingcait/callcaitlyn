@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ArrowRight, ArrowUpRight, Users2, Home } from "lucide-react";
-import { Card } from "@/components/ui";
-import { Eyebrow } from "@/components/blocks";
+import { Card, LinkButton, TextLink } from "@/components/ui";
+import { Eyebrow, Glyph } from "@/components/blocks";
 
 export const metadata: Metadata = {
   title: "Coliving",
@@ -11,12 +9,12 @@ export const metadata: Metadata = {
 
 const FEATURES = [
   {
-    icon: Home,
+    glyph: "⌂",
     title: "Coliving Conversions",
     body: "Properties with coliving conversion potential — room count, layout, parking, and the hidden spaces most people walk right past.",
   },
   {
-    icon: Users2,
+    glyph: "✦",
     title: "Occupied Coliving Properties",
     body: "Already-operating coliving homes come with unique complexities. I help you navigate occupied transactions so nothing falls through the cracks.",
   },
@@ -25,12 +23,12 @@ const FEATURES = [
 export default function ColivingPage() {
   return (
     <>
-      <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
+      <section className="reveal mx-auto max-w-3xl px-8 py-20 lg:px-[60px] lg:py-[120px]">
         <Eyebrow>Coliving</Eyebrow>
-        <h1 className="mt-4 font-serif text-3xl font-semibold text-neutral-900 sm:text-4xl">
-          A portfolio built one <span className="italic text-brand-500">room at a time.</span>
+        <h1 className="mt-4 text-h2-lg font-medium text-charcoal">
+          A portfolio built one <em>room at a time.</em>
         </h1>
-        <p className="mt-5 text-lg text-neutral-600">
+        <p className="mt-5 text-lg text-warmgray">
           CoLivingCait is my own portfolio of coliving homes across metro Atlanta — sourced, renovated,
           furnished, and operated in-house. Beyond running it myself, I coach women building their own
           portfolios, and co-founded <strong>She Leads Coliving</strong> and the annual{" "}
@@ -40,44 +38,34 @@ export default function ColivingPage() {
         </p>
       </section>
 
-      <section className="border-y border-neutral-200/70 bg-cream">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-          <h2 className="font-serif text-2xl font-semibold text-neutral-900">
+      <section className="border-y border-soft bg-blush">
+        <div className="mx-auto max-w-page px-8 py-20 lg:px-[60px] lg:py-[120px]">
+          <h2 className="reveal text-h2 font-medium text-charcoal">
             If you&apos;re buying with coliving in mind
           </h2>
-          <div className="mt-8 grid gap-5 sm:grid-cols-2">
-            {FEATURES.map(({ icon: Icon, title, body }) => (
-              <Card key={title} className="p-6">
-                <Icon size={22} className="text-brand-500" />
-                <h3 className="mt-3 font-serif text-lg font-semibold text-neutral-900">{title}</h3>
-                <p className="mt-2 text-sm text-neutral-600">{body}</p>
+          <div className="reveal mt-10 grid gap-6 sm:grid-cols-2">
+            {FEATURES.map(({ glyph, title, body }) => (
+              <Card key={title} tone="white" className="p-8">
+                <Glyph className="text-2xl">{glyph}</Glyph>
+                <h3 className="mt-3 font-heading text-h3 font-medium text-charcoal">{title}</h3>
+                <p className="mt-2 text-sm text-warmgray">{body}</p>
               </Card>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6">
-        <h2 className="font-serif text-2xl font-semibold text-neutral-900">
+      <section className="reveal mx-auto max-w-3xl px-8 py-20 text-center lg:px-[60px] lg:py-[120px]">
+        <h2 className="text-h2 font-medium text-charcoal">
           Want the full story — courses, guides, and my own portfolio?
         </h2>
-        <a
-          href="https://www.colivingcait.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-4 inline-flex items-center gap-1.5 font-medium text-brand-600 hover:underline"
-        >
+        <TextLink href="https://www.colivingcait.com" target="_blank" rel="noopener noreferrer" className="mt-4 justify-center">
           Visit CoLivingCait
-          <ArrowUpRight size={16} />
-        </a>
+        </TextLink>
         <div className="mt-8">
-          <Link
-            href="/work-with-me"
-            className="inline-flex items-center gap-2 rounded-md bg-ink px-5 py-3 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-neutral-800"
-          >
+          <LinkButton href="/work-with-me" variant="primary" size="lg">
             Find a Coliving Property
-            <ArrowRight size={15} />
-          </Link>
+          </LinkButton>
         </div>
       </section>
     </>

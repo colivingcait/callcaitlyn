@@ -9,12 +9,12 @@ export const metadata: Metadata = {
 
 export default function ContactPage() {
   return (
-    <section className="mx-auto max-w-2xl px-4 py-16 sm:px-6">
+    <section className="reveal mx-auto max-w-2xl px-8 py-20 lg:px-[60px] lg:py-[120px]">
       <Eyebrow>Contact</Eyebrow>
-      <h1 className="mt-4 font-serif text-3xl font-semibold text-neutral-900 sm:text-4xl">
-        Let&apos;s start the <span className="italic text-brand-500">conversation.</span>
+      <h1 className="mt-4 text-h2-lg font-medium text-charcoal">
+        Let&apos;s start the <em>conversation.</em>
       </h1>
-      <p className="mt-5 text-lg text-neutral-600">
+      <p className="mt-5 text-lg text-warmgray">
         Tell me a bit about what you&apos;re looking to do — I read and respond to every message myself.
       </p>
 

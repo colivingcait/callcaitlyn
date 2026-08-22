@@ -3,18 +3,134 @@
 @tailwind utilities;
 
 :root {
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --gold: #c4955a;
 }
 
-html {
-  -webkit-tap-highlight-color: transparent;
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-cream text-warmgray font-sans;
+    font-weight: 300;
+    line-height: 1.8;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-heading text-charcoal;
+    font-weight: 400;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+
+  /* Signature move: any <em> inside a heading is the one emphasized phrase
+     per headline - italic, gold, lighter weight than the rest of the line. */
+  h1 em,
+  h2 em,
+  h3 em,
+  h4 em {
+    font-style: italic;
+    color: var(--gold);
+    font-weight: 300;
+  }
+
+  button,
+  a {
+    touch-action: manipulation;
+  }
 }
 
-body {
-  @apply bg-neutral-50 text-neutral-900;
+@layer components {
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+
+  .eyebrow::before {
+    content: "";
+    display: block;
+    width: 32px;
+    height: 1px;
+    background: var(--gold);
+  }
+
+  .eyebrow-center {
+    justify-content: center;
+  }
+
+  .eyebrow-center::before {
+    display: none;
+  }
+
+  /* Scroll reveal: fades/slides an element up once it's ~12% into the
+     viewport (see RevealObserver). Staggered via .reveal-d1..d6. */
+  .reveal {
+    opacity: 0;
+    transform: translateY(40px);
+    transition:
+      opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .reveal-d1.visible {
+    transition-delay: 0.1s;
+  }
+  .reveal-d2.visible {
+    transition-delay: 0.2s;
+  }
+  .reveal-d3.visible {
+    transition-delay: 0.3s;
+  }
+  .reveal-d4.visible {
+    transition-delay: 0.4s;
+  }
+  .reveal-d5.visible {
+    transition-delay: 0.5s;
+  }
+  .reveal-d6.visible {
+    transition-delay: 0.6s;
+  }
+
+  .hero-in {
+    opacity: 0;
+    animation: heroReveal 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
 }
 
-button,
-a {
-  touch-action: manipulation;
+@keyframes heroReveal {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .hero-in {
+    opacity: 1;
+    animation: none;
+  }
 }

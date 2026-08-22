@@ -26,24 +26,31 @@ export const TESTIMONIALS = [
   },
 ] as const;
 
+// Glyphs match the design system's icon set (no icon library - section 8
+// of DESIGNSYSTEM.md): ◈ $ ⌂ ♀ ★ ✦ ⊕, rendered in the heading font, gold.
 export const DIFFERENTIATORS = [
   {
+    glyph: "◈",
     title: "Investor Mindset",
     body: "I evaluate every property the way I'd evaluate it for my own portfolio — not just the listing sheet.",
   },
   {
+    glyph: "⌂",
     title: "Renovation Knowledge",
     body: "I know what work costs, what adds value, and what to walk away from before you're in too deep.",
   },
   {
+    glyph: "✦",
     title: "Coliving Expertise",
     body: "I specialize in identifying properties with coliving conversion potential that most agents overlook entirely.",
   },
   {
+    glyph: "$",
     title: "Sharp Negotiation",
     body: "Whether you're buying or selling, I protect your bottom line at every stage of the transaction.",
   },
   {
+    glyph: "⊕",
     title: "Full Transaction Support",
     body: "Contract to close — inspections, appraisal, title, repairs, and closing coordination handled.",
   },

@@ -4,10 +4,15 @@ A standalone Next.js app (separate from the CRM in this repo — see the repo
 root's own README), live at `callcaitlyn.com` / `www.callcaitlyn.com`. The
 CRM moved to its own project at `crm.callcaitlyn.com`.
 
-Design and voice are modeled directly on
-[colivingcait.com](https://www.colivingcait.com) — warm cream/black/gold
-palette, serif headlines with an italic gold accent phrase, the card and
-testimonial styles, real stats and Zillow reviews reused from that site.
+Design system is ColivingCait's own, ported verbatim from its
+`DESIGNSYSTEM.md`: Cormorant Garamond headings + DM Sans body, one gold
+accent (`#C4955A`) on warm neutrals, square corners everywhere (the
+Tailwind border-radius scale is overridden to 0 globally), no icon
+library (single Unicode glyphs — ◈ $ ⌂ ♀ ★ ✦ ⊕ — in the heading font,
+gold), and scroll-reveal/hero-entrance motion matching the original's
+easing curves. See `tailwind.config.ts` and `app/globals.css` for the
+full token set, and `components/blocks.tsx` for the reusable pieces
+(Eyebrow, TestimonialCard, ServiceSplit, DarkCta, etc.).
 
 Pages: **Home**, **About**, **Coliving**, **House Hacking**, **Work With
 Me** (buy/sell services, lead forms, service areas), **Contact**.

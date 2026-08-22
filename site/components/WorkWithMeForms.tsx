@@ -50,9 +50,9 @@ function useLeadSubmit(inquiryType: "Buy" | "Sell") {
 
 function SentCard({ message }: { message: string }) {
   return (
-    <div className="rounded-2xl border border-neutral-200/70 bg-white p-8 text-center shadow-card">
-      <p className="font-serif text-lg text-neutral-900">Thanks!</p>
-      <p className="mt-2 text-sm text-neutral-600">{message}</p>
+    <div className="border border-brand bg-white p-8 text-center">
+      <p className="font-heading text-lg text-charcoal">Thanks!</p>
+      <p className="mt-2 text-sm text-warmgray">{message}</p>
     </div>
   );
 }
@@ -84,9 +84,9 @@ export function BuyForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-2xl border border-neutral-200/70 bg-white p-6 shadow-card sm:p-8">
-      <h3 className="font-serif text-xl font-semibold text-neutral-900">I&apos;m Looking to Buy</h3>
-      <p className="mt-1 text-sm text-neutral-500">Share a few details and I&apos;ll reach out to start the conversation.</p>
+    <form onSubmit={handleSubmit} className="border border-brand bg-white p-6 sm:p-8">
+      <h3 className="font-heading text-h3 font-medium text-charcoal">I&apos;m Looking to Buy</h3>
+      <p className="mt-1 text-sm text-warmgray">Share a few details and I&apos;ll reach out to start the conversation.</p>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <div>
@@ -137,7 +137,7 @@ export function BuyForm() {
         />
       </div>
 
-      {status === "error" && <p className="mt-3 text-sm text-red-600">{errorMessage}</p>}
+      {status === "error" && <p className="mt-3 text-sm text-red-700">{errorMessage}</p>}
 
       <Button type="submit" variant="gold" className="mt-6 w-full" disabled={status === "sending"}>
         {status === "sending" ? "Sending…" : "Submit"}
@@ -173,9 +173,9 @@ export function SellForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-2xl border border-neutral-200/70 bg-white p-6 shadow-card sm:p-8">
-      <h3 className="font-serif text-xl font-semibold text-neutral-900">I&apos;m Thinking About Selling</h3>
-      <p className="mt-1 text-sm text-neutral-500">Tell me about your property and I&apos;ll reach out to discuss your options.</p>
+    <form onSubmit={handleSubmit} className="border border-brand bg-white p-6 sm:p-8">
+      <h3 className="font-heading text-h3 font-medium text-charcoal">I&apos;m Thinking About Selling</h3>
+      <p className="mt-1 text-sm text-warmgray">Tell me about your property and I&apos;ll reach out to discuss your options.</p>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <div>
@@ -219,7 +219,7 @@ export function SellForm() {
         />
       </div>
 
-      {status === "error" && <p className="mt-3 text-sm text-red-600">{errorMessage}</p>}
+      {status === "error" && <p className="mt-3 text-sm text-red-700">{errorMessage}</p>}
 
       <Button type="submit" variant="gold" className="mt-6 w-full" disabled={status === "sending"}>
         {status === "sending" ? "Sending…" : "Submit"}

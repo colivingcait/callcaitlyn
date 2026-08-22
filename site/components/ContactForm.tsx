@@ -52,15 +52,15 @@ export function ContactForm() {
 
   if (status === "sent") {
     return (
-      <div className="rounded-2xl border border-neutral-200/70 bg-white p-8 text-center shadow-card">
-        <p className="font-serif text-lg text-neutral-900">Thanks for reaching out!</p>
-        <p className="mt-2 text-sm text-neutral-600">I&apos;ll get back to you as soon as I can.</p>
+      <div className="border border-brand bg-white p-8 text-center">
+        <p className="font-heading text-lg text-charcoal">Thanks for reaching out!</p>
+        <p className="mt-2 text-sm text-warmgray">I&apos;ll get back to you as soon as I can.</p>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 rounded-2xl border border-neutral-200/70 bg-white p-6 shadow-card sm:p-8">
+    <form onSubmit={handleSubmit} className="space-y-5 border border-brand bg-white p-6 sm:p-8">
       <div>
         <Label htmlFor="name">Name</Label>
         <Input id="name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Smith" />
@@ -113,9 +113,9 @@ export function ContactForm() {
         />
       </div>
 
-      {status === "error" && <p className="text-sm text-red-600">{errorMessage}</p>}
+      {status === "error" && <p className="text-sm text-red-700">{errorMessage}</p>}
 
-      <Button type="submit" size="lg" variant="dark" className="w-full" disabled={status === "sending"}>
+      <Button type="submit" size="lg" variant="primary" className="w-full" disabled={status === "sending"}>
         {status === "sending" ? "Sending…" : "Send Message"}
       </Button>
     </form>
