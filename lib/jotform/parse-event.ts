@@ -40,6 +40,20 @@ function findByLabel(pairs: { label: string; value: string }[], ...keywords: str
   return match?.value || null;
 }
 
+// Shared by the live webhook (parses a `pretty` string) and the backfill
+// (parses the API's `answers` object into the same {label, value} pairs
+// first - see lib/jotform/client.ts) so both paths extract fields with
+// identical fuzzy label-matching and never drift apart.
+export function extractFieldsFromPairs(pairs: { label: string; value: string }[]) {
+  return {
+    name: findByLabel(pairs, "name"),
+    email: findByLabel(pairs, "email"),
+    phone: findByLabel(pairs, "phone"),
+    howHeard: findByLabel(pairs, "hear"),
+    journeyStage: findByLabel(pairs, "journey", "stage"),
+  };
+}
+
 export function parseJotformSubmission(formData: FormData): ParsedJotformSubmission {
   const submissionId = (formData.get("submissionID") as string | null) ?? null;
   // Jotform includes the source form's ID on every submission regardless
@@ -58,11 +72,7 @@ export function parseJotformSubmission(formData: FormData): ParsedJotformSubmiss
   return {
     submissionId,
     formId,
-    name: findByLabel(pairs, "name"),
-    email: findByLabel(pairs, "email"),
-    phone: findByLabel(pairs, "phone"),
-    howHeard: findByLabel(pairs, "hear"),
-    journeyStage: findByLabel(pairs, "journey", "stage"),
+    ...extractFieldsFromPairs(pairs),
     pretty,
   };
 }
