@@ -6,6 +6,7 @@ import { TagManager } from "@/components/settings/TagManager";
 import { GmailConnect } from "@/components/settings/GmailConnect";
 import { QuoSyncBackfill } from "@/components/settings/QuoSyncBackfill";
 import { EventbriteSyncBackfill } from "@/components/settings/EventbriteSyncBackfill";
+import { JotformSyncBackfill } from "@/components/settings/JotformSyncBackfill";
 import { PushNotifications } from "@/components/settings/PushNotifications";
 import { Card, Button } from "@/components/ui";
 import { Mail, BarChart3 } from "lucide-react";
@@ -79,6 +80,12 @@ export default async function SettingsPage({
           get matched instead of duplicated.
         </p>
         <EventbriteSyncBackfill />
+        <p className="text-sm text-neutral-500">
+          Same idea for Jotform check-ins — if the in-person kiosk missed logging someone (offline, secret
+          misconfigured, etc.), the Meetup show rate report undercounts. Run this to pull the last 6 months of
+          submissions and catch up anyone who fell through.
+        </p>
+        <JotformSyncBackfill />
       </Card>
     </div>
   );

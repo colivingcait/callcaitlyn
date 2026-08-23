@@ -10,10 +10,15 @@ import { findOrCreateContact, addTagByName } from "@/lib/crm/find-or-create-cont
 import { syncContactToQuo } from "@/lib/quo/sync-contact";
 import { fetchOrganizationId, fetchRecentOrders } from "@/lib/eventbrite/client";
 import { processEventbriteOrder } from "@/lib/eventbrite/process-order";
+import { fetchRecentSubmissions } from "@/lib/jotform/client";
+import { processJotformSubmission, type JotformFormEvent } from "@/lib/jotform/process-submission";
 import type { ParsedContactRow } from "@/lib/crm/bulk-import-contacts";
 
 const QUO_BACKFILL_BATCH_SIZE = 25;
 const EVENTBRITE_BACKFILL_LOOKBACK_DAYS = 90;
+// Bigger window than Eventbrite's - the show-rate report showed check-ins
+// missing as far back as several months, not just weeks.
+const JOTFORM_BACKFILL_LOOKBACK_DAYS = 180;
 
 export async function sendTextToContact(contactId: string, toNumber: string, body: string) {
   const supabase = await createClient();
@@ -226,6 +231,56 @@ export async function backfillEventbriteOrders() {
       results.push({ label: account.label, orders: orders.length, contacts });
     } catch (err) {
       results.push({ label: account.label, orders: 0, contacts: 0, error: err instanceof Error ? err.message : "Unknown error" });
+    }
+  }
+
+  return { ok: true as const, results };
+}
+
+// Mirrors backfillEventbriteOrders above - manual "sync recent check-ins"
+// button in Settings for whenever the live Jotform webhook missed
+// submissions (kiosk offline, secret misconfigured, etc.).
+export async function backfillJotformSubmissions() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const admin = createAdminClient();
+  const since = new Date(Date.now() - JOTFORM_BACKFILL_LOOKBACK_DAYS * 24 * 60 * 60 * 1000).toISOString();
+
+  const forms: { label: string; formId: string | undefined; formEvent: JotformFormEvent }[] = [
+    {
+      label: "House Hacking",
+      formId: process.env.JOTFORM_HOUSE_HACKING_FORM_ID,
+      formEvent: { eventName: "House Hacking Meetup", tag: "House Hacking", eventbriteAccount: "house_hacking" },
+    },
+    {
+      label: "Women's REI",
+      formId: process.env.JOTFORM_WOMENS_REI_FORM_ID,
+      formEvent: { eventName: "Women's REI Meetup", tag: "Women's REI", eventbriteAccount: "womens_rei" },
+    },
+  ];
+
+  const results: { label: string; submissions: number; contacts: number; error?: string }[] = [];
+
+  for (const form of forms) {
+    if (!form.formId) {
+      results.push({ label: form.label, submissions: 0, contacts: 0, error: "No form ID configured" });
+      continue;
+    }
+
+    try {
+      const submissions = await fetchRecentSubmissions(form.formId, since);
+      let contacts = 0;
+      for (const submission of submissions) {
+        const found = await processJotformSubmission(admin, user.id, submission, form.formEvent, submission.createdAt);
+        if (found) contacts++;
+      }
+      results.push({ label: form.label, submissions: submissions.length, contacts });
+    } catch (err) {
+      results.push({ label: form.label, submissions: 0, contacts: 0, error: err instanceof Error ? err.message : "Unknown error" });
     }
   }
 
