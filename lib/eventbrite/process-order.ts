@@ -6,6 +6,42 @@ import { upsertActivity } from "@/lib/crm/activities";
 import { applyJourneyStageAnswer } from "@/lib/crm/journey-stage";
 import { notifyNewLead } from "@/lib/push/send-push";
 
+// Which Eventbrite *account* processed an order isn't a reliable signal for
+// which meetup series it belongs to - an event can be created under either
+// account regardless of its actual topic/host (confirmed by a real case: a
+// Women's REI meetup about house hacking got created under the House
+// Hacking account and ingested as house_hacking for 11 registrations
+// before anyone noticed). The real, unambiguous identity is the specific
+// Eventbrite event_id. So: the first registration seen for a given
+// event_id "locks in" its series from the account that processed it (best
+// guess available at the time); every later registration for that same
+// event_id reuses whatever's already on file instead of re-deriving it -
+// keeping a single event internally consistent, and letting a one-time
+// manual correction (fixing the metadata on existing rows) self-heal every
+// future registration for that event too.
+async function resolveEventSeries(
+  admin: SupabaseClient,
+  ownerId: string,
+  eventId: string | null,
+  fallbackIsWomensRei: boolean,
+): Promise<boolean> {
+  if (!eventId) return fallbackIsWomensRei;
+
+  const { data: existing } = await admin
+    .from("activities")
+    .select("metadata")
+    .eq("owner_id", ownerId)
+    .eq("source", "eventbrite")
+    .eq("metadata->>event_id", eventId)
+    .limit(1)
+    .maybeSingle();
+
+  const existingAccount = (existing?.metadata as Record<string, unknown> | undefined)?.eventbrite_account;
+  if (typeof existingAccount === "string") return existingAccount === "womens_rei";
+
+  return fallbackIsWomensRei;
+}
+
 // Shared between the live webhook (one order at a time, notifies) and the
 // manual backfill button (many orders at once, never notifies - see
 // notifyNewLead's own comment on why bulk syncs must stay silent) so both
@@ -14,12 +50,13 @@ export async function processEventbriteOrder(
   admin: SupabaseClient,
   ownerId: string,
   order: Record<string, unknown>,
-  isWomensRei: boolean,
+  accountIsWomensRei: boolean,
   apiToken: string | undefined,
   opts: { notify: boolean },
 ): Promise<number> {
   const eventId = typeof order.event_id === "string" ? order.event_id : null;
   const eventName = eventId ? await fetchEventName(eventId, apiToken) : null;
+  const isWomensRei = await resolveEventSeries(admin, ownerId, eventId, accountIsWomensRei);
   const attendees = parseEventbriteAttendees(order);
 
   let processed = 0;
