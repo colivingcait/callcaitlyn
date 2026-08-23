@@ -15,8 +15,12 @@ const SERIES_LIST: EventSeries[] = ["house_hacking", "womens_rei"];
 type RawActivity = { contact_id: string; source: string; occurred_at: string; metadata: Record<string, unknown> | null };
 
 // Eventbrite tags its account (house_hacking / womens_rei) directly in
-// metadata; Jotform only has a generic per-kiosk event_name string - these
-// are the only two signals available to tell the series apart.
+// metadata; Jotform stamps the reliable `series` field derived from which
+// physical kiosk form was submitted (see processJotformSubmission) - never
+// classify a Jotform row by its event_name, which is just a human-readable
+// label (the real Eventbrite event's title once one's been matched) and
+// isn't a fixed string. The event_name text match below only exists for
+// rows logged before the `series` field existed.
 function classifySeries(a: RawActivity): EventSeries | null {
   if (a.source === "eventbrite") {
     const account = a.metadata?.eventbrite_account;
@@ -25,6 +29,10 @@ function classifySeries(a: RawActivity): EventSeries | null {
     return null;
   }
   if (a.source === "jotform") {
+    const series = a.metadata?.series;
+    if (series === "womens_rei") return "womens_rei";
+    if (series === "house_hacking") return "house_hacking";
+    // Pre-existing rows logged before `series` was tracked directly.
     const name = a.metadata?.event_name;
     if (name === "Women's REI Meetup") return "womens_rei";
     if (name === "House Hacking Meetup") return "house_hacking";

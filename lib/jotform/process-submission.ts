@@ -102,6 +102,12 @@ export async function processJotformSubmission(
     metadata: {
       jotform_submission_id: submission.submissionId,
       jotform_form_id: submission.formId,
+      // The reliable series signal - which physical kiosk form was
+      // submitted, unambiguous and never guessed from text. event_name
+      // below is just a human-readable label (the real Eventbrite event's
+      // title when we found one) and must never be used to classify which
+      // meetup this belongs to - see events-report.ts's getSeriesFor.
+      series: formEvent?.eventbriteAccount ?? null,
       event_id: nearestEvent.eventId,
       event_name: eventName,
       journey_stage: submission.journeyStage,
