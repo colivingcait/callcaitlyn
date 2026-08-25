@@ -13,7 +13,10 @@ import {
   getTextBlastAudiencePreview,
   getEventAccount,
   sendTestText,
+  getTextBlastFailureDetails,
+  retryFailedTextBlastRecipients,
   type TextBlastWithProgress,
+  type TextBlastFailureGroup,
 } from "@/app/(app)/contacts/text-blast-actions";
 
 export function TextBlastModal({ eventName, onClose }: { eventName: string; onClose: () => void }) {
@@ -21,6 +24,34 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ ok: true; recipientCount: number } | { ok: false; error: string } | null>(null);
   const [history, setHistory] = useState<TextBlastWithProgress[] | null>(null);
+  const [failureDetails, setFailureDetails] = useState<Record<string, TextBlastFailureGroup[]>>({});
+  const [expandedFailures, setExpandedFailures] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState<string | null>(null);
+
+  async function toggleFailures(blastId: string) {
+    if (expandedFailures === blastId) {
+      setExpandedFailures(null);
+      return;
+    }
+    setExpandedFailures(blastId);
+    if (!failureDetails[blastId]) {
+      const groups = await getTextBlastFailureDetails(blastId);
+      setFailureDetails((prev) => ({ ...prev, [blastId]: groups }));
+    }
+  }
+
+  async function retry(blastId: string) {
+    setRetrying(blastId);
+    await retryFailedTextBlastRecipients(blastId);
+    setRetrying(null);
+    setExpandedFailures(null);
+    setFailureDetails((prev) => {
+      const next = { ...prev };
+      delete next[blastId];
+      return next;
+    });
+    await loadHistory();
+  }
 
   const [audience, setAudience] = useState<{ count: number; sample: string[] } | null>(null);
   const [excludeRecent, setExcludeRecent] = useState(false);
@@ -216,10 +247,41 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
                   </div>
                   {(b.failed > 0 || b.skipped > 0) && (
                     <p className="mt-1 text-neutral-400">
-                      {b.failed > 0 && `${b.failed} failed`}
+                      {b.failed > 0 && (
+                        <button onClick={() => toggleFailures(b.id)} className="font-medium text-red-600 hover:underline">
+                          {b.failed} failed
+                        </button>
+                      )}
                       {b.failed > 0 && b.skipped > 0 && " · "}
                       {b.skipped > 0 && `${b.skipped} skipped (no phone)`}
                     </p>
+                  )}
+                  {expandedFailures === b.id && (
+                    <div className="mt-2 space-y-2 rounded-lg bg-red-50 p-2">
+                      {!failureDetails[b.id] ? (
+                        <p className="text-neutral-400">Loading…</p>
+                      ) : (
+                        <>
+                          <div className="space-y-1.5">
+                            {failureDetails[b.id].map((group) => (
+                              <div key={group.error}>
+                                <p className="font-medium text-red-700">
+                                  {group.count}× — {group.error}
+                                </p>
+                                <p className="text-neutral-500">{group.sample.map((s) => s.name || s.phone).join(", ")}</p>
+                              </div>
+                            ))}
+                          </div>
+                          <button
+                            onClick={() => retry(b.id)}
+                            disabled={retrying === b.id}
+                            className="font-medium text-red-700 hover:underline disabled:opacity-50"
+                          >
+                            {retrying === b.id ? "Retrying…" : "Retry failed sends"}
+                          </button>
+                        </>
+                      )}
+                    </div>
                   )}
                   <p className="mt-1 max-w-full truncate text-neutral-400">&ldquo;{b.message}&rdquo;</p>
                 </div>

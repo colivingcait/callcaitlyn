@@ -132,6 +132,30 @@ export async function cancelTextBlast(blastId: string) {
   await admin.from("text_blasts").update({ status: "canceled", completed_at: new Date().toISOString() }).eq("id", blastId).eq("owner_id", user.id);
 }
 
+// Requeues every failed recipient as pending and reopens the blast so the
+// cron picks it back up - for exactly the "Quo ran out of credits, topped
+// up, now catch up the ones that bounced" case, without re-sending to
+// anyone who already got it.
+export async function retryFailedTextBlastRecipients(blastId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const admin = createAdminClient();
+
+  const { count } = await admin
+    .from("text_blast_recipients")
+    .update({ status: "pending", error: null }, { count: "exact" })
+    .eq("blast_id", blastId)
+    .eq("status", "failed");
+
+  await admin.from("text_blasts").update({ status: "sending", completed_at: null }).eq("id", blastId).eq("owner_id", user.id);
+
+  return { ok: true as const, retried: count ?? 0 };
+}
+
 export type { TextBlastWithProgress };
 
 export async function getTextBlastsForEvent(eventName: string): Promise<TextBlastWithProgress[]> {
@@ -153,4 +177,32 @@ export async function getTextBlastsForEvent(eventName: string): Promise<TextBlas
     );
 
   return withProgress(blasts, recipients ?? []);
+}
+
+export type TextBlastFailureGroup = { error: string; count: number; sample: { name: string; phone: string | null }[] };
+
+// Grouped by the actual error text (rather than one row per person) so a
+// systemic problem - the same Quo error on every failure - reads as one
+// clear reason instead of a wall of identical-looking rows. sample caps at
+// 5 names per group so a "who exactly" spot-check doesn't need a DB query.
+export async function getTextBlastFailureDetails(blastId: string): Promise<TextBlastFailureGroup[]> {
+  const supabase = await createClient();
+  const { data: rows } = await supabase
+    .from("text_blast_recipients")
+    .select("error, contacts(first_name, last_name, phone)")
+    .eq("blast_id", blastId)
+    .eq("status", "failed");
+
+  const groups = new Map<string, TextBlastFailureGroup>();
+  for (const row of (rows ?? []) as unknown as { error: string | null; contacts: { first_name: string; last_name: string; phone: string | null } | null }[]) {
+    const error = row.error ?? "Unknown error";
+    const group = groups.get(error) ?? { error, count: 0, sample: [] };
+    group.count++;
+    if (group.sample.length < 5 && row.contacts) {
+      group.sample.push({ name: [row.contacts.first_name, row.contacts.last_name].filter(Boolean).join(" "), phone: row.contacts.phone });
+    }
+    groups.set(error, group);
+  }
+
+  return Array.from(groups.values()).sort((a, b) => b.count - a.count);
 }
