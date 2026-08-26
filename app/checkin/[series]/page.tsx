@@ -18,6 +18,19 @@ const SERIES_EVENTS_URL: Record<string, string> = {
 
 const HOW_HEARD_OPTIONS = ["Eventbrite", "Meetup.com", "Facebook", "Instagram/Social Media", "Another attendee", "From the speaker/sponsor", "Other"];
 
+type ContactCard = { name: string; role: string; photo: string; phone?: string; email?: string };
+
+// Who shows up in "Get in touch" on the success screen, per series.
+const CONTACT_CARDS: Record<string, ContactCard[]> = {
+  house_hacking: [
+    { name: "Caitlyn Verdugo", role: "Realtor | Investor", photo: "/images/checkin/caitlyn.jpg", phone: "(678) 884-8494", email: "cv.sellshomes@gmail.com" },
+  ],
+  womens_rei: [
+    { name: "Caitlyn Verdugo", role: "Realtor | Investor", photo: "/images/checkin/caitlyn.jpg", phone: "(678) 884-8494", email: "cv.sellshomes@gmail.com" },
+    { name: "Jasmine Brown", role: "Hard Money Lender, Conventus Lending", photo: "/images/checkin/jasmine.jpg", email: "jbrown@cvlending.com" },
+  ],
+};
+
 const NETWORKING_TIPS = [
   "Ask one person tonight what deal they're most excited about right now.",
   "The best connections come from following up within 48 hours - send that text tomorrow.",
@@ -53,6 +66,9 @@ export default function CheckInPage() {
   const eventsUrl = SERIES_EVENTS_URL[series];
   const validSeries = series === "house_hacking" || series === "womens_rei";
   const tip = useMemo(() => NETWORKING_TIPS[Math.floor(Math.random() * NETWORKING_TIPS.length)], []);
+  const contactCards = CONTACT_CARDS[series] ?? [];
+  const [showContacts, setShowContacts] = useState(false);
+  const [selectedCard, setSelectedCard] = useState<string | null>(null);
 
   const [step, setStep] = useState<Step>({ name: "name-entry" });
   const [firstName, setFirstName] = useState("");
@@ -260,6 +276,55 @@ export default function CheckInPage() {
                 <p className="text-xs font-bold uppercase tracking-wide text-brand-600">Tonight&apos;s networking tip</p>
                 <p className="mt-1.5 text-base text-neutral-700">{tip}</p>
               </div>
+
+              {contactCards.length > 0 && (
+                <div className="mt-5">
+                  {!showContacts ? (
+                    <button
+                      onClick={() => setShowContacts(true)}
+                      className="w-full rounded-2xl border-2 border-neutral-200 px-4 py-3.5 text-base font-semibold text-neutral-800 hover:border-brand-500 hover:bg-brand-50"
+                    >
+                      💬 Get in touch
+                    </button>
+                  ) : (
+                    <div className="space-y-3 text-left">
+                      <div className="grid grid-cols-2 gap-3">
+                        {contactCards.map((c) => (
+                          <button
+                            key={c.name}
+                            onClick={() => setSelectedCard(selectedCard === c.name ? null : c.name)}
+                            className={`rounded-2xl border-2 p-3 text-center ${selectedCard === c.name ? "border-brand-500 bg-brand-50" : "border-neutral-200"}`}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={c.photo} alt={c.name} className="mx-auto h-16 w-16 rounded-full object-cover" />
+                            <p className="mt-2 text-sm font-semibold text-neutral-900">{c.name}</p>
+                          </button>
+                        ))}
+                      </div>
+                      {contactCards
+                        .filter((c) => c.name === selectedCard)
+                        .map((c) => (
+                          <div key={c.name} className="rounded-2xl bg-neutral-50 p-4">
+                            <p className="text-base font-bold text-neutral-900">{c.name}</p>
+                            <p className="text-sm text-neutral-500">{c.role}</p>
+                            <div className="mt-2 space-y-1">
+                              {c.phone && (
+                                <a href={`tel:${c.phone.replace(/[^\d+]/g, "")}`} className="block text-base font-medium text-brand-600">
+                                  {c.phone}
+                                </a>
+                              )}
+                              {c.email && (
+                                <a href={`mailto:${c.email}`} className="block text-base font-medium text-brand-600">
+                                  {c.email}
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {eventsUrl && (
                 <a
