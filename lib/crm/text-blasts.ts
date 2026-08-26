@@ -8,6 +8,16 @@ import type { TextBlast } from "@/types/database";
 
 export type TextBlastWithProgress = TextBlast & { total: number; sent: number; failed: number; skipped: number; pending: number };
 
+// Prefixed label rather than a schema change to event_name (kept not-null
+// for every existing event-based blast/query) - free-text, but distinctive
+// enough it'll never collide with a real Eventbrite event title. Pure
+// string logic in a plain module (not the "use server" actions file) so
+// both the server action that creates the blast and the client modal that
+// displays its label can call it directly, without a server round trip.
+export function tagBlastLabel(tagName: string): string {
+  return `Tag: ${tagName}`;
+}
+
 // Shared by the blast modal's "previous sends for this event" list and the
 // Dashboard's "in progress" card, so the two views of the same numbers
 // can't disagree with each other.

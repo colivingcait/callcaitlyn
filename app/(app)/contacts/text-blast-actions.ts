@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendQuoText } from "@/lib/quo/send-message";
 import { applyMergeFields, PREVIEW_CONTACT } from "@/lib/crm/merge-fields";
-import { withProgress, type TextBlastWithProgress } from "@/lib/crm/text-blasts";
+import { withProgress, tagBlastLabel, type TextBlastWithProgress } from "@/lib/crm/text-blasts";
 
 type AudienceContact = { id: string; first_name: string; last_name: string; phone: string };
 
@@ -93,6 +93,25 @@ async function resolveOccurrenceAudience(
     .from("contacts")
     .select("id, first_name, last_name, phone")
     .in("id", contactIds)
+    .eq("archived", false)
+    .not("phone", "is", null);
+
+  return (contacts ?? []) as AudienceContact[];
+}
+
+// Not every bulk text is about a meetup registration - lets a blast reach
+// everyone carrying a given tag instead (e.g. every "House Hacker", every
+// "First-Time Buyer"), independent of event attendance entirely.
+async function resolveTagAudience(admin: SupabaseClient, ownerId: string, tagId: string): Promise<AudienceContact[]> {
+  const { data: contactTags } = await admin.from("contact_tags").select("contact_id").eq("tag_id", tagId);
+  const contactIds = [...new Set((contactTags ?? []).map((r) => r.contact_id as string))];
+  if (contactIds.length === 0) return [];
+
+  const { data: contacts } = await admin
+    .from("contacts")
+    .select("id, first_name, last_name, phone")
+    .in("id", contactIds)
+    .eq("owner_id", ownerId)
     .eq("archived", false)
     .not("phone", "is", null);
 
@@ -227,6 +246,51 @@ export async function getTextBlastAudiencePreview(
     : await resolveEventAudience(admin, user.id, eventName, registeredBefore);
 
   return buildAudiencePreview(audience);
+}
+
+// Prefixed label rather than a schema change to event_name (kept not-null
+// for every existing event-based blast/query) - free-text, but distinctive
+// enough it'll never collide with a real Eventbrite event title.
+// What the compose modal is sending to - an event's registrants (the
+// original behavior) or a tag's members directly. A discriminated union
+// rather than two optional props, so the modal can't be opened in an
+// ambiguous half-configured state.
+export type BlastTarget = { kind: "event"; eventName: string } | { kind: "tag"; tagId: string; tagName: string };
+
+export async function getTagAudiencePreview(tagId: string): Promise<TextBlastAudiencePreview> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { count: 0, recipients: [] };
+
+  const admin = createAdminClient();
+  const audience = await resolveTagAudience(admin, user.id, tagId);
+  return buildAudiencePreview(audience);
+}
+
+export async function createTagTextBlast(tagId: string, tagName: string, message: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+  if (!message.trim()) return { ok: false as const, error: "Write a message" };
+
+  const admin = createAdminClient();
+  const audience = await resolveTagAudience(admin, user.id, tagId);
+  if (!audience.length) return { ok: false as const, error: "No one with a phone number on file has that tag" };
+
+  const { data: blast, error: blastError } = await admin
+    .from("text_blasts")
+    .insert({ owner_id: user.id, event_name: tagBlastLabel(tagName), message: message.trim(), tag_id: tagId })
+    .select("id")
+    .single();
+  if (blastError || !blast) return { ok: false as const, error: blastError?.message ?? "Failed to create blast" };
+
+  await admin.from("text_blast_recipients").insert(audience.map((c) => ({ blast_id: blast.id, contact_id: c.id })));
+
+  return { ok: true as const, blastId: blast.id as string, recipientCount: audience.length };
 }
 
 export async function sendTestText(message: string, phone: string) {

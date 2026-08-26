@@ -6,11 +6,14 @@ import { Button, Textarea, Input } from "@/components/ui";
 import { applyMergeFields, PREVIEW_CONTACT } from "@/lib/crm/merge-fields";
 import { MESSAGE_TEMPLATE_CATEGORIES, type MessageTemplateCategory } from "@/lib/crm/event-text-templates";
 import { estimatedTextBlastMinutes } from "@/lib/crm/text-blast-timing";
+import { tagBlastLabel } from "@/lib/crm/text-blasts";
 import {
   createTextBlast,
+  createTagTextBlast,
   cancelTextBlast,
   getTextBlastsForEvent,
   getTextBlastAudiencePreview,
+  getTagAudiencePreview,
   getEventAccount,
   sendTestText,
   getTextBlastFailureDetails,
@@ -23,6 +26,7 @@ import {
   type EventAttendanceCounts,
   type AttendanceStatus,
   type TextBlastAudiencePreview,
+  type BlastTarget,
 } from "@/app/(app)/contacts/text-blast-actions";
 
 const ATTENDANCE_OPTIONS: { value: AttendanceStatus; label: string; countKey: keyof EventAttendanceCounts }[] = [
@@ -32,7 +36,8 @@ const ATTENDANCE_OPTIONS: { value: AttendanceStatus; label: string; countKey: ke
   { value: "walk_in", label: "Walk-in", countKey: "walkIn" },
 ];
 
-export function TextBlastModal({ eventName, onClose }: { eventName: string; onClose: () => void }) {
+export function TextBlastModal({ target, onClose }: { target: BlastTarget; onClose: () => void }) {
+  const label = target.kind === "event" ? target.eventName : tagBlastLabel(target.tagName);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ ok: true; recipientCount: number } | { ok: false; error: string } | null>(null);
@@ -93,42 +98,53 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
   }
 
   async function loadHistory() {
-    const blasts = await getTextBlastsForEvent(eventName);
+    const blasts = await getTextBlastsForEvent(label);
     setHistory(blasts);
   }
 
   function loadAudience() {
+    if (target.kind === "tag") {
+      getTagAudiencePreview(target.tagId).then(setAudience);
+      return;
+    }
     if (audienceMode === "occurrence" && selectedEventId) {
-      getTextBlastAudiencePreview(eventName, undefined, { eventId: selectedEventId, attendanceStatus }).then(setAudience);
+      getTextBlastAudiencePreview(target.eventName, undefined, { eventId: selectedEventId, attendanceStatus }).then(setAudience);
       getEventAttendanceCounts(selectedEventId).then(setAttendanceCounts);
     } else if (audienceMode === "all_registered") {
-      getTextBlastAudiencePreview(eventName, registeredBeforeCutoff()).then(setAudience);
+      getTextBlastAudiencePreview(target.eventName, registeredBeforeCutoff()).then(setAudience);
     }
   }
 
   useEffect(() => {
     loadHistory();
-    getEventAccount(eventName).then(setEventAccount);
-    listEventOccurrences(eventName).then((list) => {
-      setOccurrences(list);
-      setSelectedEventId((current) => current ?? list[0]?.eventId ?? null);
-    });
+    if (target.kind === "event") {
+      getEventAccount(target.eventName).then(setEventAccount);
+      listEventOccurrences(target.eventName).then((list) => {
+        setOccurrences(list);
+        setSelectedEventId((current) => current ?? list[0]?.eventId ?? null);
+      });
+    } else {
+      loadAudience();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eventName]);
+  }, [label]);
 
   useEffect(() => {
-    loadAudience();
+    if (target.kind === "event") loadAudience();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [audienceMode, excludeRecent, excludeDays, selectedEventId, attendanceStatus]);
 
   async function send() {
     setSending(true);
-    const outcome = await createTextBlast(
-      eventName,
-      message,
-      registeredBeforeCutoff(),
-      audienceMode === "occurrence" && selectedEventId ? { eventId: selectedEventId, attendanceStatus } : undefined,
-    );
+    const outcome =
+      target.kind === "tag"
+        ? await createTagTextBlast(target.tagId, target.tagName, message)
+        : await createTextBlast(
+            target.eventName,
+            message,
+            registeredBeforeCutoff(),
+            audienceMode === "occurrence" && selectedEventId ? { eventId: selectedEventId, attendanceStatus } : undefined,
+          );
     setSending(false);
     if (outcome.ok) {
       setResult({ ok: true, recipientCount: outcome.recipientCount });
@@ -161,8 +177,8 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
       <div className="flex max-h-[85vh] w-full max-w-md flex-col rounded-t-2xl bg-white shadow-xl sm:rounded-2xl">
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-neutral-100 px-5 py-4">
           <div>
-            <p className="font-serif text-xl font-semibold text-neutral-900">Text reminder</p>
-            <p className="mt-0.5 text-xs text-neutral-500">{eventName}</p>
+            <p className="font-serif text-xl font-semibold text-neutral-900">{target.kind === "tag" ? "Text a tag" : "Text reminder"}</p>
+            <p className="mt-0.5 text-xs text-neutral-500">{label}</p>
           </div>
           <button onClick={onClose} className="shrink-0 rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100">
             <X size={18} />
@@ -214,6 +230,7 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
             </div>
           )}
 
+          {target.kind === "event" && (
           <div className="space-y-2">
             <div className="flex gap-1.5">
               <button
@@ -292,6 +309,7 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
               </div>
             )}
           </div>
+          )}
 
           <div className="space-y-2">
             <div className="flex flex-wrap gap-2">
@@ -354,7 +372,9 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
 
           {history && history.length > 0 && (
             <div className="space-y-2 border-t border-neutral-100 pt-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Previous sends for this event</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                Previous sends {target.kind === "tag" ? "to this tag" : "for this event"}
+              </p>
               {history.map((b) => (
                 <div key={b.id} className="rounded-xl border border-neutral-200 p-3 text-xs">
                   <div className="flex items-center justify-between gap-2">
@@ -423,7 +443,7 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
         <TemplatePicker
           category={MESSAGE_TEMPLATE_CATEGORIES.find((c) => c.key === openTemplateCategory)!}
           account={eventAccount}
-          eventName={eventName}
+          eventName={target.kind === "event" ? target.eventName : null}
           onPick={setMessage}
           onClose={() => setOpenTemplateCategory(null)}
         />
@@ -441,7 +461,7 @@ function TemplatePicker({
 }: {
   category: MessageTemplateCategory;
   account: string | null;
-  eventName: string;
+  eventName: string | null;
   onPick: (text: string) => void;
   onClose: () => void;
 }) {

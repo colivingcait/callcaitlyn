@@ -115,6 +115,9 @@ export interface TextBlast {
   // under this event name" (the original, still-supported behavior).
   event_id: string | null;
   attendance_status: TextBlastAttendanceStatus | null;
+  // Set instead of event_id/attendance_status when this blast targeted a
+  // tag's members directly rather than an event's registrants.
+  tag_id: string | null;
 }
 
 export interface TextBlastRecipient {

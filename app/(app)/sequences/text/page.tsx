@@ -1,11 +1,11 @@
-import { listRegisteredEventNames } from "@/lib/data/contacts";
+import { listRegisteredEventNames, listTags } from "@/lib/data/contacts";
 import { getAllTextBlasts } from "@/app/(app)/contacts/text-blast-actions";
 import { CampaignsTabNav } from "@/components/sequences/CampaignsTabNav";
 import { TextTabClient } from "@/components/sequences/TextTabClient";
 
 export default async function TextBlastsPage({ searchParams }: { searchParams: Promise<{ event?: string }> }) {
   const { event } = await searchParams;
-  const [eventNames, blasts] = await Promise.all([listRegisteredEventNames(), getAllTextBlasts()]);
+  const [eventNames, tags, blasts] = await Promise.all([listRegisteredEventNames(), listTags(), getAllTextBlasts()]);
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 px-4 py-6">
@@ -18,7 +18,7 @@ export default async function TextBlastsPage({ searchParams }: { searchParams: P
 
       <CampaignsTabNav />
 
-      <TextTabClient eventNames={eventNames} blasts={blasts} initialComposeEvent={event ?? null} />
+      <TextTabClient eventNames={eventNames} tags={tags} blasts={blasts} initialComposeEvent={event ?? null} />
     </div>
   );
 }
