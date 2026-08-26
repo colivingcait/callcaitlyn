@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, MessageSquareText, Send, Users } from "lucide-react";
+import { X, MessageSquareText, Send, Users, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
 import { Button, Textarea, Input } from "@/components/ui";
 import { applyMergeFields, PREVIEW_CONTACT } from "@/lib/crm/merge-fields";
-import { dayBeforeReminderTemplate, dayOfReminderTemplate, weekBeforeReminderTemplate } from "@/lib/crm/event-text-templates";
+import { dayBeforeReminderTemplate, dayOfReminderTemplate, weekBeforeReminderTemplate, FOLLOW_UP_TEMPLATES } from "@/lib/crm/event-text-templates";
 import { estimatedTextBlastMinutes } from "@/lib/crm/text-blast-timing";
 import {
   createTextBlast,
@@ -22,6 +22,7 @@ import {
   type EventOccurrence,
   type EventAttendanceCounts,
   type AttendanceStatus,
+  type TextBlastAudiencePreview,
 } from "@/app/(app)/contacts/text-blast-actions";
 
 const ATTENDANCE_OPTIONS: { value: AttendanceStatus; label: string; countKey: keyof EventAttendanceCounts }[] = [
@@ -65,7 +66,8 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
     await loadHistory();
   }
 
-  const [audience, setAudience] = useState<{ count: number; sample: string[] } | null>(null);
+  const [audience, setAudience] = useState<TextBlastAudiencePreview | null>(null);
+  const [recipientsOpen, setRecipientsOpen] = useState(false);
   const [excludeRecent, setExcludeRecent] = useState(false);
   const [excludeDays, setExcludeDays] = useState(1);
   const [eventAccount, setEventAccount] = useState<string | null>(null);
@@ -151,6 +153,7 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
   }
 
   const preview = message.trim() ? applyMergeFields(message, PREVIEW_CONTACT) : "";
+  const duplicateCount = audience?.recipients.filter((r) => r.duplicatePhone || r.duplicateName).length ?? 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
@@ -167,20 +170,45 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
 
         <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
           {audience && (
-            <div className="flex items-start gap-2 rounded-xl bg-neutral-50 px-3.5 py-2.5 text-xs text-neutral-600">
-              <Users size={14} className="mt-0.5 shrink-0 text-neutral-400" />
-              {audience.count === 0 ? (
-                <span>No registrants with a phone number on file for this event.</span>
-              ) : (
-                <span>
-                  Sending to <span className="font-semibold text-neutral-900">{audience.count}</span> {audience.count === 1 ? "person" : "people"}
-                  {audience.sample.length > 0 && (
-                    <>
-                      : {audience.sample.join(", ")}
-                      {audience.count > audience.sample.length && ` +${audience.count - audience.sample.length} more`}
-                    </>
-                  )}
-                </span>
+            <div className="space-y-2 rounded-xl bg-neutral-50 px-3.5 py-2.5">
+              <button
+                type="button"
+                onClick={() => setRecipientsOpen((v) => !v)}
+                disabled={audience.count === 0}
+                className="flex w-full items-center gap-2 text-xs text-neutral-600 disabled:cursor-default"
+              >
+                <Users size={14} className="shrink-0 text-neutral-400" />
+                {audience.count === 0 ? (
+                  <span>No one with a phone number on file matches this audience.</span>
+                ) : (
+                  <>
+                    <span className="flex-1 text-left">
+                      Sending to <span className="font-semibold text-neutral-900">{audience.count}</span> {audience.count === 1 ? "person" : "people"}
+                      {duplicateCount > 0 && (
+                        <span className="ml-1.5 inline-flex items-center gap-1 font-medium text-amber-700">
+                          <AlertTriangle size={11} /> {duplicateCount} possible {duplicateCount === 1 ? "duplicate" : "duplicates"}
+                        </span>
+                      )}
+                    </span>
+                    {recipientsOpen ? <ChevronUp size={14} className="shrink-0 text-neutral-400" /> : <ChevronDown size={14} className="shrink-0 text-neutral-400" />}
+                  </>
+                )}
+              </button>
+              {recipientsOpen && audience.count > 0 && (
+                <div className="max-h-40 space-y-0.5 overflow-y-auto rounded-lg border border-neutral-200 bg-white p-1.5">
+                  {audience.recipients.map((r) => (
+                    <div
+                      key={r.id}
+                      className={`flex items-center justify-between gap-2 rounded-md px-1.5 py-1 text-xs ${r.duplicatePhone || r.duplicateName ? "bg-amber-50" : ""}`}
+                    >
+                      <span className="flex min-w-0 items-center gap-1 truncate font-medium text-neutral-700">
+                        {(r.duplicatePhone || r.duplicateName) && <AlertTriangle size={11} className="shrink-0 text-amber-600" />}
+                        <span className="truncate">{r.name}</span>
+                      </span>
+                      <span className="shrink-0 text-neutral-400">{r.phone}</span>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           )}
@@ -275,6 +303,16 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
               <Button variant="secondary" size="sm" onClick={() => setMessage(dayOfReminderTemplate(eventAccount, eventName))}>
                 Day-of template
               </Button>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[11px] font-medium text-neutral-400">Follow-up (invites a reply):</p>
+              <div className="flex flex-wrap gap-2">
+                {FOLLOW_UP_TEMPLATES.map((t) => (
+                  <Button key={t.label} variant="secondary" size="sm" onClick={() => setMessage(t.build(eventAccount, eventName))}>
+                    {t.label}
+                  </Button>
+                ))}
+              </div>
             </div>
             <Textarea
               value={message}

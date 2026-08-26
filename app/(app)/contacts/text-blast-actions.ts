@@ -173,24 +173,60 @@ export async function getEventAccount(eventName: string): Promise<string | null>
   return typeof metadata?.eventbrite_account === "string" ? metadata.eventbrite_account : null;
 }
 
+export type TextBlastRecipient = { id: string; name: string; phone: string; duplicatePhone: boolean; duplicateName: boolean };
+export type TextBlastAudiencePreview = { count: number; recipients: TextBlastRecipient[] };
+
+// Full recipient list rather than a truncated sample - a "sending to 41
+// people: Jamie, Alex +39 more" summary doesn't let her actually check who
+// she's about to text, or catch two contact records that'd double-text the
+// same real person before she hits send. duplicatePhone flags recipients
+// who share a phone with another recipient in this same send (the send
+// loop keys strictly off contact_id, so this WOULD fire twice); duplicateName
+// flags a same-name collision even without a shared phone, since that's
+// the more common shape a duplicate contact takes (re-entered with a typo'd
+// or different number).
+function buildAudiencePreview(audience: AudienceContact[]): TextBlastAudiencePreview {
+  const phoneCounts = new Map<string, number>();
+  const nameCounts = new Map<string, number>();
+  for (const c of audience) {
+    phoneCounts.set(c.phone, (phoneCounts.get(c.phone) ?? 0) + 1);
+    const normalizedName = `${c.first_name} ${c.last_name}`.trim().toLowerCase();
+    nameCounts.set(normalizedName, (nameCounts.get(normalizedName) ?? 0) + 1);
+  }
+
+  const recipients = audience
+    .map((c) => {
+      const name = `${c.first_name} ${c.last_name}`.trim() || "Unnamed";
+      return {
+        id: c.id,
+        name,
+        phone: c.phone,
+        duplicatePhone: (phoneCounts.get(c.phone) ?? 0) > 1,
+        duplicateName: (nameCounts.get(name.toLowerCase()) ?? 0) > 1,
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return { count: audience.length, recipients };
+}
+
 export async function getTextBlastAudiencePreview(
   eventName: string,
   registeredBefore?: string,
   occurrence?: { eventId: string; attendanceStatus: AttendanceStatus },
-) {
+): Promise<TextBlastAudiencePreview> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { count: 0, sample: [] as string[] };
+  if (!user) return { count: 0, recipients: [] };
 
   const admin = createAdminClient();
   const audience = occurrence
     ? await resolveOccurrenceAudience(admin, user.id, occurrence.eventId, occurrence.attendanceStatus)
     : await resolveEventAudience(admin, user.id, eventName, registeredBefore);
-  const sample = audience.slice(0, 6).map((c) => c.first_name || "Unnamed");
 
-  return { count: audience.length, sample };
+  return buildAudiencePreview(audience);
 }
 
 export async function sendTestText(message: string, phone: string) {
