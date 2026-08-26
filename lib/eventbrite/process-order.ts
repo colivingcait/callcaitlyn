@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { fetchEventName } from "./client";
+import { fetchEventDetails } from "./client";
 import { parseEventbriteAttendees } from "./parse-event";
 import { findOrCreateContact, addTagByName } from "@/lib/crm/find-or-create-contact";
 import { upsertActivity } from "@/lib/crm/activities";
@@ -55,7 +55,8 @@ export async function processEventbriteOrder(
   opts: { notify: boolean },
 ): Promise<number> {
   const eventId = typeof order.event_id === "string" ? order.event_id : null;
-  const eventName = eventId ? await fetchEventName(eventId, apiToken) : null;
+  const eventDetails = eventId ? await fetchEventDetails(eventId, apiToken) : { name: null, startLocal: null };
+  const eventName = eventDetails.name;
   const isWomensRei = await resolveEventSeries(admin, ownerId, eventId, accountIsWomensRei);
   const attendees = parseEventbriteAttendees(order);
 
@@ -93,6 +94,7 @@ export async function processEventbriteOrder(
         eventbrite_account: isWomensRei ? "womens_rei" : "house_hacking",
         event_id: eventId,
         event_name: eventName,
+        event_start: eventDetails.startLocal,
         journey_stage: attendee.journeyStage,
         raw: order,
       },

@@ -99,6 +99,7 @@ export interface ContactSegment {
 
 export type TextBlastStatus = "sending" | "completed" | "canceled";
 export type TextBlastRecipientStatus = "pending" | "sent" | "failed" | "skipped";
+export type TextBlastAttendanceStatus = "registered" | "attended" | "no_show" | "walk_in";
 
 export interface TextBlast {
   id: string;
@@ -108,6 +109,11 @@ export interface TextBlast {
   status: TextBlastStatus;
   created_at: string;
   completed_at: string | null;
+  // Which specific occurrence + attendance slice this targeted - null on
+  // blasts created before this existed, meaning "everyone ever registered
+  // under this event name" (the original, still-supported behavior).
+  event_id: string | null;
+  attendance_status: TextBlastAttendanceStatus | null;
 }
 
 export interface TextBlastRecipient {

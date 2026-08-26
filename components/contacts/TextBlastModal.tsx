@@ -15,9 +15,21 @@ import {
   sendTestText,
   getTextBlastFailureDetails,
   retryFailedTextBlastRecipients,
+  listEventOccurrences,
+  getEventAttendanceCounts,
   type TextBlastWithProgress,
   type TextBlastFailureGroup,
+  type EventOccurrence,
+  type EventAttendanceCounts,
+  type AttendanceStatus,
 } from "@/app/(app)/contacts/text-blast-actions";
+
+const ATTENDANCE_OPTIONS: { value: AttendanceStatus; label: string; countKey: keyof EventAttendanceCounts }[] = [
+  { value: "registered", label: "Registered", countKey: "registered" },
+  { value: "attended", label: "Attended", countKey: "attended" },
+  { value: "no_show", label: "No-show", countKey: "noShow" },
+  { value: "walk_in", label: "Walk-in", countKey: "walkIn" },
+];
 
 export function TextBlastModal({ eventName, onClose }: { eventName: string; onClose: () => void }) {
   const [message, setMessage] = useState("");
@@ -58,6 +70,16 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
   const [excludeDays, setExcludeDays] = useState(1);
   const [eventAccount, setEventAccount] = useState<string | null>(null);
 
+  // "all_registered" is the original behavior - everyone ever registered
+  // under this recurring event name, minus an optional recent-signups
+  // cutoff. "occurrence" targets one specific night by its Eventbrite
+  // event_id, sliced by whether they actually showed up.
+  const [audienceMode, setAudienceMode] = useState<"all_registered" | "occurrence">("all_registered");
+  const [occurrences, setOccurrences] = useState<EventOccurrence[] | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [attendanceStatus, setAttendanceStatus] = useState<AttendanceStatus>("attended");
+  const [attendanceCounts, setAttendanceCounts] = useState<EventAttendanceCounts | null>(null);
+
   const [testPhone, setTestPhone] = useState(() => (typeof window !== "undefined" ? (localStorage.getItem("textBlastTestPhone") ?? "") : ""));
   const [testSending, setTestSending] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: true } | { ok: false; error: string } | null>(null);
@@ -73,19 +95,37 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
   }
 
   function loadAudience() {
-    getTextBlastAudiencePreview(eventName, registeredBeforeCutoff()).then(setAudience);
+    if (audienceMode === "occurrence" && selectedEventId) {
+      getTextBlastAudiencePreview(eventName, undefined, { eventId: selectedEventId, attendanceStatus }).then(setAudience);
+      getEventAttendanceCounts(selectedEventId).then(setAttendanceCounts);
+    } else if (audienceMode === "all_registered") {
+      getTextBlastAudiencePreview(eventName, registeredBeforeCutoff()).then(setAudience);
+    }
   }
 
   useEffect(() => {
     loadHistory();
-    loadAudience();
     getEventAccount(eventName).then(setEventAccount);
+    listEventOccurrences(eventName).then((list) => {
+      setOccurrences(list);
+      setSelectedEventId((current) => current ?? list[0]?.eventId ?? null);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eventName, excludeRecent, excludeDays]);
+  }, [eventName]);
+
+  useEffect(() => {
+    loadAudience();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audienceMode, excludeRecent, excludeDays, selectedEventId, attendanceStatus]);
 
   async function send() {
     setSending(true);
-    const outcome = await createTextBlast(eventName, message, registeredBeforeCutoff());
+    const outcome = await createTextBlast(
+      eventName,
+      message,
+      registeredBeforeCutoff(),
+      audienceMode === "occurrence" && selectedEventId ? { eventId: selectedEventId, attendanceStatus } : undefined,
+    );
     setSending(false);
     if (outcome.ok) {
       setResult({ ok: true, recipientCount: outcome.recipientCount });
@@ -145,24 +185,83 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
             </div>
           )}
 
-          <div className="space-y-1.5">
-            <label className="flex items-center gap-2 text-xs text-neutral-600">
-              <input type="checkbox" checked={excludeRecent} onChange={(e) => setExcludeRecent(e.target.checked)} className="accent-brand-600" />
-              Exclude anyone who registered in the last
-              <input
-                type="number"
-                min={1}
-                value={excludeDays}
-                onChange={(e) => setExcludeDays(Math.max(1, Number(e.target.value) || 1))}
-                disabled={!excludeRecent}
-                className="w-12 rounded-lg border border-neutral-200 px-1.5 py-1 text-center disabled:opacity-50"
-              />
-              day{excludeDays === 1 ? "" : "s"}
-            </label>
-            <p className="text-[11px] text-neutral-400">
-              Meetups reuse the same event name every month, so &ldquo;registered for this event&rdquo; can include people who just signed up for
-              a future date - use this to leave them out of a reminder about one that already happened.
-            </p>
+          <div className="space-y-2">
+            <div className="flex gap-1.5">
+              <button
+                type="button"
+                onClick={() => setAudienceMode("all_registered")}
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium ${audienceMode === "all_registered" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-neutral-200 text-neutral-600"}`}
+              >
+                Everyone registered
+              </button>
+              <button
+                type="button"
+                onClick={() => setAudienceMode("occurrence")}
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium ${audienceMode === "occurrence" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-neutral-200 text-neutral-600"}`}
+              >
+                One specific date
+              </button>
+            </div>
+
+            {audienceMode === "all_registered" ? (
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-2 text-xs text-neutral-600">
+                  <input
+                    type="checkbox"
+                    checked={excludeRecent}
+                    onChange={(e) => setExcludeRecent(e.target.checked)}
+                    className="accent-brand-600"
+                  />
+                  Exclude anyone who registered in the last
+                  <input
+                    type="number"
+                    min={1}
+                    value={excludeDays}
+                    onChange={(e) => setExcludeDays(Math.max(1, Number(e.target.value) || 1))}
+                    disabled={!excludeRecent}
+                    className="w-12 rounded-lg border border-neutral-200 px-1.5 py-1 text-center disabled:opacity-50"
+                  />
+                  day{excludeDays === 1 ? "" : "s"}
+                </label>
+                <p className="text-[11px] text-neutral-400">
+                  Meetups reuse the same event name every month, so &ldquo;registered for this event&rdquo; can include people who just signed up
+                  for a future date - use this to leave them out of a reminder about one that already happened.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <select
+                  value={selectedEventId ?? ""}
+                  onChange={(e) => setSelectedEventId(e.target.value || null)}
+                  className="w-full rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs"
+                >
+                  {!occurrences && <option>Loading dates…</option>}
+                  {occurrences?.length === 0 && <option>No occurrences found</option>}
+                  {occurrences?.map((o) => (
+                    <option key={o.eventId} value={o.eventId}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex flex-wrap gap-1.5">
+                  {ATTENDANCE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setAttendanceStatus(opt.value)}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-medium ${attendanceStatus === opt.value ? "border-brand-500 bg-brand-50 text-brand-700" : "border-neutral-200 text-neutral-600"}`}
+                    >
+                      {opt.label}
+                      {attendanceCounts && ` (${attendanceCounts[opt.countKey]})`}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-neutral-400">
+                  Registered = signed up on Eventbrite. Attended = actually checked in (whether or not they registered). No-show = registered but
+                  didn&apos;t check in. Walk-in = checked in without registering.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -239,6 +338,11 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
                       {b.status === "completed" && `Completed: ${b.sent}/${b.total} sent`}
                       {b.status === "canceled" && `Canceled: ${b.sent}/${b.total} sent`}
                     </span>
+                    {b.attendance_status && (
+                      <span className="shrink-0 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-neutral-500">
+                        {ATTENDANCE_OPTIONS.find((o) => o.value === b.attendance_status)?.label}
+                      </span>
+                    )}
                     {b.status === "sending" && (
                       <button onClick={() => cancel(b.id)} className="font-medium text-red-600 hover:underline">
                         Cancel remaining

@@ -51,6 +51,103 @@ async function resolveEventAudience(
   return (contacts ?? []) as AudienceContact[];
 }
 
+export type AttendanceStatus = "registered" | "attended" | "no_show" | "walk_in";
+
+// Registered vs. attended aren't the same list - a meetup regularly gets
+// walk-ins who never registered on Eventbrite, and registrants who don't
+// show. Scoped to one specific event_id (not the recurring event name)
+// since that's the only reliable way to mean "this exact night" - see
+// lib/eventbrite/process-order.ts and lib/jotform/process-submission.ts
+// for how event_id gets attached to both sides.
+async function resolveOccurrenceAudience(
+  admin: SupabaseClient,
+  ownerId: string,
+  eventId: string,
+  status: AttendanceStatus,
+): Promise<AudienceContact[]> {
+  const [{ data: registrations }, { data: checkins }] = await Promise.all([
+    admin.from("activities").select("contact_id").eq("owner_id", ownerId).eq("source", "eventbrite").eq("metadata->>event_id", eventId),
+    admin.from("activities").select("contact_id").eq("owner_id", ownerId).eq("source", "jotform").eq("metadata->>event_id", eventId),
+  ]);
+
+  const registeredIds = new Set((registrations ?? []).map((r) => r.contact_id as string));
+  const attendedIds = new Set((checkins ?? []).map((r) => r.contact_id as string));
+
+  let contactIds: string[];
+  if (status === "registered") contactIds = [...registeredIds];
+  else if (status === "attended") contactIds = [...attendedIds];
+  else if (status === "no_show") contactIds = [...registeredIds].filter((id) => !attendedIds.has(id));
+  else contactIds = [...attendedIds].filter((id) => !registeredIds.has(id)); // walk_in
+
+  if (contactIds.length === 0) return [];
+
+  const { data: contacts } = await admin
+    .from("contacts")
+    .select("id, first_name, last_name, phone")
+    .in("id", contactIds)
+    .eq("archived", false)
+    .not("phone", "is", null);
+
+  return (contacts ?? []) as AudienceContact[];
+}
+
+export type EventOccurrence = { eventId: string; label: string };
+
+// Distinct occurrences of a recurring event name, newest first - the
+// registration dropdown only knows the event's name (which repeats every
+// month), so this is what lets the blast UI target one specific night.
+// Labeled with the event's real scheduled date (event_start) when a
+// registration processed since that field started being captured has it;
+// falls back to the earliest registration date on file otherwise.
+export async function listEventOccurrences(eventName: string): Promise<EventOccurrence[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("activities")
+    .select("occurred_at, metadata")
+    .eq("source", "eventbrite")
+    .eq("metadata->>event_name", eventName)
+    .order("occurred_at", { ascending: true });
+
+  const byEventId = new Map<string, { start: string | null; earliestRegistration: string }>();
+  for (const row of data ?? []) {
+    const metadata = row.metadata as Record<string, unknown> | null;
+    const eventId = typeof metadata?.event_id === "string" ? metadata.event_id : null;
+    if (!eventId || byEventId.has(eventId)) continue;
+    const start = typeof metadata?.event_start === "string" ? metadata.event_start : null;
+    byEventId.set(eventId, { start, earliestRegistration: row.occurred_at });
+  }
+
+  const formatter = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return Array.from(byEventId.entries())
+    .map(([eventId, { start, earliestRegistration }]) => ({
+      eventId,
+      label: start ? formatter.format(new Date(start)) : `Around ${formatter.format(new Date(earliestRegistration))}`,
+      sortKey: start ?? earliestRegistration,
+    }))
+    .sort((a, b) => b.sortKey.localeCompare(a.sortKey))
+    .map(({ eventId, label }) => ({ eventId, label }));
+}
+
+export type EventAttendanceCounts = { registered: number; attended: number; noShow: number; walkIn: number };
+
+export async function getEventAttendanceCounts(eventId: string): Promise<EventAttendanceCounts> {
+  const supabase = await createClient();
+  const [{ data: registrations }, { data: checkins }] = await Promise.all([
+    supabase.from("activities").select("contact_id").eq("source", "eventbrite").eq("metadata->>event_id", eventId),
+    supabase.from("activities").select("contact_id").eq("source", "jotform").eq("metadata->>event_id", eventId),
+  ]);
+
+  const registeredIds = new Set((registrations ?? []).map((r) => r.contact_id as string));
+  const attendedIds = new Set((checkins ?? []).map((r) => r.contact_id as string));
+
+  return {
+    registered: registeredIds.size,
+    attended: attendedIds.size,
+    noShow: [...registeredIds].filter((id) => !attendedIds.has(id)).length,
+    walkIn: [...attendedIds].filter((id) => !registeredIds.has(id)).length,
+  };
+}
+
 // Which Eventbrite account (womens_rei/house_hacking) this event belongs
 // to, for picking the right meetup name in the reminder templates - same
 // reliable signal used to fix the dialer's welcome-text mislabeling, not a
@@ -68,7 +165,11 @@ export async function getEventAccount(eventName: string): Promise<string | null>
   return typeof metadata?.eventbrite_account === "string" ? metadata.eventbrite_account : null;
 }
 
-export async function getTextBlastAudiencePreview(eventName: string, registeredBefore?: string) {
+export async function getTextBlastAudiencePreview(
+  eventName: string,
+  registeredBefore?: string,
+  occurrence?: { eventId: string; attendanceStatus: AttendanceStatus },
+) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -76,7 +177,9 @@ export async function getTextBlastAudiencePreview(eventName: string, registeredB
   if (!user) return { count: 0, sample: [] as string[] };
 
   const admin = createAdminClient();
-  const audience = await resolveEventAudience(admin, user.id, eventName, registeredBefore);
+  const audience = occurrence
+    ? await resolveOccurrenceAudience(admin, user.id, occurrence.eventId, occurrence.attendanceStatus)
+    : await resolveEventAudience(admin, user.id, eventName, registeredBefore);
   const sample = audience.slice(0, 6).map((c) => c.first_name || "Unnamed");
 
   return { count: audience.length, sample };
@@ -95,7 +198,12 @@ export async function sendTestText(message: string, phone: string) {
 // Recipients are snapshotted here, at creation time - not re-queried live
 // by the sender - so a blast already trickling out doesn't silently pick
 // up a new registration that comes in an hour into the send.
-export async function createTextBlast(eventName: string, message: string, registeredBefore?: string) {
+export async function createTextBlast(
+  eventName: string,
+  message: string,
+  registeredBefore?: string,
+  occurrence?: { eventId: string; attendanceStatus: AttendanceStatus },
+) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -105,12 +213,20 @@ export async function createTextBlast(eventName: string, message: string, regist
   if (!message.trim()) return { ok: false as const, error: "Write a message" };
 
   const admin = createAdminClient();
-  const audience = await resolveEventAudience(admin, user.id, eventName, registeredBefore);
-  if (!audience.length) return { ok: false as const, error: "No registrants with a phone number on file for that event" };
+  const audience = occurrence
+    ? await resolveOccurrenceAudience(admin, user.id, occurrence.eventId, occurrence.attendanceStatus)
+    : await resolveEventAudience(admin, user.id, eventName, registeredBefore);
+  if (!audience.length) return { ok: false as const, error: "No one with a phone number on file matches that audience" };
 
   const { data: blast, error: blastError } = await admin
     .from("text_blasts")
-    .insert({ owner_id: user.id, event_name: eventName, message: message.trim() })
+    .insert({
+      owner_id: user.id,
+      event_name: eventName,
+      message: message.trim(),
+      event_id: occurrence?.eventId ?? null,
+      attendance_status: occurrence?.attendanceStatus ?? null,
+    })
     .select("id")
     .single();
   if (blastError || !blast) return { ok: false as const, error: blastError?.message ?? "Failed to create blast" };

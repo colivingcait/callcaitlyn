@@ -31,10 +31,26 @@ export async function fetchOrderWithAttendees(orderApiUrl: string, token: string
   return eventbriteFetch(`${orderApiUrl}${separator}expand=attendees`, token);
 }
 
-export async function fetchEventName(eventId: string, token: string | undefined): Promise<string | null> {
+export type EventDetails = { name: string | null; startLocal: string | null };
+
+// Also pulls the event's actual scheduled start (local time), not just its
+// name - used to label a specific occurrence in the text-blast audience
+// picker ("registered but no-show for the July 22 event" needs a real
+// date, not just the recurring event's name). Field shape follows
+// Eventbrite's documented API but hasn't been confirmed against a real
+// response, same caveat as everything else in this client.
+export async function fetchEventDetails(eventId: string, token: string | undefined): Promise<EventDetails> {
   const event = await eventbriteFetch(`https://www.eventbriteapi.com/v3/events/${eventId}/`, token);
   const name = event?.name as Record<string, unknown> | undefined;
-  return typeof name?.text === "string" ? name.text : null;
+  const start = event?.start as Record<string, unknown> | undefined;
+  return {
+    name: typeof name?.text === "string" ? name.text : null,
+    startLocal: typeof start?.local === "string" ? start.local : null,
+  };
+}
+
+export async function fetchEventName(eventId: string, token: string | undefined): Promise<string | null> {
+  return (await fetchEventDetails(eventId, token)).name;
 }
 
 // Throws instead of swallowing/logging like eventbriteFetch does, so the
