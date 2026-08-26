@@ -206,8 +206,7 @@ export default function CheckInPage() {
           {step.name === "not-found" && (
             <div className="space-y-4">
               <p className="text-lg text-neutral-700">
-                We don&apos;t have you on file yet, <span className="font-bold text-neutral-900">{step.firstName}</span> - just a couple more
-                things:
+                Nice to meet you, <span className="font-bold text-neutral-900">{step.firstName}</span>! A couple quick things and you&apos;re in:
               </p>
               <Field label="Email" type="email" value={email} onChange={setEmail} autoFocus autoComplete="email" />
               <Field label="Phone" type="tel" value={phone} onChange={setPhone} autoComplete="tel" />
