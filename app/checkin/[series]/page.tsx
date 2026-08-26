@@ -27,7 +27,7 @@ const CONTACT_CARDS: Record<string, ContactCard[]> = {
   ],
   womens_rei: [
     { name: "Caitlyn Verdugo", role: "Realtor | Investor", photo: "/images/checkin/caitlyn.jpg", phone: "(678) 884-8494", email: "cv.sellshomes@gmail.com" },
-    { name: "Jasmine Brown", role: "Hard Money Lender, Conventus Lending", photo: "/images/checkin/jasmine.jpg", email: "jbrown@cvlending.com" },
+    { name: "Jasmine Brown", role: "Hard Money Lender, Conventus Lending", photo: "/images/checkin/jasmine.jpg", phone: "(404) 789-5791", email: "jbrown@cvlending.com" },
   ],
 };
 
