@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { MessageSquareText } from "lucide-react";
 import { fullName, formatPhone, initials, CONTACT_TYPE_LABELS } from "@/lib/utils";
 import { RepresentingBadge } from "@/components/contacts/RepresentingBadge";
+import { SendTextForm } from "@/components/contacts/SendTextForm";
 import type { ContactWithRelations } from "@/types/database";
 
 export function ContactRow({
@@ -16,6 +19,7 @@ export function ContactRow({
   selected?: boolean;
   onToggle?: () => void;
 }) {
+  const [quickTextOpen, setQuickTextOpen] = useState(false);
   const stage = contact.pipeline_stages;
   const className = "flex items-center gap-3 border-b border-neutral-100 px-4 py-3 hover:bg-neutral-50 md:px-2";
 
@@ -61,8 +65,27 @@ export function ContactRow({
   }
 
   return (
-    <Link href={`/contacts/${contact.id}`} className={className}>
-      {content}
-    </Link>
+    <div>
+      <div className={className}>
+        <Link href={`/contacts/${contact.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+          {content}
+        </Link>
+        {contact.phone && (
+          <button
+            type="button"
+            onClick={() => setQuickTextOpen((v) => !v)}
+            className={`shrink-0 rounded-lg p-2 ${quickTextOpen ? "bg-brand-50 text-brand-600" : "text-neutral-400 hover:bg-neutral-100 hover:text-brand-600"}`}
+            aria-label="Quick text"
+          >
+            <MessageSquareText size={16} />
+          </button>
+        )}
+      </div>
+      {quickTextOpen && (
+        <div className="border-b border-neutral-100 bg-neutral-50 px-4 py-2 md:px-2">
+          <SendTextForm contactId={contact.id} phone={contact.phone} />
+        </div>
+      )}
+    </div>
   );
 }

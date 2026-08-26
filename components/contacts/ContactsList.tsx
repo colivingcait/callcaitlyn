@@ -9,14 +9,15 @@ import { BulkSequenceModal } from "@/components/contacts/BulkSequenceModal";
 import { BulkStageModal } from "@/components/contacts/BulkStageModal";
 import { BulkLeadSourceModal } from "@/components/contacts/BulkLeadSourceModal";
 import { BulkTypeModal } from "@/components/contacts/BulkTypeModal";
+import { TextBlastModal } from "@/components/contacts/TextBlastModal";
 import { Button } from "@/components/ui";
-import { Archive } from "lucide-react";
+import { Archive, MessageSquareText } from "lucide-react";
 import { groupContacts } from "@/lib/crm/contact-grouping";
 import type { ContactGroupBy } from "@/lib/crm/contact-filter-params";
 import type { ContactWithRelations, PipelineStage, Tag } from "@/types/database";
 
 type SequenceOption = { id: string; name: string; type: "broadcast" | "drip" | "batch" };
-type BulkModal = "add-tag" | "remove-tag" | "sequence" | "stage" | "source" | "type" | null;
+type BulkModal = "add-tag" | "remove-tag" | "sequence" | "stage" | "source" | "type" | "text" | null;
 
 export function ContactsList({
   contacts,
@@ -145,6 +146,9 @@ export function ContactsList({
                 <Button size="sm" variant="secondary" onClick={() => setModal("sequence")}>
                   Sequence…
                 </Button>
+                <Button size="sm" variant="secondary" onClick={() => setModal("text")}>
+                  <MessageSquareText size={14} /> Text
+                </Button>
                 <Button size="sm" variant="ghost" onClick={() => setConfirmingArchive(true)}>
                   <Archive size={14} /> Archive
                 </Button>
@@ -170,6 +174,12 @@ export function ContactsList({
         <BulkLeadSourceModal contactIds={selectedIds} onClose={() => setModal(null)} onDone={afterAction} />
       )}
       {modal === "type" && <BulkTypeModal contactIds={selectedIds} onClose={() => setModal(null)} onDone={afterAction} />}
+      {modal === "text" && (
+        <TextBlastModal
+          target={{ kind: "contacts", contactIds: selectedIds, label: `${selectedIds.length} selected contact${selectedIds.length === 1 ? "" : "s"}` }}
+          onClose={() => setModal(null)}
+        />
+      )}
     </div>
   );
 }

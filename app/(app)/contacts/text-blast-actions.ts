@@ -118,6 +118,53 @@ async function resolveTagAudience(admin: SupabaseClient, ownerId: string, tagId:
   return (contacts ?? []) as AudienceContact[];
 }
 
+// Not every bulk text has an event or a tag behind it either - a filtered
+// slice of the Contacts list, hand-picked via its checkbox selection.
+async function resolveContactsAudience(admin: SupabaseClient, ownerId: string, contactIds: string[]): Promise<AudienceContact[]> {
+  if (contactIds.length === 0) return [];
+
+  const { data: contacts } = await admin
+    .from("contacts")
+    .select("id, first_name, last_name, phone")
+    .in("id", contactIds)
+    .eq("owner_id", ownerId)
+    .eq("archived", false)
+    .not("phone", "is", null);
+
+  return (contacts ?? []) as AudienceContact[];
+}
+
+const RECENTLY_TEXTED_WINDOW_MS = 60 * 60 * 1000;
+
+// Applied to every bulk-send audience (event, tag, or hand-picked contacts)
+// right before it's shown or sent to - a contact who already got an
+// outbound text in the last hour, from any source (an individual quick
+// text, another blast), doesn't need the exact same reminder again a
+// moment later. Matters most for the "text a few people individually,
+// then bulk-blast the rest of the filtered list" workflow, where without
+// this the bulk send would immediately re-text whoever she just handled
+// by hand.
+async function excludeRecentlyTexted(admin: SupabaseClient, ownerId: string, audience: AudienceContact[]): Promise<AudienceContact[]> {
+  if (audience.length === 0) return audience;
+
+  const cutoff = new Date(Date.now() - RECENTLY_TEXTED_WINDOW_MS).toISOString();
+  const { data: recent } = await admin
+    .from("activities")
+    .select("contact_id")
+    .eq("owner_id", ownerId)
+    .eq("source", "quo")
+    .eq("type", "text")
+    .eq("direction", "outbound")
+    .gte("occurred_at", cutoff)
+    .in(
+      "contact_id",
+      audience.map((c) => c.id),
+    );
+
+  const recentlyTextedIds = new Set((recent ?? []).map((r) => r.contact_id as string));
+  return audience.filter((c) => !recentlyTextedIds.has(c.id));
+}
+
 export type EventOccurrence = { eventId: string; label: string };
 
 // Distinct occurrences of a recurring event name, newest first - the
@@ -241,21 +288,22 @@ export async function getTextBlastAudiencePreview(
   if (!user) return { count: 0, recipients: [] };
 
   const admin = createAdminClient();
-  const audience = occurrence
+  let audience = occurrence
     ? await resolveOccurrenceAudience(admin, user.id, occurrence.eventId, occurrence.attendanceStatus)
     : await resolveEventAudience(admin, user.id, eventName, registeredBefore);
+  audience = await excludeRecentlyTexted(admin, user.id, audience);
 
   return buildAudiencePreview(audience);
 }
 
-// Prefixed label rather than a schema change to event_name (kept not-null
-// for every existing event-based blast/query) - free-text, but distinctive
-// enough it'll never collide with a real Eventbrite event title.
-// What the compose modal is sending to - an event's registrants (the
-// original behavior) or a tag's members directly. A discriminated union
-// rather than two optional props, so the modal can't be opened in an
-// ambiguous half-configured state.
-export type BlastTarget = { kind: "event"; eventName: string } | { kind: "tag"; tagId: string; tagName: string };
+// What the compose modal is sending to - an event's registrants, a tag's
+// members, or a hand-picked slice of the Contacts list. A discriminated
+// union rather than a pile of optional props, so the modal can't be opened
+// in an ambiguous half-configured state.
+export type BlastTarget =
+  | { kind: "event"; eventName: string }
+  | { kind: "tag"; tagId: string; tagName: string }
+  | { kind: "contacts"; contactIds: string[]; label: string };
 
 export async function getTagAudiencePreview(tagId: string): Promise<TextBlastAudiencePreview> {
   const supabase = await createClient();
@@ -265,7 +313,8 @@ export async function getTagAudiencePreview(tagId: string): Promise<TextBlastAud
   if (!user) return { count: 0, recipients: [] };
 
   const admin = createAdminClient();
-  const audience = await resolveTagAudience(admin, user.id, tagId);
+  let audience = await resolveTagAudience(admin, user.id, tagId);
+  audience = await excludeRecentlyTexted(admin, user.id, audience);
   return buildAudiencePreview(audience);
 }
 
@@ -278,12 +327,51 @@ export async function createTagTextBlast(tagId: string, tagName: string, message
   if (!message.trim()) return { ok: false as const, error: "Write a message" };
 
   const admin = createAdminClient();
-  const audience = await resolveTagAudience(admin, user.id, tagId);
-  if (!audience.length) return { ok: false as const, error: "No one with a phone number on file has that tag" };
+  let audience = await resolveTagAudience(admin, user.id, tagId);
+  audience = await excludeRecentlyTexted(admin, user.id, audience);
+  if (!audience.length) return { ok: false as const, error: "Everyone with that tag either has no phone on file or was already texted in the last hour" };
 
   const { data: blast, error: blastError } = await admin
     .from("text_blasts")
     .insert({ owner_id: user.id, event_name: tagBlastLabel(tagName), message: message.trim(), tag_id: tagId })
+    .select("id")
+    .single();
+  if (blastError || !blast) return { ok: false as const, error: blastError?.message ?? "Failed to create blast" };
+
+  await admin.from("text_blast_recipients").insert(audience.map((c) => ({ blast_id: blast.id, contact_id: c.id })));
+
+  return { ok: true as const, blastId: blast.id as string, recipientCount: audience.length };
+}
+
+export async function getContactsAudiencePreview(contactIds: string[]): Promise<TextBlastAudiencePreview> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { count: 0, recipients: [] };
+
+  const admin = createAdminClient();
+  let audience = await resolveContactsAudience(admin, user.id, contactIds);
+  audience = await excludeRecentlyTexted(admin, user.id, audience);
+  return buildAudiencePreview(audience);
+}
+
+export async function createContactsTextBlast(contactIds: string[], label: string, message: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+  if (!message.trim()) return { ok: false as const, error: "Write a message" };
+
+  const admin = createAdminClient();
+  let audience = await resolveContactsAudience(admin, user.id, contactIds);
+  audience = await excludeRecentlyTexted(admin, user.id, audience);
+  if (!audience.length) return { ok: false as const, error: "Everyone selected either has no phone on file or was already texted in the last hour" };
+
+  const { data: blast, error: blastError } = await admin
+    .from("text_blasts")
+    .insert({ owner_id: user.id, event_name: label, message: message.trim() })
     .select("id")
     .single();
   if (blastError || !blast) return { ok: false as const, error: blastError?.message ?? "Failed to create blast" };
@@ -321,10 +409,11 @@ export async function createTextBlast(
   if (!message.trim()) return { ok: false as const, error: "Write a message" };
 
   const admin = createAdminClient();
-  const audience = occurrence
+  let audience = occurrence
     ? await resolveOccurrenceAudience(admin, user.id, occurrence.eventId, occurrence.attendanceStatus)
     : await resolveEventAudience(admin, user.id, eventName, registeredBefore);
-  if (!audience.length) return { ok: false as const, error: "No one with a phone number on file matches that audience" };
+  audience = await excludeRecentlyTexted(admin, user.id, audience);
+  if (!audience.length) return { ok: false as const, error: "Everyone in that audience either has no phone on file or was already texted in the last hour" };
 
   const { data: blast, error: blastError } = await admin
     .from("text_blasts")

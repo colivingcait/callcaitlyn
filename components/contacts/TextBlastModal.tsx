@@ -10,10 +10,12 @@ import { tagBlastLabel } from "@/lib/crm/text-blasts";
 import {
   createTextBlast,
   createTagTextBlast,
+  createContactsTextBlast,
   cancelTextBlast,
   getTextBlastsForEvent,
   getTextBlastAudiencePreview,
   getTagAudiencePreview,
+  getContactsAudiencePreview,
   getEventAccount,
   sendTestText,
   getTextBlastFailureDetails,
@@ -36,8 +38,20 @@ const ATTENDANCE_OPTIONS: { value: AttendanceStatus; label: string; countKey: ke
   { value: "walk_in", label: "Walk-in", countKey: "walkIn" },
 ];
 
+function blastLabel(target: BlastTarget): string {
+  if (target.kind === "event") return target.eventName;
+  if (target.kind === "tag") return tagBlastLabel(target.tagName);
+  return target.label;
+}
+
+function blastTitle(target: BlastTarget): string {
+  if (target.kind === "tag") return "Text a tag";
+  if (target.kind === "contacts") return "Text selected contacts";
+  return "Text reminder";
+}
+
 export function TextBlastModal({ target, onClose }: { target: BlastTarget; onClose: () => void }) {
-  const label = target.kind === "event" ? target.eventName : tagBlastLabel(target.tagName);
+  const label = blastLabel(target);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ ok: true; recipientCount: number } | { ok: false; error: string } | null>(null);
@@ -107,6 +121,10 @@ export function TextBlastModal({ target, onClose }: { target: BlastTarget; onClo
       getTagAudiencePreview(target.tagId).then(setAudience);
       return;
     }
+    if (target.kind === "contacts") {
+      getContactsAudiencePreview(target.contactIds).then(setAudience);
+      return;
+    }
     if (audienceMode === "occurrence" && selectedEventId) {
       getTextBlastAudiencePreview(target.eventName, undefined, { eventId: selectedEventId, attendanceStatus }).then(setAudience);
       getEventAttendanceCounts(selectedEventId).then(setAttendanceCounts);
@@ -136,15 +154,19 @@ export function TextBlastModal({ target, onClose }: { target: BlastTarget; onClo
 
   async function send() {
     setSending(true);
-    const outcome =
-      target.kind === "tag"
-        ? await createTagTextBlast(target.tagId, target.tagName, message)
-        : await createTextBlast(
-            target.eventName,
-            message,
-            registeredBeforeCutoff(),
-            audienceMode === "occurrence" && selectedEventId ? { eventId: selectedEventId, attendanceStatus } : undefined,
-          );
+    let outcome;
+    if (target.kind === "tag") {
+      outcome = await createTagTextBlast(target.tagId, target.tagName, message);
+    } else if (target.kind === "contacts") {
+      outcome = await createContactsTextBlast(target.contactIds, target.label, message);
+    } else {
+      outcome = await createTextBlast(
+        target.eventName,
+        message,
+        registeredBeforeCutoff(),
+        audienceMode === "occurrence" && selectedEventId ? { eventId: selectedEventId, attendanceStatus } : undefined,
+      );
+    }
     setSending(false);
     if (outcome.ok) {
       setResult({ ok: true, recipientCount: outcome.recipientCount });
@@ -177,7 +199,7 @@ export function TextBlastModal({ target, onClose }: { target: BlastTarget; onClo
       <div className="flex max-h-[85vh] w-full max-w-md flex-col rounded-t-2xl bg-white shadow-xl sm:rounded-2xl">
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-neutral-100 px-5 py-4">
           <div>
-            <p className="font-serif text-xl font-semibold text-neutral-900">{target.kind === "tag" ? "Text a tag" : "Text reminder"}</p>
+            <p className="font-serif text-xl font-semibold text-neutral-900">{blastTitle(target)}</p>
             <p className="mt-0.5 text-xs text-neutral-500">{label}</p>
           </div>
           <button onClick={onClose} className="shrink-0 rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100">
@@ -227,6 +249,7 @@ export function TextBlastModal({ target, onClose }: { target: BlastTarget; onClo
                   ))}
                 </div>
               )}
+              <p className="text-[11px] text-neutral-400">Anyone already texted in the last hour is automatically left out.</p>
             </div>
           )}
 
@@ -373,7 +396,7 @@ export function TextBlastModal({ target, onClose }: { target: BlastTarget; onClo
           {history && history.length > 0 && (
             <div className="space-y-2 border-t border-neutral-100 pt-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
-                Previous sends {target.kind === "tag" ? "to this tag" : "for this event"}
+                Previous sends {target.kind === "event" ? "for this event" : "to this audience"}
               </p>
               {history.map((b) => (
                 <div key={b.id} className="rounded-xl border border-neutral-200 p-3 text-xs">
