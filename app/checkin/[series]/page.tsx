@@ -226,7 +226,7 @@ export default function CheckInPage() {
             <div className="py-3 text-center">
               <p className="text-6xl">🎉</p>
               <p className="mt-4 font-serif text-2xl font-bold text-neutral-900">
-                {step.alreadyCheckedIn ? "You're already checked in!" : "Welcome to the meetup!"}
+                {step.alreadyCheckedIn ? "You're checked in!" : "Welcome to the meetup!"}
               </p>
               <p className="mt-1 text-lg text-neutral-500">So glad you&apos;re here.</p>
 
