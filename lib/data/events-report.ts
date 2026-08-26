@@ -15,12 +15,14 @@ const SERIES_LIST: EventSeries[] = ["house_hacking", "womens_rei"];
 type RawActivity = { contact_id: string; source: string; occurred_at: string; metadata: Record<string, unknown> | null };
 
 // Eventbrite tags its account (house_hacking / womens_rei) directly in
-// metadata; Jotform stamps the reliable `series` field derived from which
-// physical kiosk form was submitted (see processJotformSubmission) - never
-// classify a Jotform row by its event_name, which is just a human-readable
-// label (the real Eventbrite event's title once one's been matched) and
-// isn't a fixed string. The event_name text match below only exists for
-// rows logged before the `series` field existed.
+// metadata; the check-in flow (QR page, and the Jotform kiosk it replaced)
+// stamps the reliable `series` field derived from which physical/printed
+// check-in path was used (see lib/checkin/process-checkin.ts and
+// processJotformSubmission) - never classify a check-in row by its
+// event_name, which is just a human-readable label (the real Eventbrite
+// event's title once one's been matched) and isn't a fixed string. The
+// event_name text match below only exists for rows logged before the
+// `series` field existed.
 function classifySeries(a: RawActivity): EventSeries | null {
   if (a.source === "eventbrite") {
     const account = a.metadata?.eventbrite_account;
@@ -28,7 +30,7 @@ function classifySeries(a: RawActivity): EventSeries | null {
     if (account === "house_hacking") return "house_hacking";
     return null;
   }
-  if (a.source === "jotform") {
+  if (a.source === "checkin" || a.source === "jotform") {
     const series = a.metadata?.series;
     if (series === "womens_rei") return "womens_rei";
     if (series === "house_hacking") return "house_hacking";
@@ -101,7 +103,7 @@ export async function getEventsReport(): Promise<EventsReportData> {
   const supabase = await createClient();
 
   const [{ data: activities }, { data: contacts }, { data: tags }, { data: contactTags }, { data: deals }] = await Promise.all([
-    supabase.from("activities").select("contact_id, source, occurred_at, metadata").in("source", ["eventbrite", "jotform"]),
+    supabase.from("activities").select("contact_id, source, occurred_at, metadata").in("source", ["eventbrite", "checkin", "jotform"]),
     supabase.from("contacts").select("id, first_name, last_name, email, phone, contact_type").eq("archived", false),
     supabase.from("tags").select("id, name"),
     supabase.from("contact_tags").select("contact_id, tag_id"),
@@ -111,7 +113,7 @@ export async function getEventsReport(): Promise<EventsReportData> {
   const contactById = new Map((contacts ?? []).map((c) => [c.id, c]));
   const rows = (activities ?? []) as RawActivity[];
   const registrations = rows.filter((a) => a.source === "eventbrite" && contactById.has(a.contact_id));
-  const checkIns = rows.filter((a) => a.source === "jotform" && contactById.has(a.contact_id));
+  const checkIns = rows.filter((a) => (a.source === "checkin" || a.source === "jotform") && contactById.has(a.contact_id));
 
   // --- Top event topics (Eventbrite's real per-occurrence title, all-time) ---
   const topicCounts = new Map<string, number>();

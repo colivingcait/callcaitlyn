@@ -37,7 +37,7 @@ async function fetchActivityAggregates(): Promise<Map<string, ActivityAgg>> {
     }
     if (row.type === "call" && (entry.lastCallAt === null || t > entry.lastCallAt)) entry.lastCallAt = t;
     if (row.source === "eventbrite" && (entry.lastEventbriteAt === null || t > entry.lastEventbriteAt)) entry.lastEventbriteAt = t;
-    if (row.source === "jotform") entry.jotformCheckinCount++;
+    if (row.source === "checkin" || row.source === "jotform") entry.jotformCheckinCount++;
 
     map.set(row.contact_id as string, entry);
   }

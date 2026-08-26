@@ -3,6 +3,7 @@ import { findOrCreateContact, addTagByName } from "@/lib/crm/find-or-create-cont
 import { upsertActivity } from "@/lib/crm/activities";
 import { recordEventAttendance } from "@/lib/crm/events";
 import { applyJourneyStageAnswer } from "@/lib/crm/journey-stage";
+import { resolveNearestEbEvent } from "@/lib/crm/nearest-event";
 
 export type JotformSubmissionInput = {
   submissionId: string | null;
@@ -24,39 +25,6 @@ export type JotformFormEvent = {
   // resolveNearestEbEvent below.
   eventbriteAccount: "house_hacking" | "womens_rei";
 };
-
-// A check-in's kiosk form only tells us the *series* (which meetup), not
-// which specific calendar occurrence. The most recently-opened-for-
-// registration Eventbrite event in that series, as of the check-in's own
-// timestamp, is a solid proxy for "the one happening right now" - a new
-// event_id only starts collecting fresh registrations once the next
-// occurrence goes up, so this naturally tracks the current one without
-// needing the event's actual start date (which isn't fetched/stored
-// anywhere yet). Falls back to the generic label if no Eventbrite
-// registration exists yet for this series (e.g. this integration is newer
-// than any Eventbrite data on file).
-async function resolveNearestEbEvent(
-  admin: SupabaseClient,
-  ownerId: string,
-  series: "house_hacking" | "womens_rei",
-  occurredAt: string,
-): Promise<{ eventId: string | null; eventName: string | null }> {
-  const { data } = await admin
-    .from("activities")
-    .select("metadata")
-    .eq("owner_id", ownerId)
-    .eq("source", "eventbrite")
-    .eq("metadata->>eventbrite_account", series)
-    .lte("occurred_at", occurredAt)
-    .order("occurred_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const metadata = data?.metadata as Record<string, unknown> | undefined;
-  const eventId = typeof metadata?.event_id === "string" ? metadata.event_id : null;
-  const eventName = typeof metadata?.event_name === "string" ? metadata.event_name : null;
-  return { eventId, eventName };
-}
 
 // Shared between the live webhook (one submission, fires as it happens)
 // and the manual backfill (many submissions, uses each one's real

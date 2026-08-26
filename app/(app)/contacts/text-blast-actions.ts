@@ -67,7 +67,15 @@ async function resolveOccurrenceAudience(
 ): Promise<AudienceContact[]> {
   const [{ data: registrations }, { data: checkins }] = await Promise.all([
     admin.from("activities").select("contact_id").eq("owner_id", ownerId).eq("source", "eventbrite").eq("metadata->>event_id", eventId),
-    admin.from("activities").select("contact_id").eq("owner_id", ownerId).eq("source", "jotform").eq("metadata->>event_id", eventId),
+    // "checkin" is the QR check-in flow (current); "jotform" is the kiosk
+    // it replaced - both counted so history from before the switch still
+    // shows up as attended.
+    admin
+      .from("activities")
+      .select("contact_id")
+      .eq("owner_id", ownerId)
+      .in("source", ["checkin", "jotform"])
+      .eq("metadata->>event_id", eventId),
   ]);
 
   const registeredIds = new Set((registrations ?? []).map((r) => r.contact_id as string));
@@ -134,7 +142,7 @@ export async function getEventAttendanceCounts(eventId: string): Promise<EventAt
   const supabase = await createClient();
   const [{ data: registrations }, { data: checkins }] = await Promise.all([
     supabase.from("activities").select("contact_id").eq("source", "eventbrite").eq("metadata->>event_id", eventId),
-    supabase.from("activities").select("contact_id").eq("source", "jotform").eq("metadata->>event_id", eventId),
+    supabase.from("activities").select("contact_id").in("source", ["checkin", "jotform"]).eq("metadata->>event_id", eventId),
   ]);
 
   const registeredIds = new Set((registrations ?? []).map((r) => r.contact_id as string));
