@@ -12,7 +12,7 @@ export function TextBlastStatusCard({ blasts }: { blasts: TextBlastWithProgress[
       <h2 className="mb-3 text-sm font-semibold text-neutral-700">Text reminders in progress</h2>
       <div className="space-y-2">
         {blasts.map((b) => (
-          <Link key={b.id} href={`/contacts?regEvent=${encodeURIComponent(b.event_name)}&openBlast=1`}>
+          <Link key={b.id} href={`/sequences/text?event=${encodeURIComponent(b.event_name)}`}>
             <Card className="flex items-center gap-3 hover:border-brand-200">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600">
                 <MessageSquareText size={16} />

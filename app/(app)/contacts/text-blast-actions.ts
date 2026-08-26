@@ -303,6 +303,25 @@ export async function getTextBlastsForEvent(eventName: string): Promise<TextBlas
   return withProgress(blasts, recipients ?? []);
 }
 
+// All-time history across every event, newest first - the Text tab's
+// standalone home (moved out from under Contacts/one-event-at-a-time), so
+// she can see and reopen any past send regardless of which event it was for.
+export async function getAllTextBlasts(): Promise<TextBlastWithProgress[]> {
+  const supabase = await createClient();
+  const { data: blasts } = await supabase.from("text_blasts").select("*").order("created_at", { ascending: false }).limit(50);
+  if (!blasts?.length) return [];
+
+  const { data: recipients } = await supabase
+    .from("text_blast_recipients")
+    .select("blast_id, status")
+    .in(
+      "blast_id",
+      blasts.map((b) => b.id),
+    );
+
+  return withProgress(blasts, recipients ?? []);
+}
+
 export type TextBlastFailureGroup = { error: string; count: number; sample: { name: string; phone: string | null }[] };
 
 // Grouped by the actual error text (rather than one row per person) so a

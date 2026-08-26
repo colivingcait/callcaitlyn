@@ -58,7 +58,7 @@ export default async function SequenceDetailPage({ params }: { params: Promise<{
   return (
     <div className="mx-auto max-w-3xl space-y-5 px-4 py-6">
       <Link href="/sequences" className="flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-700">
-        <ChevronLeft size={16} /> Emails
+        <ChevronLeft size={16} /> Bulk Communication
       </Link>
 
       <div className="flex items-start justify-between gap-3">

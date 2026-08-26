@@ -3,6 +3,7 @@ import { listSequencesWithSummary, getAllSequencesSummary } from "@/lib/data/seq
 import { listTags } from "@/lib/data/contacts";
 import { CreateSequenceForm } from "@/components/sequences/CreateSequenceForm";
 import { SequencesDashboard } from "@/components/sequences/SequencesDashboard";
+import { CampaignsTabNav } from "@/components/sequences/CampaignsTabNav";
 import { Card, Badge } from "@/components/ui";
 import { formatLocal } from "@/lib/format-time";
 import { createClient } from "@/lib/supabase/server";
@@ -17,11 +18,13 @@ export default async function SequencesPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-5 px-4 py-6">
       <div>
-        <h1 className="font-serif text-2xl font-semibold text-neutral-900">Emails</h1>
+        <h1 className="font-serif text-2xl font-semibold text-neutral-900">Bulk Communication</h1>
         <p className="mt-0.5 text-sm text-neutral-500">
-          Scheduled sequences, drip campaigns, and one-off batch emails, all triggered off a tag.
+          Scheduled sequences, drip campaigns, one-off batch emails, and text reminders to your meetup community.
         </p>
       </div>
+
+      <CampaignsTabNav />
 
       {summary.totalCount > 0 && <SequencesDashboard summary={summary} />}
 
