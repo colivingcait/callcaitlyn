@@ -16,6 +16,8 @@ const SERIES_EVENTS_URL: Record<string, string> = {
   womens_rei: "https://www.eventbrite.com/e/women-real-estate-investors-meetup-tickets-1990612059255",
 };
 
+const HOW_HEARD_OPTIONS = ["Eventbrite", "Meetup.com", "Facebook", "Instagram/Social Media", "Another attendee", "From the speaker/sponsor", "Other"];
+
 const NETWORKING_TIPS = [
   "Ask one person tonight what deal they're most excited about right now.",
   "The best connections come from following up within 48 hours - send that text tomorrow.",
@@ -66,10 +68,13 @@ export default function CheckInPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [howHeard, setHowHeard] = useState("");
+  const [howHeardOther, setHowHeardOther] = useState("");
 
   function resetToNameEntry() {
     setEditingInfo(false);
     setError(null);
+    setHowHeard("");
+    setHowHeardOther("");
     setStep({ name: "name-entry" });
   }
 
@@ -108,7 +113,7 @@ export default function CheckInPage() {
       lastName: isNotFound ? step.lastName : "",
       email: email.trim(),
       phone: phone.trim(),
-      howHeard: isNotFound ? howHeard.trim() : undefined,
+      howHeard: isNotFound ? (howHeard === "Other" ? howHeardOther.trim() : howHeard) : undefined,
     });
 
     setSubmitting(false);
@@ -210,9 +215,31 @@ export default function CheckInPage() {
               </p>
               <Field label="Email" type="email" value={email} onChange={setEmail} autoFocus autoComplete="email" />
               <Field label="Phone" type="tel" value={phone} onChange={setPhone} autoComplete="tel" />
-              <Field label="How did you hear about us?" value={howHeard} onChange={setHowHeard} />
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-neutral-500">How did you hear about us?</span>
+                <select
+                  value={howHeard}
+                  onChange={(e) => setHowHeard(e.target.value)}
+                  className="w-full rounded-2xl border-2 border-neutral-200 bg-white px-4 py-3.5 text-lg outline-none focus:border-brand-500"
+                >
+                  <option value="" disabled>
+                    Select one…
+                  </option>
+                  {HOW_HEARD_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {howHeard === "Other" && <Field label="Please specify" value={howHeardOther} onChange={setHowHeardOther} autoFocus />}
               {error && <p className="text-base text-red-600">{error}</p>}
-              <SubmitButton onClick={handleCheckIn} disabled={submitting || !email.trim() || !phone.trim() || !howHeard.trim()}>
+              <SubmitButton
+                onClick={handleCheckIn}
+                disabled={
+                  submitting || !email.trim() || !phone.trim() || !howHeard || (howHeard === "Other" && !howHeardOther.trim())
+                }
+              >
                 {submitting ? "Checking in…" : "Check In"}
               </SubmitButton>
               <button onClick={resetToNameEntry} className="block text-base text-neutral-400 underline underline-offset-2">
