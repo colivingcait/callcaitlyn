@@ -43,9 +43,20 @@ export async function fetchEventDetails(eventId: string, token: string | undefin
   const event = await eventbriteFetch(`https://www.eventbriteapi.com/v3/events/${eventId}/`, token);
   const name = event?.name as Record<string, unknown> | undefined;
   const start = event?.start as Record<string, unknown> | undefined;
+  const startLocal = typeof start?.local === "string" ? start.local : null;
+
+  // event_start has come back null for every single order processed so far
+  // (real production data, not a hunch) - the roster and text-blast
+  // occurrence targeting both silently fall back to less reliable dating
+  // when it's missing, so this needs to be diagnosable from Vercel's logs
+  // rather than guessed at again from a sandbox with no API token.
+  if (!startLocal) {
+    console.error("fetchEventDetails: no start.local in Eventbrite response", eventId, JSON.stringify(event)?.slice(0, 800));
+  }
+
   return {
     name: typeof name?.text === "string" ? name.text : null,
-    startLocal: typeof start?.local === "string" ? start.local : null,
+    startLocal,
   };
 }
 
