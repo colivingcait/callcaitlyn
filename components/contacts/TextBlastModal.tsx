@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { X, MessageSquareText, Send, Users, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
 import { Button, Textarea, Input } from "@/components/ui";
 import { applyMergeFields, PREVIEW_CONTACT } from "@/lib/crm/merge-fields";
-import { dayBeforeReminderTemplate, dayOfReminderTemplate, weekBeforeReminderTemplate, FOLLOW_UP_TEMPLATES } from "@/lib/crm/event-text-templates";
+import { MESSAGE_TEMPLATE_CATEGORIES, type MessageTemplateCategory } from "@/lib/crm/event-text-templates";
 import { estimatedTextBlastMinutes } from "@/lib/crm/text-blast-timing";
 import {
   createTextBlast,
@@ -68,6 +68,7 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
 
   const [audience, setAudience] = useState<TextBlastAudiencePreview | null>(null);
   const [recipientsOpen, setRecipientsOpen] = useState(false);
+  const [openTemplateCategory, setOpenTemplateCategory] = useState<MessageTemplateCategory["key"] | null>(null);
   const [excludeRecent, setExcludeRecent] = useState(false);
   const [excludeDays, setExcludeDays] = useState(1);
   const [eventAccount, setEventAccount] = useState<string | null>(null);
@@ -294,25 +295,11 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
 
           <div className="space-y-2">
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" size="sm" onClick={() => setMessage(weekBeforeReminderTemplate(eventAccount, eventName))}>
-                Week-before template
-              </Button>
-              <Button variant="secondary" size="sm" onClick={() => setMessage(dayBeforeReminderTemplate(eventAccount, eventName))}>
-                Day-before template
-              </Button>
-              <Button variant="secondary" size="sm" onClick={() => setMessage(dayOfReminderTemplate(eventAccount, eventName))}>
-                Day-of template
-              </Button>
-            </div>
-            <div className="space-y-1">
-              <p className="text-[11px] font-medium text-neutral-400">Follow-up (invites a reply):</p>
-              <div className="flex flex-wrap gap-2">
-                {FOLLOW_UP_TEMPLATES.map((t) => (
-                  <Button key={t.label} variant="secondary" size="sm" onClick={() => setMessage(t.build(eventAccount, eventName))}>
-                    {t.label}
-                  </Button>
-                ))}
-              </div>
+              {MESSAGE_TEMPLATE_CATEGORIES.map((cat) => (
+                <Button key={cat.key} variant="secondary" size="sm" onClick={() => setOpenTemplateCategory(cat.key)}>
+                  {cat.label} templates
+                </Button>
+              ))}
             </div>
             <Textarea
               value={message}
@@ -430,6 +417,60 @@ export function TextBlastModal({ eventName, onClose }: { eventName: string; onCl
               ))}
             </div>
           )}
+        </div>
+      </div>
+      {openTemplateCategory && (
+        <TemplatePicker
+          category={MESSAGE_TEMPLATE_CATEGORIES.find((c) => c.key === openTemplateCategory)!}
+          account={eventAccount}
+          eventName={eventName}
+          onPick={setMessage}
+          onClose={() => setOpenTemplateCategory(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function TemplatePicker({
+  category,
+  account,
+  eventName,
+  onPick,
+  onClose,
+}: {
+  category: MessageTemplateCategory;
+  account: string | null;
+  eventName: string;
+  onPick: (text: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 sm:items-center sm:p-4" onClick={onClose}>
+      <div className="max-h-[80vh] w-full max-w-sm overflow-y-auto rounded-t-2xl bg-white p-4 shadow-xl sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <p className="font-serif text-lg font-semibold text-neutral-900">{category.label} templates</p>
+          <button onClick={onClose} className="shrink-0 rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100">
+            <X size={16} />
+          </button>
+        </div>
+        <div className="space-y-2">
+          {category.options.map((opt) => {
+            const text = opt.build(account, eventName);
+            return (
+              <button
+                key={opt.label}
+                onClick={() => {
+                  onPick(text);
+                  onClose();
+                }}
+                className="block w-full rounded-xl border border-neutral-200 p-3 text-left hover:border-brand-300 hover:bg-brand-50"
+              >
+                <p className="text-sm font-medium text-neutral-800">{opt.label}</p>
+                <p className="mt-1 whitespace-pre-wrap text-xs text-neutral-500">{text}</p>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

@@ -14,6 +14,11 @@ export function eventGroupLabel(account: string | null | undefined, eventName: s
   return "the meetup";
 }
 
+// Single-send versions (a real first name, not a merge token) - used by the
+// Dialer's one-off "text this person right now" flow, not the bulk blast
+// composer below. Kept separate from MESSAGE_TEMPLATES since that one needs
+// the literal {{first_name}} token for applyMergeFields to substitute once
+// per recipient during a staggered send.
 export function newRegistrationTemplate(firstName: string, account: string | null | undefined, eventName: string | null | undefined): string {
   const group = eventGroupLabel(account, eventName);
   return `Hi ${firstName}, this is Caitlyn Verdugo, one of the organizers for ${group}. Just wanted to introduce myself and welcome you to the group! Any questions I can answer for you? 🙂`;
@@ -24,53 +29,74 @@ export function returningRegistrationTemplate(firstName: string, account: string
   return `Hey ${firstName}, this is Caitlyn Verdugo, one of the organizers for ${group}. Just got your registration for this month's meetup - looking forward to seeing you again!`;
 }
 
-// Bulk-blast reminder templates - contain the literal {{first_name}} token
-// (not a real name) since applyMergeFields runs later, once per recipient,
-// during the actual staggered send.
-export function dayBeforeReminderTemplate(account: string | null | undefined, eventName: string | null | undefined): string {
-  const group = eventGroupLabel(account, eventName);
-  return `Hi {{first_name}}, this is Caitlyn Verdugo - just a reminder that ${group} is tomorrow! Looking forward to seeing you there. 🙂`;
-}
+export type MessageTemplateOption = { label: string; build: (account: string | null | undefined, eventName: string | null | undefined) => string };
+export type MessageTemplateCategory = { key: "registration" | "pre_event" | "follow_up"; label: string; options: MessageTemplateOption[] };
 
-export function dayOfReminderTemplate(account: string | null | undefined, eventName: string | null | undefined): string {
-  const group = eventGroupLabel(account, eventName);
-  return `Hi {{first_name}}, this is Caitlyn Verdugo - quick reminder that ${group} is today! Can't wait to see you there. 🙂`;
-}
+const FOLLOW_UP_OPENER = "Hi {{first_name}}! Thank you so much for joining us last night - it was so great seeing you!";
 
-export function weekBeforeReminderTemplate(account: string | null | undefined, eventName: string | null | undefined): string {
-  const group = eventGroupLabel(account, eventName);
-  return `Hi {{first_name}}, this is Caitlyn Verdugo - just checking in ahead of ${group} next week! Are you still planning on joining us? Let me know if anything's changed. 🙂`;
-}
-
-// Post-event outreach, each ending in a genuine question rather than a
-// statement - the goal is a reply, not just an impression, so a recipient
-// can respond in one line without it feeling like reading a broadcast.
-// Distinct from the reminder templates above (which are safe to blast
-// identically to everyone); these read best sent to the people who were
-// actually there, but nothing here is occurrence-specific enough to require
-// it - shown as a picker in the compose UI so she can choose the angle that
-// fits the room.
-export type FollowUpTemplateOption = { label: string; build: (account: string | null | undefined, eventName: string | null | undefined) => string };
-
-export const FOLLOW_UP_TEMPLATES: FollowUpTemplateOption[] = [
+// Bulk-blast templates, grouped into the three moments she actually sends
+// texts around - shown behind one button per category in the composer,
+// which opens a picker over just that category's options rather than one
+// long undifferentiated row of buttons. Every option contains the literal
+// {{first_name}} token (not a real name), substituted once per recipient
+// by applyMergeFields during the actual staggered send.
+export const MESSAGE_TEMPLATE_CATEGORIES: MessageTemplateCategory[] = [
   {
-    label: "Ask their takeaway",
-    build: (account, eventName) =>
-      `Hi {{first_name}}, this is Caitlyn Verdugo - so glad you made it out to ${eventGroupLabel(account, eventName)}! What was your biggest takeaway from last night? Would love to hear.`,
+    key: "registration",
+    label: "Registration",
+    options: [
+      {
+        label: "Welcome (new registrant)",
+        build: (account, eventName) =>
+          `Hi {{first_name}}, this is Caitlyn Verdugo, one of the organizers for ${eventGroupLabel(account, eventName)}. Just wanted to introduce myself and welcome you to the group! Any questions I can answer for you? 🙂`,
+      },
+      {
+        label: "Welcome back (returning)",
+        build: (account, eventName) =>
+          `Hey {{first_name}}, this is Caitlyn Verdugo, one of the organizers for ${eventGroupLabel(account, eventName)}. Just got your registration for this month's meetup - looking forward to seeing you there! Any questions I can answer? 🙂`,
+      },
+    ],
   },
   {
-    label: "Ask where they're at",
-    build: (account, eventName) =>
-      `Hey {{first_name}}, thanks for coming out to ${eventGroupLabel(account, eventName)}! I'd love to hear more about where you're at - are you actively looking right now, or still in the research phase?`,
+    key: "pre_event",
+    label: "Pre-event",
+    options: [
+      {
+        label: "Week before",
+        build: (account, eventName) =>
+          `Hi {{first_name}}, this is Caitlyn Verdugo - mark your calendars, ${eventGroupLabel(account, eventName)} is next week! 🗓️ Will you be bringing anyone with you?`,
+      },
+      {
+        label: "Few days before (recent sign-ups)",
+        build: (account, eventName) =>
+          `Hi {{first_name}}, this is Caitlyn Verdugo - thanks for signing up for ${eventGroupLabel(account, eventName)}! It's coming up in just a few days, so make sure to mark your calendars. 🗓️`,
+      },
+      {
+        label: "Day before",
+        build: () =>
+          `Hi {{first_name}}! Woohoo, our meetup is tomorrow! Doors open at 6:30 for drinks and networking, and our speaker will start around 7! We'd love your help in preparing for this event - are you planning on joining us tomorrow? Just a simple yes or no would be very helpful! Thank you! 😊\n- Caitlyn Verdugo`,
+      },
+      {
+        label: "Day of",
+        build: (account, eventName) => `Hi {{first_name}}, this is Caitlyn Verdugo - quick reminder that ${eventGroupLabel(account, eventName)} is today! Can't wait to see you there. 🙂`,
+      },
+    ],
   },
   {
-    label: "Ask for topic ideas",
-    build: (account, eventName) =>
-      `Hi {{first_name}}, Caitlyn here from ${eventGroupLabel(account, eventName)} - question for you: what topic would you want us to cover at a future meetup?`,
-  },
-  {
-    label: "Offer to help",
-    build: (account, eventName) =>
-      `Hey {{first_name}}, really enjoyed connecting at ${eventGroupLabel(account, eventName)}! Anything I can help you with as you keep exploring this? Happy to jump on a call if that'd be useful.`,
+    key: "follow_up",
+    label: "Follow-up",
+    // Every option shares this opener, then ends in a genuine question
+    // rather than a statement - the goal is a reply, not just an
+    // impression, so a recipient can respond in one line without it
+    // feeling like reading a broadcast.
+    options: [
+      { label: "Ask their takeaway", build: () => `${FOLLOW_UP_OPENER} What was your biggest takeaway from last night? Would love to hear.` },
+      { label: "Ask where they're at", build: () => `${FOLLOW_UP_OPENER} Are you actively looking right now, or still in the research phase?` },
+      { label: "Ask for topic ideas", build: () => `${FOLLOW_UP_OPENER} What topic would you want us to cover at a future meetup?` },
+      {
+        label: "Offer to help",
+        build: () => `${FOLLOW_UP_OPENER} Anything I can help you with as you continue on your real estate investing journey? Would love to chat about it 🤩`,
+      },
+    ],
   },
 ];
