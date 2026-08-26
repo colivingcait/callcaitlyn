@@ -5,7 +5,7 @@ import { recordEventAttendance } from "@/lib/crm/events";
 import { resolveNearestEbEvent, type EventSeriesKey } from "@/lib/crm/nearest-event";
 
 export const SERIES_TAG: Record<EventSeriesKey, string> = { house_hacking: "House Hacking", womens_rei: "Women's REI" };
-const SERIES_LABEL: Record<EventSeriesKey, string> = { house_hacking: "House Hacking Meetup", womens_rei: "Women's REI Meetup" };
+export const SERIES_LABEL: Record<EventSeriesKey, string> = { house_hacking: "House Hacking Meetup", womens_rei: "Women's REI Meetup" };
 
 export type CheckInInput = {
   // Set when the attendee was matched to an existing contact by name

@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui";
-import { Download } from "lucide-react";
+import { Download, UserCheck } from "lucide-react";
 import type { EventRosterEntry, RosterPerson } from "@/lib/data/events-report";
+import { markContactAttended } from "@/app/(app)/reports/actions";
 
 type StatusFilter = "all" | "registered" | "attended" | "no_show" | "walk_in";
 
@@ -37,14 +39,32 @@ function rosterCsvDataUri(people: RosterPerson[]) {
 }
 
 function EventCard({ event }: { event: EventRosterEntry }) {
+  const router = useRouter();
   const [filter, setFilter] = useState<StatusFilter>("all");
-  const filtered = event.people.filter((p) => matchesFilter(p, filter));
+  // Optimistic local overlay for "Mark attended" - flips a person to
+  // attended immediately so the click feels instant, while the server
+  // write (and the router refresh behind it) catches the source of truth
+  // up in the background.
+  const [markedAttended, setMarkedAttended] = useState<Set<string>>(new Set());
+  const [marking, setMarking] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
 
-  const registeredCount = event.people.filter((p) => p.registered).length;
-  const attendedCount = event.people.filter((p) => p.attended).length;
-  const noShowCount = event.people.filter((p) => p.registered && !p.attended).length;
-  const walkInCount = event.people.filter((p) => p.attended && !p.registered).length;
-  const counts: Record<StatusFilter, number> = { all: event.people.length, registered: registeredCount, attended: attendedCount, no_show: noShowCount, walk_in: walkInCount };
+  const people = event.people.map((p) => (markedAttended.has(p.contactId) ? { ...p, attended: true } : p));
+  const filtered = people.filter((p) => matchesFilter(p, filter));
+
+  async function markAttended(contactId: string) {
+    setMarking(contactId);
+    setMarkedAttended((prev) => new Set(prev).add(contactId));
+    await markContactAttended(contactId, event.series, event.eventId);
+    setMarking(null);
+    startTransition(() => router.refresh());
+  }
+
+  const registeredCount = people.filter((p) => p.registered).length;
+  const attendedCount = people.filter((p) => p.attended).length;
+  const noShowCount = people.filter((p) => p.registered && !p.attended).length;
+  const walkInCount = people.filter((p) => p.attended && !p.registered).length;
+  const counts: Record<StatusFilter, number> = { all: people.length, registered: registeredCount, attended: attendedCount, no_show: noShowCount, walk_in: walkInCount };
 
   return (
     <Card className="space-y-3">
@@ -78,11 +98,22 @@ function EventCard({ event }: { event: EventRosterEntry }) {
       ) : (
         <div className="space-y-1.5">
           {filtered.map((p) => (
-            <div key={p.contactId} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 border-t border-neutral-100 pt-1.5 text-xs first:border-t-0 first:pt-0">
-              <span className="font-medium text-neutral-700">{p.name || "Unnamed"}</span>
-              <span className="text-neutral-400">
-                {[p.email, p.phone].filter(Boolean).join(" · ") || "No contact info"}
-              </span>
+            <div key={p.contactId} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 border-t border-neutral-100 pt-1.5 text-xs first:border-t-0 first:pt-0">
+              <div className="min-w-0">
+                <span className="font-medium text-neutral-700">{p.name || "Unnamed"}</span>{" "}
+                <span className="text-neutral-400">
+                  {[p.email, p.phone].filter(Boolean).join(" · ") || "No contact info"}
+                </span>
+              </div>
+              {!p.attended && (
+                <button
+                  onClick={() => markAttended(p.contactId)}
+                  disabled={marking === p.contactId}
+                  className="flex shrink-0 items-center gap-1 rounded-full border border-neutral-200 px-2 py-0.5 text-[11px] font-medium text-neutral-500 hover:border-brand-300 hover:text-brand-700 disabled:opacity-50"
+                >
+                  <UserCheck size={11} /> {marking === p.contactId ? "Marking…" : "Mark attended"}
+                </button>
+              )}
             </div>
           ))}
         </div>
