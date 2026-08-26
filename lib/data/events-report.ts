@@ -79,8 +79,14 @@ export type EventRoiRow = {
   grossCommission: number;
   avgDaysToConvert: number | null;
 };
-export type RosterEntry = { contactId: string; name: string; email: string | null; phone: string | null };
-export type RosterDate = { date: string; series: EventSeries; attendees: RosterEntry[] };
+// Person-level roster row, keyed to one specific event occurrence (not
+// just a calendar date - see EventRosterEntry below). registered/attended
+// are independent booleans rather than a single status enum so the UI can
+// derive "registered" (either), "attended" (either), "no_show"
+// (registered && !attended), and "walk_in" (attended && !registered) from
+// the same row without four separate queries.
+export type RosterPerson = { contactId: string; name: string; email: string | null; phone: string | null; registered: boolean; attended: boolean };
+export type EventRosterEntry = { eventId: string | null; series: EventSeries; label: string; date: string; people: RosterPerson[] };
 
 export type EventsReportData = {
   topTopics: EventTopicRow[];
@@ -93,7 +99,7 @@ export type EventsReportData = {
   audienceContactType: AudienceBreakdown[];
   audienceJourneyStage: { label: string; count: number }[];
   roi: EventRoiRow[];
-  roster: RosterDate[];
+  roster: EventRosterEntry[];
 };
 
 // One pass over activities/contacts/tags/deals instead of a query per
@@ -306,27 +312,74 @@ export async function getEventsReport(): Promise<EventsReportData> {
     };
   });
 
-  // --- Roster: attendee list for the 12 most recent event dates ---
-  const rosterByKey = new Map<string, { series: EventSeries; date: string; contactIds: Set<string> }>();
+  // --- Roster: registered/attended per person for the 12 most recent event
+  // occurrences. Keyed by event_id when available (the same real
+  // Eventbrite event that registrations AND check-ins both link to - see
+  // lib/eventbrite/process-order.ts and lib/checkin/process-checkin.ts),
+  // since a date-only key can't reliably merge a registration (weeks
+  // before the event) with a check-in (the actual event day). Only falls
+  // back to a date-based key for rows logged before event_id linking
+  // existed, where registered/attended may not merge as precisely.
+  type RosterBucket = { eventId: string | null; series: EventSeries; label: string; sortKey: string; registered: Set<string>; attended: Set<string> };
+  const rosterByKey = new Map<string, RosterBucket>();
+
+  function rosterKey(series: EventSeries, eventId: string | null, occurredAt: string): string {
+    return eventId ? `${series}:${eventId}` : `${series}:date:${dateKey(occurredAt)}`;
+  }
+  function rosterLabel(series: EventSeries, metadata: Record<string, unknown> | null, occurredAt: string): string {
+    const eventStart = typeof metadata?.event_start === "string" ? metadata.event_start : null;
+    const dateLabel = new Date(eventStart ?? occurredAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    return `${SERIES_LABELS[series]} — ${dateLabel}`;
+  }
+
+  for (const a of registrations) {
+    const series = classifySeries(a);
+    if (!series) continue;
+    const eventId = typeof a.metadata?.event_id === "string" ? a.metadata.event_id : null;
+    const key = rosterKey(series, eventId, a.occurred_at);
+    if (!rosterByKey.has(key)) {
+      rosterByKey.set(key, { eventId, series, label: rosterLabel(series, a.metadata, a.occurred_at), sortKey: a.occurred_at, registered: new Set(), attended: new Set() });
+    }
+    rosterByKey.get(key)!.registered.add(a.contact_id);
+  }
   for (const a of checkIns) {
     const series = classifySeries(a);
     if (!series) continue;
-    const date = dateKey(a.occurred_at);
-    const key = `${series}:${date}`;
-    if (!rosterByKey.has(key)) rosterByKey.set(key, { series, date, contactIds: new Set() });
-    rosterByKey.get(key)!.contactIds.add(a.contact_id);
+    const eventId = typeof a.metadata?.event_id === "string" ? a.metadata.event_id : null;
+    const key = rosterKey(series, eventId, a.occurred_at);
+    const bucket = rosterByKey.get(key);
+    if (bucket) {
+      bucket.attended.add(a.contact_id);
+      // A check-in's own date is the real event date, more precise than a
+      // registration's (weeks-earlier) timestamp - prefer it for sorting.
+      if (a.occurred_at > bucket.sortKey) bucket.sortKey = a.occurred_at;
+    } else {
+      rosterByKey.set(key, { eventId, series, label: rosterLabel(series, a.metadata, a.occurred_at), sortKey: a.occurred_at, registered: new Set(), attended: new Set([a.contact_id]) });
+    }
   }
-  const roster: RosterDate[] = [...rosterByKey.values()]
-    .sort((a, b) => b.date.localeCompare(a.date))
+
+  const roster: EventRosterEntry[] = [...rosterByKey.values()]
+    .sort((a, b) => b.sortKey.localeCompare(a.sortKey))
     .slice(0, 12)
-    .map((r) => ({
-      date: r.date,
-      series: r.series,
-      attendees: [...r.contactIds]
-        .map((id) => contactById.get(id))
-        .filter((c): c is NonNullable<typeof c> => !!c)
-        .map((c) => ({ contactId: c.id, name: `${c.first_name} ${c.last_name}`.trim(), email: c.email, phone: c.phone })),
-    }));
+    .map((r) => {
+      const contactIds = new Set([...r.registered, ...r.attended]);
+      const people: RosterPerson[] = [...contactIds]
+        .map((id) => {
+          const c = contactById.get(id);
+          if (!c) return null;
+          return {
+            contactId: c.id,
+            name: `${c.first_name} ${c.last_name}`.trim(),
+            email: c.email,
+            phone: c.phone,
+            registered: r.registered.has(id),
+            attended: r.attended.has(id),
+          };
+        })
+        .filter((p): p is RosterPerson => !!p)
+        .sort((a, b) => a.name.localeCompare(b.name));
+      return { eventId: r.eventId, series: r.series, label: r.label, date: r.sortKey, people };
+    });
 
   return {
     topTopics,
