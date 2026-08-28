@@ -1,6 +1,6 @@
 import { google, gmail_v1 } from "googleapis";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getAuthorizedGmailClient } from "@/lib/google/oauth";
+import { getAuthorizedGoogleClient } from "@/lib/google/oauth";
 import { upsertActivity } from "@/lib/crm/activities";
 import { analyzeContactActivity } from "@/lib/ai/analyze-contact";
 
@@ -39,7 +39,7 @@ export async function syncGmailInbox(admin: SupabaseClient, ownerId: string) {
   const { data: account } = await admin.from("gmail_accounts").select("*").eq("owner_id", ownerId).maybeSingle();
   if (!account) return { synced: 0, skipped: "not_connected" as const };
 
-  const client = await getAuthorizedGmailClient(admin, ownerId);
+  const client = await getAuthorizedGoogleClient(admin, ownerId);
   if (!client) return { synced: 0, skipped: "not_connected" as const };
 
   const gmail = google.gmail({ version: "v1", auth: client });

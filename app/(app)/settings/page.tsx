@@ -41,13 +41,19 @@ export default async function SettingsPage({
       {user && <TagManager tags={tags} ownerId={user.id} />}
 
       <Card className="space-y-3">
-        <h2 className="text-sm font-semibold text-neutral-700">Gmail</h2>
+        <h2 className="text-sm font-semibold text-neutral-700">Gmail &amp; Calendar</h2>
         <p className="text-sm text-neutral-500">
-          Syncs email to and from contacts already in your CRM to their timeline, lets you send email from a
-          contact&apos;s profile, and powers scheduled email sequences. Doesn&apos;t touch anything else in your
-          inbox — no marketing/spam classification needed since it only looks at mail involving people you&apos;ve
-          already added.
+          Syncs email to and from contacts already in your CRM to their timeline, lets you send email and schedule
+          Google Meet invites from a contact&apos;s profile, and powers scheduled email sequences. Doesn&apos;t
+          touch anything else in your inbox — no marketing/spam classification needed since it only looks at mail
+          involving people you&apos;ve already added.
         </p>
+        {gmailAccount && (
+          <p className="text-xs text-amber-700">
+            Connected before Meet invites existed? Disconnect and reconnect once to grant calendar access — until
+            then, scheduling a meeting will ask you to reconnect.
+          </p>
+        )}
         <GmailConnect connectedEmail={gmailAccount?.email_address ?? null} errorCode={params.gmail_error} />
         <Link href="/sequences" className="block md:hidden">
           <Button variant="secondary" size="sm">

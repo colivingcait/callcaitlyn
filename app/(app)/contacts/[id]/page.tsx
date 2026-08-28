@@ -78,7 +78,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
       </div>
 
       <div className="mt-4">
-        <QuickActions phone={contact.phone} email={contact.email} />
+        <QuickActions contactId={contact.id} contactName={fullName(contact)} phone={contact.phone} email={contact.email} />
       </div>
 
       <div className="mt-4">

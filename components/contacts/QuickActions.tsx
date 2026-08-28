@@ -1,8 +1,10 @@
 "use client";
 
-import { Phone, MessageSquare, Mail } from "lucide-react";
+import { useState } from "react";
+import { Phone, MessageSquare, Mail, Video } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { openQuoCall } from "@/lib/quo/call-link";
+import { ScheduleMeetingModal } from "@/components/contacts/ScheduleMeetingModal";
 
 const actionClass =
   "flex flex-1 flex-col items-center gap-1.5 rounded-xl border border-neutral-200 py-3 text-xs font-medium text-neutral-600";
@@ -54,12 +56,28 @@ function ActionButton({
   );
 }
 
-export function QuickActions({ phone, email }: { phone?: string | null; email?: string | null }) {
+export function QuickActions({
+  contactId,
+  contactName,
+  phone,
+  email,
+}: {
+  contactId: string;
+  contactName: string;
+  phone?: string | null;
+  email?: string | null;
+}) {
+  const [scheduling, setScheduling] = useState(false);
+
   return (
     <div className="flex gap-2">
       <ActionButton onClick={() => phone && openQuoCall(phone)} icon={Phone} label="Call" disabled={!phone} />
       <ActionLink href={`sms:${phone}`} icon={MessageSquare} label="Text" disabled={!phone} />
       <ActionLink href={`mailto:${email}`} icon={Mail} label="Email" disabled={!email} />
+      <ActionButton onClick={() => setScheduling(true)} icon={Video} label="Meet" disabled={!email} />
+      {scheduling && (
+        <ScheduleMeetingModal contactId={contactId} contactName={contactName} email={email ?? null} onClose={() => setScheduling(false)} />
+      )}
     </div>
   );
 }

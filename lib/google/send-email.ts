@@ -1,6 +1,6 @@
 import { google } from "googleapis";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getAuthorizedGmailClient } from "@/lib/google/oauth";
+import { getAuthorizedGoogleClient } from "@/lib/google/oauth";
 
 // Single-owner app - the "From" name is always hers. Without this, the raw
 // MIME From header is just the bare address, and mail clients show that
@@ -52,7 +52,7 @@ export async function sendGmailMessage(
   htmlBody: string,
   extraHeaders?: Record<string, string>,
 ): Promise<{ ok: true; messageId: string } | { ok: false; error: string }> {
-  const client = await getAuthorizedGmailClient(admin, ownerId);
+  const client = await getAuthorizedGoogleClient(admin, ownerId);
   if (!client) return { ok: false, error: "Gmail isn't connected. Connect it in Settings first." };
 
   const { data: account } = await admin.from("gmail_accounts").select("email_address").eq("owner_id", ownerId).maybeSingle();
