@@ -167,9 +167,20 @@ export interface Contact {
   dialer_snoozed_at: string | null;
   event_followup_contacted_at: string | null;
   event_followup_snoozed_at: string | null;
+  referred_by: string | null;
+  lease_ends_at: string | null;
+  known_personally: boolean;
   lead_date: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface DismissedInsight {
+  id: string;
+  owner_id: string;
+  insight_key: string;
+  contact_id: string | null;
+  dismissed_at: string;
 }
 
 export interface Activity {
