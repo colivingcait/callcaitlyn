@@ -5,7 +5,6 @@ import { EventCommunityReport } from "@/components/reports/EventCommunityReport"
 import { EventAudienceReport } from "@/components/reports/EventAudienceReport";
 import { EventRoiReport } from "@/components/reports/EventRoiReport";
 import { EventTopicsReport } from "@/components/reports/EventTopicsReport";
-import { EventRosterReport } from "@/components/reports/EventRosterReport";
 
 export default async function EventsReportPage() {
   const events = await getEventsReport();
@@ -22,7 +21,6 @@ export default async function EventsReportPage() {
       <EventAudienceReport contactType={events.audienceContactType} journeyStage={events.audienceJourneyStage} />
       <EventRoiReport rows={events.roi} />
       <EventTopicsReport rows={events.topTopics} />
-      <EventRosterReport roster={events.roster} />
     </>
   );
 }
