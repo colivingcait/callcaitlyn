@@ -289,8 +289,8 @@ Unlike the other integrations, Gmail requires a real OAuth connection (not a web
 ### 1. Google Cloud setup (one-time, in your own Google account)
 
 1. Go to [console.cloud.google.com](https://console.cloud.google.com), create a project (or use an existing one).
-2. **APIs & Services → Library** → enable the **Gmail API**.
-3. **APIs & Services → OAuth consent screen**: choose **External**, fill in the basic app info (name, your email), add scopes `gmail.readonly`, `gmail.send`, and `userinfo.email`. While in "Testing" mode you'll need to add your own Google account under **Test users** — that's fine for a single-user app, no need to publish it.
+2. **APIs & Services → Library** → enable the **Gmail API** and the **Google Calendar API** (the latter powers "Schedule a meeting" - Calendar events with a Meet link. Granting the OAuth scope isn't enough on its own; the API itself has to be switched on for the project too, or event creation fails with "Google Calendar API has not been used in project... or it is disabled").
+3. **APIs & Services → OAuth consent screen** (labeled "Google Auth Platform" in the newer console layout): choose **External**, fill in the basic app info (name, your email), add scopes `gmail.readonly`, `gmail.send`, `userinfo.email`, and `calendar.events`. While in "Testing" mode you'll need to add your own Google account under **Test users** (under **Audience** in the newer layout) — that's fine for a single-user app, no need to publish it.
 4. **APIs & Services → Credentials → Create Credentials → OAuth client ID** → Application type **Web application**. Add an **Authorized redirect URI**: `https://crm.callcaitlyn.com/api/auth/gmail/callback` — this must be the CRM's own domain, not the public marketing site (`callcaitlyn.com`/`www.callcaitlyn.com`) — those are two separate Vercel projects, and Google redirecting to the wrong one 404s since this callback route only exists on the CRM deployment.
 5. Copy the **Client ID** and **Client Secret** — these are `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
 
