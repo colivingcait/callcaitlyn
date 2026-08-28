@@ -58,6 +58,10 @@ export async function filterByQueue(
     return contacts.filter((c) => flagged.has(c.id));
   }
 
+  if (queue === "no_phone") {
+    return contacts.filter((c) => !c.phone);
+  }
+
   if (queue === "duplicate_risk") {
     const pairs = await getDuplicateRiskPairs();
     const flagged = new Set(pairs.flatMap((p) => [p.aId, p.bId]));

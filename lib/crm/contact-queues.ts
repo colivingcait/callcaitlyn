@@ -14,7 +14,8 @@ export type ContactQueue =
   | "never_called"
   | "repeat_attendees"
   | "ai_flagged"
-  | "duplicate_risk";
+  | "duplicate_risk"
+  | "no_phone";
 
 export const QUEUES: { value: ContactQueue; label: string; description: string }[] = [
   { value: "no_followup_after_registration", label: "Registered, no follow-up", description: "Signed up for an event, no call/text/email since" },
@@ -25,4 +26,5 @@ export const QUEUES: { value: ContactQueue; label: string; description: string }
   { value: "repeat_attendees", label: "Repeat attendees", description: "Checked in at 2+ events - your regulars" },
   { value: "ai_flagged", label: "AI flagged, not actioned", description: "Has a pending AI insight you haven't applied or dismissed" },
   { value: "duplicate_risk", label: "Possible duplicates", description: "Matches another contact by email or phone" },
+  { value: "no_phone", label: "No phone number", description: "Email only - can't be called or texted" },
 ];
