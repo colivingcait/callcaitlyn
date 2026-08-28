@@ -7,7 +7,7 @@ import { openQuoCall } from "@/lib/quo/call-link";
 import { ScheduleMeetingModal } from "@/components/contacts/ScheduleMeetingModal";
 
 const actionClass =
-  "flex flex-1 flex-col items-center gap-1.5 rounded-xl border border-neutral-200 py-3 text-xs font-medium text-neutral-600";
+  "flex flex-1 flex-col items-center gap-1.5 rounded-xl border border-neutral-200 py-3 text-sm font-medium text-neutral-600";
 
 function ActionLink({
   href,
