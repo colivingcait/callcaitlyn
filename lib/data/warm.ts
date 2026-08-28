@@ -5,6 +5,8 @@ const BASELINE_WEEKS = 8;
 
 export type WarmTier = "very_warm" | "warm" | "reading" | "steady";
 
+export type WarmEvent = { date: string; label: string };
+
 export type WarmContact = {
   contactId: string;
   name: string;
@@ -13,6 +15,7 @@ export type WarmContact = {
   baselinePerWeek: number;
   deviation: number;
   tier: WarmTier;
+  events: WarmEvent[];
 };
 
 function tierFor(deviation: number, signalsThisWeek: number): WarmTier {
@@ -45,7 +48,7 @@ export async function getWarmRanking(): Promise<WarmContact[]> {
     .select("contact_id, opened_at, open_count, clicked_at, click_count, contacts!inner(id, first_name, last_name, phone, known_personally, archived)")
     .or(`opened_at.gte.${since},clicked_at.gte.${since}`);
 
-  const byContact = new Map<string, { name: string; phone: string | null; thisWeek: number; total: number }>();
+  const byContact = new Map<string, { name: string; phone: string | null; thisWeek: number; total: number; events: WarmEvent[] }>();
   for (const row of sends ?? []) {
     const contact = row.contacts as unknown as { id: string; first_name: string; last_name: string; phone: string | null; known_personally: boolean; archived: boolean };
     if (!contact || contact.archived || contact.known_personally) continue;
@@ -55,9 +58,15 @@ export async function getWarmRanking(): Promise<WarmContact[]> {
     const openThisWeek = row.opened_at && row.opened_at >= weekAgo ? (row.open_count ?? 0) : 0;
     const clickThisWeek = row.clicked_at && row.clicked_at >= weekAgo ? (row.click_count ?? 0) * 2 : 0;
 
-    const entry = byContact.get(contact.id) ?? { name: `${contact.first_name} ${contact.last_name}`.trim(), phone: contact.phone, thisWeek: 0, total: 0 };
+    const entry = byContact.get(contact.id) ?? { name: `${contact.first_name} ${contact.last_name}`.trim(), phone: contact.phone, thisWeek: 0, total: 0, events: [] };
     entry.thisWeek += openThisWeek + clickThisWeek;
     entry.total += openSignal + clickSignal;
+    if (row.clicked_at && row.clicked_at >= since) {
+      entry.events.push({ date: row.clicked_at, label: `Clicked through${(row.click_count ?? 0) > 1 ? ` (${row.click_count} times)` : ""}` });
+    }
+    if (row.opened_at && row.opened_at >= since) {
+      entry.events.push({ date: row.opened_at, label: `Opened your email${(row.open_count ?? 0) > 1 ? ` (${row.open_count} times)` : ""}` });
+    }
     byContact.set(contact.id, entry);
   }
 
@@ -73,6 +82,7 @@ export async function getWarmRanking(): Promise<WarmContact[]> {
         baselinePerWeek,
         deviation,
         tier: tierFor(deviation, v.thisWeek),
+        events: v.events.sort((a, b) => b.date.localeCompare(a.date)),
       };
     })
     .filter((c) => c.signalsThisWeek > 0)

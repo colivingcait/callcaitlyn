@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { updateEngagementTag } from "@/lib/crm/engagement";
+import { checkWarmNotifications } from "@/lib/crm/warm-notifications";
 
 const OWNER_ID = process.env.CRM_OWNER_USER_ID;
 
@@ -29,7 +30,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
     // A click is a strong, hard-to-fake engagement signal on its own - see
     // hasRecentEmailEngagement in lib/crm/engagement.ts.
-    if (OWNER_ID) await updateEngagementTag(admin, OWNER_ID, send.contact_id).catch(() => {});
+    if (OWNER_ID) {
+      await updateEngagementTag(admin, OWNER_ID, send.contact_id).catch(() => {});
+      await checkWarmNotifications(admin, OWNER_ID, send.contact_id, sendId, "click").catch(() => {});
+    }
   }
 
   // Only ever redirects to a link that was actually in the email body

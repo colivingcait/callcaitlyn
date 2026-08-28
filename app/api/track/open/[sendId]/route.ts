@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { updateEngagementTag } from "@/lib/crm/engagement";
+import { checkWarmNotifications } from "@/lib/crm/warm-notifications";
 
 const OWNER_ID = process.env.CRM_OWNER_USER_ID;
 
@@ -26,7 +27,10 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     // engagement signal - see hasRecentEmailEngagement - so this only
     // matters starting the second time, but it's cheap enough to just
     // always recompute rather than special-case the first open away.
-    if (OWNER_ID) await updateEngagementTag(admin, OWNER_ID, send.contact_id).catch(() => {});
+    if (OWNER_ID) {
+      await updateEngagementTag(admin, OWNER_ID, send.contact_id).catch(() => {});
+      await checkWarmNotifications(admin, OWNER_ID, send.contact_id, sendId, "open").catch(() => {});
+    }
   }
 
   return new NextResponse(PIXEL, {

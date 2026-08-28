@@ -8,6 +8,7 @@ import { QuoSyncBackfill } from "@/components/settings/QuoSyncBackfill";
 import { EventbriteSyncBackfill } from "@/components/settings/EventbriteSyncBackfill";
 import { JotformSyncBackfill } from "@/components/settings/JotformSyncBackfill";
 import { PushNotifications } from "@/components/settings/PushNotifications";
+import { WarmNotificationSettings } from "@/components/settings/WarmNotificationSettings";
 import { Card, Button } from "@/components/ui";
 import { Mail, BarChart3 } from "lucide-react";
 
@@ -21,10 +22,11 @@ export default async function SettingsPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const [stages, tags, gmailAccount] = await Promise.all([
+  const [stages, tags, gmailAccount, warmSettings] = await Promise.all([
     listStages(),
     listTags(),
     supabase.from("gmail_accounts").select("email_address").maybeSingle().then((r) => r.data),
+    supabase.from("warm_notification_settings").select("*").maybeSingle().then((r) => r.data),
   ]);
 
   return (
@@ -65,6 +67,9 @@ export default async function SettingsPage({
       <Card className="space-y-3">
         <h2 className="text-sm font-semibold text-neutral-700">Notifications</h2>
         <PushNotifications vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY} />
+        <div className="border-t border-neutral-100 pt-3">
+          <WarmNotificationSettings settings={warmSettings} />
+        </div>
       </Card>
 
       <Card className="space-y-2 bg-neutral-50">

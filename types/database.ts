@@ -183,6 +183,15 @@ export interface DismissedInsight {
   dismissed_at: string;
 }
 
+export interface WarmNotificationSettings {
+  owner_id: string;
+  rule_triple_open: boolean;
+  rule_past_client_click: boolean;
+  rule_hot_twice: boolean;
+  rule_every_open: boolean;
+  updated_at: string;
+}
+
 export interface Activity {
   id: string;
   owner_id: string;
