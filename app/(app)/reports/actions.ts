@@ -52,7 +52,7 @@ export async function markContactAttended(contactId: string, series: EventSeries
 
   await recordEventAttendance(admin, contactId, eventName, now);
 
-  revalidatePath("/reports/events");
+  revalidatePath("/reports");
   revalidatePath("/events");
   return { ok: true as const };
 }
