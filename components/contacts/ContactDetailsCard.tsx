@@ -10,6 +10,7 @@ import { syncContactToQuoAction } from "@/app/(app)/contacts/actions";
 import { contactSchema, type ContactFormValues } from "@/lib/validation/contact";
 import { CONTACT_TYPE_LABELS, TIMELINE_LABELS, REPRESENTING_LABELS, LEAD_SOURCES, cn } from "@/lib/utils";
 import type { ContactWithRelations, PipelineStage, Tag } from "@/types/database";
+import type { MergeCandidate } from "@/lib/data/contacts";
 
 const fieldClass = "mt-1.5 w-full rounded-[10px] border border-neutral-200 bg-white px-3 py-2.5 text-[15px] text-neutral-900";
 const labelClass = "text-sm text-neutral-500";
@@ -22,7 +23,17 @@ const labelClass = "text-sm text-neutral-500";
 // fix. Duplicate-detection (a create-time concern) is dropped here - the
 // footer's "Merge duplicate" already covers an existing contact turning
 // out to be the same person as another.
-export function ContactDetailsCard({ contact, tags, stages }: { contact: ContactWithRelations; tags: Tag[]; stages: PipelineStage[] }) {
+export function ContactDetailsCard({
+  contact,
+  tags,
+  stages,
+  contacts,
+}: {
+  contact: ContactWithRelations;
+  tags: Tag[];
+  stages: PipelineStage[];
+  contacts: MergeCandidate[];
+}) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -55,6 +66,8 @@ export function ContactDetailsCard({ contact, tags, stages }: { contact: Contact
       timeline: contact.timeline,
       next_follow_up_at: contact.next_follow_up_at ? contact.next_follow_up_at.slice(0, 10) : "",
       birthday: contact.birthday ?? "",
+      referred_by: contact.referred_by ?? "",
+      lease_ends_at: contact.lease_ends_at ? contact.lease_ends_at.slice(0, 10) : "",
       address_line1: contact.address_line1 ?? "",
       address_line2: contact.address_line2 ?? "",
       city: contact.city ?? "",
@@ -101,6 +114,8 @@ export function ContactDetailsCard({ contact, tags, stages }: { contact: Contact
       timeline: values.timeline,
       next_follow_up_at: values.next_follow_up_at ? new Date(values.next_follow_up_at).toISOString() : null,
       birthday: values.birthday || null,
+      referred_by: values.referred_by || null,
+      lease_ends_at: values.lease_ends_at || null,
       address_line1: values.address_line1 || null,
       address_line2: values.address_line2 || null,
       city: values.city || null,
@@ -261,6 +276,25 @@ export function ContactDetailsCard({ contact, tags, stages }: { contact: Contact
           <label className={labelClass}>Birthday</label>
           <input type="date" {...register("birthday")} className={fieldClass} />
         </div>
+        <div>
+          <label className={labelClass}>Referred by</label>
+          <select {...register("referred_by")} className={fieldClass}>
+            <option value="">Nobody on file</option>
+            {contacts
+              .filter((c) => c.id !== contact.id)
+              .map((c) => (
+                <option key={c.id} value={c.id}>
+                  {[c.first_name, c.last_name].filter(Boolean).join(" ")}
+                </option>
+              ))}
+          </select>
+        </div>
+        {contact.contact_type === "renter" && (
+          <div>
+            <label className={labelClass}>Lease ends</label>
+            <input type="date" {...register("lease_ends_at")} className={fieldClass} />
+          </div>
+        )}
       </div>
 
       <div className="mt-5">

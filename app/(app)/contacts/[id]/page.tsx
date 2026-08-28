@@ -110,7 +110,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
 
         <div id="details">
           <Section sectionKey="contact-detail:details" title="Details">
-            <ContactDetailsCard contact={contact} tags={tags} stages={stages} />
+            <ContactDetailsCard contact={contact} tags={tags} stages={stages} contacts={mergeCandidates} />
           </Section>
         </div>
 

@@ -44,6 +44,8 @@ export const contactSchema = z.object({
   postal_code: z.string().optional(),
   notes: z.string().optional(),
   tag_ids: z.array(z.string().uuid()).optional(),
+  referred_by: z.union([z.string().uuid(), z.literal("")]).nullable().optional(),
+  lease_ends_at: z.string().optional(),
 });
 
 export type ContactFormValues = z.infer<typeof contactSchema>;
