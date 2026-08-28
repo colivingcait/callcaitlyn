@@ -16,6 +16,49 @@ export type CreateMeetingResult =
   | { ok: true; eventId: string; meetLink: string | null; htmlLink: string | null }
   | { ok: false; error: string };
 
+export type UpcomingCalendarEvent = {
+  id: string;
+  title: string;
+  startAt: string;
+  location: string | null;
+  attendeeEmails: string[];
+};
+
+// Read-only counterpart to createMeetingInvite above - nothing in this
+// app has ever listed calendar events back, only created them. Used by
+// the prep-sheet cron to find meetings starting soon; singleEvents
+// expands recurring events into individual instances (otherwise a
+// weekly-recurring meeting would show as one event with the series'
+// original start time, not its next actual occurrence).
+export async function listUpcomingEvents(admin: SupabaseClient, ownerId: string, timeMin: string, timeMax: string): Promise<UpcomingCalendarEvent[]> {
+  const client = await getAuthorizedGoogleClient(admin, ownerId);
+  if (!client) return [];
+
+  const calendar = google.calendar({ version: "v3", auth: client });
+  try {
+    const { data } = await calendar.events.list({
+      calendarId: "primary",
+      timeMin,
+      timeMax,
+      singleEvents: true,
+      orderBy: "startTime",
+    });
+
+    return (data.items ?? [])
+      .filter((e) => e.status !== "cancelled" && e.start?.dateTime)
+      .map((e) => ({
+        id: e.id ?? "",
+        title: e.summary ?? "Untitled event",
+        startAt: e.start!.dateTime!,
+        location: e.location ?? null,
+        attendeeEmails: (e.attendees ?? []).map((a) => a.email).filter((email): email is string => !!email),
+      }));
+  } catch (err) {
+    console.error("Google Calendar list failed", err);
+    return [];
+  }
+}
+
 // Google only attaches a Meet link to an event that explicitly requests
 // conference data (conferenceDataVersion + a hangoutsMeet createRequest) -
 // a plain calendar event has no video link at all. sendUpdates: "all" is

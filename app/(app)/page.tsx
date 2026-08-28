@@ -12,7 +12,9 @@ import { CommissionMiniCard } from "@/components/dashboard/CommissionMiniCard";
 import { DialerStrip } from "@/components/dashboard/DialerStrip";
 import { TextAllButton } from "@/components/dashboard/TextAllButton";
 import { WeeklyReviewCard } from "@/components/dashboard/WeeklyReviewCard";
+import { PrepSheetCard } from "@/components/dashboard/PrepSheetCard";
 import type { WeeklyReviewPayload } from "@/lib/data/weekly-review";
+import type { PrepSheetPayload } from "@/lib/data/prep-sheet";
 
 export default async function TodayPage() {
   const supabase = await createClient();
@@ -23,12 +25,19 @@ export default async function TodayPage() {
     today,
     contacts,
     { data: pinnedWeeklyReview },
+    { data: pinnedPrepSheets },
   ] = await Promise.all([
     supabase.auth.getUser(),
     getTodayData(),
     listMergeCandidates(),
     supabase.from("pinned_today_items").select("id, payload").eq("kind", "weekly_review").is("cleared_at", null).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    supabase.from("pinned_today_items").select("id, payload").eq("kind", "prep_sheet").is("cleared_at", null).order("created_at", { ascending: false }).limit(5),
   ]);
+
+  // A prep sheet clears itself once its meeting's start time passes, even
+  // if nobody clicked Clear - no cleanup job needed, just don't render a
+  // stale one.
+  const activePrepSheets = (pinnedPrepSheets ?? []).filter((p) => new Date((p.payload as unknown as PrepSheetPayload).startAt).getTime() > Date.now());
 
   const ownerId = user?.id ?? "";
   const openItems = today.calls.length + today.repliesOwed.length + today.myTasks.length + today.registeredNoFollowUp.length;
@@ -38,6 +47,14 @@ export default async function TodayPage() {
     <div className="mx-auto max-w-3xl px-4 py-6">
       <h1 className="font-serif text-2xl font-semibold text-neutral-900 sm:text-[28px]">{formatLocal(new Date(), "EEEE, MMMM d")}</h1>
       <p className="mt-1 text-[15px] text-neutral-500">{openItems} open item{openItems === 1 ? "" : "s"} today</p>
+
+      {activePrepSheets.length > 0 && (
+        <div className="mt-4 space-y-3">
+          {activePrepSheets.map((p) => (
+            <PrepSheetCard key={p.id} id={p.id} payload={p.payload as unknown as PrepSheetPayload} />
+          ))}
+        </div>
+      )}
 
       {pinnedWeeklyReview && (
         <div className="mt-4">
