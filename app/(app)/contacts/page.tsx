@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { X, Download } from "lucide-react";
+import { X, Download, Plus } from "lucide-react";
 import {
   listContacts,
   listStages,
@@ -8,6 +8,7 @@ import {
   listLastEventNames,
   listRegisteredEventNames,
   listSegments,
+  getLastActivityLabels,
 } from "@/lib/data/contacts";
 import { listSequencesWithSummary } from "@/lib/data/sequences";
 import { parseContactFilterParams } from "@/lib/crm/contact-filter-params";
@@ -29,6 +30,9 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
     if (value) usp.set(key, value);
   }
   const filters = parseContactFilterParams(usp);
+  // Grouped by stage by default - the header for each group is the stage,
+  // so this is the view the redesign is built around, not an opt-in.
+  const groupBy = filters.groupBy ?? "stage";
 
   const supabase = await createClient();
   const {
@@ -44,13 +48,17 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
     listSequencesWithSummary(),
     listSegments(),
   ]);
+  const lastActivityLabels = await getLastActivityLabels(contacts.map((c) => c.id));
+  const withPhoneCount = contacts.filter((c) => c.phone).length;
 
   return (
     <div className="mx-auto max-w-3xl">
-      <div className="flex items-start justify-between gap-3 px-4 pt-6 pb-2">
+      <div className="flex items-start justify-between gap-3 px-4 pt-6 pb-2 sm:px-0">
         <div>
-          <h1 className="font-serif text-2xl font-semibold text-neutral-900">Contacts</h1>
-          <p className="mt-0.5 text-sm text-neutral-500">{contacts.length} people</p>
+          <h1 className="font-serif text-2xl font-semibold leading-9 text-neutral-900 sm:text-[28px]">Contacts</h1>
+          <p className="mt-1.5 text-[15px] leading-[22px] text-neutral-600">
+            {contacts.length} people · {withPhoneCount} have a phone number you can text
+          </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <a href={`/api/contacts/export?${usp.toString()}`}>
@@ -59,6 +67,11 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
             </Button>
           </a>
           {user && <BulkImportContactsButton tags={tags} ownerId={user.id} />}
+          <Link href="/contacts/new">
+            <Button size="sm">
+              <Plus size={15} /> New contact
+            </Button>
+          </Link>
         </div>
       </div>
       {filters.leadDateWithinDays && (
@@ -79,14 +92,15 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
         registeredEventNames={registeredEventNames}
       />
       {user && <SegmentBar segments={segments} ownerId={user.id} />}
-      <div className="bg-white">
+      <div className="bg-white sm:bg-transparent">
         <ContactsList
           contacts={contacts}
           tags={tags}
           stages={stages}
           ownerId={user?.id ?? ""}
           sequences={sequences.map((s) => ({ id: s.id, name: s.name, type: s.type }))}
-          groupBy={filters.groupBy}
+          groupBy={groupBy}
+          lastActivityLabels={lastActivityLabels}
         />
       </div>
     </div>

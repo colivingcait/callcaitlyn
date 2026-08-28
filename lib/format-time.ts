@@ -1,4 +1,5 @@
 import { formatInTimeZone } from "date-fns-tz";
+import { formatDistanceToNowStrict } from "date-fns";
 
 // Pages that show times are server-rendered, and the server runs in UTC -
 // without an explicit timezone, dates would render in the server's zone
@@ -16,4 +17,10 @@ export function formatLocal(date: string | Date, pattern: string): string {
 // app's timezone instead, so "today" means today in EST, not UTC.
 export function isTodayLocal(date: string | Date): boolean {
   return formatLocal(date, "yyyy-MM-dd") === formatLocal(new Date(), "yyyy-MM-dd");
+}
+
+// "2 hours ago" / "3 days ago" - for a row's meta line ("called 2 hours
+// ago"), where a relative sense of recency reads faster than a date.
+export function relativeTime(date: string | Date): string {
+  return formatDistanceToNowStrict(new Date(date), { addSuffix: true });
 }

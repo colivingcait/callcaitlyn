@@ -1,22 +1,61 @@
-import { Home, MessageCircle, Users, KanbanSquare, DollarSign, Mail, BarChart3, Settings, PhoneCall } from "lucide-react";
+import {
+  Sunrise,
+  Lightbulb,
+  MessageCircle,
+  PhoneCall,
+  Users,
+  HeartHandshake,
+  KanbanSquare,
+  CalendarHeart,
+  Mail,
+  Calculator,
+  DollarSign,
+  BarChart3,
+  Settings,
+  type LucideIcon,
+} from "lucide-react";
 
-export const NAV_ITEMS = [
-  { href: "/", label: "Dashboard", icon: Home },
+export type NavItem = { href: string; label: string; icon: LucideIcon };
+export type NavGroup = { label: string; items: NavItem[] };
+
+// Thirteen items in three groups - about the ceiling before a sidebar
+// becomes a list you scan instead of a map you know. Insights, Sphere,
+// Events, and Numbers are new destinations (Phase 2+) that route to a
+// placeholder for now so the nav isn't lying about what exists yet.
+export const WORK_ITEMS: NavItem[] = [
+  { href: "/", label: "Today", icon: Sunrise },
+  { href: "/insights", label: "Insights", icon: Lightbulb },
   { href: "/messages", label: "Messages", icon: MessageCircle },
+  { href: "/dialer", label: "Dialer", icon: PhoneCall },
+];
+
+export const PEOPLE_ITEMS: NavItem[] = [
   { href: "/contacts", label: "Contacts", icon: Users },
+  { href: "/sphere", label: "Sphere", icon: HeartHandshake },
   { href: "/pipeline", label: "Pipeline", icon: KanbanSquare },
+  { href: "/events", label: "Events", icon: CalendarHeart },
+];
+
+export const BUSINESS_ITEMS: NavItem[] = [
+  { href: "/sequences", label: "Campaigns", icon: Mail },
+  { href: "/numbers", label: "Numbers", icon: Calculator },
   { href: "/commissions", label: "Commissions", icon: DollarSign },
-  { href: "/sequences", label: "Bulk Communication", icon: Mail },
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-// Bottom nav (mobile) drops Settings, Commissions, Sequences, and Reports
-// to keep tap targets wide - all are occasional-use, reachable from
-// Settings on mobile instead. Desktop sidebar keeps the full list since
-// there's room there. Dialer is a phone-in-hand workflow, so it's
-// mobile-only - added here instead of to the desktop NAV_ITEMS list.
-export const MOBILE_NAV_ITEMS = [
-  ...NAV_ITEMS.filter((item) => !["/settings", "/commissions", "/sequences", "/reports"].includes(item.href)),
-  { href: "/dialer", label: "Dialer", icon: PhoneCall },
+export const NAV_GROUPS: NavGroup[] = [
+  { label: "Work", items: WORK_ITEMS },
+  { label: "People", items: PEOPLE_ITEMS },
+  { label: "Business", items: BUSINESS_ITEMS },
+];
+
+// Five along the bottom - what she touches standing up. Everything else
+// sits behind a More sheet on mobile (unchanged from before).
+export const MOBILE_NAV_ITEMS: NavItem[] = [
+  WORK_ITEMS[0], // Today
+  WORK_ITEMS[2], // Messages
+  PEOPLE_ITEMS[0], // Contacts
+  WORK_ITEMS[3], // Dialer
+  PEOPLE_ITEMS[3], // Events
 ];

@@ -1,8 +1,33 @@
 import { createClient } from "@/lib/supabase/server";
 import { computeLikelihood } from "@/lib/crm/likelihood";
 import { filterByQueue } from "@/lib/crm/contact-queue-filter";
+import { relativeTime } from "@/lib/format-time";
 import type { ContactQueue } from "@/lib/crm/contact-queues";
 import type { Activity, AiInsight, ContactSegment, ContactWithRelations, Deal, PipelineStage, Tag, Task } from "@/types/database";
+
+// Per-contact "called 2 hours ago" / "texted yesterday" meta for the
+// Contacts row - scoped to just the contacts already being displayed
+// (unlike contact-queue-filter's unscoped aggregates, which need every
+// contact's activity to compute a queue membership) so this stays a
+// cheap, targeted query rather than a full-table scan.
+export async function getLastActivityLabels(contactIds: string[]): Promise<Map<string, string>> {
+  if (contactIds.length === 0) return new Map();
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("activities")
+    .select("contact_id, type, occurred_at")
+    .in("contact_id", contactIds)
+    .in("type", ["call", "text"])
+    .order("occurred_at", { ascending: false });
+
+  const labels = new Map<string, string>();
+  for (const row of data ?? []) {
+    if (labels.has(row.contact_id)) continue;
+    const verb = row.type === "call" ? "called" : "texted";
+    labels.set(row.contact_id, `${verb} ${relativeTime(row.occurred_at)}`);
+  }
+  return labels;
+}
 
 export async function listStages() {
   const supabase = await createClient();
