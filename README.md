@@ -291,13 +291,13 @@ Unlike the other integrations, Gmail requires a real OAuth connection (not a web
 1. Go to [console.cloud.google.com](https://console.cloud.google.com), create a project (or use an existing one).
 2. **APIs & Services → Library** → enable the **Gmail API**.
 3. **APIs & Services → OAuth consent screen**: choose **External**, fill in the basic app info (name, your email), add scopes `gmail.readonly`, `gmail.send`, and `userinfo.email`. While in "Testing" mode you'll need to add your own Google account under **Test users** — that's fine for a single-user app, no need to publish it.
-4. **APIs & Services → Credentials → Create Credentials → OAuth client ID** → Application type **Web application**. Add an **Authorized redirect URI**: `https://www.callcaitlyn.com/api/auth/gmail/callback` (must be the exact `www` URL — the bare domain redirects, and Google won't follow that on this flow).
+4. **APIs & Services → Credentials → Create Credentials → OAuth client ID** → Application type **Web application**. Add an **Authorized redirect URI**: `https://crm.callcaitlyn.com/api/auth/gmail/callback` — this must be the CRM's own domain, not the public marketing site (`callcaitlyn.com`/`www.callcaitlyn.com`) — those are two separate Vercel projects, and Google redirecting to the wrong one 404s since this callback route only exists on the CRM deployment.
 5. Copy the **Client ID** and **Client Secret** — these are `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
 
 ### 2. App setup
 
 1. Run [`supabase/migrations/0015_gmail_accounts.sql`](./supabase/migrations/0015_gmail_accounts.sql), [`supabase/migrations/0016_email_sequences.sql`](./supabase/migrations/0016_email_sequences.sql), and [`supabase/migrations/0017_gmail_oauth_states.sql`](./supabase/migrations/0017_gmail_oauth_states.sql) in Supabase's SQL Editor.
-2. Add `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` (the same callback URL from step 4 above), `APP_BASE_URL` (`https://www.callcaitlyn.com`), and a random string for `CRON_SECRET` to Vercel, then redeploy.
+2. Add `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` (the same callback URL from step 4 above), `APP_BASE_URL` (`https://crm.callcaitlyn.com` — also the CRM's own domain, since it's used to build unsubscribe/click-tracking links in sequence emails), and a random string for `CRON_SECRET` to Vercel, then redeploy.
 3. **This needs Vercel Pro** (~$20/mo) — the free Hobby plan only allows daily cron jobs, and both inbox sync and scheduled sequence sends need to run every 15 minutes to be useful (a broadcast step scheduled for "9am" shouldn't fire whenever it happens to be tomorrow).
 4. In the app, go to **Settings** and click **Connect Gmail** — you'll be sent to Google's consent screen, then back to Settings showing "Connected as you@gmail.com".
 
