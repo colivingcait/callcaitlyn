@@ -192,6 +192,15 @@ export interface WarmNotificationSettings {
   updated_at: string;
 }
 
+export interface PinnedTodayItem {
+  id: string;
+  owner_id: string;
+  kind: "weekly_review" | "prep_sheet";
+  payload: Record<string, unknown>;
+  created_at: string;
+  cleared_at: string | null;
+}
+
 export interface Activity {
   id: string;
   owner_id: string;

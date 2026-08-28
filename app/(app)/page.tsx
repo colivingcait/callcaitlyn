@@ -11,6 +11,8 @@ import { PipelineMiniCard } from "@/components/dashboard/PipelineMiniCard";
 import { CommissionMiniCard } from "@/components/dashboard/CommissionMiniCard";
 import { DialerStrip } from "@/components/dashboard/DialerStrip";
 import { TextAllButton } from "@/components/dashboard/TextAllButton";
+import { WeeklyReviewCard } from "@/components/dashboard/WeeklyReviewCard";
+import type { WeeklyReviewPayload } from "@/lib/data/weekly-review";
 
 export default async function TodayPage() {
   const supabase = await createClient();
@@ -20,7 +22,13 @@ export default async function TodayPage() {
     },
     today,
     contacts,
-  ] = await Promise.all([supabase.auth.getUser(), getTodayData(), listMergeCandidates()]);
+    { data: pinnedWeeklyReview },
+  ] = await Promise.all([
+    supabase.auth.getUser(),
+    getTodayData(),
+    listMergeCandidates(),
+    supabase.from("pinned_today_items").select("id, payload").eq("kind", "weekly_review").is("cleared_at", null).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+  ]);
 
   const ownerId = user?.id ?? "";
   const openItems = today.calls.length + today.repliesOwed.length + today.myTasks.length + today.registeredNoFollowUp.length;
@@ -30,6 +38,12 @@ export default async function TodayPage() {
     <div className="mx-auto max-w-3xl px-4 py-6">
       <h1 className="font-serif text-2xl font-semibold text-neutral-900 sm:text-[28px]">{formatLocal(new Date(), "EEEE, MMMM d")}</h1>
       <p className="mt-1 text-[15px] text-neutral-500">{openItems} open item{openItems === 1 ? "" : "s"} today</p>
+
+      {pinnedWeeklyReview && (
+        <div className="mt-4">
+          <WeeklyReviewCard id={pinnedWeeklyReview.id} payload={pinnedWeeklyReview.payload as unknown as WeeklyReviewPayload} />
+        </div>
+      )}
 
       <div className="mt-4">
         <TodayStatStrip

@@ -2,6 +2,7 @@
   "crons": [
     { "path": "/api/cron/sync-gmail", "schedule": "*/15 * * * *" },
     { "path": "/api/cron/send-sequences", "schedule": "*/15 * * * *" },
-    { "path": "/api/cron/send-text-blasts", "schedule": "*/15 * * * *" }
+    { "path": "/api/cron/send-text-blasts", "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/weekly-review", "schedule": "0 21 * * 0" }
   ]
 }
