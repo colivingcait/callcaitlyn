@@ -10,12 +10,14 @@ export function Section({
   sectionKey,
   title,
   meta,
+  action,
   defaultOpen = true,
   children,
 }: {
   sectionKey: string;
   title: string;
   meta?: string;
+  action?: React.ReactNode;
   defaultOpen?: boolean;
   children: React.ReactNode;
 }) {
@@ -23,11 +25,16 @@ export function Section({
 
   return (
     <div className="overflow-hidden rounded-2xl border border-[#ebe9e7] bg-white">
-      <button type="button" onClick={() => setOpen(!open)} className="flex w-full items-center gap-2.5 px-[18px] py-4 text-left">
-        <span className="text-base font-semibold text-neutral-900">{title}</span>
-        {meta && <span className="text-[15px] text-neutral-500">{meta}</span>}
-        <span className="ml-auto text-neutral-400">{open ? <ChevronDown size={17} /> : <ChevronRight size={17} />}</span>
-      </button>
+      <div className="flex w-full items-center gap-2.5 px-[18px] py-4">
+        <button type="button" onClick={() => setOpen(!open)} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
+          <span className="text-base font-semibold text-neutral-900">{title}</span>
+          {meta && <span className="text-[15px] text-neutral-500">{meta}</span>}
+        </button>
+        {action}
+        <button type="button" onClick={() => setOpen(!open)} className="shrink-0 text-neutral-400">
+          {open ? <ChevronDown size={17} /> : <ChevronRight size={17} />}
+        </button>
+      </div>
       {open && <div className="border-t border-neutral-100">{children}</div>}
     </div>
   );

@@ -1,108 +1,100 @@
-import { getDashboardData } from "@/lib/data/dashboard";
-import { getMetrics, type Period } from "@/lib/data/metrics";
-import { listInProgressTextBlasts } from "@/lib/data/text-blasts";
+import { getTodayData } from "@/lib/data/today";
+import { listMergeCandidates } from "@/lib/data/contacts";
 import { createClient } from "@/lib/supabase/server";
-import { StatTile } from "@/components/dashboard/StatTile";
-import { FollowUpList } from "@/components/dashboard/FollowUpList";
-import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
-import { StageBreakdown } from "@/components/dashboard/StageBreakdown";
-import { MetricCard } from "@/components/dashboard/MetricCard";
-import { PeriodToggle } from "@/components/dashboard/PeriodToggle";
-import { TextBlastStatusCard } from "@/components/dashboard/TextBlastStatusCard";
-import { Card } from "@/components/ui";
+import { formatLocal } from "@/lib/format-time";
+import { Section } from "@/components/ui/Section";
+import { SuggestedRow } from "@/components/contacts/SuggestedRow";
+import { WorklistGroup } from "@/components/dashboard/WorklistGroup";
+import { TodayTasksGroup } from "@/components/dashboard/TodayTasksGroup";
+import { TodayStatStrip } from "@/components/dashboard/TodayStatStrip";
+import { PipelineMiniCard } from "@/components/dashboard/PipelineMiniCard";
+import { CommissionMiniCard } from "@/components/dashboard/CommissionMiniCard";
+import { DialerStrip } from "@/components/dashboard/DialerStrip";
+import { TextAllButton } from "@/components/dashboard/TextAllButton";
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ period?: string }>;
-}) {
-  const params = await searchParams;
-  const period: Period = params.period === "month" ? "month" : "week";
-
+export default async function TodayPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [
+    {
+      data: { user },
+    },
+    today,
+    contacts,
+  ] = await Promise.all([supabase.auth.getUser(), getTodayData(), listMergeCandidates()]);
 
-  const [{ stages, stageCounts, totalActive, followUps, activities, newLeadsWeek, newLeadsMonth }, metrics, inProgressBlasts] =
-    await Promise.all([getDashboardData(), getMetrics(period), listInProgressTextBlasts()]);
-
-  const hotCount = stages.find((s) => s.name.toLowerCase().includes("hot"))
-    ? stageCounts.get(stages.find((s) => s.name.toLowerCase().includes("hot"))!.id) ?? 0
-    : 0;
+  const ownerId = user?.id ?? "";
+  const openItems = today.calls.length + today.repliesOwed.length + today.myTasks.length + today.registeredNoFollowUp.length;
+  const lateCalls = today.calls.filter((c) => c.late).length;
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6">
-      <h1 className="font-serif text-2xl font-semibold text-neutral-900">Dashboard</h1>
-      <p className="mt-0.5 text-sm text-neutral-500">Here&apos;s what needs your attention today.</p>
+    <div className="mx-auto max-w-3xl px-4 py-6">
+      <h1 className="font-serif text-2xl font-semibold text-neutral-900 sm:text-[28px]">{formatLocal(new Date(), "EEEE, MMMM d")}</h1>
+      <p className="mt-1 text-[15px] text-neutral-500">{openItems} open item{openItems === 1 ? "" : "s"} today</p>
 
-      <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatTile label="Active Leads" value={totalActive} />
-        <StatTile label="Hot / Ready" value={hotCount} tone="good" />
-        <StatTile label="New Leads (Week)" value={newLeadsWeek} tone="warning" href="/contacts?newSince=7&sort=lead_date_desc" />
-        <StatTile label="New Leads (Month)" value={newLeadsMonth} tone="good" href="/reports/leads?period=month#new-leads" />
+      <div className="mt-4">
+        <TodayStatStrip
+          totalActive={today.statStrip.totalActive}
+          newLeadsWeek={today.statStrip.newLeadsWeek}
+          hotCount={today.statStrip.hotCount}
+          underContractCount={today.statStrip.underContractCount}
+        />
       </div>
 
-      {user && (
-        <div className="mt-8">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-neutral-700">Accountability</h2>
-            <PeriodToggle period={period} />
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
-            <MetricCard
-              label="Speed to lead"
-              result={metrics.speedToLead}
-              kind="hours"
-              ownerId={user.id}
-              metricKey="speed_to_lead"
-            />
-            <MetricCard
-              label="Contacted"
-              result={metrics.contactedPct}
-              kind="percent"
-              ownerId={user.id}
-              metricKey="contacted_pct"
-            />
-            <MetricCard
-              label="Follow-up rate"
-              result={metrics.followUpRate}
-              kind="percent"
-              ownerId={user.id}
-              metricKey="follow_up_rate"
-            />
-            <MetricCard
-              label="Conversion rate"
-              result={metrics.conversionRate}
-              kind="percent"
-              ownerId={user.id}
-              metricKey="conversion_rate"
-            />
-          </div>
-        </div>
-      )}
+      <div className="mt-5">
+        <DialerStrip count={today.newLeadsNeverCalled} />
+      </div>
 
-      {inProgressBlasts.length > 0 && (
-        <div className="mt-8">
-          <TextBlastStatusCard blasts={inProgressBlasts} />
-        </div>
-      )}
+      <div className="mt-3 space-y-3">
+        {today.suggested.length > 0 && (
+          <Section sectionKey="today:suggested" title="Suggested" meta={`${today.suggested.length}`}>
+            {today.suggested.map((s) => (
+              <SuggestedRow
+                key={s.insight.id}
+                insight={s.insight}
+                contactId={s.contactId}
+                ownerId={ownerId}
+                contactStageId={s.contactStageId}
+                contactName={s.contactName}
+                contactCreatedAt={s.contactCreatedAt}
+                representing={s.representing}
+                stages={today.stages}
+                showContactName
+              />
+            ))}
+          </Section>
+        )}
 
-      <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-3">
-        <div className="md:col-span-2">
-          <h2 className="mb-3 text-sm font-semibold text-neutral-700">Needs follow-up</h2>
-          <FollowUpList items={followUps as never} />
+        <Section sectionKey="today:calls" title="Calls" meta={lateCalls > 0 ? `${today.calls.length} · ${lateCalls} late` : `${today.calls.length}`}>
+          <WorklistGroup people={today.calls} />
+        </Section>
 
-          <h2 className="mb-3 mt-8 text-sm font-semibold text-neutral-700">Recent activity</h2>
-          <ActivityFeed items={activities} />
-        </div>
+        <Section sectionKey="today:replies" title="Replies owed" meta={`${today.repliesOwed.length}`}>
+          <WorklistGroup people={today.repliesOwed} />
+        </Section>
 
-        <div>
-          <h2 className="mb-3 text-sm font-semibold text-neutral-700">Pipeline snapshot</h2>
-          <Card>
-            <StageBreakdown stages={stages} counts={stageCounts} />
-          </Card>
-        </div>
+        <Section sectionKey="today:tasks" title="My tasks" meta={`${today.myTasks.length}`}>
+          <TodayTasksGroup tasks={today.myTasks} ownerId={ownerId} contacts={contacts} />
+        </Section>
+
+        <Section
+          sectionKey="today:registered"
+          title="Registered, no follow-up"
+          meta={`${today.registeredNoFollowUp.length}`}
+          defaultOpen={false}
+          action={<TextAllButton contactIds={today.registeredNoFollowUp.map((p) => p.id)} label="Registered, no follow-up" />}
+        >
+          <WorklistGroup people={today.registeredNoFollowUp} />
+        </Section>
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <PipelineMiniCard stages={today.stages} counts={today.statStrip.stageCounts} />
+        <CommissionMiniCard
+          netCommission={today.commissionYear.netCommission}
+          underContractNet={today.commissionYear.underContractNet}
+          kwCapLeft={today.commissionYear.kwCapLeft}
+          kwCapUsedPct={today.commissionYear.kwCapUsedPct}
+        />
       </div>
     </div>
   );
