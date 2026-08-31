@@ -53,11 +53,11 @@ export function TactiqConnect({ webhookUrl }: { webhookUrl: string | null }) {
         </Button>
       </div>
       <p className="text-xs text-neutral-500">
-        Paste this as the URL in your Zapier &ldquo;Webhooks by Zapier&rdquo; POST action, then map Tactiq&apos;s fields
-        into these keys in the request body: <code className="text-[11px]">meeting_id</code>, <code className="text-[11px]">title</code>,{" "}
+        Paste this as the URL in your Make.com scenario&apos;s HTTP &ldquo;Make a request&rdquo; module (POST, body type JSON), then map
+        Tactiq&apos;s fields into these keys in the request body: <code className="text-[11px]">meeting_id</code>, <code className="text-[11px]">title</code>,{" "}
         <code className="text-[11px]">transcript</code>, <code className="text-[11px]">occurred_at</code>,{" "}
         <code className="text-[11px]">duration_seconds</code>, <code className="text-[11px]">calendar_event_id</code> (if Tactiq exposes it),
-        and <code className="text-[11px]">participants</code> as a list of <code className="text-[11px]">{"{name, email}"}</code>. Payload type: JSON.
+        and <code className="text-[11px]">participants</code> as a list of <code className="text-[11px]">{"{name, email}"}</code>.
       </p>
       <div className="flex items-center gap-2">
         <Button variant="secondary" size="sm" onClick={testIt} disabled={testing}>

@@ -1,7 +1,7 @@
 // Tactiq's own webhook payload shape isn't something this integration
 // controls or has confirmed against a real delivery - she's connecting it
-// through Zapier ("Webhooks by Zapier" POST action), which means SHE
-// builds the outbound JSON body by mapping Tactiq's Zap fields into
+// through a Make.com scenario (Tactiq trigger -> HTTP POST module), which
+// means SHE builds the outbound JSON body by mapping Tactiq's fields into
 // whatever keys we ask for. So rather than guess Tactiq's native field
 // names, this defines the shape we want and she maps into it - see the
 // Settings row (components/settings/TactiqConnect.tsx) for the exact

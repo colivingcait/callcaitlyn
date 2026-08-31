@@ -11,11 +11,11 @@ const OWNER_ID = process.env.CRM_OWNER_USER_ID;
 export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
-  // Same secret-in-URL pattern as Eventbrite, not an HMAC header - Zapier's
-  // "Webhooks by Zapier" action makes its own outbound request built from
-  // whatever the Zap maps, it doesn't forward Tactiq's original signing
-  // headers, so a header-based signature scheme isn't reachable through
-  // this delivery path.
+  // Same secret-in-URL pattern as Eventbrite, not an HMAC header - the
+  // Make.com scenario's HTTP module makes its own outbound request built
+  // from whatever the scenario maps, it doesn't forward Tactiq's original
+  // signing headers, so a header-based signature scheme isn't reachable
+  // through this delivery path.
   const secret = request.nextUrl.searchParams.get("secret");
   if (!process.env.TACTIQ_WEBHOOK_SECRET || secret !== process.env.TACTIQ_WEBHOOK_SECRET) {
     console.error("Tactiq webhook rejected: missing/incorrect secret");
