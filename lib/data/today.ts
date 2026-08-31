@@ -135,7 +135,7 @@ async function getJustFinishedGroup(): Promise<WorklistPerson[]> {
     countByTranscript.set(row.transcript_id, (countByTranscript.get(row.transcript_id) ?? 0) + 1);
   }
 
-  const SOURCE_LABEL: Record<string, string> = { quo: "Call", tactiq: "Meeting", granola: "Note", memo: "Voice memo" };
+  const SOURCE_LABEL: Record<string, string> = { quo: "Call", tactiq: "Meeting", granola: "Granola note", memo: "Voice memo" };
   const seen = new Set<string>();
   const justFinished: WorklistPerson[] = [];
   for (const row of data) {

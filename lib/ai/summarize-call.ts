@@ -69,8 +69,8 @@ ${transcript}
   return { bullets: result.bullets, nextSteps: result.next_steps ?? [] };
 }
 
-// --- Phase 3: wide extraction for anything with a transcript (Quo calls,
-// Tactiq meetings, Granola in-person notes, a voice memo) - see
+// --- Phase 3: wide extraction for anything with a transcript (Quo calls;
+// Granola for video meetings, in-person notes, and phone calls) - see
 // lib/data/meeting-transcripts.ts for how proposals get written and
 // approved. Deliberately NOT used for inbound texts: analyzeContactActivity
 // in analyze-contact.ts keeps serving that lighter single-suggestion flow

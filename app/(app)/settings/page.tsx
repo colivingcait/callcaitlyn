@@ -9,7 +9,7 @@ import { EventbriteSyncBackfill } from "@/components/settings/EventbriteSyncBack
 import { JotformSyncBackfill } from "@/components/settings/JotformSyncBackfill";
 import { PushNotifications } from "@/components/settings/PushNotifications";
 import { WarmNotificationSettings } from "@/components/settings/WarmNotificationSettings";
-import { TactiqConnect } from "@/components/settings/TactiqConnect";
+import { GranolaConnect } from "@/components/settings/GranolaConnect";
 import { Card, Button } from "@/components/ui";
 import { Mail, BarChart3 } from "lucide-react";
 
@@ -19,9 +19,9 @@ export default async function SettingsPage({
   searchParams: Promise<{ gmail_connected?: string; gmail_error?: string }>;
 }) {
   const params = await searchParams;
-  const tactiqWebhookUrl =
-    process.env.TACTIQ_WEBHOOK_SECRET && process.env.APP_BASE_URL
-      ? `${process.env.APP_BASE_URL}/api/webhooks/tactiq?secret=${process.env.TACTIQ_WEBHOOK_SECRET}`
+  const granolaWebhookUrl =
+    process.env.GRANOLA_WEBHOOK_SECRET && process.env.APP_BASE_URL
+      ? `${process.env.APP_BASE_URL}/api/webhooks/granola?secret=${process.env.GRANOLA_WEBHOOK_SECRET}`
       : null;
   const supabase = await createClient();
   const {
@@ -105,14 +105,14 @@ export default async function SettingsPage({
       </Card>
 
       <Card className="space-y-3">
-        <h2 className="text-sm font-semibold text-neutral-700">Tactiq meetings</h2>
+        <h2 className="text-sm font-semibold text-neutral-700">Granola meetings &amp; notes</h2>
         <p className="text-sm text-neutral-500">
-          Every video meeting Tactiq transcribes gets read the same way a call is — proposed budget/timeline/note
-          updates show up on that contact&apos;s page for you to approve, each one quoting where it came from.
-          Nothing writes to a contact until you say so, and it&apos;s skipped entirely for anyone marked
-          &ldquo;know personally.&rdquo;
+          Every meeting or note Granola captures — a video call, an in-person coffee, a quick phone memo — gets read
+          the same way a call is: proposed budget/timeline/note updates show up on that contact&apos;s page for you
+          to approve, each one quoting where it came from. Nothing writes to a contact until you say so, and
+          it&apos;s skipped entirely for anyone marked &ldquo;know personally.&rdquo;
         </p>
-        <TactiqConnect webhookUrl={tactiqWebhookUrl} />
+        <GranolaConnect webhookUrl={granolaWebhookUrl} />
       </Card>
     </div>
   );

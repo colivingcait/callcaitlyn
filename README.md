@@ -75,7 +75,7 @@ opens full-screen like a native app.
 - **Calendly booking sync** — a webhook receiver at `/api/webhooks/calendly` logs new bookings (and cancellations) onto the matching contact's timeline, auto-creating a contact if the email/phone isn't recognized, and pulls the follow-up date forward to the meeting time if that's sooner than what's already set. See **Setting up Calendly** below — not yet tested against a real delivery.
 - **Eventbrite registration sync** — a webhook receiver at `/api/webhooks/eventbrite` fetches attendee details when someone registers for an event, logs it on the matching contact (or creates one, or enriches an existing bare one with name/email), and tags them "Meetup". Confirmed working end to end.
 - **Jotform check-in sync** — a webhook receiver at `/api/webhooks/jotform` matches in-person kiosk check-ins to existing contacts (from Eventbrite or elsewhere) by email/phone instead of creating duplicates, updates their last-event-attended date, and logs "how did you hear about us" + "house hacking journey" answers. Confirmed working end to end.
-- **Tactiq meeting transcripts** — a webhook receiver at `/api/webhooks/tactiq` (fed via Make.com) reads the transcript of a video meeting and proposes budget/timeline/note/stage updates on the matched contact's page, each quoting where it came from — nothing writes until approved. See **Setting up Tactiq** below.
+- **Granola meeting/note transcripts** — a webhook receiver at `/api/webhooks/granola` (Granola posts here directly, no relay needed) reads the transcript of a video meeting, in-person note, or phone call and proposes budget/timeline/note/stage updates on the matched contact's page, each quoting where it came from — nothing writes until approved. See **Setting up Granola** below.
 - **AI insights** — every inbound Quo text and every completed call transcript gets read by Claude, which decides whether it signals a stage or timeline change (e.g. "I'm ready to start looking" → suggest Hot/Ready) and writes a plain-English summary + suggested next action. Nothing changes automatically — it shows up as a card on the contact page with Apply/Dismiss buttons, so a wrong read never silently moves someone through your pipeline. Confirmed working end to end.
 - **Send texts from the CRM** — a compose box on the contact page sends a text through your Quo number directly (no need to open the Quo app), and logs it on the timeline the same as an incoming one. Not yet tested against a real send — the request format is a best-effort guess, same situation the webhooks started in.
 
@@ -244,24 +244,20 @@ Field-label matching for name/email/phone/etc. is fuzzy (matches on keywords lik
 
 Only the Jotform in-person check-in sets a contact's **last event attended** date — Eventbrite registering does not, since registering isn't attending. That field (and the post-event follow-up dialer it drives) is meant to answer "did they actually show up," which only a kiosk check-in confirms.
 
-## Setting up Tactiq (meeting transcripts, via Make.com)
+## Setting up Granola (meeting/note transcripts)
 
-Tactiq transcribes your video meetings; this reads the transcript the same way a Quo call is read — it proposes budget/timeline/note/stage updates on the matched contact's page, each one quoting the sentence it came from, and writes nothing until you approve it item by item. Tactiq doesn't offer a webhook signature Make can forward, so — same idea as Eventbrite/Jotform — this is secured with a secret you choose yourself, baked into the URL, and a Make.com scenario is what actually delivers it.
+Granola transcribes your video meetings (Zoom/Meet/Teams — it listens to device audio, no bot joins the call), in-person meetings and coffees from its phone app, and outbound phone calls (iOS). All three read the same way a Quo call is read — proposing budget/timeline/note/stage updates on the matched contact's page, each one quoting the sentence it came from, and writing nothing until you approve it item by item.
 
-**Why Make.com and not Zapier**: they do the identical job here (catch a Tactiq event, POST it to a URL) but Zapier's "Webhooks by Zapier" action requires a paid plan ($19.99+/mo) — it's not available on Zapier's free tier at all. Make's free plan covers this at no cost: 1,000 operations/month and 2 active scenarios (this one now, Granola later — exactly 2), with no minimum-interval delay for webhook-triggered scenarios (that 15-minute floor only applies to scheduled/polling scenarios). Nothing about our webhook endpoint cares which app sends the request — it just expects a JSON body with the keys below — so if you ever do want to switch to Zapier or something else later, it's a config change, not a code change.
+Unlike Tactiq (which this replaced), Granola's own account settings let you point a webhook straight at this CRM — no Zapier or Make.com relay needed, no monthly cost either way. Granola doesn't sign its webhook requests, so — same idea as Eventbrite/Jotform — this is secured with a secret you choose yourself, baked into the URL.
 
-1. Pick any long random string — this is `TACTIQ_WEBHOOK_SECRET`. Add it (and `APP_BASE_URL`, if not already set) to Vercel, redeploy.
-2. In Settings → Tactiq meetings on the CRM itself, copy the webhook URL shown there (it already has the secret baked in) — that's what goes into Make.
-3. In Make.com, create a new scenario: **first module** = Tactiq's own trigger app (new meeting transcript — search "Tactiq" when adding a module); **second module** = **HTTP → Make a request**.
-4. On the HTTP module: method **POST**, URL = the one you copied, body type **JSON**, and map Tactiq's fields into this exact set of keys:
-   - `meeting_id` — required; without it the meeting can't be deduplicated safely and the webhook rejects it (check the scenario's run history if meetings stop showing up)
-   - `title`
-   - `transcript`
-   - `occurred_at`
-   - `duration_seconds`
-   - `calendar_event_id` — if Tactiq exposes the Google Calendar/Meet event id, this is what matches the meeting to a contact without needing an attendee email
-   - `participants` — a list of `{name, email}` objects
-5. Turn the scenario on, take a real (or test) meeting, and confirm it shows up as a panel of proposed changes on the matching contact's page a little after the meeting ends — extraction runs in the background, so it won't appear instantly.
+1. Pick any long random string — this is `GRANOLA_WEBHOOK_SECRET`. Add it (and `APP_BASE_URL`, if not already set) to Vercel, redeploy.
+2. In Settings → Granola meetings & notes on the CRM itself, copy the webhook URL shown there (it already has the secret baked in).
+3. In Granola's own settings, find wherever it lets you add a webhook URL (check Settings → Integrations first) and paste the URL from step 2.
+4. Take a real (or test) meeting/note, and confirm it shows up as a panel of proposed changes on the matching contact's page a little after it's captured — extraction runs in the background, so it won't appear instantly.
+
+**Field names aren't confirmed against a real delivery yet** — Granola's payload is read defensively (a few plausible key-name variants per field: `note_id`/`noteId`/`id`, `transcript`, `attendees`/`participants`, etc.), and the webhook logs the full raw payload whenever a required field (the note id) can't be found, the same way Quo's signature header got sorted out from a real delivery. If a note doesn't show up after step 4, check the Vercel function logs for that warning and send me what's in there so `lib/granola/parse-event.ts` can be corrected to match Granola's actual field names.
+
+A meeting with no calendar-event match and no matching attendee email (an in-person coffee, most outbound phone calls) is still saved — nothing is ever lost — it just has nowhere to show its proposals yet until the Notes inbox ships.
 
 Matching works the same way a scheduled-through-the-CRM meeting resolves: first by the Google Calendar event id (if you scheduled it via "Schedule a meeting" on a contact), falling back to an exact match on an attendee's email against a contact already on file. A meeting with no calendar-event match and no matching attendee email is still saved (nothing is ever lost), it just won't have anywhere to show its proposals yet.
 
@@ -375,7 +371,7 @@ app/api/webhooks/quo/         Quo call/text webhook receiver
 app/api/webhooks/calendly/    Calendly booking webhook receiver
 app/api/webhooks/eventbrite/  Eventbrite registration webhook receiver
 app/api/webhooks/jotform/     Jotform in-person check-in webhook receiver
-app/api/webhooks/tactiq/      Tactiq meeting-transcript webhook receiver (via Make.com)
+app/api/webhooks/granola/     Granola meeting/note transcript webhook receiver
 app/api/auth/gmail/           Gmail OAuth connect/callback routes
 app/api/cron/                 Vercel Cron endpoints: Gmail inbox sync, sequence sends
 app/api/track/                Sequence email open/click tracking redirects

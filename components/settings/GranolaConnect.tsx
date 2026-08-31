@@ -4,11 +4,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui";
 import { Copy, Check, Radio } from "lucide-react";
 
-// No OAuth here (Tactiq has no CRM-facing account to connect) - "connected"
-// just means TACTIQ_WEBHOOK_SECRET is set, which is what makes this URL
-// live. webhookUrl is built server-side (Settings page) from that env var,
-// same trust boundary as the rest of this owner-only Settings page.
-export function TactiqConnect({ webhookUrl }: { webhookUrl: string | null }) {
+// No Zapier/Make relay here - Granola's own settings let her paste a
+// webhook URL directly, so "connected" just means GRANOLA_WEBHOOK_SECRET
+// is set (built server-side into this URL by the Settings page).
+export function GranolaConnect({ webhookUrl }: { webhookUrl: string | null }) {
   const [copied, setCopied] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<"ok" | "error" | null>(null);
@@ -20,8 +19,8 @@ export function TactiqConnect({ webhookUrl }: { webhookUrl: string | null }) {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  // Sends a meeting_id with no transcript - the route's own early-return
-  // for a transcript-less event means this round-trips the secret check
+  // Sends a note id with no transcript - the route's own early-return for
+  // a transcript-less event means this round-trips the secret check
   // without ever creating a meeting_transcripts row.
   async function testIt() {
     if (!webhookUrl) return;
@@ -31,7 +30,7 @@ export function TactiqConnect({ webhookUrl }: { webhookUrl: string | null }) {
       const res = await fetch(webhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ meeting_id: `settings-test-${Date.now()}` }),
+        body: JSON.stringify({ note_id: `settings-test-${Date.now()}` }),
       });
       setTestResult(res.ok ? "ok" : "error");
     } catch {
@@ -41,7 +40,7 @@ export function TactiqConnect({ webhookUrl }: { webhookUrl: string | null }) {
   }
 
   if (!webhookUrl) {
-    return <p className="text-sm text-amber-700">Add TACTIQ_WEBHOOK_SECRET to Vercel and redeploy to turn this on.</p>;
+    return <p className="text-sm text-amber-700">Add GRANOLA_WEBHOOK_SECRET to Vercel and redeploy to turn this on.</p>;
   }
 
   return (
@@ -53,11 +52,8 @@ export function TactiqConnect({ webhookUrl }: { webhookUrl: string | null }) {
         </Button>
       </div>
       <p className="text-xs text-neutral-500">
-        Paste this as the URL in your Make.com scenario&apos;s HTTP &ldquo;Make a request&rdquo; module (POST, body type JSON), then map
-        Tactiq&apos;s fields into these keys in the request body: <code className="text-[11px]">meeting_id</code>, <code className="text-[11px]">title</code>,{" "}
-        <code className="text-[11px]">transcript</code>, <code className="text-[11px]">occurred_at</code>,{" "}
-        <code className="text-[11px]">duration_seconds</code>, <code className="text-[11px]">calendar_event_id</code> (if Tactiq exposes it),
-        and <code className="text-[11px]">participants</code> as a list of <code className="text-[11px]">{"{name, email}"}</code>.
+        Paste this into Granola&apos;s own webhook settings — wherever it lets you add a custom webhook URL. No Zapier
+        or Make needed; Granola sends straight here.
       </p>
       <div className="flex items-center gap-2">
         <Button variant="secondary" size="sm" onClick={testIt} disabled={testing}>
@@ -67,8 +63,8 @@ export function TactiqConnect({ webhookUrl }: { webhookUrl: string | null }) {
         {testResult === "error" && <span className="text-sm font-medium text-red-600">Couldn&apos;t reach it — double check the URL.</span>}
       </div>
       <p className="text-xs text-neutral-500">
-        Tactiq only records while your laptop&apos;s open with it running — it won&apos;t catch a meeting from your phone. And the other
-        person on the call isn&apos;t automatically told it&apos;s recording, so that&apos;s on you to mention.
+        Covers video meetings (Zoom/Meet/Teams), in-person notes, and phone calls — however you captured it in
+        Granola, it shows up the same way here.
       </p>
     </div>
   );

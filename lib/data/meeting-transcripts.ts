@@ -152,8 +152,9 @@ function normalizeProposal(p: RawProposal, stages: { id: string; name: string }[
 // proposed_changes - called via after() from a webhook route, so it's
 // never on the critical path of the request that triggered it (the
 // design brief's "extraction runs async; the panel appears when it's
-// ready, not on the request"). Shared by every transcript source (Quo,
-// Tactiq, Granola, voice memo) - only the participantNames hint differs.
+// ready, not on the request"). Shared by every transcript source (Quo
+// calls; Granola for video meetings, in-person notes, and phone calls) -
+// only the participantNames hint differs.
 export async function runExtraction(
   admin: SupabaseClient,
   ownerId: string,
@@ -210,7 +211,7 @@ export async function runExtraction(
   // generateCallSummary. Keep it working, just from this one wider call
   // instead of a second separate one, patched onto the original call
   // activity by the same dedupe key patchActivityMetadata already looks
-  // up by. Only applies to Quo - Tactiq/Granola/memo don't have an
+  // up by. Only applies to Quo - Granola transcripts don't have an
   // existing card like this to preserve.
   if (transcriptRow?.source === "quo" && extraction.summaryBullets.length > 0) {
     await patchActivityMetadata(admin, ownerId, "quo", "quo_call_id", transcriptRow.external_id, {

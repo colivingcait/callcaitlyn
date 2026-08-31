@@ -4,10 +4,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 // stores the Google Calendar event id as an activity's dedupe key
 // (source: "manual", dedupe_field: "google_event_id" - see
 // scheduleMeeting). That's the most reliable match available for a
-// transcript source that also knows the calendar event id (Tactiq, via
-// the calendar_event_id Zap field) - no live Calendar API call needed,
-// just a lookup against what the CRM already wrote when the meeting was
-// created.
+// transcript source that also knows the calendar event id (a Granola
+// video meeting carries one) - no live Calendar API call needed, just a
+// lookup against what the CRM already wrote when the meeting was created.
 export async function matchByCalendarEventId(admin: SupabaseClient, ownerId: string, calendarEventId: string): Promise<string | null> {
   const { data } = await admin
     .from("activities")

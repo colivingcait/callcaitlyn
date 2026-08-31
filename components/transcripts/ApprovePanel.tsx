@@ -13,10 +13,14 @@ import { relativeTime } from "@/lib/format-time";
 import { initials } from "@/lib/utils";
 import type { MeetingTranscript, ProposedChange, PipelineStage, Representing, DealSide } from "@/types/database";
 
+// "memo" has no live source wired to it - Granola covers the voice-memo
+// case too (its phone app captures in-person and phone calls), so every
+// non-Quo transcript comes through as "granola" regardless of whether it
+// was a video meeting, a coffee, or a quick phone note.
 const SOURCE_LABEL: Record<MeetingTranscript["source"], string> = {
   quo: "Call",
   tactiq: "Meeting",
-  granola: "In-person note",
+  granola: "Granola note",
   memo: "Voice memo",
 };
 
@@ -286,7 +290,7 @@ export function ApprovePanel({
         ))}
       </div>
 
-      {transcript.source === "tactiq" && recapRecipients.length > 0 && (
+      {recapRecipients.length > 0 && (
         <div className="border-t border-neutral-100 px-[18px] py-3.5">
           <button type="button" onClick={() => setRecapOpen((v) => !v)} className="text-sm font-semibold text-neutral-700">
             {recapOpen ? "Hide recap" : "Send them a recap"}
