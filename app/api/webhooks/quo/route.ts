@@ -1,12 +1,19 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyQuoSignature } from "@/lib/quo/verify-signature";
 import { parseQuoCall, parseQuoMessage } from "@/lib/quo/parse-event";
 import { findOrCreateContact } from "@/lib/crm/find-or-create-contact";
 import { upsertActivity, patchActivityMetadata } from "@/lib/crm/activities";
 import { analyzeContactActivity } from "@/lib/ai/analyze-contact";
-import { generateCallSummary } from "@/lib/ai/summarize-call";
+import { createOrGetTranscript, runExtraction } from "@/lib/data/meeting-transcripts";
 import { updateEngagementTag } from "@/lib/crm/engagement";
+
+// Extraction (a Claude call over the full transcript) runs after the
+// response via after() below, but the function invocation itself still
+// needs to stay alive long enough for that background work to finish -
+// same reason send-sequences' cron raises this.
+export const maxDuration = 60;
 
 const OWNER_ID = process.env.CRM_OWNER_USER_ID;
 
@@ -84,8 +91,6 @@ export async function POST(request: NextRequest) {
           : eventType === "call.summary.completed"
             ? "raw_summary_event"
             : "raw_transcript_event";
-      const aiCallSummary =
-        eventType === "call.transcript.completed" && call.transcript ? await generateCallSummary(call.transcript) : null;
 
       const patch: Record<string, unknown> = {
         recording_url: call.recordingUrl ?? undefined,
@@ -93,19 +98,42 @@ export async function POST(request: NextRequest) {
         transcript: call.transcript ?? undefined,
         [rawKey]: body,
       };
-      if (aiCallSummary) patch.ai_call_summary = aiCallSummary;
 
       const result = await patchActivityMetadata(admin, OWNER_ID, "quo", "quo_call_id", call.quoCallId, patch);
-      const content = call.transcript ?? call.summary;
-      if (result && content) {
-        await analyzeContactActivity(admin, OWNER_ID, result.contactId, {
-          type: "call",
-          // These follow-up payloads don't carry the original call's
-          // direction themselves (confirmed on the transcript shape) - use
-          // whatever was recorded on the original call.completed activity.
-          direction: result.direction,
-          content,
+
+      // The wide extraction (Phase 3) only runs once a transcript actually
+      // exists, and replaces the old single stage-nudge analysis for calls -
+      // analyzeContactActivity below is still used, just for the
+      // message.received branch's lighter text-message flow.
+      if (eventType === "call.transcript.completed" && call.transcript && call.quoCallId && result) {
+        const transcriptText = call.transcript;
+        const quoCallId = call.quoCallId;
+        const { data: contact } = await admin.from("contacts").select("known_personally").eq("id", result.contactId).maybeSingle();
+
+        const { id: transcriptId, wasCreated } = await createOrGetTranscript(admin, {
+          ownerId: OWNER_ID,
+          contactId: result.contactId,
+          source: "quo",
+          externalId: quoCallId,
+          rawPayload: body,
+          durationSeconds: call.durationSeconds,
+          occurredAt: call.occurredAt,
         });
+
+        // wasCreated guards against a redelivered webhook re-running
+        // extraction a second time for the same call - the exact class of
+        // bug this phase exists to stop repeating.
+        if (wasCreated) {
+          if (contact?.known_personally) {
+            // Per the design brief: the transcript is still stored (it's
+            // already saved via patchActivityMetadata above and the
+            // meeting_transcripts row just created), but no suggestions are
+            // generated for a contact she knows personally.
+            await admin.from("meeting_transcripts").update({ status: "no_proposals" }).eq("id", transcriptId);
+          } else {
+            after(() => runExtraction(admin, OWNER_ID, transcriptId, result.contactId, transcriptText));
+          }
+        }
       }
     } else if (eventType === "message.received" || eventType === "message.delivered") {
       const msg = parseQuoMessage(body);

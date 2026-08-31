@@ -103,6 +103,58 @@ async function getRegisteredNoFollowUpGroup(stages: PipelineStage[]): Promise<Wo
   }));
 }
 
+// "Just finished" - ready transcripts from the last 48 hours that still
+// have pending proposals to review. Today only lists these (name, source,
+// how many proposals) and links to the contact page, which is where the
+// actual ApprovePanel renders - keeps this query light (no need to also
+// pull every contact's stage/representing/etc just to list who has
+// something to review).
+async function getJustFinishedGroup(): Promise<WorklistPerson[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("meeting_transcripts")
+    .select("id, source, occurred_at, contacts!inner(id, first_name, last_name, phone, archived)")
+    .eq("status", "ready")
+    .eq("contacts.archived", false)
+    .gte("occurred_at", daysAgo(2))
+    .order("occurred_at", { ascending: false })
+    .limit(20);
+
+  if (!data || data.length === 0) return [];
+
+  const { data: pendingCounts } = await supabase
+    .from("proposed_changes")
+    .select("transcript_id")
+    .eq("status", "pending")
+    .in(
+      "transcript_id",
+      data.map((t) => t.id),
+    );
+  const countByTranscript = new Map<string, number>();
+  for (const row of pendingCounts ?? []) {
+    countByTranscript.set(row.transcript_id, (countByTranscript.get(row.transcript_id) ?? 0) + 1);
+  }
+
+  const SOURCE_LABEL: Record<string, string> = { quo: "Call", tactiq: "Meeting", granola: "Note", memo: "Voice memo" };
+  const seen = new Set<string>();
+  const justFinished: WorklistPerson[] = [];
+  for (const row of data) {
+    const contact = row.contacts as unknown as { id: string; first_name: string; last_name: string; phone: string | null } | null;
+    if (!contact || seen.has(contact.id)) continue;
+    const count = countByTranscript.get(row.id) ?? 0;
+    if (count === 0) continue;
+    seen.add(contact.id);
+    justFinished.push({
+      id: contact.id,
+      name: `${contact.first_name} ${contact.last_name}`.trim(),
+      phone: contact.phone,
+      meta: `${SOURCE_LABEL[row.source] ?? row.source} ${relativeTime(row.occurred_at)} · ${count} thing${count === 1 ? "" : "s"} to review`,
+      late: false,
+    });
+  }
+  return justFinished;
+}
+
 export type SuggestedInsight = {
   insight: AiInsight;
   contactId: string;
@@ -186,12 +238,13 @@ export async function getTodayData() {
   const { data: stagesData } = await supabase.from("pipeline_stages").select("*").order("sort_order", { ascending: true });
   const stages = (stagesData ?? []) as PipelineStage[];
 
-  const [calls, repliesOwed, myTasks, registeredNoFollowUp, suggested, statStrip, commissionYear, newLeads] = await Promise.all([
+  const [calls, repliesOwed, myTasks, registeredNoFollowUp, suggested, justFinished, statStrip, commissionYear, newLeads] = await Promise.all([
     getCallsGroup(),
     getRepliesOwedGroup(),
     getMyTasksGroup(),
     getRegisteredNoFollowUpGroup(stages),
     getSuggestedInsights(),
+    getJustFinishedGroup(),
     getStatStrip(stages),
     getCommissionYearSummary(),
     listNewRegistrationsQueue(),
@@ -204,6 +257,7 @@ export async function getTodayData() {
     myTasks,
     registeredNoFollowUp,
     suggested,
+    justFinished,
     statStrip,
     commissionYear,
     newLeadsNeverCalled: newLeads.contacts.length,

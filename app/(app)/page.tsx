@@ -76,6 +76,12 @@ export default async function TodayPage() {
       </div>
 
       <div className="mt-3 space-y-3">
+        {today.justFinished.length > 0 && (
+          <Section sectionKey="today:just-finished" title="Just finished" meta={`${today.justFinished.length}`}>
+            <WorklistGroup people={today.justFinished} />
+          </Section>
+        )}
+
         {today.suggested.length > 0 && (
           <Section sectionKey="today:suggested" title="Suggested" meta={`${today.suggested.length}`}>
             {today.suggested.map((s) => (

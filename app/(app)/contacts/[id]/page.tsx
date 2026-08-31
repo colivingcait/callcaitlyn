@@ -23,10 +23,12 @@ import { ArchiveButton } from "@/components/contacts/ArchiveButton";
 import { MergeContactButton } from "@/components/contacts/MergeContactButton";
 import { DealsList } from "@/components/contacts/DealsList";
 import { computeLikelihood } from "@/lib/crm/likelihood";
+import { getLatestReadyTranscriptForContact } from "@/lib/data/meeting-transcripts";
+import { ApprovePanel } from "@/components/transcripts/ApprovePanel";
 
 export default async function ContactDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [contact, activities, tasks, stages, insights, deals, mergeCandidates, tags] = await Promise.all([
+  const [contact, activities, tasks, stages, insights, deals, mergeCandidates, tags, readyTranscript] = await Promise.all([
     getContact(id),
     getContactActivities(id),
     getContactTasks(id),
@@ -35,6 +37,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
     getContactDeals(id),
     listMergeCandidates(),
     listTags(),
+    getLatestReadyTranscriptForContact(id),
   ]);
 
   if (!contact) notFound();
@@ -86,6 +89,20 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
       </div>
 
       <div className="mt-5 space-y-3">
+        {readyTranscript && (
+          <ApprovePanel
+            transcript={readyTranscript.transcript}
+            proposals={readyTranscript.proposals}
+            contactId={contact.id}
+            contactName={fullName(contact)}
+            ownerId={contact.owner_id}
+            contactStageId={contact.stage_id}
+            contactCreatedAt={contact.created_at}
+            representing={contact.representing}
+            stages={stages}
+          />
+        )}
+
         <Section sectionKey="contact-detail:message" title="Send a message" meta="text or email" defaultOpen={false}>
           <SendMessageCard contactId={contact.id} phone={contact.phone} email={contact.email} />
         </Section>
