@@ -170,6 +170,8 @@ export interface Contact {
   referred_by: string | null;
   lease_ends_at: string | null;
   known_personally: boolean;
+  decision_maker: string | null;
+  objection: string | null;
   lead_date: string;
   created_at: string;
   updated_at: string;
@@ -181,6 +183,43 @@ export interface DismissedInsight {
   insight_key: string;
   contact_id: string | null;
   dismissed_at: string;
+}
+
+export type MeetingTranscriptSource = "quo" | "tactiq" | "granola" | "memo";
+export type MeetingTranscriptStatus = "pending" | "ready" | "no_proposals" | "failed";
+
+export type TranscriptParticipant = { name: string | null; email: string | null; isContact: boolean; contactId: string | null };
+
+export interface MeetingTranscript {
+  id: string;
+  owner_id: string;
+  contact_id: string | null;
+  source: MeetingTranscriptSource;
+  external_id: string;
+  raw_payload: Record<string, unknown>;
+  participants: TranscriptParticipant[];
+  duration_seconds: number | null;
+  occurred_at: string;
+  status: MeetingTranscriptStatus;
+  summary_bullets: string[];
+  created_at: string;
+}
+
+export type ProposedField = "budget" | "timeline" | "areas_of_interest" | "decision_maker" | "objection" | "note" | "task" | "stage";
+export type ProposedChangeStatus = "pending" | "accepted" | "rejected";
+
+export interface ProposedChange {
+  id: string;
+  transcript_id: string;
+  field: ProposedField;
+  proposed_value: unknown;
+  current_value: unknown;
+  quote: string;
+  timestamp_seconds: number | null;
+  speaker: string | null;
+  confidence: number;
+  status: ProposedChangeStatus;
+  created_at: string;
 }
 
 export interface WarmNotificationSettings {
