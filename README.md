@@ -75,6 +75,7 @@ opens full-screen like a native app.
 - **Calendly booking sync** — a webhook receiver at `/api/webhooks/calendly` logs new bookings (and cancellations) onto the matching contact's timeline, auto-creating a contact if the email/phone isn't recognized, and pulls the follow-up date forward to the meeting time if that's sooner than what's already set. See **Setting up Calendly** below — not yet tested against a real delivery.
 - **Eventbrite registration sync** — a webhook receiver at `/api/webhooks/eventbrite` fetches attendee details when someone registers for an event, logs it on the matching contact (or creates one, or enriches an existing bare one with name/email), and tags them "Meetup". Confirmed working end to end.
 - **Jotform check-in sync** — a webhook receiver at `/api/webhooks/jotform` matches in-person kiosk check-ins to existing contacts (from Eventbrite or elsewhere) by email/phone instead of creating duplicates, updates their last-event-attended date, and logs "how did you hear about us" + "house hacking journey" answers. Confirmed working end to end.
+- **Tactiq meeting transcripts** — a webhook receiver at `/api/webhooks/tactiq` (fed via Zapier) reads the transcript of a video meeting and proposes budget/timeline/note/stage updates on the matched contact's page, each quoting where it came from — nothing writes until approved. See **Setting up Tactiq** below.
 - **AI insights** — every inbound Quo text and every completed call transcript gets read by Claude, which decides whether it signals a stage or timeline change (e.g. "I'm ready to start looking" → suggest Hot/Ready) and writes a plain-English summary + suggested next action. Nothing changes automatically — it shows up as a card on the contact page with Apply/Dismiss buttons, so a wrong read never silently moves someone through your pipeline. Confirmed working end to end.
 - **Send texts from the CRM** — a compose box on the contact page sends a text through your Quo number directly (no need to open the Quo app), and logs it on the timeline the same as an incoming one. Not yet tested against a real send — the request format is a best-effort guess, same situation the webhooks started in.
 
@@ -243,6 +244,27 @@ Field-label matching for name/email/phone/etc. is fuzzy (matches on keywords lik
 
 Only the Jotform in-person check-in sets a contact's **last event attended** date — Eventbrite registering does not, since registering isn't attending. That field (and the post-event follow-up dialer it drives) is meant to answer "did they actually show up," which only a kiosk check-in confirms.
 
+## Setting up Tactiq (meeting transcripts, via Zapier)
+
+Tactiq transcribes your video meetings; this reads the transcript the same way a Quo call is read — it proposes budget/timeline/note/stage updates on the matched contact's page, each one quoting the sentence it came from, and writes nothing until you approve it item by item. Tactiq doesn't offer a webhook Zapier can forward the signature of, so — same idea as Eventbrite/Jotform — this is secured with a secret you choose yourself, baked into the URL, and Zapier's "Webhooks by Zapier" action is what actually delivers it.
+
+1. Pick any long random string — this is `TACTIQ_WEBHOOK_SECRET`. Add it (and `APP_BASE_URL`, if not already set) to Vercel, redeploy.
+2. In Settings → Tactiq meetings on the CRM itself, copy the webhook URL shown there (it already has the secret baked in) — that's what goes into Zapier.
+3. In Zapier, build a Zap: **Trigger** = Tactiq (new meeting transcript, or however Tactiq's own Zapier app exposes it); **Action** = Webhooks by Zapier → POST.
+4. On the Action step, set the URL to the one you copied, payload type **JSON**, and map Tactiq's fields into this exact set of keys:
+   - `meeting_id` — required; without it the meeting can't be deduplicated safely and the webhook rejects it (check the Zap's run history if meetings stop showing up)
+   - `title`
+   - `transcript`
+   - `occurred_at`
+   - `duration_seconds`
+   - `calendar_event_id` — if Tactiq exposes the Google Calendar/Meet event id, this is what matches the meeting to a contact without needing an attendee email
+   - `participants` — a list of `{name, email}` objects
+5. Turn the Zap on, take a real (or test) meeting, and confirm it shows up as a panel of proposed changes on the matching contact's page a little after the meeting ends — extraction runs in the background, so it won't appear instantly.
+
+Matching works the same way a scheduled-through-the-CRM meeting resolves: first by the Google Calendar event id (if you scheduled it via "Schedule a meeting" on a contact), falling back to an exact match on an attendee's email against a contact already on file. A meeting with no calendar-event match and no matching attendee email is still saved (nothing is ever lost), it just won't have anywhere to show its proposals yet.
+
+Same rule as everywhere else in this CRM: a meeting with someone marked "know personally" is stored but never generates proposals.
+
 ### House hacking journey stage → pipeline mapping
 
 Both Jotform and Eventbrite ask "Where are you at in your house hacking journey?" with four options, and both feed the same shared logic (`lib/crm/journey-stage.ts`):
@@ -351,6 +373,7 @@ app/api/webhooks/quo/         Quo call/text webhook receiver
 app/api/webhooks/calendly/    Calendly booking webhook receiver
 app/api/webhooks/eventbrite/  Eventbrite registration webhook receiver
 app/api/webhooks/jotform/     Jotform in-person check-in webhook receiver
+app/api/webhooks/tactiq/      Tactiq meeting-transcript webhook receiver (via Zapier)
 app/api/auth/gmail/           Gmail OAuth connect/callback routes
 app/api/cron/                 Vercel Cron endpoints: Gmail inbox sync, sequence sends
 app/api/track/                Sequence email open/click tracking redirects

@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { applyStageChange, type DealModalMode, type PendingDealSummary } from "@/lib/crm/stage-transition";
 import { DealCelebrationModal } from "@/components/contacts/DealCelebrationModal";
 import { PendingDealCleanupModal } from "@/components/contacts/PendingDealCleanupModal";
 import { ApproveRow } from "@/components/transcripts/ApproveRow";
+import { sendEmailToContact } from "@/app/(app)/contacts/actions";
 import { relativeTime } from "@/lib/format-time";
 import { initials } from "@/lib/utils";
 import type { MeetingTranscript, ProposedChange, PipelineStage, Representing, DealSide } from "@/types/database";
@@ -51,10 +53,66 @@ export function ApprovePanel({
   const [dealModal, setDealModal] = useState<{ id: string; mode: DealModalMode } | null>(null);
   const [pendingCleanup, setPendingCleanup] = useState<PendingDealSummary[] | null>(null);
   const [saving, setSaving] = useState(false);
+  const [participants, setParticipants] = useState(transcript.participants ?? []);
+  const [addingContact, setAddingContact] = useState<number | null>(null);
+  const [recapOpen, setRecapOpen] = useState(false);
+  const [recapBody, setRecapBody] = useState(
+    () => `Hey! Thanks for the time today${transcript.summary_bullets[0] ? ` - ${transcript.summary_bullets[0]}` : ""}. Let me know if anything comes up.`,
+  );
+  const [recapSending, setRecapSending] = useState(false);
+  const [recapSent, setRecapSent] = useState(false);
 
   const firstName = contactName.split(" ")[0] || contactName;
   const duration = formatDuration(transcript.duration_seconds);
   const savedNoun = transcript.source === "quo" ? "recording and transcript" : transcript.source === "memo" ? "recording" : "transcript";
+  const recapRecipients = participants.filter((p) => p.isContact && p.contactId && p.email);
+
+  async function addParticipantAsContact(index: number) {
+    const p = participants[index];
+    if (!p) return;
+    setAddingContact(index);
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setAddingContact(null);
+      return;
+    }
+
+    const nameParts = (p.name ?? p.email ?? "Unknown").trim().split(/\s+/);
+    const { data: firstStage } = await supabase.from("pipeline_stages").select("id").order("sort_order", { ascending: true }).limit(1).maybeSingle();
+    const { data: created } = await supabase
+      .from("contacts")
+      .insert({
+        owner_id: user.id,
+        first_name: nameParts[0] ?? "Unknown",
+        last_name: nameParts.slice(1).join(" ") || "",
+        email: p.email,
+        contact_type: "other",
+        lead_source: `${SOURCE_LABEL[transcript.source]} (auto-created from meeting)`,
+        stage_id: firstStage?.id ?? null,
+      })
+      .select("id")
+      .single();
+    if (!created) {
+      setAddingContact(null);
+      return;
+    }
+
+    const updated = participants.map((row, i) => (i === index ? { ...row, isContact: true, contactId: created.id } : row));
+    setParticipants(updated);
+    await supabase.from("meeting_transcripts").update({ participants: updated }).eq("id", transcript.id);
+    setAddingContact(null);
+    router.refresh();
+  }
+
+  async function sendRecap() {
+    setRecapSending(true);
+    await Promise.all(recapRecipients.map((p) => sendEmailToContact(p.contactId as string, p.email as string, "Following up from our meeting", recapBody)));
+    setRecapSending(false);
+    setRecapSent(true);
+  }
 
   async function writeProposal(p: ProposedChange) {
     const supabase = createClient();
@@ -186,6 +244,35 @@ export function ApprovePanel({
         </div>
       </div>
 
+      {participants.length > 1 && (
+        <div className="flex flex-wrap items-center gap-1.5 border-b border-neutral-100 px-[18px] py-3">
+          {participants.map((p, i) => (
+            <span
+              key={`${p.email ?? p.name ?? i}`}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[13px] font-medium ${
+                p.isContact ? "border-neutral-200 bg-neutral-50 text-neutral-700" : "border-dashed border-neutral-300 text-neutral-500"
+              }`}
+            >
+              {p.isContact && p.contactId ? (
+                <Link href={`/contacts/${p.contactId}`}>{p.name ?? p.email}</Link>
+              ) : (
+                <span>{p.name ?? p.email ?? "Unknown"} · not in your CRM</span>
+              )}
+              {!p.isContact && (p.name || p.email) && (
+                <button
+                  type="button"
+                  onClick={() => addParticipantAsContact(i)}
+                  disabled={addingContact === i}
+                  className="font-semibold text-brand-600 disabled:opacity-50"
+                >
+                  {addingContact === i ? "Adding…" : "Add as a contact"}
+                </button>
+              )}
+            </span>
+          ))}
+        </div>
+      )}
+
       <div className="px-[18px] pt-4">
         <p className="text-lg font-semibold text-neutral-900">Here&apos;s what I heard. Keep what&apos;s right.</p>
         <p className="mt-1 text-[15px] text-neutral-600">
@@ -198,6 +285,41 @@ export function ApprovePanel({
           <ApproveRow key={p.id} proposal={p} stages={stages} onAccept={handleAccept} onReject={handleReject} />
         ))}
       </div>
+
+      {transcript.source === "tactiq" && recapRecipients.length > 0 && (
+        <div className="border-t border-neutral-100 px-[18px] py-3.5">
+          <button type="button" onClick={() => setRecapOpen((v) => !v)} className="text-sm font-semibold text-neutral-700">
+            {recapOpen ? "Hide recap" : "Send them a recap"}
+          </button>
+          {recapOpen && (
+            <div className="mt-2.5 rounded-xl border border-neutral-200 bg-[#fcfbfa] p-3.5">
+              <p className="mb-2 text-sm text-neutral-500">
+                To {recapRecipients.map((p) => p.name ?? p.email).join(", ")}. Nobody is sent anything until you press Send.
+              </p>
+              {recapSent ? (
+                <p className="text-sm font-medium text-neutral-500">Sent.</p>
+              ) : (
+                <>
+                  <textarea
+                    rows={3}
+                    value={recapBody}
+                    onChange={(e) => setRecapBody(e.target.value)}
+                    className="w-full rounded-[10px] border border-neutral-200 bg-white px-3 py-2.5 text-[15px] text-neutral-900"
+                  />
+                  <button
+                    type="button"
+                    onClick={sendRecap}
+                    disabled={recapSending || !recapBody.trim()}
+                    className="mt-2.5 rounded-[10px] bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  >
+                    {recapSending ? "Sending…" : "Send"}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-2.5 border-t border-neutral-100 px-[18px] py-4">
         <button
