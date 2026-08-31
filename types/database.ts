@@ -436,3 +436,41 @@ export interface EmailSequenceExclusion {
   contact_id: string;
   excluded_at: string;
 }
+
+export type LoanType = "fha_30" | "conventional_30" | "conventional_15";
+
+export interface Quote {
+  id: string;
+  owner_id: string;
+  contact_id: string | null;
+  slug: string;
+  client_first_name: string;
+  property_address: string;
+  property_description: string;
+  purchase_price: number;
+  down_payment_pct: number;
+  interest_rate_pct: number;
+  loan_type: LoanType;
+  rent_from_other_unit: number | null;
+  renting_now: number | null;
+  taxes_annual: number;
+  insurance_annual: number;
+  loan_amount: number;
+  monthly_principal_interest: number;
+  monthly_taxes_insurance: number;
+  monthly_mortgage_insurance: number;
+  monthly_maintenance: number;
+  monthly_out_of_pocket: number;
+  cash_to_close: number;
+  both_sides_rented_out_of_pocket: number | null;
+  calc_version: number;
+  created_at: string;
+}
+
+export interface QuoteView {
+  id: string;
+  quote_id: string;
+  visitor_key: string;
+  viewed_at: string;
+  user_agent: string | null;
+}

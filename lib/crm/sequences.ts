@@ -15,7 +15,7 @@ type SequenceContact = {
   unsubscribe_token: string;
 };
 
-function baseUrl() {
+export function baseUrl() {
   return (process.env.APP_BASE_URL ?? "https://www.callcaitlyn.com").replace(/\/$/, "");
 }
 

@@ -2,6 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const BASELINE_WEEKS = 8;
+// A quote-page open weighted the same as an email click - a stronger,
+// more deliberate signal than an open, same tier as clicking through.
+const QUOTE_VIEW_WEIGHT = 2;
 
 export type WarmTier = "very_warm" | "warm" | "reading" | "steady";
 
@@ -67,6 +70,26 @@ export async function getWarmRanking(): Promise<WarmContact[]> {
     if (row.opened_at && row.opened_at >= since) {
       entry.events.push({ date: row.opened_at, label: `Opened your email${(row.open_count ?? 0) > 1 ? ` (${row.open_count} times)` : ""}` });
     }
+    byContact.set(contact.id, entry);
+  }
+
+  // Second, additive signal source - a quote-page view feeds the same
+  // byContact map the email loop above just built. Plain (not !inner)
+  // join, same defensive null-guard shape as the email loop.
+  const { data: views } = await supabase
+    .from("quote_views")
+    .select("viewed_at, quotes(contact_id, property_address, contacts(id, first_name, last_name, phone, known_personally, archived))")
+    .gte("viewed_at", since);
+
+  for (const row of views ?? []) {
+    const quote = row.quotes as unknown as { contact_id: string | null; property_address: string; contacts: unknown } | null;
+    const contact = quote?.contacts as { id: string; first_name: string; last_name: string; phone: string | null; known_personally: boolean; archived: boolean } | null;
+    if (!quote?.contact_id || !contact || contact.archived || contact.known_personally) continue;
+
+    const entry = byContact.get(contact.id) ?? { name: `${contact.first_name} ${contact.last_name}`.trim(), phone: contact.phone, thisWeek: 0, total: 0, events: [] };
+    entry.total += QUOTE_VIEW_WEIGHT;
+    if (row.viewed_at >= weekAgo) entry.thisWeek += QUOTE_VIEW_WEIGHT;
+    entry.events.push({ date: row.viewed_at, label: "Opened the numbers you sent" });
     byContact.set(contact.id, entry);
   }
 

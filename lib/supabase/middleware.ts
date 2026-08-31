@@ -34,6 +34,10 @@ export async function updateSession(request: NextRequest) {
   // The QR check-in page - scanned by attendees' own phones, not the
   // logged-in agent, so it must be reachable without a session.
   const isCheckIn = request.nextUrl.pathname.startsWith("/checkin");
+  // The shared house-hack quote one-pager - opened by whoever she texted
+  // or emailed it to, not the logged-in agent, so it must be reachable
+  // without a session too.
+  const isPublicQuote = request.nextUrl.pathname.startsWith("/n/");
   // Webhooks (Quo, and any future integration) authenticate via their own
   // signature, not a Supabase session - they must bypass the login guard.
   // Same for cron jobs (authenticate via CRON_SECRET, no browser session),
@@ -57,7 +61,7 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/favicon") ||
     request.nextUrl.pathname.startsWith("/sw.js");
 
-  if (isAuthCallback || isWebhook || isCheckIn) {
+  if (isAuthCallback || isWebhook || isCheckIn || isPublicQuote) {
     return response;
   }
 

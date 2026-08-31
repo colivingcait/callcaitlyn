@@ -5,7 +5,7 @@ const QUIET_HOURS_START = 9; // 9am
 const QUIET_HOURS_END = 21; // 9pm
 const APP_TIMEZONE = "America/New_York";
 
-function isWithinQuietHours(): boolean {
+export function isWithinQuietHours(): boolean {
   const hour = Number(
     new Intl.DateTimeFormat("en-US", { timeZone: APP_TIMEZONE, hour: "numeric", hour12: false }).format(new Date()),
   );

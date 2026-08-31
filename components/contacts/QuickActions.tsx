@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Phone, MessageSquare, Mail, Video } from "lucide-react";
+import { Phone, MessageSquare, Mail, Video, Calculator } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { openQuoCall } from "@/lib/quo/call-link";
 import { ScheduleMeetingModal } from "@/components/contacts/ScheduleMeetingModal";
+import { HouseHackCalculatorModal } from "@/components/contacts/HouseHackCalculatorModal";
 
 const actionClass =
   "flex flex-1 flex-col items-center gap-1.5 rounded-xl border border-neutral-200 py-3 text-sm font-medium text-neutral-600";
@@ -68,6 +69,8 @@ export function QuickActions({
   email?: string | null;
 }) {
   const [scheduling, setScheduling] = useState(false);
+  const [calculating, setCalculating] = useState(false);
+  const firstName = contactName.split(" ")[0] ?? "";
 
   return (
     <div className="flex gap-2">
@@ -75,8 +78,12 @@ export function QuickActions({
       <ActionLink href={`sms:${phone}`} icon={MessageSquare} label="Text" disabled={!phone} />
       <ActionLink href={`mailto:${email}`} icon={Mail} label="Email" disabled={!email} />
       <ActionButton onClick={() => setScheduling(true)} icon={Video} label="Meet" disabled={!email} />
+      <ActionButton onClick={() => setCalculating(true)} icon={Calculator} label="Numbers" />
       {scheduling && (
         <ScheduleMeetingModal contactId={contactId} contactName={contactName} email={email ?? null} onClose={() => setScheduling(false)} />
+      )}
+      {calculating && (
+        <HouseHackCalculatorModal contactId={contactId} firstName={firstName} phone={phone ?? null} email={email ?? null} onClose={() => setCalculating(false)} />
       )}
     </div>
   );
