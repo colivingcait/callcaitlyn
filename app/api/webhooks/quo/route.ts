@@ -8,6 +8,7 @@ import { upsertActivity, patchActivityMetadata } from "@/lib/crm/activities";
 import { analyzeContactActivity } from "@/lib/ai/analyze-contact";
 import { createOrGetTranscript, runExtraction } from "@/lib/data/meeting-transcripts";
 import { updateEngagementTag } from "@/lib/crm/engagement";
+import { recordConsent, recordOptOut, isOptOutMessage } from "@/lib/crm/consent";
 
 // Extraction (a Claude call over the full transcript) runs after the
 // response via after() below, but the function invocation itself still
@@ -152,11 +153,19 @@ export async function POST(request: NextRequest) {
         await updateEngagementTag(admin, OWNER_ID, contact.id);
 
         if (eventType === "message.received" && msg.text) {
-          await analyzeContactActivity(admin, OWNER_ID, contact.id, {
-            type: "text",
-            direction: msg.direction,
-            content: msg.text,
-          });
+          if (isOptOutMessage(msg.text)) {
+            // Fines here are per message - marked immediately, no AI
+            // analysis on an opt-out (there's nothing to read into it),
+            // and every future bulk send already filters on this.
+            await recordOptOut(admin, contact.id);
+          } else {
+            await recordConsent(admin, contact.id, "texted you first");
+            await analyzeContactActivity(admin, OWNER_ID, contact.id, {
+              type: "text",
+              direction: msg.direction,
+              content: msg.text,
+            });
+          }
         }
       }
     } else {

@@ -25,6 +25,7 @@ import { DealsList } from "@/components/contacts/DealsList";
 import { computeLikelihood } from "@/lib/crm/likelihood";
 import { getLatestReadyTranscriptForContact } from "@/lib/data/meeting-transcripts";
 import { ApprovePanel } from "@/components/transcripts/ApprovePanel";
+import { ConsentStatus } from "@/components/contacts/ConsentStatus";
 
 export default async function ContactDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -73,6 +74,9 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
               {contact.last_event_at && ` (${formatLocal(contact.last_event_at, "MMM d, yyyy")})`}
             </p>
           )}
+          <div className="mt-1.5">
+            <ConsentStatus contactId={contact.id} consentSource={contact.consent_source} consentAt={contact.consent_at} optedOutAt={contact.opted_out_at} />
+          </div>
           {isOverdue && (
             <p className="mt-3 flex flex-wrap items-center gap-2.5 text-[15px] font-semibold text-red-700">
               Follow-up was due {formatLocal(contact.next_follow_up_at!, "MMM d")} — {daysLate} day{daysLate === 1 ? "" : "s"} late

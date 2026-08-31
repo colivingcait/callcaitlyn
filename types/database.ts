@@ -172,6 +172,9 @@ export interface Contact {
   known_personally: boolean;
   decision_maker: string | null;
   objection: string | null;
+  consent_source: string | null;
+  consent_at: string | null;
+  opted_out_at: string | null;
   lead_date: string;
   created_at: string;
   updated_at: string;

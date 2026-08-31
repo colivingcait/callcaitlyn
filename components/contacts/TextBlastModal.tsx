@@ -218,11 +218,19 @@ export function TextBlastModal({ target, onClose }: { target: BlastTarget; onClo
               >
                 <Users size={14} className="shrink-0 text-neutral-400" />
                 {audience.count === 0 ? (
-                  <span>No one with a phone number on file matches this audience.</span>
+                  <span>
+                    No one with a phone number on file matches this audience
+                    {audience.optedOutCount > 0 && ` (${audience.optedOutCount} opted out)`}.
+                  </span>
                 ) : (
                   <>
                     <span className="flex-1 text-left">
                       Sending to <span className="font-semibold text-neutral-900">{audience.count}</span> {audience.count === 1 ? "person" : "people"}
+                      {audience.optedOutCount > 0 && (
+                        <span className="ml-1.5 font-medium text-neutral-500">
+                          · {audience.optedOutCount} opted out
+                        </span>
+                      )}
                       {duplicateCount > 0 && (
                         <span className="ml-1.5 inline-flex items-center gap-1 font-medium text-amber-700">
                           <AlertTriangle size={11} /> {duplicateCount} possible {duplicateCount === 1 ? "duplicate" : "duplicates"}

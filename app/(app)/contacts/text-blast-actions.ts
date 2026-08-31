@@ -8,6 +8,22 @@ import { applyMergeFields, PREVIEW_CONTACT } from "@/lib/crm/merge-fields";
 import { withProgress, tagBlastLabel, type TextBlastWithProgress } from "@/lib/crm/text-blasts";
 
 type AudienceContact = { id: string; first_name: string; last_name: string; phone: string };
+type AudienceResolution = { eligible: AudienceContact[]; optedOutCount: number };
+
+// Split out from the id-in-list query every resolver below already runs -
+// opted_out_at is fetched alongside instead of filtered in SQL, so "how
+// many were excluded specifically for opting out" (the design brief's
+// "84 registered, 81 can be texted, 3 opted out") is a plain count, not a
+// second query. Consent recording (lib/crm/consent.ts) is enforcement
+// input, not itself required here - a contact with no consent_at at all
+// still receives an event-registration or tag blast the same as before;
+// opted_out_at is the one flag that actually blocks a send.
+function splitByOptOut(rows: (AudienceContact & { opted_out_at: string | null })[]): AudienceResolution {
+  const eligible: AudienceContact[] = rows
+    .filter((c) => !c.opted_out_at)
+    .map((c) => ({ id: c.id, first_name: c.first_name, last_name: c.last_name, phone: c.phone }));
+  return { eligible, optedOutCount: rows.length - eligible.length };
+}
 
 // Shared by the "how many will this reach" preview and the actual send, so
 // the count she sees before sending is guaranteed to match who it actually
@@ -27,7 +43,7 @@ async function resolveEventAudience(
   ownerId: string,
   eventName: string,
   registeredBefore?: string,
-): Promise<AudienceContact[]> {
+): Promise<AudienceResolution> {
   let query = admin
     .from("activities")
     .select("contact_id")
@@ -39,16 +55,16 @@ async function resolveEventAudience(
   const { data: registrations } = await query;
 
   const contactIds = [...new Set((registrations ?? []).map((r) => r.contact_id as string))];
-  if (contactIds.length === 0) return [];
+  if (contactIds.length === 0) return { eligible: [], optedOutCount: 0 };
 
   const { data: contacts } = await admin
     .from("contacts")
-    .select("id, first_name, last_name, phone")
+    .select("id, first_name, last_name, phone, opted_out_at")
     .in("id", contactIds)
     .eq("archived", false)
     .not("phone", "is", null);
 
-  return (contacts ?? []) as AudienceContact[];
+  return splitByOptOut((contacts ?? []) as (AudienceContact & { opted_out_at: string | null })[]);
 }
 
 export type AttendanceStatus = "registered" | "attended" | "no_show" | "walk_in";
@@ -64,7 +80,7 @@ async function resolveOccurrenceAudience(
   ownerId: string,
   eventId: string,
   status: AttendanceStatus,
-): Promise<AudienceContact[]> {
+): Promise<AudienceResolution> {
   const [{ data: registrations }, { data: checkins }] = await Promise.all([
     admin.from("activities").select("contact_id").eq("owner_id", ownerId).eq("source", "eventbrite").eq("metadata->>event_id", eventId),
     // "checkin" is the QR check-in flow (current); "jotform" is the kiosk
@@ -87,51 +103,51 @@ async function resolveOccurrenceAudience(
   else if (status === "no_show") contactIds = [...registeredIds].filter((id) => !attendedIds.has(id));
   else contactIds = [...attendedIds].filter((id) => !registeredIds.has(id)); // walk_in
 
-  if (contactIds.length === 0) return [];
+  if (contactIds.length === 0) return { eligible: [], optedOutCount: 0 };
 
   const { data: contacts } = await admin
     .from("contacts")
-    .select("id, first_name, last_name, phone")
+    .select("id, first_name, last_name, phone, opted_out_at")
     .in("id", contactIds)
     .eq("archived", false)
     .not("phone", "is", null);
 
-  return (contacts ?? []) as AudienceContact[];
+  return splitByOptOut((contacts ?? []) as (AudienceContact & { opted_out_at: string | null })[]);
 }
 
 // Not every bulk text is about a meetup registration - lets a blast reach
 // everyone carrying a given tag instead (e.g. every "House Hacker", every
 // "First-Time Buyer"), independent of event attendance entirely.
-async function resolveTagAudience(admin: SupabaseClient, ownerId: string, tagId: string): Promise<AudienceContact[]> {
+async function resolveTagAudience(admin: SupabaseClient, ownerId: string, tagId: string): Promise<AudienceResolution> {
   const { data: contactTags } = await admin.from("contact_tags").select("contact_id").eq("tag_id", tagId);
   const contactIds = [...new Set((contactTags ?? []).map((r) => r.contact_id as string))];
-  if (contactIds.length === 0) return [];
+  if (contactIds.length === 0) return { eligible: [], optedOutCount: 0 };
 
   const { data: contacts } = await admin
     .from("contacts")
-    .select("id, first_name, last_name, phone")
+    .select("id, first_name, last_name, phone, opted_out_at")
     .in("id", contactIds)
     .eq("owner_id", ownerId)
     .eq("archived", false)
     .not("phone", "is", null);
 
-  return (contacts ?? []) as AudienceContact[];
+  return splitByOptOut((contacts ?? []) as (AudienceContact & { opted_out_at: string | null })[]);
 }
 
 // Not every bulk text has an event or a tag behind it either - a filtered
 // slice of the Contacts list, hand-picked via its checkbox selection.
-async function resolveContactsAudience(admin: SupabaseClient, ownerId: string, contactIds: string[]): Promise<AudienceContact[]> {
-  if (contactIds.length === 0) return [];
+async function resolveContactsAudience(admin: SupabaseClient, ownerId: string, contactIds: string[]): Promise<AudienceResolution> {
+  if (contactIds.length === 0) return { eligible: [], optedOutCount: 0 };
 
   const { data: contacts } = await admin
     .from("contacts")
-    .select("id, first_name, last_name, phone")
+    .select("id, first_name, last_name, phone, opted_out_at")
     .in("id", contactIds)
     .eq("owner_id", ownerId)
     .eq("archived", false)
     .not("phone", "is", null);
 
-  return (contacts ?? []) as AudienceContact[];
+  return splitByOptOut((contacts ?? []) as (AudienceContact & { opted_out_at: string | null })[]);
 }
 
 const RECENTLY_TEXTED_WINDOW_MS = 60 * 60 * 1000;
@@ -240,7 +256,7 @@ export async function getEventAccount(eventName: string): Promise<string | null>
 }
 
 export type TextBlastRecipient = { id: string; name: string; phone: string; duplicatePhone: boolean; duplicateName: boolean };
-export type TextBlastAudiencePreview = { count: number; recipients: TextBlastRecipient[] };
+export type TextBlastAudiencePreview = { count: number; recipients: TextBlastRecipient[]; optedOutCount: number };
 
 // Full recipient list rather than a truncated sample - a "sending to 41
 // people: Jamie, Alex +39 more" summary doesn't let her actually check who
@@ -251,7 +267,7 @@ export type TextBlastAudiencePreview = { count: number; recipients: TextBlastRec
 // flags a same-name collision even without a shared phone, since that's
 // the more common shape a duplicate contact takes (re-entered with a typo'd
 // or different number).
-function buildAudiencePreview(audience: AudienceContact[]): TextBlastAudiencePreview {
+function buildAudiencePreview(audience: AudienceContact[], optedOutCount = 0): TextBlastAudiencePreview {
   const phoneCounts = new Map<string, number>();
   const nameCounts = new Map<string, number>();
   for (const c of audience) {
@@ -273,7 +289,7 @@ function buildAudiencePreview(audience: AudienceContact[]): TextBlastAudiencePre
     })
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  return { count: audience.length, recipients };
+  return { count: audience.length, recipients, optedOutCount };
 }
 
 export async function getTextBlastAudiencePreview(
@@ -285,15 +301,15 @@ export async function getTextBlastAudiencePreview(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { count: 0, recipients: [] };
+  if (!user) return { count: 0, recipients: [], optedOutCount: 0 };
 
   const admin = createAdminClient();
-  let audience = occurrence
+  const { eligible, optedOutCount } = occurrence
     ? await resolveOccurrenceAudience(admin, user.id, occurrence.eventId, occurrence.attendanceStatus)
     : await resolveEventAudience(admin, user.id, eventName, registeredBefore);
-  audience = await excludeRecentlyTexted(admin, user.id, audience);
+  const audience = await excludeRecentlyTexted(admin, user.id, eligible);
 
-  return buildAudiencePreview(audience);
+  return buildAudiencePreview(audience, optedOutCount);
 }
 
 // What the compose modal is sending to - an event's registrants, a tag's
@@ -310,12 +326,12 @@ export async function getTagAudiencePreview(tagId: string): Promise<TextBlastAud
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { count: 0, recipients: [] };
+  if (!user) return { count: 0, recipients: [], optedOutCount: 0 };
 
   const admin = createAdminClient();
-  let audience = await resolveTagAudience(admin, user.id, tagId);
-  audience = await excludeRecentlyTexted(admin, user.id, audience);
-  return buildAudiencePreview(audience);
+  const { eligible, optedOutCount } = await resolveTagAudience(admin, user.id, tagId);
+  const audience = await excludeRecentlyTexted(admin, user.id, eligible);
+  return buildAudiencePreview(audience, optedOutCount);
 }
 
 export async function createTagTextBlast(tagId: string, tagName: string, message: string) {
@@ -327,9 +343,9 @@ export async function createTagTextBlast(tagId: string, tagName: string, message
   if (!message.trim()) return { ok: false as const, error: "Write a message" };
 
   const admin = createAdminClient();
-  let audience = await resolveTagAudience(admin, user.id, tagId);
-  audience = await excludeRecentlyTexted(admin, user.id, audience);
-  if (!audience.length) return { ok: false as const, error: "Everyone with that tag either has no phone on file or was already texted in the last hour" };
+  const { eligible } = await resolveTagAudience(admin, user.id, tagId);
+  const audience = await excludeRecentlyTexted(admin, user.id, eligible);
+  if (!audience.length) return { ok: false as const, error: "Everyone with that tag either has no phone on file, opted out, or was already texted in the last hour" };
 
   const { data: blast, error: blastError } = await admin
     .from("text_blasts")
@@ -348,12 +364,12 @@ export async function getContactsAudiencePreview(contactIds: string[]): Promise<
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { count: 0, recipients: [] };
+  if (!user) return { count: 0, recipients: [], optedOutCount: 0 };
 
   const admin = createAdminClient();
-  let audience = await resolveContactsAudience(admin, user.id, contactIds);
-  audience = await excludeRecentlyTexted(admin, user.id, audience);
-  return buildAudiencePreview(audience);
+  const { eligible, optedOutCount } = await resolveContactsAudience(admin, user.id, contactIds);
+  const audience = await excludeRecentlyTexted(admin, user.id, eligible);
+  return buildAudiencePreview(audience, optedOutCount);
 }
 
 export async function createContactsTextBlast(contactIds: string[], label: string, message: string) {
@@ -365,9 +381,9 @@ export async function createContactsTextBlast(contactIds: string[], label: strin
   if (!message.trim()) return { ok: false as const, error: "Write a message" };
 
   const admin = createAdminClient();
-  let audience = await resolveContactsAudience(admin, user.id, contactIds);
-  audience = await excludeRecentlyTexted(admin, user.id, audience);
-  if (!audience.length) return { ok: false as const, error: "Everyone selected either has no phone on file or was already texted in the last hour" };
+  const { eligible } = await resolveContactsAudience(admin, user.id, contactIds);
+  const audience = await excludeRecentlyTexted(admin, user.id, eligible);
+  if (!audience.length) return { ok: false as const, error: "Everyone selected either has no phone on file, opted out, or was already texted in the last hour" };
 
   const { data: blast, error: blastError } = await admin
     .from("text_blasts")
@@ -409,11 +425,11 @@ export async function createTextBlast(
   if (!message.trim()) return { ok: false as const, error: "Write a message" };
 
   const admin = createAdminClient();
-  let audience = occurrence
+  const { eligible } = occurrence
     ? await resolveOccurrenceAudience(admin, user.id, occurrence.eventId, occurrence.attendanceStatus)
     : await resolveEventAudience(admin, user.id, eventName, registeredBefore);
-  audience = await excludeRecentlyTexted(admin, user.id, audience);
-  if (!audience.length) return { ok: false as const, error: "Everyone in that audience either has no phone on file or was already texted in the last hour" };
+  const audience = await excludeRecentlyTexted(admin, user.id, eligible);
+  if (!audience.length) return { ok: false as const, error: "Everyone in that audience either has no phone on file, opted out, or was already texted in the last hour" };
 
   const { data: blast, error: blastError } = await admin
     .from("text_blasts")
