@@ -47,6 +47,7 @@ export type ActivitySource =
   | "checkin"
   | "house_hacking_site"
   | "site_form"
+  | "instagram"
   | "ai"
   | "system";
 
@@ -467,6 +468,28 @@ export interface Quote {
   cash_to_close: number;
   both_sides_rented_out_of_pocket: number | null;
   calc_version: number;
+  created_at: string;
+}
+
+export interface InstagramMessage {
+  id: string;
+  owner_id: string;
+  contact_id: string | null;
+  ig_sender_id: string;
+  ig_username: string | null;
+  ig_name: string | null;
+  ig_message_id: string;
+  text: string;
+  occurred_at: string;
+  raw: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface InstagramContactLink {
+  id: string;
+  owner_id: string;
+  ig_sender_id: string;
+  contact_id: string;
   created_at: string;
 }
 

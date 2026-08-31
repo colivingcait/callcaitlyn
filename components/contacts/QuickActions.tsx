@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Phone, MessageSquare, Mail, Video, Calculator } from "lucide-react";
+import { Phone, MessageSquare, Mail, Video, Calculator, Instagram } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { openQuoCall } from "@/lib/quo/call-link";
 import { ScheduleMeetingModal } from "@/components/contacts/ScheduleMeetingModal";
 import { HouseHackCalculatorModal } from "@/components/contacts/HouseHackCalculatorModal";
+import { InstagramMessageModal } from "@/components/contacts/InstagramMessageModal";
 
 const actionClass =
   "flex flex-1 flex-col items-center gap-1.5 rounded-xl border border-neutral-200 py-3 text-sm font-medium text-neutral-600";
@@ -62,14 +63,17 @@ export function QuickActions({
   contactName,
   phone,
   email,
+  instagramSenderId,
 }: {
   contactId: string;
   contactName: string;
   phone?: string | null;
   email?: string | null;
+  instagramSenderId?: string | null;
 }) {
   const [scheduling, setScheduling] = useState(false);
   const [calculating, setCalculating] = useState(false);
+  const [messagingInstagram, setMessagingInstagram] = useState(false);
   const firstName = contactName.split(" ")[0] ?? "";
 
   return (
@@ -79,11 +83,15 @@ export function QuickActions({
       <ActionLink href={`mailto:${email}`} icon={Mail} label="Email" disabled={!email} />
       <ActionButton onClick={() => setScheduling(true)} icon={Video} label="Meet" disabled={!email} />
       <ActionButton onClick={() => setCalculating(true)} icon={Calculator} label="Numbers" />
+      {instagramSenderId && <ActionButton onClick={() => setMessagingInstagram(true)} icon={Instagram} label="Instagram" />}
       {scheduling && (
         <ScheduleMeetingModal contactId={contactId} contactName={contactName} email={email ?? null} onClose={() => setScheduling(false)} />
       )}
       {calculating && (
         <HouseHackCalculatorModal contactId={contactId} firstName={firstName} phone={phone ?? null} email={email ?? null} onClose={() => setCalculating(false)} />
+      )}
+      {messagingInstagram && instagramSenderId && (
+        <InstagramMessageModal igSenderId={instagramSenderId} contactName={firstName} onClose={() => setMessagingInstagram(false)} />
       )}
     </div>
   );

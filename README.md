@@ -278,6 +278,24 @@ The stage is only ever set on a **brand-new** contact — an existing contact's 
 
 Eventbrite's custom registration question is fetched from the attendee's `answers` array (matched by the question text containing "journey" or "house hacking") — this field shape isn't confirmed against a real payload yet, so if it doesn't come through, the full raw order is saved in the activity's `metadata.raw` for us to check.
 
+## Setting up Instagram (DMs in the Messages inbox)
+
+Instagram DMs show up in the same unified Messages inbox as your Quo calls/texts — a stranger who messages your business account first shows up as a "Stranger" row (their handle/name, last message, a message count) with two actions: **Add contact** (name it, or search-match it to someone already on file) or **Send the link** (a one-tap drafted reply pointing them at the House Hacking meetup registration page). Once matched — either from that row, or automatically the next time the same sender messages again — every DM from them mirrors into their activity timeline, same as a Quo text.
+
+This uses Meta's Instagram Messaging API, which requires an Instagram **professional** account (Business or Creator) connected to a Facebook Page, and a Meta Developer App:
+
+1. Create an app at [developers.facebook.com](https://developers.facebook.com) (or reuse one you already have), and add the **Instagram** product to it.
+2. Under the app's **App Settings → Basic**, copy the App Secret — this is `META_APP_SECRET`.
+3. Confirm your Instagram professional account is connected to a Facebook Page you manage, then generate a (long-lived) **Page Access Token** with the `instagram_manage_messages` permission — this is `META_PAGE_ACCESS_TOKEN`.
+4. Pick any long random string — this is `META_VERIFY_TOKEN`. Add all three, plus `APP_BASE_URL` if not already set, to Vercel, and redeploy.
+5. Back in the app's webhook setup (App Settings → Webhooks, or Instagram → Configuration, depending on how Meta has it laid out that week), register a subscription pointed at `https://crm.callcaitlyn.com/api/webhooks/instagram`, using the same string as the **Verify Token** field. Meta will call the URL once to confirm it (a GET request) before accepting the subscription.
+6. Subscribe to the **`messages`** webhook field for your connected Page/Instagram account.
+7. Send a real test DM to the connected Instagram account from a different account, and confirm it shows up as a "Stranger" row on the Messages page.
+
+**The exact webhook payload and signature format aren't confirmed against a real delivery yet** — this integration was built from Meta's documented (Messenger-platform-compatible) contract, the same caution already applied to Quo's webhook signature before a real payload confirmed it. If step 7 doesn't work, check the Vercel function logs for `/api/webhooks/instagram` — the raw payload is logged whenever no recognizable messaging event can be parsed out of it, and a rejected signature logs its own reason — and send me what's in there so `lib/instagram/verify-signature.ts` and `lib/instagram/parse-event.ts` can be corrected to match.
+
+Leave all three variables unset and this integration just stays dormant — the Messages page works exactly as it does today, no "Stranger" section appears.
+
 ## Setting up the House Hacking site (website signups)
 
 `househackingatl.com` is a separately-hosted, fully static Next.js site (its own repo, no database) - its signup forms used to `fetch()` straight to Kit's public form API from the browser. This endpoint replaces that: the site's form components POST to the CRM directly instead, and the CRM does the work Kit used to do (nothing - Kit only collected email addresses; this also creates/updates the contact, tags them, and enrolls them in the same sequences as an in-person meetup attendee).

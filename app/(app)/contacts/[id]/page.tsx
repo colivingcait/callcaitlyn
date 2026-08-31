@@ -26,10 +26,11 @@ import { computeLikelihood } from "@/lib/crm/likelihood";
 import { getLatestReadyTranscriptForContact } from "@/lib/data/meeting-transcripts";
 import { ApprovePanel } from "@/components/transcripts/ApprovePanel";
 import { ConsentStatus } from "@/components/contacts/ConsentStatus";
+import { getInstagramSenderId } from "@/lib/data/instagram";
 
 export default async function ContactDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [contact, activities, tasks, stages, insights, deals, mergeCandidates, tags, readyTranscript] = await Promise.all([
+  const [contact, activities, tasks, stages, insights, deals, mergeCandidates, tags, readyTranscript, instagramSenderId] = await Promise.all([
     getContact(id),
     getContactActivities(id),
     getContactTasks(id),
@@ -39,6 +40,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
     listMergeCandidates(),
     listTags(),
     getLatestReadyTranscriptForContact(id),
+    getInstagramSenderId(id),
   ]);
 
   if (!contact) notFound();
@@ -89,7 +91,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
       </div>
 
       <div className="mt-4">
-        <QuickActions contactId={contact.id} contactName={fullName(contact)} phone={contact.phone} email={contact.email} />
+        <QuickActions contactId={contact.id} contactName={fullName(contact)} phone={contact.phone} email={contact.email} instagramSenderId={instagramSenderId} />
       </div>
 
       <div className="mt-5 space-y-3">
