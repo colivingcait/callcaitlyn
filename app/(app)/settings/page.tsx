@@ -13,6 +13,8 @@ import { GranolaConnect } from "@/components/settings/GranolaConnect";
 import { GranolaMatchingSettings } from "@/components/settings/GranolaMatchingSettings";
 import { ConsentSummaryCard } from "@/components/settings/ConsentSummary";
 import { getConsentSummary } from "@/lib/data/consent";
+import { RateManualEntry } from "@/components/settings/RateManualEntry";
+import { RATE_PRODUCT } from "@/lib/crm/rate-feed";
 import { Card, Button } from "@/components/ui";
 import { Mail, BarChart3 } from "lucide-react";
 
@@ -30,13 +32,21 @@ export default async function SettingsPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const [stages, tags, gmailAccount, warmSettings, granolaMatchingSettings, consentSummary] = await Promise.all([
+  const [stages, tags, gmailAccount, warmSettings, granolaMatchingSettings, consentSummary, latestRate] = await Promise.all([
     listStages(),
     listTags(),
     supabase.from("gmail_accounts").select("email_address").maybeSingle().then((r) => r.data),
     supabase.from("warm_notification_settings").select("*").maybeSingle().then((r) => r.data),
     supabase.from("granola_matching_settings").select("*").maybeSingle().then((r) => r.data),
     getConsentSummary(),
+    supabase
+      .from("daily_rates")
+      .select("rate_pct, rate_date")
+      .eq("product", RATE_PRODUCT)
+      .order("rate_date", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then((r) => r.data),
   ]);
 
   return (
@@ -125,6 +135,10 @@ export default async function SettingsPage({
 
       <Card>
         <ConsentSummaryCard summary={consentSummary} />
+      </Card>
+
+      <Card>
+        <RateManualEntry latestRatePct={latestRate?.rate_pct ?? null} latestRateDate={latestRate?.rate_date ?? null} />
       </Card>
     </div>
   );

@@ -17,6 +17,26 @@ export function loanTermMonths(loanType: LoanType): number {
   return loanType === "conventional_15" ? 180 : 360;
 }
 
+// Rate-alerts support (Phase 4 Stop 3): recompute a stored quote's P&I at
+// a new rate without touching anything else about it (taxes, insurance,
+// mortgage insurance, maintenance, rent credit all stay exactly as
+// snapshotted - only the rate changed, not the property).
+export function recomputePrincipalInterest(loanAmount: number, ratePct: number, loanType: LoanType): number {
+  const n = loanTermMonths(loanType);
+  const r = ratePct / 100 / 12;
+  return r === 0 ? loanAmount / n : (loanAmount * r * (1 + r) ** n) / ((1 + r) ** n - 1);
+}
+
+// The algebraic inverse of the above - "what loan amount produces this
+// exact monthly P&I at this rate" - is what makes the "ceiling" framing
+// possible: at a lower rate, the SAME payment she already discussed
+// supports a bigger loan, hence a bigger purchase price.
+export function loanAmountForPayment(monthlyPrincipalInterest: number, ratePct: number, loanType: LoanType): number {
+  const n = loanTermMonths(loanType);
+  const r = ratePct / 100 / 12;
+  return r === 0 ? monthlyPrincipalInterest * n : (monthlyPrincipalInterest * ((1 + r) ** n - 1)) / (r * (1 + r) ** n);
+}
+
 export type HouseHackInputs = {
   purchasePrice: number;
   downPaymentPct: number;

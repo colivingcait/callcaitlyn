@@ -4,6 +4,7 @@
     { "path": "/api/cron/send-sequences", "schedule": "*/15 * * * *" },
     { "path": "/api/cron/send-text-blasts", "schedule": "*/15 * * * *" },
     { "path": "/api/cron/weekly-review", "schedule": "0 21 * * 0" },
-    { "path": "/api/cron/prep-sheet", "schedule": "*/5 * * * *" }
+    { "path": "/api/cron/prep-sheet", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/rate-feed", "schedule": "0 14 * * *" }
   ]
 }

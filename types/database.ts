@@ -470,6 +470,16 @@ export interface Quote {
   created_at: string;
 }
 
+export interface DailyRate {
+  id: string;
+  owner_id: string;
+  rate_date: string;
+  product: string;
+  rate_pct: number;
+  source: string;
+  created_at: string;
+}
+
 export interface QuoteView {
   id: string;
   quote_id: string;

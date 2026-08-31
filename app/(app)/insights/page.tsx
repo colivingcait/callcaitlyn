@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { Calendar, TrendingDown, Eye, Flame, Users, Clock, AlertTriangle, ChevronRight } from "lucide-react";
 import { getInsightsData } from "@/lib/data/insights";
+import { getRateMoves } from "@/lib/data/rate-moves";
 import { InsightCard } from "@/components/insights/InsightCard";
 import { LeaseRows } from "@/components/insights/LeaseRows";
+import { RateMoveRow } from "@/components/insights/RateMoveRow";
 import { WorklistGroup } from "@/components/dashboard/WorklistGroup";
 import { dismissCard } from "@/app/(app)/insights/actions";
+import { formatPercent } from "@/lib/utils";
 
 export default async function InsightsPage() {
-  const data = await getInsightsData();
+  const [data, rateMoves] = await Promise.all([getInsightsData(), getRateMoves()]);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6">
@@ -25,7 +28,23 @@ export default async function InsightsPage() {
           </InsightCard>
         )}
 
-        <InsightCard icon={TrendingDown} title="Rates fell" subtitle="Coming once rate tracking is live." expandable={false} muted />
+        {rateMoves ? (
+          <InsightCard
+            icon={TrendingDown}
+            title={`Rates ${rateMoves.currentRatePct < rateMoves.previousRatePct ? "fell" : "rose"} to ${formatPercent(rateMoves.currentRatePct, 3)}`}
+            subtitle={`Down from ${formatPercent(rateMoves.previousRatePct, 3)} · ${rateMoves.moves.length} ${rateMoves.moves.length === 1 ? "person" : "people"} you quoted a payment to ${rateMoves.moves.length === 1 ? "is" : "are"} now looking at a smaller one`}
+            defaultOpen
+          >
+            {rateMoves.moves.map((move) => (
+              <RateMoveRow key={move.quoteId} move={move} phone={move.phone} email={move.email} />
+            ))}
+            <p className="border-t border-neutral-100 px-4 py-2.5 text-sm text-neutral-400">
+              One person at a time, same as review requests. A rate move is a reason to call, not a reason to blast.
+            </p>
+          </InsightCard>
+        ) : (
+          <InsightCard icon={TrendingDown} title="Rates" subtitle="Nothing to compare yet - add today's rate in Settings." expandable={false} muted />
+        )}
 
         {data.warmCount > 0 && (
           <InsightCard
