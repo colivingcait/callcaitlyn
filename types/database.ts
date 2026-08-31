@@ -211,6 +211,8 @@ export interface Activity {
   occurred_at: string;
   source: ActivitySource;
   metadata: Record<string, unknown>;
+  dedupe_field: string | null;
+  dedupe_value: string | null;
   created_at: string;
 }
 
