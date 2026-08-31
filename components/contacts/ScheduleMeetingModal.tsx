@@ -2,11 +2,37 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { fromZonedTime } from "date-fns-tz";
 import { X, Video, Copy, Check } from "lucide-react";
 import { Button, Input, Select, Textarea } from "@/components/ui";
 import { scheduleMeeting } from "@/app/(app)/contacts/meeting-actions";
+import { APP_TIMEZONE } from "@/lib/format-time";
 
 const DURATION_OPTIONS = [15, 30, 45, 60];
+
+// Common US zones, plus whatever the browser reports as "here" (added
+// below if it isn't already one of these) - a datetime-local input has no
+// timezone of its own, so without an explicit choice the previous code
+// silently took whatever zone the device happened to be set to, which is
+// wrong the moment she's scheduling from a phone set to a different zone
+// than the meeting itself.
+const TIMEZONE_OPTIONS = [
+  { value: "America/New_York", label: "Eastern" },
+  { value: "America/Chicago", label: "Central" },
+  { value: "America/Denver", label: "Mountain" },
+  { value: "America/Phoenix", label: "Arizona (no DST)" },
+  { value: "America/Los_Angeles", label: "Pacific" },
+  { value: "America/Anchorage", label: "Alaska" },
+  { value: "Pacific/Honolulu", label: "Hawaii" },
+];
+
+function detectTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || APP_TIMEZONE;
+  } catch {
+    return APP_TIMEZONE;
+  }
+}
 
 // Rounds to the next quarter-hour so the default start time isn't a random
 // minute in the past-feeling near-present - a small touch, but "2:47 PM"
@@ -34,6 +60,10 @@ export function ScheduleMeetingModal({
   const [title, setTitle] = useState(`Call with ${contactName}`);
   const [startAt, setStartAt] = useState(defaultStart);
   const [duration, setDuration] = useState(30);
+  const [timeZone, setTimeZone] = useState(detectTimeZone);
+  const timeZoneOptions = TIMEZONE_OPTIONS.some((z) => z.value === timeZone)
+    ? TIMEZONE_OPTIONS
+    : [{ value: timeZone, label: timeZone.replace(/_/g, " ").split("/").pop()! }, ...TIMEZONE_OPTIONS];
   const [notes, setNotes] = useState("");
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ ok: true; meetLink: string | null } | { ok: false; error: string } | null>(null);
@@ -44,7 +74,7 @@ export function ScheduleMeetingModal({
     setSending(true);
     const outcome = await scheduleMeeting(contactId, {
       title: title.trim(),
-      startAt: new Date(startAt).toISOString(),
+      startAt: fromZonedTime(startAt, timeZone).toISOString(),
       durationMinutes: duration,
       notes: notes.trim() || undefined,
     });
@@ -117,6 +147,17 @@ export function ScheduleMeetingModal({
                     ))}
                   </Select>
                 </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-neutral-500">Time zone</label>
+                <Select value={timeZone} onChange={(e) => setTimeZone(e.target.value)}>
+                  {timeZoneOptions.map((z) => (
+                    <option key={z.value} value={z.value}>
+                      {z.label}
+                    </option>
+                  ))}
+                </Select>
               </div>
 
               <div className="space-y-1.5">
