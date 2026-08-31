@@ -71,6 +71,16 @@ export function ApprovePanel({
   const savedNoun = transcript.source === "quo" ? "recording and transcript" : transcript.source === "memo" ? "recording" : "transcript";
   const recapRecipients = participants.filter((p) => p.isContact && p.contactId && p.email);
 
+  // A short, just-captured phone note (option 8d) reads better as "Just
+  // now · 34 seconds" than the standard source/duration line - same data,
+  // same rows below, just a lighter-weight header for something she's
+  // reviewing seconds after recording it, likely still standing there.
+  const isPhoneMemo =
+    transcript.source === "granola" &&
+    transcript.duration_seconds != null &&
+    transcript.duration_seconds < 90 &&
+    Date.now() - new Date(transcript.created_at).getTime() < 10 * 60 * 1000;
+
   async function addParticipantAsContact(index: number) {
     const p = participants[index];
     if (!p) return;
@@ -169,6 +179,18 @@ export function ApprovePanel({
         await supabase.from("tasks").insert({ owner_id: ownerId, contact_id: contactId, title: v.title, due_at: v.dueAt });
         break;
       }
+      case "showing": {
+        const v = p.proposed_value as { address: string };
+        await supabase.from("activities").insert({
+          owner_id: ownerId,
+          contact_id: contactId,
+          type: "showing",
+          direction: "none",
+          source: "ai",
+          body: v.address,
+        });
+        break;
+      }
       case "stage": {
         const v = p.proposed_value as { stageId: string; stageName: string };
         const newStage = stages.find((s) => s.id === v.stageId);
@@ -242,8 +264,14 @@ export function ApprovePanel({
         <div className="min-w-0 flex-1">
           <p className="font-serif text-[22px] font-semibold leading-8 text-neutral-900">{contactName}</p>
           <p className="text-[15px] text-neutral-500">
-            {SOURCE_LABEL[transcript.source]} {relativeTime(transcript.occurred_at)}
-            {duration ? ` · ${duration}` : ""} · {savedNoun} saved
+            {isPhoneMemo ? (
+              <>Just now{duration ? ` · ${duration}` : ""}</>
+            ) : (
+              <>
+                {SOURCE_LABEL[transcript.source]} {relativeTime(transcript.occurred_at)}
+                {duration ? ` · ${duration}` : ""} · {savedNoun} saved
+              </>
+            )}
           </p>
         </div>
       </div>
@@ -334,18 +362,24 @@ export function ApprovePanel({
         >
           {saving ? "Saving…" : `Save all ${proposals.length}`}
         </button>
-        <button
-          type="button"
-          onClick={saveNothing}
-          disabled={saving}
-          className="rounded-[10px] border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-800 disabled:opacity-50"
-        >
-          Save nothing
-        </button>
-        <span className="text-sm text-neutral-400">
-          Saved changes show up in {firstName}&apos;s activity as &ldquo;updated from the{" "}
-          {new Date(transcript.occurred_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })} {SOURCE_LABEL[transcript.source].toLowerCase()}.&rdquo;
-        </span>
+        {isPhoneMemo ? (
+          <span className="text-sm text-neutral-400">or review each one below</span>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={saveNothing}
+              disabled={saving}
+              className="rounded-[10px] border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-800 disabled:opacity-50"
+            >
+              Save nothing
+            </button>
+            <span className="text-sm text-neutral-400">
+              Saved changes show up in {firstName}&apos;s activity as &ldquo;updated from the{" "}
+              {new Date(transcript.occurred_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })} {SOURCE_LABEL[transcript.source].toLowerCase()}.&rdquo;
+            </span>
+          </>
+        )}
       </div>
 
       {dealModal && (

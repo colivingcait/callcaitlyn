@@ -3,6 +3,7 @@ import { after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parseGranolaEvent } from "@/lib/granola/parse-event";
 import { matchByCalendarEventId, matchByAttendeeEmail } from "@/lib/crm/meeting-match";
+import { findNameCandidates, matchByRememberedName, getGranolaMatchingRules } from "@/lib/crm/note-name-match";
 import { createOrGetTranscript, runExtraction } from "@/lib/data/meeting-transcripts";
 import type { TranscriptParticipant } from "@/types/database";
 
@@ -51,18 +52,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
+    const rules = await getGranolaMatchingRules(admin, OWNER_ID);
+
     // A video meeting (Zoom/Meet/Teams) carries a calendar event id the
-    // same way a Tactiq meeting did - match on that first. An in-person
-    // coffee or a phone call has neither, and falls through to the
-    // attendee-email match, then to the Notes inbox if that also misses
-    // (contactId stays null - see the guard below).
-    const contactId =
-      (event.calendarEventId ? await matchByCalendarEventId(admin, OWNER_ID, event.calendarEventId) : null) ??
+    // same way a Tactiq meeting did - match on that first (toggle-gated).
+    // An in-person coffee or a phone call has neither, and falls through
+    // to the attendee-email match, then a remembered "That's her" name,
+    // then a live name-in-note match if exactly one contact's full name
+    // shows up in the transcript (also toggle-gated - an ambiguous 2+
+    // match is deliberately left unmatched for the Notes inbox to ask
+    // about, never auto-resolved to a guess).
+    let contactId =
+      (rules.match_on_calendar_event && event.calendarEventId ? await matchByCalendarEventId(admin, OWNER_ID, event.calendarEventId) : null) ??
       (await matchByAttendeeEmail(
         admin,
         OWNER_ID,
         event.participants.map((p) => p.email).filter((e): e is string => !!e),
-      ));
+      )) ??
+      (await matchByRememberedName(admin, OWNER_ID, event.transcript));
+
+    if (!contactId && rules.match_on_name_when_single) {
+      const { data: contacts } = await admin.from("contacts").select("id, first_name, last_name").eq("owner_id", OWNER_ID).eq("archived", false);
+      const candidates = findNameCandidates(contacts ?? [], event.transcript);
+      if (candidates.length === 1) contactId = candidates[0].id;
+    }
 
     const participants: TranscriptParticipant[] = await Promise.all(
       event.participants.map(async (p) => {
@@ -79,7 +92,7 @@ export async function POST(request: NextRequest) {
       externalId: event.noteId,
       rawPayload: body,
       participants,
-      durationSeconds: null,
+      durationSeconds: event.durationSeconds,
       occurredAt: event.occurredAt,
     });
 

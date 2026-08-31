@@ -7,6 +7,7 @@ import { QuickAddButton } from "@/components/nav/QuickAddButton";
 import { SignOutButton } from "@/components/nav/SignOutButton";
 import { listConversations } from "@/lib/data/messages";
 import { listNewRegistrationsQueue } from "@/lib/data/dialer";
+import { getUnmatchedNotesCount } from "@/lib/data/notes-inbox";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -14,13 +15,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ count: contactsCount }, conversations, { contacts: newLeads }] = await Promise.all([
+  const [{ count: contactsCount }, conversations, { contacts: newLeads }, unmatchedNotes] = await Promise.all([
     supabase.from("contacts").select("id", { count: "exact", head: true }).eq("archived", false),
     listConversations(),
     listNewRegistrationsQueue(),
+    getUnmatchedNotesCount(),
   ]);
   const waitingOnReply = conversations.filter((c) => c.lastActivity.type === "text" && c.lastActivity.direction === "inbound").length;
-  const navCounts = { contacts: contactsCount ?? 0, dialer: newLeads.length, messages: waitingOnReply };
+  const navCounts = { contacts: contactsCount ?? 0, dialer: newLeads.length, messages: waitingOnReply, notes: unmatchedNotes };
 
   return (
     <div className="flex min-h-dvh">

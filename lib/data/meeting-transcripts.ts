@@ -127,6 +127,9 @@ function normalizeProposal(p: RawProposal, stages: { id: string; name: string }[
     case "note":
       proposedValue = { text: p.text_value };
       break;
+    case "showing":
+      proposedValue = { address: p.text_value };
+      break;
     case "task":
       proposedValue = { title: p.task_title, dueAt: p.task_due_date };
       break;

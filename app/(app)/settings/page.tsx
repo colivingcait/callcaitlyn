@@ -10,6 +10,7 @@ import { JotformSyncBackfill } from "@/components/settings/JotformSyncBackfill";
 import { PushNotifications } from "@/components/settings/PushNotifications";
 import { WarmNotificationSettings } from "@/components/settings/WarmNotificationSettings";
 import { GranolaConnect } from "@/components/settings/GranolaConnect";
+import { GranolaMatchingSettings } from "@/components/settings/GranolaMatchingSettings";
 import { Card, Button } from "@/components/ui";
 import { Mail, BarChart3 } from "lucide-react";
 
@@ -27,11 +28,12 @@ export default async function SettingsPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const [stages, tags, gmailAccount, warmSettings] = await Promise.all([
+  const [stages, tags, gmailAccount, warmSettings, granolaMatchingSettings] = await Promise.all([
     listStages(),
     listTags(),
     supabase.from("gmail_accounts").select("email_address").maybeSingle().then((r) => r.data),
     supabase.from("warm_notification_settings").select("*").maybeSingle().then((r) => r.data),
+    supabase.from("granola_matching_settings").select("*").maybeSingle().then((r) => r.data),
   ]);
 
   return (
@@ -113,6 +115,9 @@ export default async function SettingsPage({
           it&apos;s skipped entirely for anyone marked &ldquo;know personally.&rdquo;
         </p>
         <GranolaConnect webhookUrl={granolaWebhookUrl} />
+        <div className="border-t border-neutral-100 pt-3">
+          <GranolaMatchingSettings settings={granolaMatchingSettings} />
+        </div>
       </Card>
     </div>
   );

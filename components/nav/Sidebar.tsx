@@ -9,7 +9,7 @@ import { SignOutButton } from "./SignOutButton";
 import { QuickAddMenu } from "./QuickAddMenu";
 import { cn } from "@/lib/utils";
 
-export type NavCounts = { contacts?: number; dialer?: number; messages?: number };
+export type NavCounts = { contacts?: number; dialer?: number; messages?: number; notes?: number };
 
 export function Sidebar({ userEmail, counts = {} }: { userEmail?: string | null; counts?: NavCounts }) {
   const pathname = usePathname();
@@ -19,6 +19,7 @@ export function Sidebar({ userEmail, counts = {} }: { userEmail?: string | null;
     "/contacts": counts.contacts !== undefined ? { value: counts.contacts } : undefined,
     "/dialer": counts.dialer !== undefined ? { value: counts.dialer } : undefined,
     "/messages": counts.messages !== undefined ? { value: counts.messages, waiting: counts.messages > 0 } : undefined,
+    "/notes": counts.notes !== undefined && counts.notes > 0 ? { value: counts.notes, waiting: true } : undefined,
   };
 
   return (

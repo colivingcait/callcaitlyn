@@ -64,7 +64,8 @@ export function GranolaConnect({ webhookUrl }: { webhookUrl: string | null }) {
       </div>
       <p className="text-xs text-neutral-500">
         Covers video meetings (Zoom/Meet/Teams), in-person notes, and phone calls — however you captured it in
-        Granola, it shows up the same way here.
+        Granola, it shows up the same way here. A note with no calendar invite and no attendee email (an in-person
+        coffee, most phone calls) lands in the Notes inbox instead of a contact&apos;s page until you say who it was with.
       </p>
     </div>
   );

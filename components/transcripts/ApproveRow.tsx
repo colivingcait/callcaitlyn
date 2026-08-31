@@ -14,6 +14,7 @@ const FIELD_LABELS: Record<string, string> = {
   note: "New note on the record",
   task: "Task to create",
   stage: "Stage",
+  showing: "Showing to log",
 };
 
 function formatSeconds(s: number | null) {
@@ -58,6 +59,10 @@ function describe(p: ProposedChange, stages: PipelineStage[]) {
       const v = value as { text: string };
       return { proposed: v.text, meta: "· new" };
     }
+    case "showing": {
+      const v = value as { address: string };
+      return { proposed: v.address, meta: "· logs a showing" };
+    }
     case "task": {
       const v = value as { title: string; dueAt: string | null };
       return { proposed: v.title, meta: v.dueAt ? `· due ${v.dueAt}` : "· new" };
@@ -88,19 +93,20 @@ export function ApproveRow({
     const v = proposal.proposed_value as Record<string, unknown>;
     if (proposal.field === "task") return (v.title as string) ?? "";
     if (proposal.field === "areas_of_interest") return (v.area as string) ?? "";
+    if (proposal.field === "showing") return (v.address as string) ?? "";
     return (v.text as string) ?? "";
   });
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<"accepted" | "rejected" | null>(null);
 
   const { proposed, meta } = describe(proposal, stages);
-  const isEditableText = ["decision_maker", "objection", "note", "task", "areas_of_interest"].includes(proposal.field);
+  const isEditableText = ["decision_maker", "objection", "note", "task", "areas_of_interest", "showing"].includes(proposal.field);
   const timestampLabel = formatSeconds(proposal.timestamp_seconds);
 
   async function handleAccept() {
     setBusy(true);
     if (editing && isEditableText) {
-      const key = proposal.field === "task" ? "title" : proposal.field === "areas_of_interest" ? "area" : "text";
+      const key = proposal.field === "task" ? "title" : proposal.field === "areas_of_interest" ? "area" : proposal.field === "showing" ? "address" : "text";
       proposal.proposed_value = { ...(proposal.proposed_value as Record<string, unknown>), [key]: editValue };
     }
     await onAccept(proposal);

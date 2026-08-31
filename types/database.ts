@@ -205,7 +205,7 @@ export interface MeetingTranscript {
   created_at: string;
 }
 
-export type ProposedField = "budget" | "timeline" | "areas_of_interest" | "decision_maker" | "objection" | "note" | "task" | "stage";
+export type ProposedField = "budget" | "timeline" | "areas_of_interest" | "decision_maker" | "objection" | "note" | "task" | "stage" | "showing";
 export type ProposedChangeStatus = "pending" | "accepted" | "rejected";
 
 export interface ProposedChange {
@@ -229,6 +229,22 @@ export interface WarmNotificationSettings {
   rule_hot_twice: boolean;
   rule_every_open: boolean;
   updated_at: string;
+}
+
+export interface GranolaMatchingSettings {
+  owner_id: string;
+  match_on_calendar_event: boolean;
+  match_on_name_when_single: boolean;
+  ask_when_ambiguous: boolean;
+  updated_at: string;
+}
+
+export interface NoteNameMatch {
+  id: string;
+  owner_id: string;
+  name_text: string;
+  contact_id: string;
+  created_at: string;
 }
 
 export interface PinnedTodayItem {

@@ -102,13 +102,13 @@ const EXTRACTION_TOOL = {
           properties: {
             field: {
               type: "string",
-              enum: ["budget", "timeline", "areas_of_interest", "decision_maker", "objection", "note", "task", "stage"],
+              enum: ["budget", "timeline", "areas_of_interest", "decision_maker", "objection", "note", "task", "stage", "showing"],
               description:
-                "budget: a range or ceiling was stated. timeline: buying/selling timeframe. areas_of_interest: a neighborhood/area they're interested in (one per proposal, never replaces existing areas). decision_maker: who else is involved in the decision and what they control. objection: a concern or hesitation, captured close to verbatim. note: anything else worth keeping on the record that doesn't fit another field (pre-approval details, property type, bedroom/must-have preferences, etc). task: something the agent committed to doing, with a due date if one was stated or clearly implied. stage: only when the pipeline stage should clearly change - omit rather than guess.",
+                "budget: a range or ceiling was stated. timeline: buying/selling timeframe. areas_of_interest: a neighborhood/area they're interested in (one per proposal, never replaces existing areas). decision_maker: who else is involved in the decision and what they control. objection: a concern or hesitation, captured close to verbatim. note: anything else worth keeping on the record that doesn't fit another field (pre-approval details, property type, bedroom/must-have preferences, etc). task: something the agent committed to doing, with a due date if one was stated or clearly implied. stage: only when the pipeline stage should clearly change - omit rather than guess. showing: the agent showed this person a specific property in person - use the property's address as the text.",
             },
             text_value: {
               type: ["string", "null"],
-              description: "The proposed text for decision_maker, objection, note, or a single area name for areas_of_interest.",
+              description: "The proposed text for decision_maker, objection, note, a single area name for areas_of_interest, or the property address for showing.",
             },
             budget_min: { type: ["number", "null"] },
             budget_max: { type: ["number", "null"] },

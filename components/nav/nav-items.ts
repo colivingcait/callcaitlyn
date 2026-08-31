@@ -12,6 +12,7 @@ import {
   DollarSign,
   BarChart3,
   Settings,
+  NotebookText,
   type LucideIcon,
 } from "lucide-react";
 
@@ -27,6 +28,10 @@ export const WORK_ITEMS: NavItem[] = [
   { href: "/insights", label: "Insights", icon: Lightbulb },
   { href: "/messages", label: "Messages", icon: MessageCircle },
   { href: "/dialer", label: "Dialer", icon: PhoneCall },
+  // Appended, not inserted - MOBILE_NAV_ITEMS below indexes into this
+  // array positionally, so a new item has to go last or it'd silently
+  // swap which item shows up on the bottom nav.
+  { href: "/notes", label: "Notes", icon: NotebookText },
 ];
 
 export const PEOPLE_ITEMS: NavItem[] = [
