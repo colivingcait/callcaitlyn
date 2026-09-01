@@ -175,6 +175,8 @@ This logs every call and text from your Quo number straight into each contact's 
 
 By default every number on the Quo account gets pulled in. If you add a second number for something that has nothing to do with the CRM (rooms-for-rent texting, say), set `QUO_INCLUDED_PHONE_NUMBERS` to a comma-separated list of the number(s) that *should* keep flowing in (any format — with or without the `+1`, spaces, dashes) and redeploy. Anything on an unlisted number is skipped entirely at the webhook — never creates a contact, never logs an activity. Leave it unset to keep pulling in everything, same as today.
 
+That covers *inbound*. For **outbound** texts sent from the CRM (the message box on a contact page, bulk texts), set `QUO_SEND_PHONE_NUMBER` to your real business number the moment there's more than one number on the account. Without it, the CRM has no way to know which number is "the" business line and previously just grabbed whichever one Quo's API happened to list first — which is exactly how a batch of texts went out from the rooms-for-rent number by mistake. It now refuses to send at all (with a clear error) rather than guess, until this is set.
+
 ## Setting up Calendly (booking sync)
 
 Same shape as Quo: a webhook logs bookings straight onto the matching contact.
