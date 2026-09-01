@@ -4,7 +4,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAuthorizedGoogleClient } from "@/lib/google/oauth";
 
 export type CreateMeetingInput = {
-  attendeeEmail: string;
+  // null when the only contact info on hand is a phone number (e.g. a
+  // scheduling-page booking with no email given) - the event is still
+  // created on her calendar, just with no attendee to email an invite to.
+  attendeeEmail: string | null;
   attendeeName: string;
   title: string;
   description?: string;
@@ -20,6 +23,7 @@ export type UpcomingCalendarEvent = {
   id: string;
   title: string;
   startAt: string;
+  endAt: string;
   location: string | null;
   attendeeEmails: string[];
 };
@@ -50,6 +54,7 @@ export async function listUpcomingEvents(admin: SupabaseClient, ownerId: string,
         id: e.id ?? "",
         title: e.summary ?? "Untitled event",
         startAt: e.start!.dateTime!,
+        endAt: e.end?.dateTime ?? e.start!.dateTime!,
         location: e.location ?? null,
         attendeeEmails: (e.attendees ?? []).map((a) => a.email).filter((email): email is string => !!email),
       }));
@@ -75,14 +80,14 @@ export async function createMeetingInvite(admin: SupabaseClient, ownerId: string
   try {
     const { data } = await calendar.events.insert({
       calendarId: "primary",
-      sendUpdates: "all",
+      sendUpdates: input.attendeeEmail ? "all" : "none",
       conferenceDataVersion: 1,
       requestBody: {
         summary: input.title,
         description: input.description,
         start: { dateTime: start.toISOString() },
         end: { dateTime: end.toISOString() },
-        attendees: [{ email: input.attendeeEmail, displayName: input.attendeeName }],
+        attendees: input.attendeeEmail ? [{ email: input.attendeeEmail, displayName: input.attendeeName }] : undefined,
         conferenceData: {
           createRequest: {
             requestId: randomUUID(),

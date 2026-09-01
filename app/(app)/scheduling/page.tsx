@@ -1,0 +1,58 @@
+import {
+  getSchedulingSettings,
+  getOrCreateGenericBookingLink,
+  listPendingBookingRequests,
+  listUpcomingApprovedBookingRequests,
+} from "@/lib/data/scheduling";
+import { Section } from "@/components/ui/Section";
+import { BookingRequestRow } from "@/components/scheduling/BookingRequestRow";
+import { SchedulingSettingsCard } from "@/components/scheduling/SchedulingSettingsCard";
+import { baseUrl } from "@/lib/crm/sequences";
+import { formatLocal } from "@/lib/format-time";
+
+export default async function SchedulingPage() {
+  const [settings, genericLink, pending, upcoming] = await Promise.all([
+    getSchedulingSettings(),
+    getOrCreateGenericBookingLink(),
+    listPendingBookingRequests(),
+    listUpcomingApprovedBookingRequests(),
+  ]);
+
+  return (
+    <div className="mx-auto max-w-2xl px-4 py-6">
+      <h1 className="font-serif text-2xl font-semibold text-neutral-900 sm:text-[28px]">Scheduling</h1>
+      <p className="mt-1 text-[15px] text-neutral-500">Requests need your approval before anything&apos;s booked.</p>
+
+      <div className="mt-4 space-y-3">
+        <Section sectionKey="scheduling:pending" title="Pending requests" meta={`${pending.length}`}>
+          {pending.length === 0 ? (
+            <p className="px-4 py-4 text-center text-sm text-neutral-400">Nothing waiting on you.</p>
+          ) : (
+            pending.map((r) => <BookingRequestRow key={r.id} request={r} />)
+          )}
+        </Section>
+
+        <Section sectionKey="scheduling:upcoming" title="Upcoming" meta={`${upcoming.length}`} defaultOpen={false}>
+          {upcoming.length === 0 ? (
+            <p className="px-4 py-4 text-center text-sm text-neutral-400">Nothing booked yet.</p>
+          ) : (
+            upcoming.map((r) => (
+              <div key={r.id} className="flex items-center justify-between border-b border-neutral-100 px-4 py-3 last:border-b-0">
+                <div>
+                  <p className="text-[15px] font-semibold text-neutral-900">{r.contact_name || r.visitor_name}</p>
+                  <p className="text-sm text-neutral-500">{formatLocal(r.starts_at, "EEE, MMM d 'at' h:mm a")}</p>
+                </div>
+              </div>
+            ))
+          )}
+        </Section>
+
+        <Section sectionKey="scheduling:settings" title="Settings" defaultOpen={false}>
+          {settings && (
+            <SchedulingSettingsCard settings={settings} genericLink={genericLink ? `${baseUrl()}/book/${genericLink.slug}` : null} />
+          )}
+        </Section>
+      </div>
+    </div>
+  );
+}

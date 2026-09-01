@@ -53,6 +53,7 @@ export type ActivitySource =
   | "site_form"
   | "instagram"
   | "blinq"
+  | "scheduling"
   | "ai"
   | "system";
 
@@ -523,5 +524,43 @@ export interface QuoteView {
   visitor_key: string;
   viewed_at: string;
   user_agent: string | null;
+}
+
+export type Weekday = "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
+export type WeeklyHours = Record<Weekday, { enabled: boolean; start: string; end: string }>;
+
+export interface SchedulingSettings {
+  owner_id: string;
+  duration_minutes: number;
+  days_out: number;
+  visible_slot_pct: number;
+  weekly_hours: WeeklyHours;
+  updated_at: string;
+}
+
+export interface BookingLink {
+  id: string;
+  owner_id: string;
+  contact_id: string | null;
+  slug: string;
+  created_at: string;
+}
+
+export type BookingRequestStatus = "pending" | "approved" | "declined" | "canceled";
+
+export interface BookingRequest {
+  id: string;
+  owner_id: string;
+  booking_link_id: string;
+  contact_id: string | null;
+  visitor_name: string;
+  visitor_phone: string;
+  visitor_email: string | null;
+  starts_at: string;
+  ends_at: string;
+  status: BookingRequestStatus;
+  google_event_id: string | null;
+  created_at: string;
+  decided_at: string | null;
 }
 

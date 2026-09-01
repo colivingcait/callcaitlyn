@@ -9,6 +9,7 @@ import {
   CalendarHeart,
   Mail,
   Calculator,
+  CalendarClock,
   DollarSign,
   BarChart3,
   Settings,
@@ -45,6 +46,7 @@ export const PEOPLE_ITEMS: NavItem[] = [
 export const BUSINESS_ITEMS: NavItem[] = [
   { href: "/sequences", label: "Campaigns", icon: Mail },
   { href: "/numbers", label: "Numbers", icon: Calculator },
+  { href: "/scheduling", label: "Scheduling", icon: CalendarClock },
   { href: "/commissions", label: "Commissions", icon: DollarSign },
   { href: "/recruiting", label: "Agent recruiting", icon: UserPlus },
   { href: "/reports", label: "Reports", icon: BarChart3 },

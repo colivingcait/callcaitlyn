@@ -1,0 +1,163 @@
+"use server";
+
+import { randomBytes } from "crypto";
+import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createMeetingInvite } from "@/lib/google/calendar";
+import { upsertActivity } from "@/lib/crm/activities";
+import { sendTextToContact } from "@/app/(app)/contacts/actions";
+import { buildBookingConfirmedMessage, buildBookingDeclinedMessage } from "@/lib/crm/booking-message";
+import { baseUrl } from "@/lib/crm/sequences";
+import type { WeeklyHours } from "@/types/database";
+
+export async function updateSchedulingSettings(input: {
+  durationMinutes: number;
+  daysOut: number;
+  visibleSlotPct: number;
+  weeklyHours: WeeklyHours;
+}) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const { error } = await supabase
+    .from("scheduling_settings")
+    .upsert({
+      owner_id: user.id,
+      duration_minutes: input.durationMinutes,
+      days_out: input.daysOut,
+      visible_slot_pct: input.visibleSlotPct,
+      weekly_hours: input.weeklyHours,
+      updated_at: new Date().toISOString(),
+    });
+  if (error) return { ok: false as const, error: error.message };
+
+  revalidatePath("/scheduling");
+  return { ok: true as const };
+}
+
+function generateSlug(): string {
+  return randomBytes(6).toString("base64url");
+}
+
+// Reuses an existing link for this contact if one was already generated
+// (e.g. she hit "Send scheduling link" twice) rather than minting a fresh
+// slug every time - a contact only ever needs one standing link.
+export async function createContactBookingLink(contactId: string): Promise<{ ok: true; link: string } | { ok: false; error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  const { data: existing } = await supabase
+    .from("booking_links")
+    .select("slug")
+    .eq("owner_id", user.id)
+    .eq("contact_id", contactId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (existing) return { ok: true, link: `${baseUrl()}/book/${existing.slug}` };
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const slug = generateSlug();
+    const { data, error } = await supabase
+      .from("booking_links")
+      .insert({ owner_id: user.id, contact_id: contactId, slug })
+      .select("slug")
+      .maybeSingle();
+    if (!error && data) return { ok: true, link: `${baseUrl()}/book/${data.slug}` };
+    if (error && error.code !== "23505") return { ok: false, error: "Couldn't create that link" };
+  }
+  return { ok: false, error: "Couldn't generate a unique link - try again" };
+}
+
+// Her explicit requirement: nothing is final until she approves it. Only
+// on approval does a real Google Calendar event get created and a
+// confirmation text go out - a pending request is otherwise invisible to
+// the visitor beyond "request sent."
+export async function approveBooking(requestId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const { data: request } = await supabase.from("booking_requests").select("*").eq("id", requestId).eq("owner_id", user.id).maybeSingle();
+  if (!request) return { ok: false as const, error: "Request not found" };
+  if (request.status !== "pending") return { ok: false as const, error: "Already decided" };
+
+  const admin = createAdminClient();
+  const durationMinutes = Math.round((new Date(request.ends_at).getTime() - new Date(request.starts_at).getTime()) / 60_000);
+  const invite = await createMeetingInvite(admin, user.id, {
+    attendeeEmail: request.visitor_email,
+    attendeeName: request.visitor_name,
+    title: `Meeting with ${request.visitor_name}`,
+    startAt: request.starts_at,
+    durationMinutes: durationMinutes > 0 ? durationMinutes : 30,
+  });
+  if (!invite.ok) return { ok: false as const, error: invite.error };
+
+  const { error } = await supabase
+    .from("booking_requests")
+    .update({ status: "approved", google_event_id: invite.eventId, decided_at: new Date().toISOString() })
+    .eq("id", requestId);
+  if (error) return { ok: false as const, error: error.message };
+
+  if (request.contact_id) {
+    const message = buildBookingConfirmedMessage({
+      visitorFirstName: request.visitor_name.split(" ")[0] || request.visitor_name,
+      startsAt: request.starts_at,
+      meetLink: invite.meetLink,
+    });
+    await sendTextToContact(request.contact_id, request.visitor_phone, message);
+
+    await upsertActivity(admin, user.id, request.contact_id, "scheduling", "booking_request_id", request.id, {
+      type: "meeting",
+      direction: "none",
+      occurred_at: request.starts_at,
+      body: `Booked via scheduling link`,
+      metadata: { google_event_id: invite.eventId, meet_link: invite.meetLink, booking_request_id: request.id },
+    });
+  }
+
+  revalidatePath("/scheduling");
+  return { ok: true as const };
+}
+
+export async function declineBooking(requestId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const { data: request } = await supabase
+    .from("booking_requests")
+    .select("*, booking_links(slug)")
+    .eq("id", requestId)
+    .eq("owner_id", user.id)
+    .maybeSingle();
+  if (!request) return { ok: false as const, error: "Request not found" };
+  if (request.status !== "pending") return { ok: false as const, error: "Already decided" };
+
+  const { error } = await supabase.from("booking_requests").update({ status: "declined", decided_at: new Date().toISOString() }).eq("id", requestId);
+  if (error) return { ok: false as const, error: error.message };
+
+  const bookingLink = (request as unknown as { booking_links: { slug: string } | null }).booking_links;
+  if (request.contact_id && bookingLink) {
+    const message = buildBookingDeclinedMessage({
+      visitorFirstName: request.visitor_name.split(" ")[0] || request.visitor_name,
+      startsAt: request.starts_at,
+      rebookLink: `${baseUrl()}/book/${bookingLink.slug}`,
+    });
+    await sendTextToContact(request.contact_id, request.visitor_phone, message);
+  }
+
+  revalidatePath("/scheduling");
+  return { ok: true as const };
+}

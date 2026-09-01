@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Phone, MessageSquare, Mail, Video, Calculator, Instagram } from "lucide-react";
+import { Phone, MessageSquare, Mail, Video, Calculator, CalendarClock, Instagram } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { openQuoCall, openQuoText } from "@/lib/quo/call-link";
 import { ScheduleMeetingModal } from "@/components/contacts/ScheduleMeetingModal";
 import { HouseHackCalculatorModal } from "@/components/contacts/HouseHackCalculatorModal";
+import { SchedulingLinkModal } from "@/components/contacts/SchedulingLinkModal";
 import { InstagramMessageModal } from "@/components/contacts/InstagramMessageModal";
 
 const actionClass =
@@ -73,6 +74,7 @@ export function QuickActions({
 }) {
   const [scheduling, setScheduling] = useState(false);
   const [calculating, setCalculating] = useState(false);
+  const [sendingSchedulingLink, setSendingSchedulingLink] = useState(false);
   const [messagingInstagram, setMessagingInstagram] = useState(false);
   const firstName = contactName.split(" ")[0] ?? "";
 
@@ -83,12 +85,16 @@ export function QuickActions({
       <ActionLink href={`mailto:${email}`} icon={Mail} label="Email" disabled={!email} />
       <ActionButton onClick={() => setScheduling(true)} icon={Video} label="Meet" disabled={!email} />
       <ActionButton onClick={() => setCalculating(true)} icon={Calculator} label="Numbers" />
+      <ActionButton onClick={() => setSendingSchedulingLink(true)} icon={CalendarClock} label="Book" disabled={!phone} />
       {instagramSenderId && <ActionButton onClick={() => setMessagingInstagram(true)} icon={Instagram} label="Instagram" />}
       {scheduling && (
         <ScheduleMeetingModal contactId={contactId} contactName={contactName} email={email ?? null} onClose={() => setScheduling(false)} />
       )}
       {calculating && (
         <HouseHackCalculatorModal contactId={contactId} firstName={firstName} phone={phone ?? null} email={email ?? null} onClose={() => setCalculating(false)} />
+      )}
+      {sendingSchedulingLink && (
+        <SchedulingLinkModal contactId={contactId} firstName={firstName} phone={phone ?? null} onClose={() => setSendingSchedulingLink(false)} />
       )}
       {messagingInstagram && instagramSenderId && (
         <InstagramMessageModal igSenderId={instagramSenderId} contactName={firstName} onClose={() => setMessagingInstagram(false)} />

@@ -38,6 +38,10 @@ export async function updateSession(request: NextRequest) {
   // or emailed it to, not the logged-in agent, so it must be reachable
   // without a session too.
   const isPublicQuote = request.nextUrl.pathname.startsWith("/n/");
+  // The self-serve scheduling page - opened by whoever she texted the
+  // link to, not the logged-in agent, so it must be reachable without a
+  // session too.
+  const isPublicBooking = request.nextUrl.pathname.startsWith("/book/");
   // Webhooks (Quo, and any future integration) authenticate via their own
   // signature, not a Supabase session - they must bypass the login guard.
   // Same for cron jobs (authenticate via CRON_SECRET, no browser session),
@@ -61,7 +65,7 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/favicon") ||
     request.nextUrl.pathname.startsWith("/sw.js");
 
-  if (isAuthCallback || isWebhook || isCheckIn || isPublicQuote) {
+  if (isAuthCallback || isWebhook || isCheckIn || isPublicQuote || isPublicBooking) {
     return response;
   }
 
