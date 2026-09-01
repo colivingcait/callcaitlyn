@@ -101,11 +101,46 @@ export async function getEventsData(): Promise<EventsData> {
     eventId: string | null;
     series: EventSeries;
     label: string;
-    sortKey: string;
+    // Real Eventbrite start times have never actually come back from
+    // their API (see lib/eventbrite/client.ts's fetchEventDetails) - in
+    // its absence, the least-wrong proxy for "when did this event
+    // actually happen" is the earliest kiosk/QR check-in, since those
+    // only ever get logged live, on the real day. Registration dates
+    // (which trickle in over the weeks before) and manual "Mark
+    // attended" clicks (metadata.manual - logged whenever someone
+    // reviews the roster after the fact, which can be days or weeks
+    // later) are both worse proxies and are only used as a last resort,
+    // and always by their EARLIEST occurrence, never their latest - a
+    // late retroactive mark should never be able to drag a whole
+    // event's date forward.
+    eventStart: string | null;
+    earliestCheckin: string | null;
+    earliestManualCheckin: string | null;
+    earliestRegistration: string | null;
     registered: Set<string>;
     attended: Set<string>;
   };
   const byKey = new Map<string, Bucket>();
+
+  function newBucket(key: string, eventId: string | null, series: EventSeries, label: string): Bucket {
+    return {
+      key,
+      eventId,
+      series,
+      label,
+      eventStart: null,
+      earliestCheckin: null,
+      earliestManualCheckin: null,
+      earliestRegistration: null,
+      registered: new Set(),
+      attended: new Set(),
+    };
+  }
+
+  function noteEventStart(bucket: Bucket, metadata: Record<string, unknown> | null) {
+    const start = typeof metadata?.event_start === "string" ? metadata.event_start : null;
+    if (start && (!bucket.eventStart || start < bucket.eventStart)) bucket.eventStart = start;
+  }
 
   for (const a of registrations) {
     const series = classifySeries(a);
@@ -113,25 +148,40 @@ export async function getEventsData(): Promise<EventsData> {
     const eventId = typeof a.metadata?.event_id === "string" ? a.metadata.event_id : null;
     const key = eventKey(series, eventId, a.occurred_at);
     if (!byKey.has(key)) {
-      byKey.set(key, { key, eventId, series, label: eventLabel(series, a.metadata, a.occurred_at), sortKey: a.occurred_at, registered: new Set(), attended: new Set() });
+      byKey.set(key, newBucket(key, eventId, series, eventLabel(series, a.metadata, a.occurred_at)));
     }
-    byKey.get(key)!.registered.add(a.contact_id);
+    const bucket = byKey.get(key)!;
+    bucket.registered.add(a.contact_id);
+    if (!bucket.earliestRegistration || a.occurred_at < bucket.earliestRegistration) bucket.earliestRegistration = a.occurred_at;
+    noteEventStart(bucket, a.metadata);
   }
   for (const a of checkIns) {
     const series = classifySeries(a);
     if (!series) continue;
     const eventId = typeof a.metadata?.event_id === "string" ? a.metadata.event_id : null;
     const key = eventKey(series, eventId, a.occurred_at);
-    const bucket = byKey.get(key);
-    if (bucket) {
-      bucket.attended.add(a.contact_id);
-      if (a.occurred_at > bucket.sortKey) bucket.sortKey = a.occurred_at;
-    } else {
-      byKey.set(key, { key, eventId, series, label: eventLabel(series, a.metadata, a.occurred_at), sortKey: a.occurred_at, registered: new Set(), attended: new Set([a.contact_id]) });
+    const isManual = a.metadata?.manual === true;
+    let bucket = byKey.get(key);
+    if (!bucket) {
+      bucket = newBucket(key, eventId, series, eventLabel(series, a.metadata, a.occurred_at));
+      byKey.set(key, bucket);
     }
+    bucket.attended.add(a.contact_id);
+    if (isManual) {
+      if (!bucket.earliestManualCheckin || a.occurred_at < bucket.earliestManualCheckin) bucket.earliestManualCheckin = a.occurred_at;
+    } else if (!bucket.earliestCheckin || a.occurred_at < bucket.earliestCheckin) {
+      bucket.earliestCheckin = a.occurred_at;
+    }
+    noteEventStart(bucket, a.metadata);
   }
 
-  const buckets = [...byKey.values()];
+  // sortKey (used both for the displayed date and for numbering each
+  // contact's Nth attendance in chronological order) picks the best
+  // available signal per the priority in the Bucket type's comment above.
+  const buckets = [...byKey.values()].map((b) => ({
+    ...b,
+    sortKey: b.eventStart ?? b.earliestCheckin ?? b.earliestManualCheckin ?? b.earliestRegistration ?? "",
+  }));
 
   // Walk each series' buckets oldest-first to number each contact's
   // attendances, then re-sort newest-first for display.
