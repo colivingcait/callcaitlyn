@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Phone, MessageSquareText } from "lucide-react";
-import { openQuoCall } from "@/lib/quo/call-link";
+import { Phone, MessageSquareText, X } from "lucide-react";
+import { openQuoCall, openQuoText } from "@/lib/quo/call-link";
 import { initials } from "@/lib/utils";
 import type { WorklistPerson } from "@/lib/data/today";
 
@@ -12,12 +12,27 @@ const CAP = 10;
 // Shared row treatment for Calls / Replies owed / Registered-no-follow-up -
 // same person-row shape as ContactRow, just without the expand/edit
 // affordances (this is a worklist, not the record itself; "Open full
-// record" lives one click away via the name link).
-export function WorklistGroup({ people }: { people: WorklistPerson[] }) {
+// record" lives one click away via the name link). onDismiss is opt-in
+// (only Replies owed passes it) and only renders for a row that actually
+// has an activityId to dismiss - Calls/Registered rows are keyed by
+// contact, not a single message, so there's nothing there to dismiss.
+export function WorklistGroup({ people, onDismiss }: { people: WorklistPerson[]; onDismiss?: (activityId: string) => Promise<{ ok: boolean }> }) {
   const [showAll, setShowAll] = useState(false);
-  const visible = showAll ? people : people.slice(0, CAP);
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [dismissing, setDismissing] = useState<string | null>(null);
 
-  if (people.length === 0) {
+  const remaining = people.filter((p) => !p.activityId || !dismissed.has(p.activityId));
+  const visible = showAll ? remaining : remaining.slice(0, CAP);
+
+  async function handleDismiss(activityId: string) {
+    if (!onDismiss) return;
+    setDismissing(activityId);
+    await onDismiss(activityId);
+    setDismissing(null);
+    setDismissed((prev) => new Set(prev).add(activityId));
+  }
+
+  if (remaining.length === 0) {
     return <p className="px-4 py-6 text-[15px] text-neutral-400">Nothing here right now.</p>;
   }
 
@@ -41,23 +56,35 @@ export function WorklistGroup({ people }: { people: WorklistPerson[] }) {
               >
                 <Phone size={15} className="text-neutral-500" /> Call
               </button>
-              <a
-                href={`sms:${person.phone}`}
+              <button
+                type="button"
+                onClick={() => openQuoText(person.phone!)}
                 className="flex items-center gap-1.5 rounded-[10px] border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-800"
               >
                 <MessageSquareText size={15} className="text-neutral-500" /> Text
-              </a>
+              </button>
             </div>
+          )}
+          {onDismiss && person.activityId && (
+            <button
+              type="button"
+              onClick={() => handleDismiss(person.activityId!)}
+              disabled={dismissing === person.activityId}
+              title="I don't need to reply to this"
+              className="shrink-0 rounded-[10px] border border-neutral-200 bg-white p-2 text-neutral-400 disabled:opacity-50"
+            >
+              <X size={15} />
+            </button>
           )}
         </div>
       ))}
-      {!showAll && people.length > CAP && (
+      {!showAll && remaining.length > CAP && (
         <button
           type="button"
           onClick={() => setShowAll(true)}
           className="w-full px-4 py-3.5 text-left text-[15px] font-semibold text-neutral-500"
         >
-          Show the rest ({people.length - CAP} more)
+          Show the rest ({remaining.length - CAP} more)
         </button>
       )}
     </div>

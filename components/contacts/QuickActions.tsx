@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Phone, MessageSquare, Mail, Video, Calculator, Instagram } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { openQuoCall } from "@/lib/quo/call-link";
+import { openQuoCall, openQuoText } from "@/lib/quo/call-link";
 import { ScheduleMeetingModal } from "@/components/contacts/ScheduleMeetingModal";
 import { HouseHackCalculatorModal } from "@/components/contacts/HouseHackCalculatorModal";
 import { InstagramMessageModal } from "@/components/contacts/InstagramMessageModal";
@@ -79,7 +79,7 @@ export function QuickActions({
   return (
     <div className="flex gap-2">
       <ActionButton onClick={() => phone && openQuoCall(phone)} icon={Phone} label="Call" disabled={!phone} />
-      <ActionLink href={`sms:${phone}`} icon={MessageSquare} label="Text" disabled={!phone} />
+      <ActionButton onClick={() => phone && openQuoText(phone)} icon={MessageSquare} label="Text" disabled={!phone} />
       <ActionLink href={`mailto:${email}`} icon={Mail} label="Email" disabled={!email} />
       <ActionButton onClick={() => setScheduling(true)} icon={Video} label="Meet" disabled={!email} />
       <ActionButton onClick={() => setCalculating(true)} icon={Calculator} label="Numbers" />

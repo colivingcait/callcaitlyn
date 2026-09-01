@@ -34,6 +34,22 @@ export async function fixDoubleRegistration(secondActivityId: string) {
   return { ok: true as const };
 }
 
+// "I don't actually need to text them back" - hides this specific message
+// from Replies owed and stops the reply-reminder cron from ever nudging
+// about it. Keyed to the activity row, not the contact, so a new inbound
+// text from the same person later is unaffected.
+export async function dismissReplyOwed(activityId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  await supabase.from("activities").update({ reply_dismissed_at: new Date().toISOString() }).eq("id", activityId).eq("owner_id", user.id);
+  revalidatePath("/");
+  return { ok: true as const };
+}
+
 export async function markKnownPersonally(contactId: string) {
   const supabase = await createClient();
   const {

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronRight, Phone, MessageSquareText, Copy, Check } from "lucide-react";
-import { openQuoCall } from "@/lib/quo/call-link";
+import { openQuoCall, openQuoText } from "@/lib/quo/call-link";
 import { relativeTime } from "@/lib/format-time";
 import { initials, cn } from "@/lib/utils";
 import type { WarmContact } from "@/lib/data/warm";
@@ -74,9 +74,13 @@ export function WarmRow({ contact, numbersLink, defaultOpen = false }: { contact
               </button>
             )}
             {contact.phone && (
-              <a href={`sms:${contact.phone}`} className="flex items-center gap-1.5 rounded-[10px] border border-neutral-200 bg-white px-3.5 py-2 text-sm font-semibold text-neutral-800">
+              <button
+                type="button"
+                onClick={() => openQuoText(contact.phone!)}
+                className="flex items-center gap-1.5 rounded-[10px] border border-neutral-200 bg-white px-3.5 py-2 text-sm font-semibold text-neutral-800"
+              >
                 <MessageSquareText size={15} className="text-neutral-500" /> Text
-              </a>
+              </button>
             )}
             {numbersLink && (
               <button

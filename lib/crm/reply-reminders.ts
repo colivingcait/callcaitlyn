@@ -15,7 +15,9 @@ const REMINDER_DELAY_HOURS = 2;
 export async function sendReplyReminders(admin: SupabaseClient, ownerId: string): Promise<number> {
   const { data } = await admin
     .from("activities")
-    .select("id, contact_id, direction, occurred_at, body, needs_reply, reply_reminder_sent_at, contacts!inner(id, first_name, last_name, archived)")
+    .select(
+      "id, contact_id, direction, occurred_at, body, needs_reply, reply_reminder_sent_at, reply_dismissed_at, contacts!inner(id, first_name, last_name, archived)",
+    )
     .eq("owner_id", ownerId)
     .eq("type", "text")
     .eq("contacts.archived", false)
@@ -38,6 +40,7 @@ export async function sendReplyReminders(admin: SupabaseClient, ownerId: string)
     if (row.direction !== "inbound") continue;
     if (row.needs_reply !== true) continue;
     if (row.reply_reminder_sent_at) continue;
+    if (row.reply_dismissed_at) continue;
     if (new Date(row.occurred_at).getTime() > cutoff) continue;
 
     const name = `${contact.first_name} ${contact.last_name}`.trim();

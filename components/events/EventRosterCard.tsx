@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronDown, ChevronRight, Download, Phone, MessageSquareText, UserCheck, PhoneOff, Trash2, Merge } from "lucide-react";
-import { openQuoCall } from "@/lib/quo/call-link";
+import { openQuoCall, openQuoText } from "@/lib/quo/call-link";
 import { formatLocal } from "@/lib/format-time";
 import { formatPhone, cn } from "@/lib/utils";
 import { markContactAttended } from "@/app/(app)/reports/actions";
@@ -215,9 +215,13 @@ export function EventRosterCard({
                               >
                                 <Phone size={14} />
                               </button>
-                              <a href={`sms:${p.phone}`} className="rounded-[10px] border border-neutral-200 bg-white p-1.5 text-neutral-500">
+                              <button
+                                type="button"
+                                onClick={() => openQuoText(p.phone!)}
+                                className="rounded-[10px] border border-neutral-200 bg-white p-1.5 text-neutral-500"
+                              >
                                 <MessageSquareText size={14} />
-                              </a>
+                              </button>
                             </div>
                           ) : null}
                         </td>

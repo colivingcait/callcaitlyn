@@ -1,4 +1,5 @@
 import { getTodayData } from "@/lib/data/today";
+import { dismissReplyOwed } from "@/app/(app)/today-actions";
 import { listMergeCandidates } from "@/lib/data/contacts";
 import { createClient } from "@/lib/supabase/server";
 import { formatLocal } from "@/lib/format-time";
@@ -106,7 +107,7 @@ export default async function TodayPage() {
         </Section>
 
         <Section sectionKey="today:replies" title="Replies owed" meta={`${today.repliesOwed.length}`}>
-          <WorklistGroup people={today.repliesOwed} />
+          <WorklistGroup people={today.repliesOwed} onDismiss={dismissReplyOwed} />
         </Section>
 
         <Section sectionKey="today:tasks" title="My tasks" meta={`${today.myTasks.length}`}>

@@ -8,7 +8,7 @@ import { listWonDeals, listPendingDeals } from "@/lib/data/commissions";
 import { computeDeals, summarizeDeals, capYearKey, capYearStart, KW_CAP } from "@/lib/crm/commission";
 import type { AiInsight, PipelineStage, Representing } from "@/types/database";
 
-export type WorklistPerson = { id: string; name: string; phone: string | null; meta: string; late: boolean };
+export type WorklistPerson = { id: string; name: string; phone: string | null; meta: string; late: boolean; activityId?: string };
 
 // "Calls" - contacts.next_follow_up_at due or overdue, or a missed call
 // logged. The overdue/today math previously lived inside FollowUpList
@@ -48,7 +48,7 @@ async function getRepliesOwedGroup(): Promise<WorklistPerson[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("activities")
-    .select("contact_id, direction, occurred_at, body, needs_reply, contacts!inner(id, first_name, last_name, phone, archived)")
+    .select("id, contact_id, direction, occurred_at, body, needs_reply, reply_dismissed_at, contacts!inner(id, first_name, last_name, phone, archived)")
     .eq("type", "text")
     .eq("contacts.archived", false)
     .order("occurred_at", { ascending: false })
@@ -62,6 +62,7 @@ async function getRepliesOwedGroup(): Promise<WorklistPerson[]> {
     seen.add(contact.id);
     if (row.direction !== "inbound") continue;
     if (row.needs_reply === false) continue;
+    if (row.reply_dismissed_at) continue;
     const preview = row.body ? `"${row.body.slice(0, 60)}${row.body.length > 60 ? "…" : ""}"` : "Texted you";
     owed.push({
       id: contact.id,
@@ -69,6 +70,7 @@ async function getRepliesOwedGroup(): Promise<WorklistPerson[]> {
       phone: contact.phone,
       meta: `${preview} · ${relativeTime(row.occurred_at)}`,
       late: false,
+      activityId: row.id,
     });
   }
   return owed;
