@@ -47,8 +47,14 @@ export async function POST(request: NextRequest) {
     if (!event.transcript) {
       // Granola can fire more than one event per note (created, updated,
       // shared) - only the one carrying a transcript is worth extracting
-      // from. Earlier ones just get skipped here, not stored as failures.
-      console.log("Granola webhook with no transcript yet, skipping", event.noteId);
+      // from, so this is expected to fire on the earlier ones. But it's
+      // also exactly what happens if the transcript field name guess in
+      // parse-event.ts is wrong for a real Granola payload - logging only
+      // the note id gave no way to tell those two cases apart. Logging the
+      // full raw body here too (same as the missing-note-id case above)
+      // means the next real delivery hands us the actual field name to
+      // fix, instead of another round of guessing.
+      console.log("Granola webhook with no transcript field found - check the payload shape if this note should have one", event.noteId, body);
       return NextResponse.json({ received: true });
     }
 
