@@ -151,3 +151,145 @@ export async function backfillInsightSignal(admin: SupabaseClient, ownerId: stri
 
   return dismissedCount;
 }
+
+// One-time sweep of contacts' EXISTING texts/calls against the live
+// suggested_tags classifier (lib/ai/analyze-contact.ts) - that one only
+// looks at brand-new activity going forward, so a contact whose old
+// conversation already implied a tag (e.g. a call from before "Agent"
+// existed as a tag at all) would otherwise never surface. One Anthropic
+// call per contact (recent activity aggregated, not per-message) to keep
+// the call count bounded by contact count rather than message count.
+// Marks every contact it looks at via tag_suggestions_backfilled_at
+// regardless of outcome, so a Run click only ever advances through the
+// backlog - repeated clicks page through it in BATCH_SIZE chunks rather
+// than one giant request that risks the serverless timeout.
+const BATCH_SIZE = 60;
+const MAX_CONTENT_CHARS = 6000;
+
+const TAG_SUGGESTION_TOOL = {
+  name: "suggest_tags",
+  description: "Suggests which of a real estate agent's existing CRM tags apply to a contact, based on their past texts and calls.",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      tags: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "Names of any tags from the provided list that this contact's past conversations clearly justify. Must exactly match a name from the list - never invent one. Empty array if none apply.",
+      },
+    },
+    required: ["tags"],
+  },
+};
+
+function activityContent(a: { type: string; body: string | null; metadata: Record<string, unknown> | null }): string | null {
+  if (a.type === "text") return a.body;
+  const summary = a.metadata?.ai_call_summary as { bullets?: string[] } | undefined;
+  if (summary?.bullets?.length) return summary.bullets.join(". ");
+  const transcript = a.metadata?.transcript;
+  if (typeof transcript === "string" && transcript.trim().length > 0) return transcript;
+  return a.body;
+}
+
+export async function backfillSuggestedTags(
+  admin: SupabaseClient,
+  ownerId: string,
+): Promise<{ processed: number; suggested: number; remaining: number }> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return { processed: 0, suggested: 0, remaining: 0 };
+
+  const { data: tags } = await admin.from("tags").select("id, name").eq("owner_id", ownerId);
+  const tagList = tags ?? [];
+  if (tagList.length === 0) return { processed: 0, suggested: 0, remaining: 0 };
+
+  const { count: totalPending } = await admin
+    .from("contacts")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", ownerId)
+    .eq("archived", false)
+    .is("tag_suggestions_backfilled_at", null);
+
+  const { data: contacts } = await admin
+    .from("contacts")
+    .select("id, contact_tags(tag_id)")
+    .eq("owner_id", ownerId)
+    .eq("archived", false)
+    .is("tag_suggestions_backfilled_at", null)
+    .order("created_at", { ascending: true })
+    .limit(BATCH_SIZE);
+
+  if (!contacts || contacts.length === 0) return { processed: 0, suggested: 0, remaining: 0 };
+
+  const client = new Anthropic({ apiKey });
+  let suggestedCount = 0;
+
+  for (const contact of contacts) {
+    const existingTagIds = new Set((contact.contact_tags ?? []).map((ct: { tag_id: string }) => ct.tag_id));
+    const candidateTags = tagList.filter((t) => !existingTagIds.has(t.id));
+
+    if (candidateTags.length > 0) {
+      const { data: activities } = await admin
+        .from("activities")
+        .select("type, body, metadata")
+        .eq("owner_id", ownerId)
+        .eq("contact_id", contact.id)
+        .in("type", ["text", "call"])
+        .order("occurred_at", { ascending: false })
+        .limit(30);
+
+      let content = "";
+      for (const a of activities ?? []) {
+        const piece = activityContent(a as { type: string; body: string | null; metadata: Record<string, unknown> | null });
+        if (!piece) continue;
+        if (content.length + piece.length > MAX_CONTENT_CHARS) break;
+        content += `${piece}\n`;
+      }
+
+      if (content.trim().length >= 20) {
+        try {
+          const response = await client.messages.create({
+            model: MODEL,
+            max_tokens: 256,
+            tools: [TAG_SUGGESTION_TOOL],
+            tool_choice: { type: "tool", name: "suggest_tags" },
+            messages: [
+              {
+                role: "user",
+                content: `Based only on this real estate contact's past texts and calls, which of these existing tags apply? Available tags: ${candidateTags.map((t) => t.name).join(", ")}\n\nPast conversations:\n"""\n${content}\n"""`,
+              },
+            ],
+          });
+          const toolUse = response.content.find((b) => b.type === "tool_use");
+          if (toolUse && toolUse.type === "tool_use") {
+            const result = toolUse.input as { tags: string[] };
+            const matched = (result.tags ?? [])
+              .map((name) => candidateTags.find((t) => t.name.toLowerCase() === name.toLowerCase()))
+              .filter((t): t is { id: string; name: string } => Boolean(t));
+
+            if (matched.length > 0) {
+              await admin.from("ai_insights").insert({
+                owner_id: ownerId,
+                contact_id: contact.id,
+                summary: `Past conversations suggest tagging as ${matched.map((t) => t.name).join(", ")}.`,
+                suggested_tag_ids: matched.map((t) => t.id),
+                confidence: 0.7,
+              });
+              suggestedCount++;
+            }
+          }
+        } catch (err) {
+          console.error("Tag suggestion backfill request failed", err);
+        }
+      }
+    }
+
+    await admin.from("contacts").update({ tag_suggestions_backfilled_at: new Date().toISOString() }).eq("id", contact.id);
+  }
+
+  return {
+    processed: contacts.length,
+    suggested: suggestedCount,
+    remaining: Math.max(0, (totalPending ?? 0) - contacts.length),
+  };
+}

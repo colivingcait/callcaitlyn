@@ -185,6 +185,7 @@ export interface Contact {
   referral_fee: number | null;
   recruit_joined_at: string | null;
   recruit_fee_received_at: string | null;
+  tag_suggestions_backfilled_at: string | null;
   created_at: string;
   updated_at: string;
 }

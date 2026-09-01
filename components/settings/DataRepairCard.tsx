@@ -4,6 +4,7 @@ import { JotformSyncBackfill } from "@/components/settings/JotformSyncBackfill";
 import { QuoSyncBackfill } from "@/components/settings/QuoSyncBackfill";
 import { GranolaSyncBackfill } from "@/components/settings/GranolaSyncBackfill";
 import { BacklogCleanup } from "@/components/settings/BacklogCleanup";
+import { TagSuggestionBackfill } from "@/components/settings/TagSuggestionBackfill";
 import { EventOrdersCsvImport } from "@/components/settings/EventOrdersCsvImport";
 
 // The one-off backfills are the same kind of thing - catching up on
@@ -19,6 +20,7 @@ export function DataRepairCard() {
         <QuoSyncBackfill />
         <GranolaSyncBackfill />
         <BacklogCleanup />
+        <TagSuggestionBackfill />
       </div>
     </Section>
   );
