@@ -27,21 +27,25 @@ import { getLatestReadyTranscriptForContact } from "@/lib/data/meeting-transcrip
 import { ApprovePanel } from "@/components/transcripts/ApprovePanel";
 import { ConsentStatus } from "@/components/contacts/ConsentStatus";
 import { getInstagramSenderId } from "@/lib/data/instagram";
+import { getContactEventHistory } from "@/lib/data/contact-events";
+import { ContactEventHistory } from "@/components/contacts/ContactEventHistory";
 
 export default async function ContactDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [contact, activities, tasks, stages, insights, deals, mergeCandidates, tags, readyTranscript, instagramSenderId] = await Promise.all([
-    getContact(id),
-    getContactActivities(id),
-    getContactTasks(id),
-    listStages(),
-    getContactInsights(id),
-    getContactDeals(id),
-    listMergeCandidates(),
-    listTags(),
-    getLatestReadyTranscriptForContact(id),
-    getInstagramSenderId(id),
-  ]);
+  const [contact, activities, tasks, stages, insights, deals, mergeCandidates, tags, readyTranscript, instagramSenderId, eventHistory] =
+    await Promise.all([
+      getContact(id),
+      getContactActivities(id),
+      getContactTasks(id),
+      listStages(),
+      getContactInsights(id),
+      getContactDeals(id),
+      listMergeCandidates(),
+      listTags(),
+      getLatestReadyTranscriptForContact(id),
+      getInstagramSenderId(id),
+      getContactEventHistory(id),
+    ]);
 
   if (!contact) notFound();
 
@@ -134,6 +138,12 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
             <ContactDetailsCard contact={contact} tags={tags} stages={stages} contacts={mergeCandidates} />
           </Section>
         </div>
+
+        {eventHistory.length > 0 && (
+          <Section sectionKey="contact-detail:events" title="Events" meta={`${eventHistory.length}`} defaultOpen={false}>
+            <ContactEventHistory events={eventHistory} />
+          </Section>
+        )}
 
         <Section sectionKey="contact-detail:deals" title="Deals" meta={`${deals.length}`} defaultOpen={false}>
           <div className="p-[18px]">

@@ -56,7 +56,9 @@ function normalizeHeader(h: string) {
 // commas - a naive split on "," would cut a quoted "Smith, Jr." style value
 // in half. Pasted spreadsheet rows use tabs instead, which never need
 // quoting, so those are split on tab whenever a line has one.
-function splitLine(line: string): string[] {
+// Exported so lib/eventbrite/parse-orders-csv.ts can reuse the exact same
+// cell-splitting behavior instead of a second, potentially-drifting copy.
+export function splitLine(line: string): string[] {
   if (line.includes("\t")) return line.split("\t");
   const cells: string[] = [];
   let cur = "";
