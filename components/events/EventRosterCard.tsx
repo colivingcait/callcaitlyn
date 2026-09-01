@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronDown, ChevronRight, Download, Phone, MessageSquareText, UserCheck, PhoneOff } from "lucide-react";
+import { ChevronDown, ChevronRight, Download, Phone, MessageSquareText, UserCheck, PhoneOff, Trash2 } from "lucide-react";
 import { openQuoCall } from "@/lib/quo/call-link";
 import { formatLocal } from "@/lib/format-time";
 import { formatPhone, cn } from "@/lib/utils";
 import { markContactAttended } from "@/app/(app)/reports/actions";
+import { deleteEventByEventId } from "@/app/(app)/events/actions";
 import { TextBlastModal } from "@/components/contacts/TextBlastModal";
 import type { EventEntry, RosterPerson } from "@/lib/data/events";
 
@@ -48,6 +49,9 @@ export function EventRosterCard({ event, defaultOpen = false }: { event: EventEn
   const [markedAttended, setMarkedAttended] = useState<Set<string>>(new Set());
   const [marking, setMarking] = useState<string | null>(null);
   const [textTarget, setTextTarget] = useState<{ contactIds: string[]; label: string } | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   const people = event.people.map((p) => (markedAttended.has(p.contactId) ? { ...p, attended: true } : p));
   const filtered = people.filter((p) => matchesFilter(p, filter));
@@ -58,6 +62,19 @@ export function EventRosterCard({ event, defaultOpen = false }: { event: EventEn
     await markContactAttended(contactId, event.series, event.eventId);
     setMarking(null);
     router.refresh();
+  }
+
+  async function handleDelete() {
+    if (!event.eventId) return;
+    setDeleting(true);
+    setDeleteError("");
+    const result = await deleteEventByEventId(event.eventId);
+    if (result.ok) {
+      router.refresh();
+    } else {
+      setDeleting(false);
+      setDeleteError(result.error);
+    }
   }
 
   const showRate = event.counts.registered > 0 ? Math.round((event.counts.attended / event.counts.registered) * 100) : null;
@@ -214,6 +231,43 @@ export function EventRosterCard({ event, defaultOpen = false }: { event: EventEn
           <p className="border-t border-neutral-100 px-[18px] py-2.5 text-sm text-neutral-400">
             Registered but not checked in counts as a no-show until you mark them attended.
           </p>
+
+          {event.eventId && (
+            <div className="border-t border-neutral-100 px-[18px] py-3">
+              {confirmingDelete ? (
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <p className="text-sm text-neutral-600">
+                    Delete this event and its {people.length} {people.length === 1 ? "person" : "people"}? This can&apos;t be undone.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="rounded-[10px] bg-red-600 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+                  >
+                    {deleting ? "Deleting…" : "Delete"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingDelete(false)}
+                    disabled={deleting}
+                    className="rounded-[10px] border border-neutral-200 bg-white px-3 py-1.5 text-sm font-semibold text-neutral-700 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  {deleteError && <p className="w-full text-sm text-red-600">{deleteError}</p>}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmingDelete(true)}
+                  className="flex items-center gap-1.5 text-sm font-medium text-red-600"
+                >
+                  <Trash2 size={14} /> Remove this event (duplicate listing)
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
