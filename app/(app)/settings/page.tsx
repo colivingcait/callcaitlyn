@@ -12,6 +12,7 @@ import { WarmNotificationSettings } from "@/components/settings/WarmNotification
 import { GranolaConnect } from "@/components/settings/GranolaConnect";
 import { GranolaMatchingSettings } from "@/components/settings/GranolaMatchingSettings";
 import { RateManualEntry } from "@/components/settings/RateManualEntry";
+import { BacklogCleanup } from "@/components/settings/BacklogCleanup";
 import { RATE_PRODUCT } from "@/lib/crm/rate-feed";
 import { Card, Button } from "@/components/ui";
 import { Mail, BarChart3 } from "lucide-react";
@@ -132,6 +133,10 @@ export default async function SettingsPage({
 
       <Card>
         <RateManualEntry latestRatePct={latestRate?.rate_pct ?? null} latestRateDate={latestRate?.rate_date ?? null} />
+      </Card>
+
+      <Card>
+        <BacklogCleanup />
       </Card>
     </div>
   );
