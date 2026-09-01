@@ -1,21 +1,21 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { listStages, listTags } from "@/lib/data/contacts";
-import { StageManager } from "@/components/settings/StageManager";
-import { TagManager } from "@/components/settings/TagManager";
+import { PipelineStagesAndTags } from "@/components/settings/PipelineStagesAndTags";
+import { ConnectionsCard, type ConnectionRow } from "@/components/settings/ConnectionsCard";
+import { NotificationsCard } from "@/components/settings/NotificationsCard";
 import { GmailConnect } from "@/components/settings/GmailConnect";
 import { QuoSyncBackfill } from "@/components/settings/QuoSyncBackfill";
 import { EventbriteSyncBackfill } from "@/components/settings/EventbriteSyncBackfill";
 import { JotformSyncBackfill } from "@/components/settings/JotformSyncBackfill";
-import { PushNotifications } from "@/components/settings/PushNotifications";
-import { WarmNotificationSettings } from "@/components/settings/WarmNotificationSettings";
 import { GranolaConnect } from "@/components/settings/GranolaConnect";
 import { GranolaMatchingSettings } from "@/components/settings/GranolaMatchingSettings";
 import { RateManualEntry } from "@/components/settings/RateManualEntry";
-import { BacklogCleanup } from "@/components/settings/BacklogCleanup";
+import { DataRepairCard } from "@/components/settings/DataRepairCard";
+import { SignOutButton } from "@/components/nav/SignOutButton";
 import { RATE_PRODUCT } from "@/lib/crm/rate-feed";
 import { Card, Button } from "@/components/ui";
-import { Mail, BarChart3 } from "lucide-react";
+import { BarChart3, Download } from "lucide-react";
 
 export default async function SettingsPage({
   searchParams,
@@ -31,7 +31,7 @@ export default async function SettingsPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const [stages, tags, gmailAccount, warmSettings, granolaMatchingSettings, latestRate] = await Promise.all([
+  const [stages, tags, gmailAccount, warmSettings, granolaMatchingSettings, latestRate, stageCountRows] = await Promise.all([
     listStages(),
     listTags(),
     supabase.from("gmail_accounts").select("email_address").maybeSingle().then((r) => r.data),
@@ -45,11 +45,98 @@ export default async function SettingsPage({
       .limit(1)
       .maybeSingle()
       .then((r) => r.data),
+    supabase.from("contacts").select("stage_id").eq("archived", false).then((r) => r.data),
   ]);
 
+  const stageCounts: Record<string, number> = {};
+  for (const row of stageCountRows ?? []) {
+    if (!row.stage_id) continue;
+    stageCounts[row.stage_id] = (stageCounts[row.stage_id] ?? 0) + 1;
+  }
+
+  const connectionRows: ConnectionRow[] = [
+    {
+      key: "gmail",
+      name: "Gmail and Calendar",
+      description: "Email on each timeline, sending from a contact, Meet invites, sequences.",
+      status: gmailAccount ? "Connected" : "Not connected",
+      connected: !!gmailAccount,
+      manageContent: (
+        <div className="space-y-3">
+          <p className="text-[15px] leading-[22px] text-neutral-600">
+            Syncs email to and from contacts already in your CRM to their timeline, lets you send email and schedule Google Meet
+            invites from a contact&apos;s profile, and powers scheduled email sequences.
+          </p>
+          {gmailAccount && (
+            <p className="text-[13px] leading-5 text-amber-700">
+              Connected before Meet invites existed? Disconnect and reconnect once to grant calendar access.
+            </p>
+          )}
+          <GmailConnect connectedEmail={gmailAccount?.email_address ?? null} errorCode={params.gmail_error} />
+          <Link href="/sequences" className="block md:hidden">
+            <Button variant="secondary" size="sm">
+              Manage sequences
+            </Button>
+          </Link>
+        </div>
+      ),
+    },
+    {
+      key: "quo",
+      name: "Quo",
+      description: "Calls and texts log automatically. New contacts push back so calls show a name.",
+      status: process.env.QUO_API_KEY ? "Connected" : "Not set up",
+      connected: !!process.env.QUO_API_KEY,
+      manageContent: <QuoSyncBackfill />,
+    },
+    {
+      key: "granola",
+      name: "Granola",
+      description: "Meetings, in-person notes and phone memos become changes you approve.",
+      status: granolaWebhookUrl ? "Connected" : "Not set up",
+      connected: !!granolaWebhookUrl,
+      manageContent: (
+        <div className="space-y-3.5">
+          <GranolaConnect webhookUrl={granolaWebhookUrl} />
+          <div className="border-t border-neutral-100 pt-3.5">
+            <GranolaMatchingSettings settings={granolaMatchingSettings} />
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "eventbrite-jotform",
+      name: "Eventbrite and Jotform",
+      description: "Registrations and check-ins create or match contacts.",
+      status: process.env.EVENTBRITE_API_TOKEN ? "Connected" : "Not set up",
+      connected: !!process.env.EVENTBRITE_API_TOKEN,
+      manageContent: (
+        <div className="space-y-3.5">
+          <EventbriteSyncBackfill />
+          <JotformSyncBackfill />
+        </div>
+      ),
+    },
+    {
+      key: "calendly",
+      name: "Calendly",
+      description: "Built, needs setup.",
+      status: process.env.CALENDLY_API_TOKEN ? "Connected" : "Not set up",
+      connected: !!process.env.CALENDLY_API_TOKEN,
+      manageContent: (
+        <p className="text-[15px] leading-[22px] text-neutral-600">
+          See the README&apos;s &quot;Setting up Calendly&quot; section for the setup steps — nothing to configure here yet.
+        </p>
+      ),
+    },
+  ];
+
   return (
-    <div className="mx-auto max-w-2xl space-y-5 px-4 py-6">
-      <h1 className="font-serif text-2xl font-semibold text-neutral-900">Settings</h1>
+    <div className="mx-auto max-w-2xl space-y-3 px-4 py-6">
+      <div>
+        <h1 className="font-serif text-2xl font-semibold text-neutral-900">Settings</h1>
+        {user?.email && <p className="mt-1.5 text-[15px] leading-[22px] text-neutral-600">{user.email}</p>}
+      </div>
 
       <Link href="/reports" className="block md:hidden">
         <Button variant="secondary" size="sm">
@@ -57,87 +144,26 @@ export default async function SettingsPage({
         </Button>
       </Link>
 
-      {user && <StageManager stages={stages} ownerId={user.id} />}
-      {user && <TagManager tags={tags} ownerId={user.id} />}
+      {user && <PipelineStagesAndTags stages={stages} tags={tags} ownerId={user.id} stageCounts={stageCounts} />}
 
-      <Card className="space-y-3">
-        <h2 className="text-sm font-semibold text-neutral-700">Gmail &amp; Calendar</h2>
-        <p className="text-sm text-neutral-500">
-          Syncs email to and from contacts already in your CRM to their timeline, lets you send email and schedule
-          Google Meet invites from a contact&apos;s profile, and powers scheduled email sequences. Doesn&apos;t
-          touch anything else in your inbox — no marketing/spam classification needed since it only looks at mail
-          involving people you&apos;ve already added.
-        </p>
-        {gmailAccount && (
-          <p className="text-xs text-amber-700">
-            Connected before Meet invites existed? Disconnect and reconnect once to grant calendar access — until
-            then, scheduling a meeting will ask you to reconnect.
-          </p>
-        )}
-        <GmailConnect connectedEmail={gmailAccount?.email_address ?? null} errorCode={params.gmail_error} />
-        <Link href="/sequences" className="block md:hidden">
-          <Button variant="secondary" size="sm">
-            <Mail size={14} /> Manage sequences
-          </Button>
-        </Link>
-      </Card>
+      <ConnectionsCard rows={connectionRows} />
 
-      <Card className="space-y-3">
-        <h2 className="text-sm font-semibold text-neutral-700">Notifications</h2>
-        <PushNotifications vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY} />
-        <div className="border-t border-neutral-100 pt-3">
-          <WarmNotificationSettings settings={warmSettings} />
-        </div>
-      </Card>
-
-      <Card className="space-y-2 bg-neutral-50">
-        <h2 className="text-sm font-semibold text-neutral-700">Integrations</h2>
-        <p className="text-sm text-neutral-500">
-          Quo (calls/texts), Eventbrite, and Jotform are live — activity logs straight to each contact&apos;s
-          timeline automatically. New calls/texts/emails also get read by AI, which suggests stage/timeline
-          updates for you to approve on the contact page. Calendly is built, just needs setup (see the README).
-        </p>
-        <p className="text-sm text-neutral-500">
-          New and edited contacts with a phone number now push automatically into Quo, so calls and texts there
-          show a name instead of a raw number. Run this once to backfill everyone already in the CRM.
-        </p>
-        <QuoSyncBackfill />
-        <p className="text-sm text-neutral-500">
-          If a webhook was ever misconfigured or missing (like the House Hacking one just was), any registrations
-          it missed won&apos;t show up on their own. Run this to pull the last 90 days of orders from both
-          Eventbrite accounts and catch up anyone who fell through — safe to run anytime, existing contacts just
-          get matched instead of duplicated.
-        </p>
-        <EventbriteSyncBackfill />
-        <p className="text-sm text-neutral-500">
-          Same idea for Jotform check-ins — if the in-person kiosk missed logging someone (offline, secret
-          misconfigured, etc.), the Meetup show rate report undercounts. Run this to pull the last 6 months of
-          submissions and catch up anyone who fell through.
-        </p>
-        <JotformSyncBackfill />
-      </Card>
-
-      <Card className="space-y-3">
-        <h2 className="text-sm font-semibold text-neutral-700">Granola meetings &amp; notes</h2>
-        <p className="text-sm text-neutral-500">
-          Every meeting or note Granola captures — a video call, an in-person coffee, a quick phone memo — gets read
-          the same way a call is: proposed budget/timeline/note updates show up on that contact&apos;s page for you
-          to approve, each one quoting where it came from. Nothing writes to a contact until you say so, and
-          it&apos;s skipped entirely for anyone marked &ldquo;know personally.&rdquo;
-        </p>
-        <GranolaConnect webhookUrl={granolaWebhookUrl} />
-        <div className="border-t border-neutral-100 pt-3">
-          <GranolaMatchingSettings settings={granolaMatchingSettings} />
-        </div>
-      </Card>
+      <NotificationsCard warmSettings={warmSettings} vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY} />
 
       <Card>
         <RateManualEntry latestRatePct={latestRate?.rate_pct ?? null} latestRateDate={latestRate?.rate_date ?? null} />
       </Card>
 
-      <Card>
-        <BacklogCleanup />
-      </Card>
+      <DataRepairCard />
+
+      <div className="flex items-center gap-2.5 border-t border-neutral-100 pt-4">
+        <a href="/api/contacts/export">
+          <Button variant="secondary" size="sm">
+            <Download size={14} /> Export all contacts
+          </Button>
+        </a>
+        <SignOutButton className="rounded-xl border border-neutral-200 bg-white px-4 py-2.5 font-semibold" />
+      </div>
     </div>
   );
 }

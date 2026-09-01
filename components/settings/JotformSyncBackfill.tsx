@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { backfillJotformSubmissions } from "@/app/(app)/contacts/actions";
-import { Button } from "@/components/ui";
+import { BackfillRow } from "@/components/settings/BackfillRow";
 
 type Result = { label: string; submissions: number; contacts: number; error?: string };
 
@@ -18,19 +18,21 @@ export function JotformSyncBackfill() {
   }
 
   return (
-    <div className="space-y-2">
-      <Button size="sm" variant="secondary" onClick={run} disabled={running}>
-        {running ? "Syncing…" : "Sync recent Jotform check-ins"}
-      </Button>
-      {results && (
-        <ul className="space-y-0.5 text-xs text-neutral-500">
-          {results.map((r) => (
-            <li key={r.label}>
-              {r.label}: {r.error ? r.error : `${r.submissions} submission${r.submissions === 1 ? "" : "s"}, ${r.contacts} contact${r.contacts === 1 ? "" : "s"} synced`}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <BackfillRow
+      description="Pull the last 6 months of Jotform check-ins, in case the kiosk missed someone."
+      running={running}
+      onRun={run}
+      result={
+        results && (
+          <ul className="space-y-0.5">
+            {results.map((r) => (
+              <li key={r.label}>
+                {r.label}: {r.error ? r.error : `${r.submissions} submission${r.submissions === 1 ? "" : "s"}, ${r.contacts} contact${r.contacts === 1 ? "" : "s"} synced`}
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    />
   );
 }

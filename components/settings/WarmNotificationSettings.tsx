@@ -27,15 +27,21 @@ export function WarmNotificationSettings({ settings }: { settings: Settings | nu
 
   return (
     <div>
-      <p className="mb-2 text-sm text-neutral-500">
-        Pushed when someone&apos;s reading your emails without replying - quiet hours 9am-9pm, nothing fires outside that window.
+      <p className="text-[15px] leading-[23px] text-neutral-600">
+        Pushed when someone&apos;s reading your emails without replying. Nothing fires outside 9am–9pm.
       </p>
-      <div className="space-y-2">
+      <div className="mt-3.5 space-y-3.5">
         {RULES.map((rule) => (
-          <label key={rule.key} className="flex items-center gap-2.5 text-sm text-neutral-700">
-            <input type="checkbox" checked={values[rule.key]} onChange={() => toggle(rule.key)} className="h-4 w-4 rounded border-neutral-300" />
-            {rule.label}
-          </label>
+          <div key={rule.key} className="flex items-center gap-3.5">
+            <p className={`min-w-0 flex-1 text-[16px] leading-6 ${values[rule.key] ? "text-neutral-700" : "text-neutral-500"}`}>{rule.label}</p>
+            <button
+              type="button"
+              onClick={() => toggle(rule.key)}
+              className="shrink-0 rounded-[10px] border border-neutral-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-neutral-800"
+            >
+              {values[rule.key] ? "On" : "Off"}
+            </button>
+          </div>
         ))}
       </div>
     </div>

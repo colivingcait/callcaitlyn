@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { backfillEventbriteOrders } from "@/app/(app)/contacts/actions";
-import { Button } from "@/components/ui";
+import { BackfillRow } from "@/components/settings/BackfillRow";
 
 type Result = { label: string; orders: number; contacts: number; error?: string };
 
@@ -18,19 +18,21 @@ export function EventbriteSyncBackfill() {
   }
 
   return (
-    <div className="space-y-2">
-      <Button size="sm" variant="secondary" onClick={run} disabled={running}>
-        {running ? "Syncing…" : "Sync recent Eventbrite registrations"}
-      </Button>
-      {results && (
-        <ul className="space-y-0.5 text-xs text-neutral-500">
-          {results.map((r) => (
-            <li key={r.label}>
-              {r.label}: {r.error ? r.error : `${r.orders} order${r.orders === 1 ? "" : "s"}, ${r.contacts} contact${r.contacts === 1 ? "" : "s"} synced`}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <BackfillRow
+      description="Pull the last 90 days of Eventbrite orders from both accounts. Existing contacts get matched, not duplicated."
+      running={running}
+      onRun={run}
+      result={
+        results && (
+          <ul className="space-y-0.5">
+            {results.map((r) => (
+              <li key={r.label}>
+                {r.label}: {r.error ? r.error : `${r.orders} order${r.orders === 1 ? "" : "s"}, ${r.contacts} contact${r.contacts === 1 ? "" : "s"} synced`}
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    />
   );
 }

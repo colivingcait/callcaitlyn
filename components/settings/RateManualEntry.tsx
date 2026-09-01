@@ -24,16 +24,25 @@ export function RateManualEntry({ latestRatePct, latestRateDate }: { latestRateP
   }
 
   return (
-    <div>
-      <p className="text-sm font-semibold text-neutral-700">Today&apos;s 30-year rate</p>
-      <p className="mt-1 text-sm text-neutral-500">
-        {latestRatePct != null
-          ? `On file: ${latestRatePct}% as of ${formatLocal(latestRateDate!, "MMM d")}.`
-          : "Nothing on file yet - the rate-move alert on Insights needs at least two entries to compare."}{" "}
-        A free FRED API key pulls this automatically (see the README) - otherwise just type it in here whenever it moves.
-      </p>
-      <div className="mt-2 flex items-center gap-2">
-        <Input type="number" step="0.01" placeholder="6.5" value={value} onChange={(e) => setValue(e.target.value)} className="max-w-[120px]" />
+    <div className="flex items-center gap-4">
+      <div className="min-w-0 flex-1">
+        <p className="text-base font-semibold text-neutral-900">Today&apos;s 30-year rate</p>
+        <p className="mt-1.5 text-[15px] leading-[23px] text-neutral-600">
+          {latestRatePct != null
+            ? `${latestRatePct}% on file, as of ${formatLocal(latestRateDate!, "MMM d")}.`
+            : "Nothing on file yet - the rate-move alert on Insights needs at least two entries to compare."}{" "}
+          A FRED key pulls this automatically — otherwise type it in whenever it moves.
+        </p>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <Input
+          type="number"
+          step="0.01"
+          placeholder="6.5"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          className="w-[88px] text-[16px] font-semibold"
+        />
         <Button size="sm" onClick={handleSave} disabled={saving || !value}>
           {saving ? "Saving…" : saved ? "Saved" : "Save"}
         </Button>

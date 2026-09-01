@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { backfillQuoSync } from "@/app/(app)/contacts/actions";
-import { Button } from "@/components/ui";
+import { BackfillRow } from "@/components/settings/BackfillRow";
 
 export function QuoSyncBackfill() {
   const [running, setRunning] = useState(false);
@@ -16,17 +16,19 @@ export function QuoSyncBackfill() {
   }
 
   return (
-    <div className="space-y-2">
-      <Button size="sm" variant="secondary" onClick={run} disabled={running}>
-        {running ? "Syncing…" : status ? "Sync more" : "Sync contacts to Quo"}
-      </Button>
-      {status && (
-        <p className="text-xs text-neutral-500">
-          Synced {status.synced}
-          {status.failed > 0 && `, ${status.failed} failed`}.{" "}
-          {status.remaining > 0 ? `${status.remaining} left — click again to continue.` : "All caught up."}
-        </p>
-      )}
-    </div>
+    <BackfillRow
+      description="Push every contact with a phone number into Quo, so calls show a name."
+      running={running}
+      onRun={run}
+      result={
+        status && (
+          <>
+            Synced {status.synced}
+            {status.failed > 0 && `, ${status.failed} failed`}.{" "}
+            {status.remaining > 0 ? `${status.remaining} left — click again to continue.` : "All caught up."}
+          </>
+        )
+      }
+    />
   );
 }

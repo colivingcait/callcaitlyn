@@ -100,12 +100,12 @@ export function PushNotifications({ vapidPublicKey }: { vapidPublicKey: string |
   if (status === "checking") return null;
 
   if (status === "unsupported") {
-    return <p className="text-sm text-neutral-500">Push notifications aren&apos;t supported in this browser.</p>;
+    return <p className="text-[15px] leading-[23px] text-neutral-500">Push notifications aren&apos;t supported in this browser.</p>;
   }
 
   if (status === "needs-install") {
     return (
-      <p className="text-sm text-neutral-500">
+      <p className="text-[15px] leading-[23px] text-neutral-500">
         On iPhone, add CallCaitlyn to your Home Screen first (Share → Add to Home Screen), then come back here to turn on
         notifications.
       </p>
@@ -114,25 +114,30 @@ export function PushNotifications({ vapidPublicKey }: { vapidPublicKey: string |
 
   if (status === "denied") {
     return (
-      <p className="text-sm text-neutral-500">
+      <p className="text-[15px] leading-[23px] text-neutral-500">
         Notifications are blocked for this site in your browser settings. Enable them there, then reload this page.
       </p>
     );
   }
 
   return (
-    <div>
-      <p className="mb-2 text-sm text-neutral-500">Get a push notification the moment a new lead comes in from Eventbrite or Calendly.</p>
+    <div className="flex items-center gap-3.5">
+      <p className="min-w-0 flex-1 text-[16px] leading-6 text-neutral-700">Push on this device</p>
       {status === "on" ? (
         <Button variant="secondary" size="sm" onClick={disable} disabled={busy}>
-          <BellOff size={14} /> {busy ? "Turning off…" : "Turn off notifications"}
+          <BellOff size={14} /> {busy ? "Turning off…" : "Turn off"}
         </Button>
       ) : (
-        <Button size="sm" onClick={enable} disabled={busy}>
-          <Bell size={14} /> {busy ? "Enabling…" : "Enable notifications on this device"}
-        </Button>
+        <button
+          type="button"
+          onClick={enable}
+          disabled={busy}
+          className="inline-flex shrink-0 items-center gap-2 rounded-[10px] border-0 bg-neutral-900 px-3.5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+        >
+          <Bell size={14} /> {busy ? "Turning on…" : "Turn on"}
+        </button>
       )}
-      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+      {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Button, Input, Card, Select } from "@/components/ui";
+import { Button, Input, Select } from "@/components/ui";
 import { ArrowUp, ArrowDown, Trash2, Plus } from "lucide-react";
 import type { PipelineStage } from "@/types/database";
 
@@ -17,7 +17,7 @@ function statusOf(stage: PipelineStage): "active" | "closed" | "trash" {
   return "active";
 }
 
-export function StageManager({ stages, ownerId }: { stages: PipelineStage[]; ownerId: string }) {
+export function StageManager({ stages, ownerId, stageCounts }: { stages: PipelineStage[]; ownerId: string; stageCounts?: Record<string, number> }) {
   const router = useRouter();
   const [newName, setNewName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -91,18 +91,18 @@ export function StageManager({ stages, ownerId }: { stages: PipelineStage[]; own
   }
 
   return (
-    <Card className="space-y-3">
-      <h2 className="text-sm font-semibold text-neutral-700">Pipeline stages</h2>
-      <p className="text-xs text-neutral-400">
+    <div>
+      <p className="text-[16px] font-semibold text-neutral-900">Pipeline stages</p>
+      <p className="mt-1.5 text-[15px] leading-[22px] text-neutral-500">
         &quot;Active&quot; vs &quot;Closed&quot; controls who counts as an active lead on your dashboard and in
         metrics — mark any stage that means the relationship is done as Closed. &quot;Trash&quot; is for
         contacts who were never a real lead (spam, wrong number) — moving a contact into a Trash stage
         archives them and removes them from metrics entirely. Flag one active stage as &quot;Under Contract&quot;
         to get a details prompt (address, price, etc.) the moment a deal goes pending, before it actually closes.
       </p>
-      <div className="space-y-2">
+      <div className="mt-3 space-y-2.5">
         {sorted.map((stage, i) => (
-          <div key={stage.id} className="flex flex-wrap items-center gap-2">
+          <div key={stage.id} className="flex flex-wrap items-center gap-2.5 border-b border-neutral-100 pb-2.5 last:border-b-0 last:pb-0">
             <input
               type="color"
               value={stage.color}
@@ -112,35 +112,40 @@ export function StageManager({ stages, ownerId }: { stages: PipelineStage[]; own
             <Input
               defaultValue={stage.name}
               onBlur={(e) => e.target.value !== stage.name && updateStage(stage.id, { name: e.target.value })}
-              className="min-w-[7rem] flex-1"
+              className="min-w-[7rem] flex-1 font-medium"
             />
+            {stageCounts && (
+              <span className="shrink-0 text-[15px] text-neutral-500">
+                {stageCounts[stage.id] ?? 0} {(stageCounts[stage.id] ?? 0) === 1 ? "person" : "people"}
+              </span>
+            )}
             <Select
               value={statusOf(stage)}
               onChange={(e) => setStatus(stage, e.target.value as "active" | "closed" | "trash")}
-              className="w-auto shrink-0 text-xs"
+              className="w-auto shrink-0 text-[15px]"
             >
               <option value="active">Active</option>
               <option value="closed">Closed</option>
               <option value="trash">Trash</option>
             </Select>
             {isClosed(stage) && (
-              <label className="flex shrink-0 items-center gap-1.5 text-xs text-neutral-500">
+              <label className="flex shrink-0 items-center gap-1.5 text-[15px] text-neutral-600">
                 <input
                   type="checkbox"
                   checked={stage.is_closed_won}
                   onChange={(e) => setWon(stage, e.target.checked)}
-                  className="h-3.5 w-3.5 rounded border-neutral-300"
+                  className="h-4 w-4 rounded border-neutral-300"
                 />
                 Win
               </label>
             )}
             {statusOf(stage) === "active" && (
-              <label className="flex shrink-0 items-center gap-1.5 text-xs text-neutral-500">
+              <label className="flex shrink-0 items-center gap-1.5 text-[15px] text-neutral-600">
                 <input
                   type="checkbox"
                   checked={stage.is_under_contract}
                   onChange={(e) => setUnderContract(stage, e.target.checked)}
-                  className="h-3.5 w-3.5 rounded border-neutral-300"
+                  className="h-4 w-4 rounded border-neutral-300"
                 />
                 Under Contract
               </label>
@@ -165,12 +170,12 @@ export function StageManager({ stages, ownerId }: { stages: PipelineStage[]; own
           </div>
         ))}
       </div>
-      <form onSubmit={addStage} className="flex gap-2 pt-2">
+      <form onSubmit={addStage} className="mt-3 flex gap-2">
         <Input placeholder="New stage name" value={newName} onChange={(e) => setNewName(e.target.value)} />
         <Button type="submit" size="sm" disabled={saving}>
           <Plus size={15} /> Add
         </Button>
       </form>
-    </Card>
+    </div>
   );
 }
