@@ -1,12 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parseGranolaEvent } from "@/lib/granola/parse-event";
 import { fetchGranolaNote } from "@/lib/granola/client";
-import { matchByCalendarEventId, matchByAttendeeEmail } from "@/lib/crm/meeting-match";
-import { findNameCandidates, matchByRememberedName, getGranolaMatchingRules } from "@/lib/crm/note-name-match";
-import { createOrGetTranscript, runExtraction } from "@/lib/data/meeting-transcripts";
-import type { TranscriptParticipant } from "@/types/database";
+import { processGranolaNote } from "@/lib/granola/process-note";
 
 const OWNER_ID = process.env.CRM_OWNER_USER_ID;
 
@@ -90,66 +86,7 @@ export async function POST(request: NextRequest) {
       fetchedNote = note;
     }
 
-    const rules = await getGranolaMatchingRules(admin, OWNER_ID);
-
-    // A video meeting (Zoom/Meet/Teams) carries a calendar event id the
-    // same way a Tactiq meeting did - match on that first (toggle-gated).
-    // An in-person coffee or a phone call has neither, and falls through
-    // to the attendee-email match, then a remembered "That's her" name,
-    // then a live name-in-note match if exactly one contact's full name
-    // shows up in the transcript (also toggle-gated - an ambiguous 2+
-    // match is deliberately left unmatched for the Notes inbox to ask
-    // about, never auto-resolved to a guess).
-    let contactId =
-      (rules.match_on_calendar_event && event.calendarEventId ? await matchByCalendarEventId(admin, OWNER_ID, event.calendarEventId) : null) ??
-      (await matchByAttendeeEmail(
-        admin,
-        OWNER_ID,
-        event.participants.map((p) => p.email).filter((e): e is string => !!e),
-      )) ??
-      (await matchByRememberedName(admin, OWNER_ID, event.transcript));
-
-    if (!contactId && rules.match_on_name_when_single) {
-      const { data: contacts } = await admin.from("contacts").select("id, first_name, last_name").eq("owner_id", OWNER_ID).eq("archived", false);
-      const candidates = findNameCandidates(contacts ?? [], event.transcript);
-      if (candidates.length === 1) contactId = candidates[0].id;
-    }
-
-    const participants: TranscriptParticipant[] = await Promise.all(
-      event.participants.map(async (p) => {
-        if (!p.email) return { name: p.name, email: null, isContact: false, contactId: null };
-        const matchedId = await matchByAttendeeEmail(admin, OWNER_ID, [p.email]);
-        return { name: p.name, email: p.email, isContact: !!matchedId, contactId: matchedId };
-      }),
-    );
-
-    const { id: transcriptId, wasCreated } = await createOrGetTranscript(admin, {
-      ownerId: OWNER_ID,
-      contactId,
-      source: "granola",
-      externalId: event.noteId,
-      rawPayload: fetchedNote ? { webhook: body, note: fetchedNote } : body,
-      participants,
-      durationSeconds: event.durationSeconds,
-      occurredAt: event.occurredAt,
-    });
-
-    if (!wasCreated) return NextResponse.json({ received: true });
-
-    // Unmatched (in-person coffee, phone call, or a video meeting nobody
-    // recognized) - still saved, surfaces in the Notes inbox once that
-    // ships, nothing lost either way.
-    if (!contactId) return NextResponse.json({ received: true });
-
-    const { data: contact } = await admin.from("contacts").select("known_personally").eq("id", contactId).maybeSingle();
-    if (contact?.known_personally) {
-      await admin.from("meeting_transcripts").update({ status: "no_proposals" }).eq("id", transcriptId);
-      return NextResponse.json({ received: true });
-    }
-
-    const transcriptText = event.transcript;
-    const participantNames = event.participants.map((p) => p.name).filter((n): n is string => !!n);
-    after(() => runExtraction(admin, OWNER_ID, transcriptId, contactId, transcriptText, participantNames));
+    await processGranolaNote(admin, OWNER_ID, event, fetchedNote ? { webhook: body, note: fetchedNote } : body);
 
     return NextResponse.json({ received: true });
   } catch (err) {

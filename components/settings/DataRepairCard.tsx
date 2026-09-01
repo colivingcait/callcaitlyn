@@ -2,6 +2,7 @@ import { Section } from "@/components/ui/Section";
 import { EventbriteSyncBackfill } from "@/components/settings/EventbriteSyncBackfill";
 import { JotformSyncBackfill } from "@/components/settings/JotformSyncBackfill";
 import { QuoSyncBackfill } from "@/components/settings/QuoSyncBackfill";
+import { GranolaSyncBackfill } from "@/components/settings/GranolaSyncBackfill";
 import { BacklogCleanup } from "@/components/settings/BacklogCleanup";
 import { EventOrdersCsvImport } from "@/components/settings/EventOrdersCsvImport";
 
@@ -16,6 +17,7 @@ export function DataRepairCard() {
         <EventbriteSyncBackfill />
         <JotformSyncBackfill />
         <QuoSyncBackfill />
+        <GranolaSyncBackfill />
         <BacklogCleanup />
       </div>
     </Section>

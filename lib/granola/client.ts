@@ -17,10 +17,12 @@ export type GranolaNote = {
   title: string | null;
   summary: string | null;
   transcriptText: string | null;
-  // The docs' quick-start example elides most of the Get Note response
-  // behind "..." - whether it carries calendar/attendee fields at all
-  // (and under what name) isn't confirmed, so these are read defensively
-  // across a few plausible key names, same posture as parse-event.ts.
+  // The docs' quick-start example elides most of the Get Note/List Notes
+  // response behind "..." - whether it carries calendar/attendee/date
+  // fields at all (and under what name) isn't confirmed, so these are read
+  // defensively across a few plausible key names, same posture as
+  // parse-event.ts.
+  occurredAt: string | null;
   calendarEventId: string | null;
   participants: { name: string | null; email: string | null }[];
 };
@@ -95,6 +97,7 @@ export async function fetchGranolaNote(noteId: string): Promise<GranolaNote | nu
       title: asString(note.title),
       summary: asString(note.summary),
       transcriptText: turnsToText(turns),
+      occurredAt: asString(pick(note, "created_at", "createdAt", "occurred_at", "date")),
       calendarEventId: asString(pick(note, "calendar_event_id", "google_calendar_event_id", "calendarEventId")),
       participants: parseParticipants(note),
     };
@@ -108,7 +111,38 @@ export async function fetchGranolaNote(noteId: string): Promise<GranolaNote | nu
     title: asString(note.title),
     summary: asString(note.summary),
     transcriptText: turnsToText(note.transcript),
+    occurredAt: asString(pick(note, "created_at", "createdAt", "occurred_at", "date")),
     calendarEventId: asString(pick(note, "calendar_event_id", "google_calendar_event_id", "calendarEventId")),
     participants: parseParticipants(note),
   };
+}
+
+// For the manual "sync recent notes" backfill button in Settings - lists
+// note ids created since a given time, paginating via the cursor the docs
+// describe, then each id gets fetched individually with fetchGranolaNote
+// above (which already handles the 413/404 cases) rather than trying to
+// parse a second, differently-shaped bulk response - simpler and reuses
+// already-tested code, at the cost of one extra request per note, which is
+// fine at this account's note volume and well under Granola's documented
+// rate limit (300/minute).
+export async function listGranolaNoteIds(createdAfter: string): Promise<string[]> {
+  const ids: string[] = [];
+  let cursor: string | undefined;
+
+  do {
+    const qs = new URLSearchParams({ created_after: createdAfter });
+    if (cursor) qs.set("cursor", cursor);
+    const res = await granolaFetch(`/notes?${qs.toString()}`);
+    if (!res.ok) throw new Error(`Granola API error listing notes (${res.status}): ${await res.text()}`);
+
+    const body = await res.json();
+    const notes = Array.isArray(body?.notes) ? body.notes : [];
+    for (const n of notes) {
+      const id = asString(n?.id);
+      if (id) ids.push(id);
+    }
+    cursor = body?.hasMore ? (asString(body?.cursor) ?? undefined) : undefined;
+  } while (cursor);
+
+  return ids;
 }

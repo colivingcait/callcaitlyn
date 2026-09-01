@@ -12,6 +12,9 @@ import { fetchOrganizationId, fetchRecentOrders } from "@/lib/eventbrite/client"
 import { processEventbriteOrder } from "@/lib/eventbrite/process-order";
 import { fetchRecentSubmissions } from "@/lib/jotform/client";
 import { processJotformSubmission, type JotformFormEvent } from "@/lib/jotform/process-submission";
+import { listGranolaNoteIds, fetchGranolaNote } from "@/lib/granola/client";
+import { processGranolaNote } from "@/lib/granola/process-note";
+import type { GranolaNoteEvent } from "@/lib/granola/parse-event";
 import type { ParsedContactRow } from "@/lib/crm/bulk-import-contacts";
 
 const QUO_BACKFILL_BATCH_SIZE = 25;
@@ -19,6 +22,7 @@ const EVENTBRITE_BACKFILL_LOOKBACK_DAYS = 90;
 // Bigger window than Eventbrite's - the show-rate report showed check-ins
 // missing as far back as several months, not just weeks.
 const JOTFORM_BACKFILL_LOOKBACK_DAYS = 180;
+const GRANOLA_BACKFILL_LOOKBACK_DAYS = 90;
 
 export async function sendTextToContact(contactId: string, toNumber: string, body: string) {
   const supabase = await createClient();
@@ -285,4 +289,65 @@ export async function backfillJotformSubmissions() {
   }
 
   return { ok: true as const, results };
+}
+
+// Manual "sync recent notes" button in Settings for whenever the live
+// Granola webhook missed a note (never fired at all, or fired before the
+// note had a generated transcript and no later event followed up).
+// Reuses processGranolaNote - the same match/create/extract logic the
+// webhook itself calls - so this can't drift from live behavior, and
+// createOrGetTranscript's own dedupe on (owner, source, note id) makes
+// re-running this safe: an already-synced note is a no-op, not a
+// duplicate.
+export async function backfillGranolaNotes() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  if (!process.env.GRANOLA_API_KEY) return { ok: false as const, error: "GRANOLA_API_KEY is not configured" };
+
+  const admin = createAdminClient();
+  const since = new Date(Date.now() - GRANOLA_BACKFILL_LOOKBACK_DAYS * 24 * 60 * 60 * 1000).toISOString();
+
+  let noteIds: string[];
+  try {
+    noteIds = await listGranolaNoteIds(since);
+  } catch (err) {
+    return { ok: false as const, error: err instanceof Error ? err.message : "Unknown error" };
+  }
+
+  let processed = 0;
+  let notReady = 0;
+  let failed = 0;
+
+  for (const noteId of noteIds) {
+    let note;
+    try {
+      note = await fetchGranolaNote(noteId);
+    } catch {
+      failed++;
+      continue;
+    }
+    if (!note || !note.transcriptText) {
+      notReady++;
+      continue;
+    }
+
+    const event: GranolaNoteEvent = {
+      noteId,
+      title: note.title ?? "Meeting",
+      transcript: note.transcriptText,
+      occurredAt: note.occurredAt ?? new Date().toISOString(),
+      durationSeconds: null,
+      calendarEventId: note.calendarEventId,
+      participants: note.participants,
+    };
+
+    await processGranolaNote(admin, user.id, event, { note });
+    processed++;
+  }
+
+  return { ok: true as const, notes: noteIds.length, processed, notReady, failed };
 }
