@@ -13,6 +13,7 @@ import {
   BarChart3,
   Settings,
   NotebookText,
+  UserPlus,
   type LucideIcon,
 } from "lucide-react";
 
@@ -45,6 +46,7 @@ export const BUSINESS_ITEMS: NavItem[] = [
   { href: "/sequences", label: "Campaigns", icon: Mail },
   { href: "/numbers", label: "Numbers", icon: Calculator },
   { href: "/commissions", label: "Commissions", icon: DollarSign },
+  { href: "/recruiting", label: "Agent recruiting", icon: UserPlus },
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
