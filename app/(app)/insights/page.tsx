@@ -32,7 +32,7 @@ export default async function InsightsPage() {
       <div className="mt-5 space-y-3">
         {data.leases.length > 0 && (
           <InsightCard
-            icon={Calendar}
+            icon={<Calendar size={18} />}
             title={`${data.leases.length} lease${data.leases.length === 1 ? "" : "s"} end${data.leases.length === 1 ? "s" : ""} within 90 days`}
             subtitle={data.leases.map((l) => l.name).join(", ")}
             defaultOpen
@@ -43,7 +43,7 @@ export default async function InsightsPage() {
 
         {rateMoves ? (
           <InsightCard
-            icon={TrendingDown}
+            icon={<TrendingDown size={18} />}
             title={`Rates ${rateMoves.currentRatePct < rateMoves.previousRatePct ? "fell" : "rose"} to ${formatPercent(rateMoves.currentRatePct, 3)}`}
             subtitle={`Down from ${formatPercent(rateMoves.previousRatePct, 3)} · ${rateMoves.moves.length} ${rateMoves.moves.length === 1 ? "person" : "people"} you quoted a payment to ${rateMoves.moves.length === 1 ? "is" : "are"} now looking at a smaller one`}
           >
@@ -55,12 +55,12 @@ export default async function InsightsPage() {
             </p>
           </InsightCard>
         ) : (
-          <InsightCard icon={TrendingDown} title="Rates" subtitle="Nothing to compare yet - add today's rate in Settings." expandable={false} muted />
+          <InsightCard icon={<TrendingDown size={18} />} title="Rates" subtitle="Nothing to compare yet - add today's rate in Settings." expandable={false} muted />
         )}
 
         {data.warmCount > 0 && (
           <InsightCard
-            icon={Eye}
+            icon={<Eye size={18} />}
             title={`${data.warmCount} ${data.warmCount === 1 ? "person is" : "people are"} paying attention`}
             subtitle="Opened what you sent them more than once this week"
             action={
@@ -86,7 +86,7 @@ export default async function InsightsPage() {
 
         {data.coldHot.length > 0 && (
           <InsightCard
-            icon={Flame}
+            icon={<Flame size={18} />}
             title={`${data.coldHot.length} Hot / Ready gone quiet 30+ days`}
             subtitle={data.coldHot.map((c) => c.name).join(", ")}
             expandable={false}
@@ -101,7 +101,7 @@ export default async function InsightsPage() {
 
         {data.regularsNeverCalled.length > 0 && (
           <InsightCard
-            icon={Users}
+            icon={<Users size={18} />}
             title={`${data.regularsNeverCalled.length} regulars never had a phone call`}
             subtitle="Two or more meetups - your warmest untouched group"
             onDismiss={dismissCard.bind(null, "regulars_never_called")}
@@ -112,7 +112,7 @@ export default async function InsightsPage() {
 
         {data.pastClientsTwoYears.length > 0 && (
           <InsightCard
-            icon={Clock}
+            icon={<Clock size={18} />}
             title={`${data.pastClientsTwoYears.length} past clients passed two years`}
             subtitle="The point where people start thinking about the next one"
             onDismiss={dismissCard.bind(null, "past_clients_two_years")}
@@ -125,7 +125,7 @@ export default async function InsightsPage() {
 
         {(data.noPhoneCount > 0 || data.duplicatePairs.length > 0) && (
           <InsightCard
-            icon={AlertTriangle}
+            icon={<AlertTriangle size={18} />}
             title="Two data problems worth ten minutes"
             subtitle={[
               data.noPhoneCount > 0 ? `${data.noPhoneCount} with no phone number` : null,
@@ -152,7 +152,7 @@ export default async function InsightsPage() {
 
         {data.registeredNoFollowUp.length > 0 && (
           <InsightCard
-            icon={UserPlus}
+            icon={<UserPlus size={18} />}
             title={`${data.registeredNoFollowUp.length} registered and haven't heard from you`}
             subtitle="Signed up for an event, no call/text/email since - the widest gap in the funnel right now"
             expandable={false}

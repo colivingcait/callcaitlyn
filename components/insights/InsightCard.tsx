@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, X, type LucideIcon } from "lucide-react";
+import { ChevronDown, ChevronRight, X } from "lucide-react";
 
 export function InsightCard({
-  icon: Icon,
+  icon,
   title,
   subtitle,
   expandable = true,
@@ -14,7 +14,7 @@ export function InsightCard({
   muted = false,
   children,
 }: {
-  icon: LucideIcon;
+  icon: React.ReactNode;
   title: string;
   subtitle?: string;
   expandable?: boolean;
@@ -41,7 +41,7 @@ export function InsightCard({
   return (
     <div className={`overflow-hidden rounded-2xl border border-[#ebe9e7] bg-white ${muted ? "opacity-60" : ""}`}>
       <div className="flex items-center gap-3 px-[18px] py-4">
-        <Icon size={18} className="mt-0.5 shrink-0 text-neutral-500" />
+        <span className="mt-0.5 shrink-0 text-neutral-500">{icon}</span>
         <button
           type="button"
           onClick={() => expandable && setOpen((v) => !v)}
