@@ -13,7 +13,12 @@ export type ContactType =
   | "past_client"
   | "sphere"
   | "attendee"
+  | "agent"
   | "other";
+
+// null (on Contact.recruit_stage) = top of funnel, "Introduced" - every
+// agent-type contact by default, no separate value stored for it.
+export type RecruitStage = "connected_with_lead" | "joined" | "fee_received" | "not_moving_forward";
 
 export type Timeline =
   | "asap"
@@ -177,6 +182,10 @@ export interface Contact {
   consent_at: string | null;
   opted_out_at: string | null;
   lead_date: string;
+  recruit_stage: RecruitStage | null;
+  referral_fee: number | null;
+  recruit_joined_at: string | null;
+  recruit_fee_received_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -514,21 +523,3 @@ export interface QuoteView {
   user_agent: string | null;
 }
 
-export type AgentRecruitStage = "introduced" | "connected_with_lead" | "joined" | "fee_received" | "not_moving_forward";
-
-export interface AgentRecruit {
-  id: string;
-  owner_id: string;
-  first_name: string;
-  last_name: string;
-  phone: string | null;
-  email: string | null;
-  current_brokerage: string | null;
-  notes: string | null;
-  stage: AgentRecruitStage;
-  referral_fee: number | null;
-  joined_at: string | null;
-  fee_received_at: string | null;
-  created_at: string;
-  updated_at: string;
-}

@@ -3,21 +3,21 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { changeRecruitStage } from "@/app/(app)/recruiting/actions";
-import { AGENT_RECRUIT_STAGES } from "@/lib/crm/agent-recruit-stages";
-import type { AgentRecruitStage } from "@/types/database";
+import { AGENT_RECRUIT_STAGES, recruitStageKey } from "@/lib/crm/agent-recruit-stages";
+import type { RecruitStage } from "@/types/database";
 
 // Same "Move to..." dropdown shape as Pipeline's MoveToMenu - the only
-// side effect a stage change here needs (stamping joined_at/
-// fee_received_at) lives in changeRecruitStage itself, not this menu.
-export function MoveRecruitStageMenu({ recruitId, currentStage }: { recruitId: string; currentStage: AgentRecruitStage }) {
+// side effect a stage change here needs (stamping recruit_joined_at/
+// recruit_fee_received_at) lives in changeRecruitStage itself.
+export function MoveRecruitStageMenu({ contactId, currentStage }: { contactId: string; currentStage: RecruitStage | null }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  async function move(stage: AgentRecruitStage) {
+  async function move(stage: RecruitStage | null) {
     setOpen(false);
     setBusy(true);
-    await changeRecruitStage(recruitId, stage);
+    await changeRecruitStage(contactId, stage);
     setBusy(false);
     router.refresh();
   }
@@ -50,9 +50,9 @@ export function MoveRecruitStageMenu({ recruitId, currentStage }: { recruitId: s
             className="fixed inset-0 z-30 cursor-default"
           />
           <div className="absolute right-0 top-full z-40 mt-1 w-56 overflow-y-auto rounded-xl border border-neutral-200 bg-white py-1 shadow-lg">
-            {AGENT_RECRUIT_STAGES.filter((s) => s.value !== currentStage).map((s) => (
+            {AGENT_RECRUIT_STAGES.filter((s) => recruitStageKey(s.value) !== recruitStageKey(currentStage)).map((s) => (
               <button
-                key={s.value}
+                key={recruitStageKey(s.value)}
                 type="button"
                 onClick={(e) => {
                   e.preventDefault();

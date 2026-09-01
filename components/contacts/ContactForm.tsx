@@ -20,11 +20,13 @@ export function ContactForm({
   stages,
   tags,
   existingContacts = [],
+  defaultContactType,
 }: {
   contact?: ContactWithRelations;
   stages: PipelineStage[];
   tags: Tag[];
   existingContacts?: MergeCandidate[];
+  defaultContactType?: ContactFormValues["contact_type"];
 }) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
@@ -56,6 +58,7 @@ export function ContactForm({
           lead_date: contact.lead_date ? contact.lead_date.slice(0, 10) : "",
           budget_min: contact.budget_min ?? undefined,
           budget_max: contact.budget_max ?? undefined,
+          referral_fee: contact.referral_fee ?? undefined,
           areas_of_interest: (contact.areas_of_interest ?? []).join(", "),
           timeline: contact.timeline,
           next_follow_up_at: contact.next_follow_up_at ? contact.next_follow_up_at.slice(0, 10) : "",
@@ -68,7 +71,7 @@ export function ContactForm({
           notes: contact.notes ?? "",
         }
       : {
-          contact_type: "buyer",
+          contact_type: defaultContactType ?? "buyer",
           representing: "buyer",
           timeline: "unknown",
           stage_id: stages[0]?.id ?? null,
@@ -77,6 +80,8 @@ export function ContactForm({
 
   const representing = watch("representing");
   const showListingFields = representing === "seller" || representing === "both";
+  const watchedContactType = watch("contact_type");
+  const showReferralFee = watchedContactType === "agent";
 
   const watchedEmail = watch("email");
   const watchedPhone = watch("phone");
@@ -139,6 +144,7 @@ export function ContactForm({
       state: values.state || null,
       postal_code: values.postal_code || null,
       notes: values.notes || null,
+      referral_fee: values.referral_fee && !Number.isNaN(values.referral_fee) ? values.referral_fee : null,
     };
 
     let contactId = contact?.id;
@@ -247,6 +253,15 @@ export function ContactForm({
             </Select>
           </div>
         </div>
+        {showReferralFee && (
+          <div>
+            <Label htmlFor="referral_fee">Referral fee</Label>
+            <Input id="referral_fee" type="number" inputMode="decimal" step="0.01" {...register("referral_fee")} placeholder="Fill in once it's agreed" />
+            <p className="mt-1 text-xs text-neutral-400">
+              What the team lead pays if this agent joins the office - shows up on Agent recruiting once known.
+            </p>
+          </div>
+        )}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <Label htmlFor="representing">Representing</Label>
