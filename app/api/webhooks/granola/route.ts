@@ -36,6 +36,16 @@ export async function POST(request: NextRequest) {
   const admin = createAdminClient();
 
   try {
+    // Confirmed from a real delivery: Granola's own connectivity check from
+    // its webhook settings page ("Test it" there, not this app's Settings
+    // button) sends {event_type: "webhook.test", event_id, occurred_at} -
+    // no note_id, on purpose, since it isn't about a real note. Treating
+    // that as a malformed payload made Granola's own dashboard show every
+    // connectivity test as a failure.
+    if (body.event_type === "webhook.test") {
+      return NextResponse.json({ received: true });
+    }
+
     const event = parseGranolaEvent(body);
 
     if (!event.noteId) {
