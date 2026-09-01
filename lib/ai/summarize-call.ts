@@ -102,13 +102,14 @@ const EXTRACTION_TOOL = {
           properties: {
             field: {
               type: "string",
-              enum: ["budget", "timeline", "areas_of_interest", "decision_maker", "objection", "note", "task", "stage", "showing"],
+              enum: ["budget", "timeline", "areas_of_interest", "decision_maker", "objection", "note", "task", "stage", "showing", "tag"],
               description:
-                "budget: a range or ceiling was stated. timeline: buying/selling timeframe. areas_of_interest: a neighborhood/area they're interested in (one per proposal, never replaces existing areas). decision_maker: who else is involved in the decision and what they control. objection: a concern or hesitation, captured close to verbatim. note: anything else worth keeping on the record that doesn't fit another field (pre-approval details, property type, bedroom/must-have preferences, etc). task: something the agent committed to doing, with a due date if one was stated or clearly implied. stage: only when the pipeline stage should clearly change - omit rather than guess. showing: the agent showed this person a specific property in person - use the property's address as the text.",
+                "budget: a range or ceiling was stated. timeline: buying/selling timeframe. areas_of_interest: a neighborhood/area they're interested in (one per proposal, never replaces existing areas). decision_maker: who else is involved in the decision and what they control. objection: a concern or hesitation, captured close to verbatim. note: anything else worth keeping on the record that doesn't fit another field (pre-approval details, property type, bedroom/must-have preferences, etc). task: something the agent committed to doing, with a due date if one was stated or clearly implied. stage: only when the pipeline stage should clearly change - omit rather than guess. showing: the agent showed this person a specific property in person - use the property's address as the text. tag: the conversation clearly justifies one of the provided existing tag names (e.g. they mention getting licensed and wanting to join the team -> \"Agent\") - text_value must exactly match a name from the provided tag list, never a new name.",
             },
             text_value: {
               type: ["string", "null"],
-              description: "The proposed text for decision_maker, objection, note, a single area name for areas_of_interest, or the property address for showing.",
+              description:
+                "The proposed text for decision_maker, objection, note, a single area name for areas_of_interest, the property address for showing, or the exact existing tag name for tag.",
             },
             budget_min: { type: ["number", "null"] },
             budget_max: { type: ["number", "null"] },
@@ -154,6 +155,7 @@ export type TranscriptContext = {
   currentAreasOfInterest: string[];
   currentStageName: string;
   availableStageNames: string[];
+  availableTagNames: string[];
   participantNames?: string[];
 };
 
@@ -188,6 +190,7 @@ What's already on ${context.contactName}'s record:
 ${context.participantNames?.length ? `- Other people on this call/meeting: ${context.participantNames.join(", ")}` : ""}
 
 Available pipeline stages (a "stage" proposal's stage_name must exactly match one of these): ${context.availableStageNames.join(", ")}
+Available tags (a "tag" proposal's text_value must exactly match one of these, or omit the proposal entirely if none fit): ${context.availableTagNames.length ? context.availableTagNames.join(", ") : "none set up yet"}
 
 Transcript:
 """

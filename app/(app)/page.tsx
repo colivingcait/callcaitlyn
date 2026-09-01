@@ -1,6 +1,6 @@
 import { getTodayData } from "@/lib/data/today";
 import { dismissReplyOwed } from "@/app/(app)/today-actions";
-import { listMergeCandidates } from "@/lib/data/contacts";
+import { listMergeCandidates, listTags } from "@/lib/data/contacts";
 import { createClient } from "@/lib/supabase/server";
 import { formatLocal } from "@/lib/format-time";
 import { Section } from "@/components/ui/Section";
@@ -25,12 +25,14 @@ export default async function TodayPage() {
     },
     today,
     contacts,
+    tags,
     { data: pinnedWeeklyReview },
     { data: pinnedPrepSheets },
   ] = await Promise.all([
     supabase.auth.getUser(),
     getTodayData(),
     listMergeCandidates(),
+    listTags(),
     supabase.from("pinned_today_items").select("id, payload").eq("kind", "weekly_review").is("cleared_at", null).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("pinned_today_items").select("id, payload").eq("kind", "prep_sheet").is("cleared_at", null).order("created_at", { ascending: false }).limit(5),
   ]);
@@ -96,6 +98,7 @@ export default async function TodayPage() {
                 contactCreatedAt={s.contactCreatedAt}
                 representing={s.representing}
                 stages={today.stages}
+                tags={tags}
                 showContactName
               />
             ))}

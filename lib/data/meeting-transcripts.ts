@@ -100,7 +100,12 @@ type ExtractionContact = {
   objection: string | null;
 };
 
-function normalizeProposal(p: RawProposal, stages: { id: string; name: string }[], contact: ExtractionContact) {
+function normalizeProposal(
+  p: RawProposal,
+  stages: { id: string; name: string }[],
+  tags: { id: string; name: string }[],
+  contact: ExtractionContact,
+) {
   let proposedValue: Record<string, unknown> = {};
   let currentValue: Record<string, unknown> | null = null;
 
@@ -138,6 +143,11 @@ function normalizeProposal(p: RawProposal, stages: { id: string; name: string }[
       proposedValue = { stageId: stage?.id ?? null, stageName: p.stage_name };
       break;
     }
+    case "tag": {
+      const tag = tags.find((t) => t.name.toLowerCase() === (p.text_value ?? "").toLowerCase());
+      proposedValue = { tagId: tag?.id ?? null, name: tag?.name ?? p.text_value };
+      break;
+    }
   }
 
   return {
@@ -166,13 +176,14 @@ export async function runExtraction(
   transcript: string,
   participantNames?: string[],
 ): Promise<void> {
-  const [{ data: contact }, { data: stages }, { data: transcriptRow }] = await Promise.all([
+  const [{ data: contact }, { data: stages }, { data: tags }, { data: transcriptRow }] = await Promise.all([
     admin
       .from("contacts")
       .select("first_name, last_name, budget_min, budget_max, timeline, areas_of_interest, stage_id, decision_maker, objection, known_personally")
       .eq("id", contactId)
       .maybeSingle(),
     admin.from("pipeline_stages").select("id, name").eq("owner_id", ownerId).order("sort_order", { ascending: true }),
+    admin.from("tags").select("id, name").eq("owner_id", ownerId),
     admin.from("meeting_transcripts").select("source, external_id").eq("id", transcriptId).maybeSingle(),
   ]);
 
@@ -190,6 +201,7 @@ export async function runExtraction(
   }
 
   const stageList = (stages ?? []) as { id: string; name: string }[];
+  const tagList = (tags ?? []) as { id: string; name: string }[];
   const currentStageName = stageList.find((s) => s.id === contact.stage_id)?.name ?? "unknown";
 
   const extraction = await extractFromTranscript(transcript, {
@@ -200,6 +212,7 @@ export async function runExtraction(
     currentAreasOfInterest: contact.areas_of_interest ?? [],
     currentStageName,
     availableStageNames: stageList.map((s) => s.name),
+    availableTagNames: tagList.map((t) => t.name),
     participantNames,
   });
 
@@ -223,11 +236,14 @@ export async function runExtraction(
   }
 
   const rows = extraction.proposals
-    .map((p) => normalizeProposal(p, stageList, contact))
+    .map((p) => normalizeProposal(p, stageList, tagList, contact))
     // A "stage" proposal whose stage_name didn't match any real stage is
     // useless (and dangerous - applying it would clear the contact's
     // stage rather than change it), so it's dropped rather than shown.
-    .filter((r) => r.field !== "stage" || (r.proposed_value as { stageId: string | null }).stageId);
+    // Same idea for "tag" - a name that doesn't match anything on her
+    // list is dropped rather than shown as an uneditable no-op.
+    .filter((r) => r.field !== "stage" || (r.proposed_value as { stageId: string | null }).stageId)
+    .filter((r) => r.field !== "tag" || (r.proposed_value as { tagId: string | null }).tagId);
 
   if (rows.length === 0) {
     await admin.from("meeting_transcripts").update({ status: "no_proposals", summary_bullets: extraction.summaryBullets }).eq("id", transcriptId);

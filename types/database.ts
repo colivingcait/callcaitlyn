@@ -217,7 +217,7 @@ export interface MeetingTranscript {
   created_at: string;
 }
 
-export type ProposedField = "budget" | "timeline" | "areas_of_interest" | "decision_maker" | "objection" | "note" | "task" | "stage" | "showing";
+export type ProposedField = "budget" | "timeline" | "areas_of_interest" | "decision_maker" | "objection" | "note" | "task" | "stage" | "showing" | "tag";
 export type ProposedChangeStatus = "pending" | "accepted" | "rejected";
 
 export interface ProposedChange {
@@ -316,6 +316,7 @@ export interface AiInsight {
   suggested_action: string | null;
   suggested_stage_id: string | null;
   suggested_timeline: Timeline | null;
+  suggested_tag_ids: string[] | null;
   confidence: number | null;
   dismissed: boolean;
   applied: boolean;

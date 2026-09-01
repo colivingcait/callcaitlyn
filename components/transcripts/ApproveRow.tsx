@@ -15,6 +15,7 @@ const FIELD_LABELS: Record<string, string> = {
   task: "Task to create",
   stage: "Stage",
   showing: "Showing to log",
+  tag: "Tag suggestion",
 };
 
 function formatSeconds(s: number | null) {
@@ -71,6 +72,10 @@ function describe(p: ProposedChange, stages: PipelineStage[]) {
       const v = value as { stageId: string; stageName: string };
       const stage = stages.find((s) => s.id === v.stageId);
       return { proposed: stage?.name ?? v.stageName, meta: "" };
+    }
+    case "tag": {
+      const v = value as { name: string };
+      return { proposed: v.name, meta: "· adds a tag" };
     }
     default:
       return { proposed: "", meta: "" };

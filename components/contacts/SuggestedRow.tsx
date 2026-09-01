@@ -8,7 +8,7 @@ import { TIMELINE_LABELS } from "@/lib/utils";
 import { applyStageChange, type DealModalMode, type PendingDealSummary } from "@/lib/crm/stage-transition";
 import { DealCelebrationModal } from "@/components/contacts/DealCelebrationModal";
 import { PendingDealCleanupModal } from "@/components/contacts/PendingDealCleanupModal";
-import type { AiInsight, DealSide, PipelineStage, Representing } from "@/types/database";
+import type { AiInsight, DealSide, PipelineStage, Representing, Tag } from "@/types/database";
 
 // Row-shaped AI-insight display, replacing AiInsightCard's standalone
 // card shape - used both on a contact's own Suggested card (one insight,
@@ -25,6 +25,7 @@ export function SuggestedRow({
   contactCreatedAt,
   representing,
   stages,
+  tags,
   showContactName = false,
 }: {
   insight: AiInsight;
@@ -35,6 +36,7 @@ export function SuggestedRow({
   contactCreatedAt: string;
   representing: Representing | null;
   stages: PipelineStage[];
+  tags: Tag[];
   showContactName?: boolean;
 }) {
   const router = useRouter();
@@ -44,7 +46,9 @@ export function SuggestedRow({
 
   const suggestedStage = stages.find((s) => s.id === insight.suggested_stage_id);
   const currentStage = stages.find((s) => s.id === contactStageId);
+  const suggestedTags = (insight.suggested_tag_ids ?? []).map((id) => tags.find((t) => t.id === id)).filter((t): t is Tag => Boolean(t));
   const hasStageOrTimeline = !!suggestedStage || !!insight.suggested_timeline;
+  const hasApplyTarget = hasStageOrTimeline || suggestedTags.length > 0;
 
   async function handleDismiss() {
     setBusy(true);
@@ -64,6 +68,14 @@ export function SuggestedRow({
     }
     if (insight.suggested_timeline) {
       await supabase.from("contacts").update({ timeline: insight.suggested_timeline }).eq("id", contactId);
+    }
+    if (suggestedTags.length > 0) {
+      await supabase
+        .from("contact_tags")
+        .upsert(
+          suggestedTags.map((t) => ({ contact_id: contactId, tag_id: t.id })),
+          { onConflict: "contact_id,tag_id", ignoreDuplicates: true },
+        );
     }
 
     await supabase.from("activities").insert({
@@ -100,6 +112,7 @@ export function SuggestedRow({
   const suggestionLine = [
     suggestedStage ? `Move to ${suggestedStage.name}` : null,
     insight.suggested_timeline ? `Timeline: ${TIMELINE_LABELS[insight.suggested_timeline]}` : null,
+    suggestedTags.length > 0 ? `Tag: ${suggestedTags.map((t) => t.name).join(", ")}` : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -114,7 +127,7 @@ export function SuggestedRow({
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        {hasStageOrTimeline ? (
+        {hasApplyTarget ? (
           <button
             onClick={handleApply}
             disabled={busy}

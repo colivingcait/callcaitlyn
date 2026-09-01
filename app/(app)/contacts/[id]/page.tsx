@@ -128,6 +128,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
                 contactCreatedAt={contact.created_at}
                 representing={contact.representing}
                 stages={stages}
+                tags={tags}
               />
             ))}
           </Section>

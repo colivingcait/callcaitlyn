@@ -37,6 +37,12 @@ const INSIGHT_TOOL = {
         type: ["string", "null"],
         description: "A concrete next action for the agent to take, e.g. 'Call to schedule a showing this week.'",
       },
+      suggested_tags: {
+        type: ["array", "null"],
+        items: { type: "string" },
+        description:
+          "Names of any tags from the provided list that this activity clearly justifies adding to the contact (e.g. an \"Agent\" tag if they mention getting licensed or wanting to join the team). Must exactly match a name from the provided list - never invent a tag that isn't in it. Empty array or null if none apply.",
+      },
       confidence: {
         type: "number",
         description: "0 to 1 - how confident this read is, based on how explicit the signal was.",
@@ -62,18 +68,20 @@ export async function analyzeContactActivity(
   if (!apiKey) return;
   if (!activity.content || activity.content.trim().length < 3) return;
 
-  const [{ data: contact }, { data: stages }] = await Promise.all([
+  const [{ data: contact }, { data: stages }, { data: tags }] = await Promise.all([
     admin
       .from("contacts")
       .select("first_name, last_name, contact_type, timeline, stage_id")
       .eq("id", contactId)
       .maybeSingle(),
     admin.from("pipeline_stages").select("id, name").eq("owner_id", ownerId).order("sort_order", { ascending: true }),
+    admin.from("tags").select("id, name").eq("owner_id", ownerId),
   ]);
   if (!contact) return;
 
   const stageNames = (stages ?? []).map((s) => s.name);
   const currentStage = stages?.find((s) => s.id === contact.stage_id)?.name ?? "unknown";
+  const tagList = tags ?? [];
 
   const client = new Anthropic({ apiKey });
 
@@ -93,6 +101,7 @@ Contact: ${contact.first_name} ${contact.last_name} (${contact.contact_type})
 Current pipeline stage: ${currentStage}
 Current timeline estimate: ${contact.timeline}
 Available pipeline stages (suggested_stage must exactly match one of these, or be null): ${stageNames.join(", ")}
+Available tags (suggested_tags must only use names from this list): ${tagList.length ? tagList.map((t) => t.name).join(", ") : "none set up yet"}
 
 New ${activity.type}:
 """
@@ -120,6 +129,7 @@ Be strict about has_signal: she's already read the message herself, so only set 
     suggested_stage: string | null;
     suggested_timeline: string | null;
     suggested_action: string | null;
+    suggested_tags: string[] | null;
     confidence: number;
   };
 
@@ -141,6 +151,9 @@ Be strict about has_signal: she's already read the message herself, so only set 
     : null;
   const suggestedTimeline =
     result.suggested_timeline && result.suggested_timeline !== contact.timeline ? result.suggested_timeline : null;
+  const suggestedTagIds = (result.suggested_tags ?? [])
+    .map((name) => tagList.find((t) => t.name.toLowerCase() === name.toLowerCase())?.id)
+    .filter((id): id is string => Boolean(id));
 
   await admin.from("ai_insights").insert({
     owner_id: ownerId,
@@ -149,6 +162,7 @@ Be strict about has_signal: she's already read the message herself, so only set 
     suggested_action: result.suggested_action,
     suggested_stage_id: suggestedStageId,
     suggested_timeline: suggestedTimeline,
+    suggested_tag_ids: suggestedTagIds.length > 0 ? suggestedTagIds : null,
     confidence: result.confidence,
   });
 

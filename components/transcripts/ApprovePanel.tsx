@@ -199,6 +199,11 @@ export function ApprovePanel({
         if (pendingAtRisk) setPendingCleanup(pendingAtRisk);
         break;
       }
+      case "tag": {
+        const v = p.proposed_value as { tagId: string; name: string };
+        await supabase.from("contact_tags").upsert({ contact_id: contactId, tag_id: v.tagId }, { onConflict: "contact_id,tag_id", ignoreDuplicates: true });
+        break;
+      }
     }
 
     // Every accept logs one activity noting where it came from, regardless
