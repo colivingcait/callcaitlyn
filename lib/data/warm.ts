@@ -19,6 +19,7 @@ export type WarmContact = {
   deviation: number;
   tier: WarmTier;
   events: WarmEvent[];
+  lastQuoteSlug: string | null;
 };
 
 function tierFor(deviation: number, signalsThisWeek: number): WarmTier {
@@ -93,6 +94,24 @@ export async function getWarmRanking(): Promise<WarmContact[]> {
     byContact.set(contact.id, entry);
   }
 
+  const contactIds = [...byContact.keys()];
+  const lastQuoteSlugByContact = new Map<string, string>();
+  if (contactIds.length > 0) {
+    // Most recent saved quote per contact - lets a warm row offer "Send
+    // the numbers" for the same contact she already quoted, instead of
+    // the mockup's fabricated "text their partner" idea (no spouse/
+    // co-buyer link exists in this schema).
+    const { data: quotes } = await supabase
+      .from("quotes")
+      .select("contact_id, slug, created_at")
+      .in("contact_id", contactIds)
+      .order("created_at", { ascending: false });
+    for (const q of quotes ?? []) {
+      if (!q.contact_id || lastQuoteSlugByContact.has(q.contact_id)) continue;
+      lastQuoteSlugByContact.set(q.contact_id, q.slug);
+    }
+  }
+
   const ranked: WarmContact[] = [...byContact.entries()]
     .map(([contactId, v]) => {
       const baselinePerWeek = v.total / BASELINE_WEEKS;
@@ -106,6 +125,7 @@ export async function getWarmRanking(): Promise<WarmContact[]> {
         deviation,
         tier: tierFor(deviation, v.thisWeek),
         events: v.events.sort((a, b) => b.date.localeCompare(a.date)),
+        lastQuoteSlug: lastQuoteSlugByContact.get(contactId) ?? null,
       };
     })
     .filter((c) => c.signalsThisWeek > 0)

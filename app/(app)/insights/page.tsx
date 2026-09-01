@@ -1,16 +1,28 @@
 import Link from "next/link";
-import { Calendar, TrendingDown, Eye, Flame, Users, Clock, AlertTriangle, ChevronRight } from "lucide-react";
+import { Calendar, TrendingDown, Eye, Flame, Users, Clock, AlertTriangle, UserPlus, ChevronRight } from "lucide-react";
 import { getInsightsData } from "@/lib/data/insights";
 import { getRateMoves } from "@/lib/data/rate-moves";
 import { InsightCard } from "@/components/insights/InsightCard";
 import { LeaseRows } from "@/components/insights/LeaseRows";
 import { RateMoveRow } from "@/components/insights/RateMoveRow";
+import { WarmPreviewRow } from "@/components/insights/WarmPreviewRow";
 import { WorklistGroup } from "@/components/dashboard/WorklistGroup";
 import { dismissCard } from "@/app/(app)/insights/actions";
 import { formatPercent } from "@/lib/utils";
+import { relativeTime } from "@/lib/format-time";
 
 export default async function InsightsPage() {
   const [data, rateMoves] = await Promise.all([getInsightsData(), getRateMoves()]);
+
+  const nothingToFlag =
+    data.leases.length === 0 &&
+    data.warmCount === 0 &&
+    data.coldHot.length === 0 &&
+    data.regularsNeverCalled.length === 0 &&
+    data.pastClientsTwoYears.length === 0 &&
+    data.noPhoneCount === 0 &&
+    data.duplicatePairs.length === 0 &&
+    data.registeredNoFollowUp.length === 0;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6">
@@ -23,6 +35,7 @@ export default async function InsightsPage() {
             icon={Calendar}
             title={`${data.leases.length} lease${data.leases.length === 1 ? "" : "s"} end${data.leases.length === 1 ? "s" : ""} within 90 days`}
             subtitle={data.leases.map((l) => l.name).join(", ")}
+            defaultOpen
           >
             <LeaseRows rows={data.leases} />
           </InsightCard>
@@ -33,7 +46,6 @@ export default async function InsightsPage() {
             icon={TrendingDown}
             title={`Rates ${rateMoves.currentRatePct < rateMoves.previousRatePct ? "fell" : "rose"} to ${formatPercent(rateMoves.currentRatePct, 3)}`}
             subtitle={`Down from ${formatPercent(rateMoves.previousRatePct, 3)} · ${rateMoves.moves.length} ${rateMoves.moves.length === 1 ? "person" : "people"} you quoted a payment to ${rateMoves.moves.length === 1 ? "is" : "are"} now looking at a smaller one`}
-            defaultOpen
           >
             {rateMoves.moves.map((move) => (
               <RateMoveRow key={move.quoteId} move={move} phone={move.phone} email={move.email} />
@@ -49,15 +61,27 @@ export default async function InsightsPage() {
         {data.warmCount > 0 && (
           <InsightCard
             icon={Eye}
-            title={`${data.warmCount} people are paying attention`}
-            subtitle="Opens and clicks without a reply"
-            expandable={false}
+            title={`${data.warmCount} ${data.warmCount === 1 ? "person is" : "people are"} paying attention`}
+            subtitle="Opened what you sent them more than once this week"
             action={
               <Link href="/insights/warm" className="flex shrink-0 items-center gap-1 rounded-[10px] border border-neutral-200 bg-white px-3.5 py-2 text-sm font-semibold text-neutral-800">
-                See them <ChevronRight size={14} />
+                See all <ChevronRight size={14} />
               </Link>
             }
-          />
+          >
+            {data.warmPreview.map((w) => (
+              <WarmPreviewRow
+                key={w.contactId}
+                name={w.name}
+                phone={w.phone}
+                signalsThisWeek={w.signalsThisWeek}
+                lastEventLabel={w.events[0] ? relativeTime(w.events[0].date) : null}
+              />
+            ))}
+            <p className="border-t border-neutral-100 px-[18px] py-2.5 text-sm text-neutral-400">
+              Built from the link clicks your emails already track, plus opens on the calculator pages you send.
+            </p>
+          </InsightCard>
         )}
 
         {data.coldHot.length > 0 && (
@@ -126,13 +150,22 @@ export default async function InsightsPage() {
           </InsightCard>
         )}
 
-        {data.leases.length === 0 &&
-          data.warmCount === 0 &&
-          data.coldHot.length === 0 &&
-          data.regularsNeverCalled.length === 0 &&
-          data.pastClientsTwoYears.length === 0 &&
-          data.noPhoneCount === 0 &&
-          data.duplicatePairs.length === 0 && <p className="text-[15px] text-neutral-400">Nothing worth flagging right now.</p>}
+        {data.registeredNoFollowUp.length > 0 && (
+          <InsightCard
+            icon={UserPlus}
+            title={`${data.registeredNoFollowUp.length} registered and haven't heard from you`}
+            subtitle="Signed up for an event, no call/text/email since - the widest gap in the funnel right now"
+            expandable={false}
+            onDismiss={dismissCard.bind(null, "registered_no_followup")}
+            action={
+              <Link href="/contacts?queue=no_followup_after_registration" className="flex shrink-0 items-center gap-1 rounded-[10px] border border-neutral-200 bg-white px-3.5 py-2 text-sm font-semibold text-neutral-800">
+                Text them <ChevronRight size={14} />
+              </Link>
+            }
+          />
+        )}
+
+        {nothingToFlag && <p className="text-[15px] text-neutral-400">Nothing worth flagging right now.</p>}
       </div>
     </div>
   );

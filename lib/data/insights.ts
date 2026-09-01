@@ -3,7 +3,7 @@ import { listContacts, listStages } from "@/lib/data/contacts";
 import { filterByQueue } from "@/lib/crm/contact-queue-filter";
 import { getDuplicateRiskPairs } from "@/lib/data/reports";
 import { computeDeals } from "@/lib/crm/commission";
-import { getWarmRanking } from "@/lib/data/warm";
+import { getWarmRanking, type WarmContact } from "@/lib/data/warm";
 import { isDismissedWithin } from "@/lib/crm/dismissed-insights";
 import { fullName } from "@/lib/utils";
 import type { Deal } from "@/types/database";
@@ -18,11 +18,13 @@ export type ClosedRow = { contactId: string; name: string; phone: string | null;
 export type InsightsData = {
   leases: LeaseRow[];
   warmCount: number;
+  warmPreview: Pick<WarmContact, "contactId" | "name" | "phone" | "signalsThisWeek" | "events">[];
   coldHot: SimplePerson[];
   regularsNeverCalled: SimplePerson[];
   pastClientsTwoYears: ClosedRow[];
   noPhoneCount: number;
   duplicatePairs: { aId: string; aName: string; bId: string; bName: string }[];
+  registeredNoFollowUp: SimplePerson[];
 };
 
 export async function getInsightsData(): Promise<InsightsData> {
@@ -63,8 +65,10 @@ export async function getInsightsData(): Promise<InsightsData> {
     .filter((row) => !isDismissedWithin(dismissedByKey.get(`${row.dismissKey}:${row.contactId}`), DISMISS_WINDOW_DAYS))
     .sort((a, b) => a.leaseEndsAt.localeCompare(b.leaseEndsAt));
 
-  // --- Paying attention (count only here - the ranked list lives on /insights/warm) ---
-  const warmCount = warmRanking.filter((w) => w.tier === "very_warm" || w.tier === "warm").length;
+  // --- Paying attention (a couple of preview rows here - the full ranked list lives on /insights/warm) ---
+  const warmMatches = warmRanking.filter((w) => w.tier === "very_warm" || w.tier === "warm");
+  const warmCount = warmMatches.length;
+  const warmPreview = warmMatches.slice(0, 2).map((w) => ({ contactId: w.contactId, name: w.name, phone: w.phone, signalsThisWeek: w.signalsThisWeek, events: w.events }));
 
   // --- Hot/Ready gone quiet 30+ days ---
   const coldHotMatches = cardLevelDismissed.has("cold_from_hot") ? [] : await filterByQueue(known, "cold_from_hot", stages);
@@ -109,13 +113,22 @@ export async function getInsightsData(): Promise<InsightsData> {
   // --- Data problems: no phone, duplicates ---
   const noPhone = cardLevelDismissed.has("data_problems") ? [] : known.filter((c) => !c.phone);
 
+  // --- Registered for an event, no follow-up since ---
+  let registeredNoFollowUp: SimplePerson[] = [];
+  if (!cardLevelDismissed.has("registered_no_followup")) {
+    const matches = await filterByQueue(known, "no_followup_after_registration", stages);
+    registeredNoFollowUp = matches.map((c) => ({ contactId: c.id, name: fullName(c), phone: c.phone }));
+  }
+
   return {
     leases,
     warmCount,
+    warmPreview,
     coldHot,
     regularsNeverCalled,
     pastClientsTwoYears,
     noPhoneCount: noPhone.length,
     duplicatePairs: cardLevelDismissed.has("data_problems") ? [] : duplicatePairs,
+    registeredNoFollowUp,
   };
 }

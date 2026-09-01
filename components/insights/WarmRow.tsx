@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronRight, Phone, MessageSquareText } from "lucide-react";
+import { ChevronDown, ChevronRight, Phone, MessageSquareText, Copy, Check } from "lucide-react";
 import { openQuoCall } from "@/lib/quo/call-link";
 import { relativeTime } from "@/lib/format-time";
 import { initials, cn } from "@/lib/utils";
@@ -16,10 +16,18 @@ const TIER_BAR: Record<WarmContact["tier"], string> = {
   steady: "bg-neutral-300",
 };
 
-export function WarmRow({ contact, defaultOpen = false }: { contact: WarmContact; defaultOpen?: boolean }) {
+export function WarmRow({ contact, numbersLink, defaultOpen = false }: { contact: WarmContact; numbersLink: string | null; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
+  const [copied, setCopied] = useState(false);
   const pct = Math.max(8, Math.min(100, Math.round((contact.deviation / 5) * 100)));
   const lastEvent = contact.events[0];
+
+  async function copyNumbersLink() {
+    if (!numbersLink) return;
+    await navigator.clipboard.writeText(numbersLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
 
   return (
     <div className="border-b border-neutral-100 last:border-b-0">
@@ -69,6 +77,16 @@ export function WarmRow({ contact, defaultOpen = false }: { contact: WarmContact
               <a href={`sms:${contact.phone}`} className="flex items-center gap-1.5 rounded-[10px] border border-neutral-200 bg-white px-3.5 py-2 text-sm font-semibold text-neutral-800">
                 <MessageSquareText size={15} className="text-neutral-500" /> Text
               </a>
+            )}
+            {numbersLink && (
+              <button
+                type="button"
+                onClick={copyNumbersLink}
+                className="flex items-center gap-1.5 rounded-[10px] border border-neutral-200 bg-white px-3.5 py-2 text-sm font-semibold text-neutral-800"
+              >
+                {copied ? <Check size={15} className="text-neutral-500" /> : <Copy size={15} className="text-neutral-500" />}
+                {copied ? "Copied" : "Send the numbers"}
+              </button>
             )}
             <Link href={`/contacts/${contact.contactId}`} className="text-sm font-semibold text-neutral-500">
               Open contact
