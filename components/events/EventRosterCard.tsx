@@ -117,7 +117,7 @@ export function EventRosterCard({
   };
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[#ebe9e7] bg-white">
+    <div className="rounded-2xl border border-[#ebe9e7] bg-white">
       <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full items-center gap-3 px-[18px] py-4 text-left">
         <span className="shrink-0 text-neutral-400">{open ? <ChevronDown size={17} /> : <ChevronRight size={17} />}</span>
         <div className="min-w-0 flex-1">
