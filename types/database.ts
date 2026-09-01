@@ -15,9 +15,9 @@ export type ContactType =
   | "attendee"
   | "other";
 
-// null (on Contact.recruit_stage) = top of funnel, "Introduced" - every
+// null (on Contact.recruit_stage) = top of funnel, "Potential" - every
 // contact tagged "Agent" by default, no separate value stored for it.
-export type RecruitStage = "connected_with_lead" | "joined" | "fee_received" | "not_moving_forward";
+export type RecruitStage = "introduced" | "connected_with_lead" | "joined" | "fee_received" | "not_moving_forward";
 
 export type Timeline =
   | "asap"

@@ -6,11 +6,11 @@ import { AGENT_RECRUIT_STAGES, recruitStageKey } from "@/lib/crm/agent-recruit-s
 import { formatCurrency } from "@/lib/utils";
 import type { Contact } from "@/types/database";
 
-// Active work (introduced, connected with the team lead) defaults open;
-// the two "it's decided" stages and the dead-end bucket default closed -
-// same "top of funnel stays visible, resolved stuff tucks away" idea as
-// Pipeline's stage ordering.
-const DEFAULT_OPEN_KEYS = new Set(["introduced", "connected_with_lead"]);
+// Active work (potential, introduced, connected with the team lead)
+// defaults open; the two "it's decided" stages and the dead-end bucket
+// default closed - same "top of funnel stays visible, resolved stuff
+// tucks away" idea as Pipeline's stage ordering.
+const DEFAULT_OPEN_KEYS = new Set(["potential", "introduced", "connected_with_lead"]);
 
 export function RecruitBoard({ recruits }: { recruits: Contact[] }) {
   const byStage = new Map<string, Contact[]>();
