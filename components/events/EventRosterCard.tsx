@@ -3,14 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronDown, ChevronRight, Download, Phone, MessageSquareText, UserCheck, PhoneOff, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Download, Phone, MessageSquareText, UserCheck, PhoneOff, Trash2, Merge } from "lucide-react";
 import { openQuoCall } from "@/lib/quo/call-link";
 import { formatLocal } from "@/lib/format-time";
 import { formatPhone, cn } from "@/lib/utils";
 import { markContactAttended } from "@/app/(app)/reports/actions";
-import { deleteEventByEventId } from "@/app/(app)/events/actions";
+import { deleteEventByEventId, mergeEventInto } from "@/app/(app)/events/actions";
 import { TextBlastModal } from "@/components/contacts/TextBlastModal";
 import type { EventEntry, RosterPerson } from "@/lib/data/events";
+
+type OtherEvent = { eventId: string; label: string; date: string };
 
 type StatusFilter = "all" | "registered" | "attended" | "no_show" | "walk_in";
 
@@ -42,7 +44,15 @@ function historyLabel(p: RosterPerson): string {
   return `${ordinal(p.attendanceNumber)} event`;
 }
 
-export function EventRosterCard({ event, defaultOpen = false }: { event: EventEntry; defaultOpen?: boolean }) {
+export function EventRosterCard({
+  event,
+  defaultOpen = false,
+  otherEvents = [],
+}: {
+  event: EventEntry;
+  defaultOpen?: boolean;
+  otherEvents?: OtherEvent[];
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(defaultOpen);
   const [filter, setFilter] = useState<StatusFilter>("all");
@@ -52,6 +62,10 @@ export function EventRosterCard({ event, defaultOpen = false }: { event: EventEn
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [mergeMenuOpen, setMergeMenuOpen] = useState(false);
+  const [mergeTarget, setMergeTarget] = useState<OtherEvent | null>(null);
+  const [merging, setMerging] = useState(false);
+  const [mergeError, setMergeError] = useState("");
 
   const people = event.people.map((p) => (markedAttended.has(p.contactId) ? { ...p, attended: true } : p));
   const filtered = people.filter((p) => matchesFilter(p, filter));
@@ -74,6 +88,19 @@ export function EventRosterCard({ event, defaultOpen = false }: { event: EventEn
     } else {
       setDeleting(false);
       setDeleteError(result.error);
+    }
+  }
+
+  async function handleMerge() {
+    if (!event.eventId || !mergeTarget) return;
+    setMerging(true);
+    setMergeError("");
+    const result = await mergeEventInto(event.eventId, mergeTarget.eventId);
+    if (result.ok) {
+      router.refresh();
+    } else {
+      setMerging(false);
+      setMergeError(result.error);
     }
   }
 
@@ -234,7 +261,31 @@ export function EventRosterCard({ event, defaultOpen = false }: { event: EventEn
 
           {event.eventId && (
             <div className="border-t border-neutral-100 px-[18px] py-3">
-              {confirmingDelete ? (
+              {mergeTarget ? (
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <p className="text-sm text-neutral-600">
+                    Combine into <span className="font-semibold">{mergeTarget.label}</span> ({formatLocal(mergeTarget.date, "MMM d")})? All{" "}
+                    {people.length} {people.length === 1 ? "person" : "people"} move over and this listing goes away. This can&apos;t be undone.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleMerge}
+                    disabled={merging}
+                    className="rounded-[10px] bg-neutral-900 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+                  >
+                    {merging ? "Combining…" : "Combine"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMergeTarget(null)}
+                    disabled={merging}
+                    className="rounded-[10px] border border-neutral-200 bg-white px-3 py-1.5 text-sm font-semibold text-neutral-700 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  {mergeError && <p className="w-full text-sm text-red-600">{mergeError}</p>}
+                </div>
+              ) : confirmingDelete ? (
                 <div className="flex flex-wrap items-center gap-2.5">
                   <p className="text-sm text-neutral-600">
                     Delete this event and its {people.length} {people.length === 1 ? "person" : "people"}? This can&apos;t be undone.
@@ -258,13 +309,47 @@ export function EventRosterCard({ event, defaultOpen = false }: { event: EventEn
                   {deleteError && <p className="w-full text-sm text-red-600">{deleteError}</p>}
                 </div>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => setConfirmingDelete(true)}
-                  className="flex items-center gap-1.5 text-sm font-medium text-red-600"
-                >
-                  <Trash2 size={14} /> Remove this event (duplicate listing)
-                </button>
+                <div className="flex flex-wrap items-center gap-3.5">
+                  {otherEvents.length > 0 && (
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setMergeMenuOpen((v) => !v)}
+                        className="flex items-center gap-1.5 text-sm font-medium text-brand-700"
+                      >
+                        <Merge size={14} /> Combine with another listing (duplicate)
+                      </button>
+                      {mergeMenuOpen && (
+                        <>
+                          <button type="button" aria-label="Close menu" onClick={() => setMergeMenuOpen(false)} className="fixed inset-0 z-30 cursor-default" />
+                          <div className="absolute left-0 top-full z-40 mt-1 max-h-64 w-72 overflow-y-auto rounded-xl border border-neutral-200 bg-white py-1 shadow-lg">
+                            {otherEvents.map((o) => (
+                              <button
+                                key={o.eventId}
+                                type="button"
+                                onClick={() => {
+                                  setMergeMenuOpen(false);
+                                  setMergeTarget(o);
+                                }}
+                                className="block w-full px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50"
+                              >
+                                <span className="block font-medium text-neutral-900">{o.label}</span>
+                                <span className="block text-neutral-500">{formatLocal(o.date, "MMM d, yyyy")}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingDelete(true)}
+                    className="flex items-center gap-1.5 text-sm font-medium text-red-600"
+                  >
+                    <Trash2 size={14} /> Remove entirely
+                  </button>
+                </div>
               )}
             </div>
           )}

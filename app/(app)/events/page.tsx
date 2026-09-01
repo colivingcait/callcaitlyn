@@ -33,7 +33,14 @@ export default async function EventsPage() {
         <>
           <div className="mt-5 space-y-3">
             {recent.map((event, i) => (
-              <EventRosterCard key={event.key} event={event} defaultOpen={i === 0} />
+              <EventRosterCard
+                key={event.key}
+                event={event}
+                defaultOpen={i === 0}
+                otherEvents={events
+                  .filter((e) => e.key !== event.key && e.eventId)
+                  .map((e) => ({ eventId: e.eventId as string, label: e.label, date: e.date }))}
+              />
             ))}
           </div>
 
