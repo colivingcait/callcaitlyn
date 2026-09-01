@@ -1,12 +1,16 @@
 // Granola's own account settings let her point a webhook straight at us -
 // no Zapier/Make relay in between, so unlike Tactiq this parses Granola's
 // actual native payload shape rather than one we invented for her to map
-// into. That shape isn't confirmed against a real delivery yet (Granola's
-// public docs describe the fields loosely: note id, title, attendees,
-// transcript, calendar event), so every field is read defensively across a
-// few plausible key-name variants, and the route logs the full raw body
-// whenever something required is missing - the same "log it so we can fix
-// the guess" approach used for Quo's signature header.
+// into. Confirmed against real deliveries: the webhook body itself is a
+// thin notification ({event_id, note_id, occurred_at, event_type}), never
+// the transcript - the route falls back to fetching the note from
+// Granola's API (lib/granola/client.ts) when this comes back empty. The
+// noteId/title/calendarEventId/participants fields below are still read
+// defensively across a few plausible key-name variants for whatever a
+// content-carrying webhook event (if Granola ever sends one) might use,
+// and the route logs the full raw body whenever something required is
+// missing - the same "log it so we can fix the guess" approach used for
+// Quo's signature header.
 export type GranolaNoteEvent = {
   noteId: string;
   title: string;
@@ -67,7 +71,7 @@ export function parseGranolaEvent(body: Record<string, unknown>): GranolaNoteEve
     noteId: asString(pick(body, "note_id", "noteId", "id")) ?? "",
     title: asString(pick(body, "title", "meeting_title")) ?? "Meeting",
     transcript: asString(pick(body, "transcript", "transcript_text")) ?? "",
-    occurredAt: asString(pick(body, "start_time", "startTime", "date", "created_at")) ?? new Date().toISOString(),
+    occurredAt: asString(pick(body, "occurred_at", "start_time", "startTime", "date", "created_at")) ?? new Date().toISOString(),
     durationSeconds: computeDuration(body),
     calendarEventId: asString(pick(body, "calendar_event_id", "calendarEventId")),
     participants,

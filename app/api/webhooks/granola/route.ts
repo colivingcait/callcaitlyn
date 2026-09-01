@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parseGranolaEvent } from "@/lib/granola/parse-event";
+import { fetchGranolaNote } from "@/lib/granola/client";
 import { matchByCalendarEventId, matchByAttendeeEmail } from "@/lib/crm/meeting-match";
 import { findNameCandidates, matchByRememberedName, getGranolaMatchingRules } from "@/lib/crm/note-name-match";
 import { createOrGetTranscript, runExtraction } from "@/lib/data/meeting-transcripts";
@@ -47,6 +48,7 @@ export async function POST(request: NextRequest) {
     }
 
     const event = parseGranolaEvent(body);
+    let fetchedNote: Awaited<ReturnType<typeof fetchGranolaNote>> = null;
 
     if (!event.noteId) {
       // No stable id means no reliable dedupe - log the raw payload so we
@@ -55,17 +57,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "missing note id" }, { status: 400 });
     }
     if (!event.transcript) {
-      // Granola can fire more than one event per note (created, updated,
-      // shared) - only the one carrying a transcript is worth extracting
-      // from, so this is expected to fire on the earlier ones. But it's
-      // also exactly what happens if the transcript field name guess in
-      // parse-event.ts is wrong for a real Granola payload - logging only
-      // the note id gave no way to tell those two cases apart. Logging the
-      // full raw body here too (same as the missing-note-id case above)
-      // means the next real delivery hands us the actual field name to
-      // fix, instead of another round of guessing.
-      console.log("Granola webhook with no transcript field found - check the payload shape if this note should have one", event.noteId, body);
-      return NextResponse.json({ received: true });
+      // Confirmed against real deliveries (not a guess): Granola's webhook
+      // never carries the transcript itself, just a thin "this note
+      // changed" notification - fetch the real content from their API
+      // using the note id instead.
+      if (!process.env.GRANOLA_API_KEY) {
+        console.log("Granola webhook has no transcript and GRANOLA_API_KEY isn't set, so it can't be fetched - skipping", event.noteId, body);
+        return NextResponse.json({ received: true });
+      }
+
+      let note: Awaited<ReturnType<typeof fetchGranolaNote>>;
+      try {
+        note = await fetchGranolaNote(event.noteId);
+      } catch (err) {
+        console.error("Granola API error fetching note content", event.noteId, err);
+        return NextResponse.json({ received: true });
+      }
+
+      if (!note || !note.transcriptText) {
+        // Granola 404s Get Note until it has a generated summary +
+        // transcript (per their docs) - not ready yet, not a failure.
+        // Another event fires once it is, and this note gets picked up
+        // then.
+        console.log("Granola note isn't ready yet (no transcript from the API) - will pick it up on a later event", event.noteId);
+        return NextResponse.json({ received: true });
+      }
+
+      event.transcript = note.transcriptText;
+      if (note.title) event.title = note.title;
+      if (note.calendarEventId) event.calendarEventId = note.calendarEventId;
+      if (note.participants.length > 0) event.participants = note.participants;
+      fetchedNote = note;
     }
 
     const rules = await getGranolaMatchingRules(admin, OWNER_ID);
@@ -106,7 +128,7 @@ export async function POST(request: NextRequest) {
       contactId,
       source: "granola",
       externalId: event.noteId,
-      rawPayload: body,
+      rawPayload: fetchedNote ? { webhook: body, note: fetchedNote } : body,
       participants,
       durationSeconds: event.durationSeconds,
       occurredAt: event.occurredAt,
