@@ -9,9 +9,19 @@ const INSIGHT_TOOL = {
   input_schema: {
     type: "object" as const,
     properties: {
+      has_signal: {
+        type: "boolean",
+        description:
+          "True only if this activity reveals something worth surfacing that isn't already obvious from just reading the message - a new timeline/budget/concern, a stage-worthy update, a concrete next step. False for a plain conversational close or acknowledgment with no new information: \"ok that works\", \"have a good night!\", \"thanks!\", \"sounds good\", \"perfect\", \"see you then\", a one-word confirmation. She already read the message itself; don't restate it back to her as an 'insight'.",
+      },
+      needs_reply: {
+        type: "boolean",
+        description:
+          "Only meaningful for an inbound text. True if this message is waiting on a reply from her - it asks a question, makes a request, or leaves something open. False if it closes the exchange and needs nothing further - a goodbye, a thank-you, a simple acknowledgment/confirmation like \"ok that works\" or \"sounds good\". For a call or email, or an outbound message, set this to false.",
+      },
       summary: {
         type: "string",
-        description: "1-2 sentence plain-English summary of what this activity reveals about the contact's status.",
+        description: "1-2 sentence plain-English summary of what this activity reveals about the contact's status. Only read when has_signal is true.",
       },
       suggested_stage: {
         type: ["string", "null"],
@@ -32,7 +42,7 @@ const INSIGHT_TOOL = {
         description: "0 to 1 - how confident this read is, based on how explicit the signal was.",
       },
     },
-    required: ["summary", "confidence"],
+    required: ["has_signal", "needs_reply", "summary", "confidence"],
   },
 };
 
@@ -46,6 +56,7 @@ export async function analyzeContactActivity(
   ownerId: string,
   contactId: string,
   activity: { type: "call" | "text" | "email"; direction: string; content: string },
+  activityId?: string,
 ): Promise<void> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return;
@@ -88,7 +99,9 @@ New ${activity.type}:
 ${activity.content}
 """
 
-Only suggest a stage/timeline change if the content actually signals it explicitly or strongly implicitly (e.g. "I'm ready to start looking" -> a more ready stage; "we're a couple months out" -> 1_3_months or 3_6_months). Don't invent signal that isn't there - it's fine for suggested_stage/suggested_timeline to be null.`,
+Only suggest a stage/timeline change if the content actually signals it explicitly or strongly implicitly (e.g. "I'm ready to start looking" -> a more ready stage; "we're a couple months out" -> 1_3_months or 3_6_months). Don't invent signal that isn't there - it's fine for suggested_stage/suggested_timeline to be null.
+
+Be strict about has_signal: she's already read the message herself, so only set it true when there's a real read worth handing her - not a restatement of a pleasantry. And be strict about needs_reply for inbound texts: a message that just closes things out ("ok that works", "have a good night!", "thanks!") doesn't need one.`,
         },
       ],
     });
@@ -101,12 +114,27 @@ Only suggest a stage/timeline change if the content actually signals it explicit
   if (!toolUse || toolUse.type !== "tool_use") return;
 
   const result = toolUse.input as {
+    has_signal: boolean;
+    needs_reply: boolean;
     summary: string;
     suggested_stage: string | null;
     suggested_timeline: string | null;
     suggested_action: string | null;
     confidence: number;
   };
+
+  // Written regardless of has_signal - "replies owed" is about whether the
+  // message itself needs an answer, independent of whether it's also
+  // interesting enough to surface as a Suggested insight.
+  if (activity.type === "text" && activityId) {
+    await admin.from("activities").update({ needs_reply: result.needs_reply }).eq("id", activityId);
+  }
+
+  // She already read the message - only add to Suggested when there's
+  // something worth handing her beyond what the text itself already said
+  // (see has_signal's own description on why "ok that works" shouldn't
+  // become an insight card).
+  if (!result.has_signal) return;
 
   const suggestedStageId = result.suggested_stage
     ? stages?.find((s) => s.name === result.suggested_stage && s.name !== currentStage)?.id ?? null

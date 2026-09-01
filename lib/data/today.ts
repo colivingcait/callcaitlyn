@@ -37,11 +37,18 @@ async function getCallsGroup(): Promise<WorklistPerson[]> {
 // it. Nothing in the app reads activities.direction in bulk today; this
 // is a new aggregation, same shape as contact-queue-filter's
 // fetchActivityAggregates (one unscoped-ish select, reduce in JS).
+//
+// needs_reply === false (the AI classifier's positive read that this was
+// just a conversational close - "have a good night!", "ok that works")
+// is the only thing that hides a row; null (not evaluated - AI off, the
+// call failed, or the row predates this column) still shows, same
+// fail-open posture as everywhere else uncertain signal gets surfaced
+// rather than silently dropped.
 async function getRepliesOwedGroup(): Promise<WorklistPerson[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("activities")
-    .select("contact_id, direction, occurred_at, body, contacts!inner(id, first_name, last_name, phone, archived)")
+    .select("contact_id, direction, occurred_at, body, needs_reply, contacts!inner(id, first_name, last_name, phone, archived)")
     .eq("type", "text")
     .eq("contacts.archived", false)
     .order("occurred_at", { ascending: false })
@@ -54,6 +61,7 @@ async function getRepliesOwedGroup(): Promise<WorklistPerson[]> {
     if (!contact || seen.has(contact.id)) continue;
     seen.add(contact.id);
     if (row.direction !== "inbound") continue;
+    if (row.needs_reply === false) continue;
     const preview = row.body ? `"${row.body.slice(0, 60)}${row.body.length > 60 ? "…" : ""}"` : "Texted you";
     owed.push({
       id: contact.id,

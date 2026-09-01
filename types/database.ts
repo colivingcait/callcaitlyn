@@ -272,6 +272,8 @@ export interface Activity {
   metadata: Record<string, unknown>;
   dedupe_field: string | null;
   dedupe_value: string | null;
+  needs_reply: boolean | null;
+  reply_reminder_sent_at: string | null;
   created_at: string;
 }
 

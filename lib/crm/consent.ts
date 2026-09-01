@@ -1,21 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-// First-consent-wins - the earliest real reason she had permission is the
-// one worth keeping on the record, not whatever happened to touch the
-// contact most recently. Deliberately never touches opted_out_at: once
-// someone's opted out, a later registration/check-in/inbound message
-// doesn't silently re-enable them - that's a manual, deliberate action
-// only (see recordOptOut's caller and the settings UI), matching the
-// design brief's "this is the one place the system should be strict
-// rather than suggestive."
-export async function recordConsent(admin: SupabaseClient, contactId: string, source: string): Promise<void> {
-  await admin
-    .from("contacts")
-    .update({ consent_source: source, consent_at: new Date().toISOString() })
-    .eq("id", contactId)
-    .is("consent_at", null);
-}
-
+// Opt-out is still tracked (an explicit STOP is a hard no, worth
+// honoring regardless of how someone got into the CRM), but consent
+// isn't recorded up front any more - she gave a lower bar ("they gave
+// you their number") than requiring a logged reason per contact.
 export async function recordOptOut(admin: SupabaseClient, contactId: string): Promise<void> {
   await admin.from("contacts").update({ opted_out_at: new Date().toISOString() }).eq("id", contactId);
 }

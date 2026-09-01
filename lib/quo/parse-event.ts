@@ -20,6 +20,7 @@ export type ParsedQuoCall = {
   quoCallId: string | null;
   direction: "inbound" | "outbound" | "none";
   counterpartNumber: string | null;
+  ownNumber: string | null;
   durationSeconds: number | null;
   status: string | null;
   occurredAt: string;
@@ -32,6 +33,7 @@ export type ParsedQuoMessage = {
   quoMessageId: string | null;
   direction: "inbound" | "outbound" | "none";
   counterpartNumber: string | null;
+  ownNumber: string | null;
   text: string | null;
   occurredAt: string;
 };
@@ -75,6 +77,7 @@ export function parseQuoCall(body: AnyRecord): ParsedQuoCall {
     quoCallId: asString(obj.id) ?? asString(obj.callId),
     direction,
     counterpartNumber: direction === "outbound" ? to : from,
+    ownNumber: direction === "outbound" ? from : to,
     durationSeconds: typeof obj.duration === "number" ? obj.duration : null,
     status: asString(obj.status),
     occurredAt: asString(obj.completedAt) ?? asString(obj.createdAt) ?? new Date().toISOString(),
@@ -114,6 +117,7 @@ export function parseQuoMessage(body: AnyRecord): ParsedQuoMessage {
     quoMessageId: asString(obj.id),
     direction,
     counterpartNumber: direction === "outbound" ? to : from,
+    ownNumber: direction === "outbound" ? from : to,
     text: asString(obj.text) ?? asString(obj.body),
     occurredAt: asString(obj.createdAt) ?? new Date().toISOString(),
   };

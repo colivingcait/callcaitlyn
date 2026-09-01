@@ -3,8 +3,6 @@ import { findOrCreateContact, addTagByName } from "@/lib/crm/find-or-create-cont
 import { upsertActivity } from "@/lib/crm/activities";
 import { recordEventAttendance } from "@/lib/crm/events";
 import { resolveNearestEbEvent, type EventSeriesKey } from "@/lib/crm/nearest-event";
-import { recordConsent } from "@/lib/crm/consent";
-import { formatLocal } from "@/lib/format-time";
 
 export const SERIES_TAG: Record<EventSeriesKey, string> = { house_hacking: "House Hacking", womens_rei: "Women's REI" };
 export const SERIES_LABEL: Record<EventSeriesKey, string> = { house_hacking: "House Hacking Meetup", womens_rei: "Women's REI Meetup" };
@@ -63,9 +61,6 @@ export async function processCheckIn(
 
   await addTagByName(admin, ownerId, contactId, "Meetup");
   await addTagByName(admin, ownerId, contactId, SERIES_TAG[series]);
-  // Handing over a phone number at the door is consent, dated - collected
-  // today and, before this, never actually written down anywhere.
-  await recordConsent(admin, contactId, `checked in at ${eventName}, ${formatLocal(now, "MMM d")}`);
 
   // Falls back to today's date when no Eventbrite event has been matched
   // yet (e.g. the very first event before any registration exists) - still

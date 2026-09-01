@@ -5,7 +5,6 @@ import { findOrCreateContact, addTagByName } from "@/lib/crm/find-or-create-cont
 import { upsertActivity } from "@/lib/crm/activities";
 import { applyJourneyStageAnswer } from "@/lib/crm/journey-stage";
 import { notifyNewLead } from "@/lib/push/send-push";
-import { recordConsent } from "@/lib/crm/consent";
 
 // Which Eventbrite *account* processed an order isn't a reliable signal for
 // which meetup series it belongs to - an event can be created under either
@@ -79,7 +78,6 @@ export async function processEventbriteOrder(
     await addTagByName(admin, ownerId, contact.id, "Meetup");
     if (isWomensRei) await addTagByName(admin, ownerId, contact.id, "Women's REI");
     await applyJourneyStageAnswer(admin, ownerId, contact.id, attendee.journeyStage, contact.wasCreated);
-    await recordConsent(admin, contact.id, "registered for an event");
 
     const occurredAt = typeof order.created === "string" ? order.created : new Date().toISOString();
     const bodyParts = [`Registered${eventName ? ` for ${eventName}` : " for an event"} via Eventbrite`];

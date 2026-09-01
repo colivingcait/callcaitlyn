@@ -171,6 +171,10 @@ This logs every call and text from your Quo number straight into each contact's 
 5. Once a real call/text comes in, check that it shows up on the right contact's timeline. If Quo's actual field names differ from what the code guesses, nothing is lost — the full raw payload is saved on the activity's `metadata.raw`, so we can adjust the parsing from real data.
 6. Set `CRM_QUO_ENFORCE_SIGNATURE=true` once the signature format is confirmed working, so the endpoint starts rejecting anything not actually from Quo. **Still open** — works fine with enforcement off, just not hardened yet.
 
+### Running more than one Quo number (e.g. a separate rooms-for-rent line)
+
+By default every number on the Quo account gets pulled in. If you add a second number for something that has nothing to do with the CRM (rooms-for-rent texting, say), set `QUO_INCLUDED_PHONE_NUMBERS` to a comma-separated list of the number(s) that *should* keep flowing in (any format — with or without the `+1`, spaces, dashes) and redeploy. Anything on an unlisted number is skipped entirely at the webhook — never creates a contact, never logs an activity. Leave it unset to keep pulling in everything, same as today.
+
 ## Setting up Calendly (booking sync)
 
 Same shape as Quo: a webhook logs bookings straight onto the matching contact.

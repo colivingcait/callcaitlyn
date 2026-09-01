@@ -4,8 +4,6 @@ import { upsertActivity } from "@/lib/crm/activities";
 import { recordEventAttendance } from "@/lib/crm/events";
 import { applyJourneyStageAnswer } from "@/lib/crm/journey-stage";
 import { resolveNearestEbEvent } from "@/lib/crm/nearest-event";
-import { recordConsent } from "@/lib/crm/consent";
-import { formatLocal } from "@/lib/format-time";
 
 export type JotformSubmissionInput = {
   submissionId: string | null;
@@ -60,7 +58,6 @@ export async function processJotformSubmission(
   await addTagByName(admin, ownerId, contact.id, "Meetup");
   if (formEvent) await addTagByName(admin, ownerId, contact.id, formEvent.tag);
   await applyJourneyStageAnswer(admin, ownerId, contact.id, submission.journeyStage, contact.wasCreated);
-  await recordConsent(admin, contact.id, `checked in at ${eventName}, ${formatLocal(occurredAt, "MMM d")}`);
 
   const bodyParts = [`Checked in at ${eventName} (Jotform kiosk)`];
   if (submission.journeyStage) bodyParts.push(`House hacking journey: ${submission.journeyStage}`);

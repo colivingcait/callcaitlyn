@@ -8,7 +8,8 @@ import { upsertActivity, patchActivityMetadata } from "@/lib/crm/activities";
 import { analyzeContactActivity } from "@/lib/ai/analyze-contact";
 import { createOrGetTranscript, runExtraction } from "@/lib/data/meeting-transcripts";
 import { updateEngagementTag } from "@/lib/crm/engagement";
-import { recordConsent, recordOptOut, isOptOutMessage } from "@/lib/crm/consent";
+import { recordOptOut, isOptOutMessage } from "@/lib/crm/consent";
+import { isIncludedQuoNumber } from "@/lib/quo/phone-filter";
 
 // Extraction (a Claude call over the full transcript) runs after the
 // response via after() below, but the function invocation itself still
@@ -53,6 +54,9 @@ export async function POST(request: NextRequest) {
   try {
     if (eventType === "call.completed") {
       const call = parseQuoCall(body);
+      if (!isIncludedQuoNumber(call.ownNumber)) {
+        return NextResponse.json({ received: true, skipped: "excluded phone number" });
+      }
       const contact = await findOrCreateContact(admin, OWNER_ID, {
         phone: call.counterpartNumber,
         leadSource: "Quo (auto-created from call)",
@@ -82,6 +86,9 @@ export async function POST(request: NextRequest) {
       eventType === "call.transcript.completed"
     ) {
       const call = parseQuoCall(body);
+      if (!isIncludedQuoNumber(call.ownNumber)) {
+        return NextResponse.json({ received: true, skipped: "excluded phone number" });
+      }
       // Distinct key per event type, alongside the original call.completed
       // event's `raw` - so if a field guess above is still wrong for
       // recording/summary specifically, the real payload is saved to fix
@@ -138,12 +145,15 @@ export async function POST(request: NextRequest) {
       }
     } else if (eventType === "message.received" || eventType === "message.delivered") {
       const msg = parseQuoMessage(body);
+      if (!isIncludedQuoNumber(msg.ownNumber)) {
+        return NextResponse.json({ received: true, skipped: "excluded phone number" });
+      }
       const contact = await findOrCreateContact(admin, OWNER_ID, {
         phone: msg.counterpartNumber,
         leadSource: "Quo (auto-created from text)",
       });
       if (contact) {
-        await upsertActivity(admin, OWNER_ID, contact.id, "quo", "quo_message_id", msg.quoMessageId, {
+        const activity = await upsertActivity(admin, OWNER_ID, contact.id, "quo", "quo_message_id", msg.quoMessageId, {
           type: "text",
           direction: msg.direction,
           occurred_at: msg.occurredAt,
@@ -159,12 +169,13 @@ export async function POST(request: NextRequest) {
             // and every future bulk send already filters on this.
             await recordOptOut(admin, contact.id);
           } else {
-            await recordConsent(admin, contact.id, "texted you first");
-            await analyzeContactActivity(admin, OWNER_ID, contact.id, {
-              type: "text",
-              direction: msg.direction,
-              content: msg.text,
-            });
+            await analyzeContactActivity(
+              admin,
+              OWNER_ID,
+              contact.id,
+              { type: "text", direction: msg.direction, content: msg.text },
+              activity.id,
+            );
           }
         }
       }
