@@ -1,4 +1,4 @@
-import { cn, initials, avatarColor } from "@/lib/utils";
+import { cn, initials } from "@/lib/utils";
 import { forwardRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
 
 export const Button = forwardRef<
@@ -83,24 +83,24 @@ export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElemen
   return <div className={cn("rounded-2xl border border-neutral-200/70 bg-white p-4 shadow-card", className)} {...props} />;
 }
 
+// No colour as decoration (Phase 1 rule) - plain stone, same treatment
+// every other avatar in the app (contact detail header, etc.) already uses.
 export function Avatar({
-  id,
   firstName,
   lastName,
   size = 44,
   className,
 }: {
-  id: string;
+  id?: string;
   firstName: string;
   lastName?: string | null;
   size?: number;
   className?: string;
 }) {
-  const color = avatarColor(id);
   return (
     <div
-      className={cn("flex shrink-0 items-center justify-center rounded-full font-semibold", className)}
-      style={{ backgroundColor: `${color}1a`, color, width: size, height: size, fontSize: Math.round(size * 0.36) }}
+      className={cn("flex shrink-0 items-center justify-center rounded-full bg-neutral-100 font-semibold text-neutral-600", className)}
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.36) }}
     >
       {initials(firstName, lastName)}
     </div>

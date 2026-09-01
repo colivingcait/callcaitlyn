@@ -21,7 +21,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     listNewRegistrationsQueue(),
     getUnmatchedNotesCount(),
   ]);
-  const waitingOnReply = conversations.filter((c) => c.lastActivity.type === "text" && c.lastActivity.direction === "inbound").length;
+  const waitingOnReply = conversations.filter((c) => c.owed).length;
   const navCounts = { contacts: contactsCount ?? 0, dialer: newLeads.length, messages: waitingOnReply, notes: unmatchedNotes };
 
   return (

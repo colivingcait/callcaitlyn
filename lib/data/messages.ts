@@ -1,14 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
+import { isConversationOwed } from "@/lib/crm/message-owed";
 import type { Activity, ContactWithRelations } from "@/types/database";
 
 type ContactSummary = Pick<
   ContactWithRelations,
-  "id" | "first_name" | "last_name" | "phone" | "contact_type" | "timeline" | "pipeline_stages" | "contact_tags" | "archived"
+  "id" | "first_name" | "last_name" | "phone" | "contact_type" | "timeline" | "representing" | "pipeline_stages" | "contact_tags" | "archived"
 >;
 
 export type Conversation = {
   contact: ContactSummary;
   lastActivity: Activity;
+  owed: boolean;
 };
 
 // Supabase's JS client can't easily express "latest row per group" in one
@@ -19,12 +21,17 @@ export type Conversation = {
 // Hidden (archived) contacts - spam/trash leads - are excluded by default,
 // reusing the same `archived` flag the rest of the app already treats as
 // "soft trash." Pass hidden: true to see the hidden list instead.
-export async function listConversations(opts?: { hidden?: boolean }): Promise<Conversation[]> {
+//
+// filter narrows which conversations come back: "owed" only the ones
+// isConversationOwed flags, "calls" only call-type threads (missed or
+// answered), "all"/undefined everything - all three still compute `owed`
+// per row so the caller can style rows consistently either way.
+export async function listConversations(opts?: { hidden?: boolean; filter?: "owed" | "all" | "calls" }): Promise<Conversation[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("activities")
     .select(
-      "*, contacts!inner(id, first_name, last_name, phone, contact_type, timeline, archived, pipeline_stages(*), contact_tags(tags(*)))",
+      "*, contacts!inner(id, first_name, last_name, phone, contact_type, timeline, representing, archived, pipeline_stages(*), contact_tags(tags(*)))",
     )
     .eq("contacts.archived", !!opts?.hidden)
     .in("type", ["call", "text"])
@@ -39,7 +46,14 @@ export async function listConversations(opts?: { hidden?: boolean }): Promise<Co
     if (!contact || seen.has(contact.id)) continue;
     seen.add(contact.id);
     const { contacts: _contacts, ...activity } = row as Activity & { contacts: unknown };
-    conversations.push({ contact, lastActivity: activity as Activity });
+    const lastActivity = activity as Activity;
+
+    if (opts?.filter === "calls" && lastActivity.type !== "call") continue;
+
+    const owed = isConversationOwed(lastActivity);
+    if (opts?.filter === "owed" && !owed) continue;
+
+    conversations.push({ contact, lastActivity, owed });
   }
 
   return conversations;
