@@ -47,6 +47,7 @@ export async function dismissReplyOwed(activityId: string) {
 
   await supabase.from("activities").update({ reply_dismissed_at: new Date().toISOString() }).eq("id", activityId).eq("owner_id", user.id);
   revalidatePath("/");
+  revalidatePath("/messages");
   return { ok: true as const };
 }
 

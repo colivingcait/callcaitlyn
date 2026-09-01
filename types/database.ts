@@ -274,6 +274,7 @@ export interface Activity {
   dedupe_value: string | null;
   needs_reply: boolean | null;
   reply_reminder_sent_at: string | null;
+  reply_dismissed_at: string | null;
   created_at: string;
 }
 

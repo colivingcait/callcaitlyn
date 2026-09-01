@@ -91,7 +91,7 @@ export function ConversationRow({ conversation }: { conversation: Conversation }
             <Phone size={15} />
           </button>
         )}
-        <ConversationActions contactId={contact.id} hidden={contact.archived} />
+        <ConversationActions contactId={contact.id} hidden={contact.archived} activityId={lastActivity.id} owed={owed} missedCall={missedCall} />
       </div>
     </div>
   );

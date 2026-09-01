@@ -3,20 +3,34 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { MoreVertical, EyeOff, Eye, Trash2 } from "lucide-react";
+import { MoreVertical, EyeOff, Eye, Trash2, CircleCheck } from "lucide-react";
+import { dismissReplyOwed } from "@/app/(app)/today-actions";
 
 // Lets Caitlyn clear spam/trash leads out of her Messages inbox - "Hide"
 // just flips the same `archived` flag the rest of the app already treats
 // as soft trash, "Delete" removes the contact (and everything attached to
-// it, via cascade) for good.
+// it, via cascade) for good. Dismiss is different from both - not every
+// thread flagged "needs a reply" actually does (she may already know from
+// other context she doesn't owe one), and dismissing keeps the contact
+// and every message intact, just clears the "owed" flag on this one
+// activity - same reply_dismissed_at mechanism Today's Replies owed
+// already uses, reused here (activityId/owed are optional so this
+// component works unchanged everywhere it doesn't apply, e.g. the thread
+// detail page).
 export function ConversationActions({
   contactId,
   hidden,
   afterDelete,
+  activityId,
+  owed,
+  missedCall,
 }: {
   contactId: string;
   hidden: boolean;
   afterDelete?: "back-to-messages";
+  activityId?: string;
+  owed?: boolean;
+  missedCall?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -34,6 +48,17 @@ export function ConversationActions({
     setBusy(true);
     const supabase = createClient();
     await supabase.from("contacts").update({ archived: !hidden }).eq("id", contactId);
+    setBusy(false);
+    close();
+    router.refresh();
+  }
+
+  async function handleDismiss(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!activityId) return;
+    setBusy(true);
+    await dismissReplyOwed(activityId);
     setBusy(false);
     close();
     router.refresh();
@@ -104,6 +129,16 @@ export function ConversationActions({
               </div>
             ) : (
               <>
+                {owed && activityId && (
+                  <button
+                    onClick={handleDismiss}
+                    disabled={busy}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+                  >
+                    <CircleCheck size={14} />
+                    {missedCall ? "Doesn't need a call back" : "Doesn't need a reply"}
+                  </button>
+                )}
                 <button
                   onClick={toggleHidden}
                   disabled={busy}
