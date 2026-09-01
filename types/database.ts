@@ -52,6 +52,7 @@ export type ActivitySource =
   | "house_hacking_site"
   | "site_form"
   | "instagram"
+  | "blinq"
   | "ai"
   | "system";
 

@@ -304,6 +304,28 @@ This uses Meta's Instagram Messaging API, which requires an Instagram **professi
 
 Leave all three variables unset and this integration just stays dormant — the Messages page works exactly as it does today, no "Stranger" section appears.
 
+## Setting up Blinq (digital business card capture)
+
+When you share your Blinq digital business card at a meetup and someone shares theirs back, this pulls their contact into the CRM automatically — tagged **"Blinq"**, with their company/title (if given) logged as a note on their activity timeline. Requires **Blinq Business** (their Zapier integration is gated behind that tier) — Blinq itself has no native webhook, so this goes through Zapier's generic "Webhooks by Zapier" action instead:
+
+1. **Run the new migration**: [`supabase/migrations/0055_blinq_activity_source.sql`](./supabase/migrations/0055_blinq_activity_source.sql).
+2. Pick any long random string — this is `BLINQ_WEBHOOK_SECRET`. Add it to Vercel and redeploy.
+3. In Zapier, create a new Zap: **Trigger** = Blinq, "Contact Created". **Action** = Webhooks by Zapier, "POST".
+4. Set the action's URL to `https://crm.callcaitlyn.com/api/webhooks/blinq?secret=YOUR_SECRET` (your actual `BLINQ_WEBHOOK_SECRET`), Payload Type = **json**, and map these fields from the Blinq trigger step (skip any that don't apply to a given contact):
+   ```
+   email          -> their email
+   phone          -> their phone
+   first_name     -> their first name (or map "name" to their full name instead)
+   last_name      -> their last name
+   company        -> their company (optional)
+   job_title      -> their job title (optional)
+   blinq_contact_id -> Blinq's own contact ID
+   ```
+   `blinq_contact_id` is what stops a redelivered/retried Zap run from logging the same "shared a business card" note twice — worth mapping even though it's not required, since without it every retry adds a duplicate note.
+5. Turn the Zap on, share cards with a test contact, and confirm they show up in Contacts tagged "Blinq" with a note on their timeline.
+
+Leave `BLINQ_WEBHOOK_SECRET` unset and this integration just stays dormant, same as any other webhook before it's configured.
+
 ## Setting up the House Hacking site (website signups)
 
 `househackingatl.com` is a separately-hosted, fully static Next.js site (its own repo, no database) - its signup forms used to `fetch()` straight to Kit's public form API from the browser. This endpoint replaces that: the site's form components POST to the CRM directly instead, and the CRM does the work Kit used to do (nothing - Kit only collected email addresses; this also creates/updates the contact, tags them, and enrolls them in the same sequences as an in-person meetup attendee).
@@ -398,6 +420,7 @@ app/api/webhooks/calendly/    Calendly booking webhook receiver
 app/api/webhooks/eventbrite/  Eventbrite registration webhook receiver
 app/api/webhooks/jotform/     Jotform in-person check-in webhook receiver
 app/api/webhooks/granola/     Granola meeting/note transcript webhook receiver
+app/api/webhooks/blinq/       Blinq digital business card webhook receiver (via Zapier)
 app/api/auth/gmail/           Gmail OAuth connect/callback routes
 app/api/cron/                 Vercel Cron endpoints: Gmail inbox sync, sequence sends
 app/api/track/                Sequence email open/click tracking redirects
