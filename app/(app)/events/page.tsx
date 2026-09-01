@@ -1,14 +1,9 @@
 import { Download } from "lucide-react";
 import { getEventsData } from "@/lib/data/events";
 import { EventRosterCard } from "@/components/events/EventRosterCard";
-import { OlderEventRow } from "@/components/events/OlderEventRow";
-
-const EXPANDED_COUNT = 6;
 
 export default async function EventsPage() {
   const { events, totalUniqueAttendees, eventsInLastYear } = await getEventsData();
-  const recent = events.slice(0, EXPANDED_COUNT);
-  const older = events.slice(EXPANDED_COUNT);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6">
@@ -30,28 +25,18 @@ export default async function EventsPage() {
       {events.length === 0 ? (
         <p className="mt-6 text-[15px] text-neutral-400">No registrations or check-ins yet.</p>
       ) : (
-        <>
-          <div className="mt-5 space-y-3">
-            {recent.map((event, i) => (
-              <EventRosterCard
-                key={event.key}
-                event={event}
-                defaultOpen={i === 0}
-                otherEvents={events
-                  .filter((e) => e.key !== event.key && e.eventId)
-                  .map((e) => ({ eventId: e.eventId as string, label: e.label, date: e.date }))}
-              />
-            ))}
-          </div>
-
-          {older.length > 0 && (
-            <div className="mt-5 overflow-hidden rounded-2xl border border-[#ebe9e7] bg-white">
-              {older.map((event) => (
-                <OlderEventRow key={event.key} event={event} />
-              ))}
-            </div>
-          )}
-        </>
+        <div className="mt-5 space-y-3">
+          {events.map((event, i) => (
+            <EventRosterCard
+              key={event.key}
+              event={event}
+              defaultOpen={i === 0}
+              otherEvents={events
+                .filter((e) => e.key !== event.key && e.eventId)
+                .map((e) => ({ eventId: e.eventId as string, label: e.label, date: e.date }))}
+            />
+          ))}
+        </div>
       )}
     </div>
   );

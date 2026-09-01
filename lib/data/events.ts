@@ -9,9 +9,13 @@ import { createClient } from "@/lib/supabase/server";
 export type EventSeries = "house_hacking" | "womens_rei";
 const SERIES_LABELS: Record<EventSeries, string> = { house_hacking: "House Hacking", womens_rei: "Women's REI" };
 
-type RawActivity = { contact_id: string; source: string; occurred_at: string; metadata: Record<string, unknown> | null };
+// Exported so app/(app)/events/actions.ts's delete-by-key action can
+// recompute the exact same bucket key for every activity and delete
+// whichever ones land on the key it was given, instead of re-deriving a
+// second, potentially-drifting copy of this classification logic in SQL.
+export type RawActivity = { contact_id: string; source: string; occurred_at: string; metadata: Record<string, unknown> | null };
 
-function classifySeries(a: RawActivity): EventSeries | null {
+export function classifySeries(a: RawActivity): EventSeries | null {
   if (a.source === "eventbrite") {
     const account = a.metadata?.eventbrite_account;
     if (account === "womens_rei") return "womens_rei";
@@ -30,7 +34,7 @@ function classifySeries(a: RawActivity): EventSeries | null {
   return null;
 }
 
-function dateKey(iso: string) {
+export function dateKey(iso: string) {
   return new Date(iso).toISOString().slice(0, 10);
 }
 
@@ -68,7 +72,7 @@ export type EventsData = {
   eventsInLastYear: number;
 };
 
-function eventKey(series: EventSeries, eventId: string | null, occurredAt: string): string {
+export function eventKey(series: EventSeries, eventId: string | null, occurredAt: string): string {
   return eventId ? `${series}:${eventId}` : `${series}:date:${dateKey(occurredAt)}`;
 }
 

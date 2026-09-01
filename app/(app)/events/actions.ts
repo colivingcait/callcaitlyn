@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { classifySeries, eventKey, type RawActivity } from "@/lib/data/events";
 
 // For cleaning up a genuinely duplicate Eventbrite listing (two listings
 // accidentally created for the same real meetup) - deletes every
@@ -100,4 +101,48 @@ export async function mergeEventInto(sourceEventId: string, targetEventId: strin
   revalidatePath("/events");
   revalidatePath("/reports");
   return { ok: true as const, merged: sourceRows.length };
+}
+
+// For an event that has no real Eventbrite event_id at all - a stray
+// walk-in/manual check-in with nothing else tying it to a real listing
+// (the "1 of 0, no registrations, 1 walk-in" phantom events). Since
+// there's no event_id to delete by, this recomputes the exact same
+// series+key every activity would land in via getEventsData's own
+// classifySeries/eventKey (imported, not re-implemented) and deletes
+// whichever rows land on the given key - guaranteed to match what was
+// actually shown on the card, since it's the same function computing it.
+export async function deleteEventByKey(key: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+  if (!key) return { ok: false as const, error: "No event to delete" };
+
+  const admin = createAdminClient();
+  const { data: activities, error } = await admin
+    .from("activities")
+    .select("id, contact_id, source, occurred_at, metadata")
+    .eq("owner_id", user.id)
+    .in("source", ["eventbrite", "checkin", "jotform"]);
+
+  if (error) return { ok: false as const, error: error.message };
+
+  const matchIds = (activities ?? [])
+    .filter((a) => {
+      const series = classifySeries(a as RawActivity);
+      if (!series) return false;
+      const eventId = typeof a.metadata?.event_id === "string" ? a.metadata.event_id : null;
+      return eventKey(series, eventId, a.occurred_at) === key;
+    })
+    .map((a) => a.id);
+
+  if (matchIds.length === 0) return { ok: false as const, error: "Couldn't find that event anymore" };
+
+  const { error: deleteError, count } = await admin.from("activities").delete({ count: "exact" }).in("id", matchIds);
+  if (deleteError) return { ok: false as const, error: deleteError.message };
+
+  revalidatePath("/events");
+  revalidatePath("/reports");
+  return { ok: true as const, deleted: count ?? 0 };
 }

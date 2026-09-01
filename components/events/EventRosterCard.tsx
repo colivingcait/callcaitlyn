@@ -8,7 +8,7 @@ import { openQuoCall } from "@/lib/quo/call-link";
 import { formatLocal } from "@/lib/format-time";
 import { formatPhone, cn } from "@/lib/utils";
 import { markContactAttended } from "@/app/(app)/reports/actions";
-import { deleteEventByEventId, mergeEventInto } from "@/app/(app)/events/actions";
+import { deleteEventByEventId, deleteEventByKey, mergeEventInto } from "@/app/(app)/events/actions";
 import { TextBlastModal } from "@/components/contacts/TextBlastModal";
 import type { EventEntry, RosterPerson } from "@/lib/data/events";
 
@@ -79,10 +79,9 @@ export function EventRosterCard({
   }
 
   async function handleDelete() {
-    if (!event.eventId) return;
     setDeleting(true);
     setDeleteError("");
-    const result = await deleteEventByEventId(event.eventId);
+    const result = event.eventId ? await deleteEventByEventId(event.eventId) : await deleteEventByKey(event.key);
     if (result.ok) {
       router.refresh();
     } else {
@@ -259,8 +258,7 @@ export function EventRosterCard({
             Registered but not checked in counts as a no-show until you mark them attended.
           </p>
 
-          {event.eventId && (
-            <div className="border-t border-neutral-100 px-[18px] py-3">
+          <div className="border-t border-neutral-100 px-[18px] py-3">
               {mergeTarget ? (
                 <div className="flex flex-wrap items-center gap-2.5">
                   <p className="text-sm text-neutral-600">
@@ -310,7 +308,7 @@ export function EventRosterCard({
                 </div>
               ) : (
                 <div className="flex flex-wrap items-center gap-3.5">
-                  {otherEvents.length > 0 && (
+                  {event.eventId && otherEvents.length > 0 && (
                     <div className="relative">
                       <button
                         type="button"
@@ -351,8 +349,7 @@ export function EventRosterCard({
                   </button>
                 </div>
               )}
-            </div>
-          )}
+          </div>
         </div>
       )}
 
