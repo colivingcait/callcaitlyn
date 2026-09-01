@@ -12,6 +12,7 @@ export function Section({
   meta,
   action,
   defaultOpen = true,
+  forceOpen,
   children,
 }: {
   sectionKey: string;
@@ -19,9 +20,10 @@ export function Section({
   meta?: string;
   action?: React.ReactNode;
   defaultOpen?: boolean;
+  forceOpen?: boolean;
   children: React.ReactNode;
 }) {
-  const [open, setOpen] = useSectionOpen(sectionKey, defaultOpen);
+  const [open, setOpen] = useSectionOpen(sectionKey, defaultOpen, forceOpen);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-[#ebe9e7] bg-white">

@@ -1,7 +1,18 @@
 import { PipelineCard } from "@/components/contacts/PipelineCard";
+import { Section } from "@/components/ui/Section";
+import { getPipelineExtras } from "@/lib/data/pipeline";
+import { formatCurrency } from "@/lib/utils";
 import type { ContactWithRelations, PipelineStage } from "@/types/database";
 
-export function PipelineBoard({
+// Stages ordered by closeness to money rather than pipeline sequence -
+// Under Contract and Hot/Ready are the two she actually acts on day to
+// day, so they open by default; everything else (including New Lead,
+// which is high-volume but low-per-contact-urgency) stays collapsed
+// until she wants it. One collapse mechanism (Section/useSectionOpen)
+// for all 9 stages rather than two different ones for a "top 3" vs. "the
+// rest" grouping - simpler, and every stage gets the same persisted
+// open/closed state across visits.
+export async function PipelineBoard({
   stages,
   contacts,
   openStageId,
@@ -16,61 +27,65 @@ export function PipelineBoard({
     byStage.set(c.stage_id, [...(byStage.get(c.stage_id) ?? []), c]);
   }
 
-  return (
-    <>
-      {/* Mobile: accordion sections */}
-      <div className="space-y-2 px-4 md:hidden">
-        {stages.map((stage) => {
-          const items = byStage.get(stage.id) ?? [];
-          return (
-            <details
-              key={stage.id}
-              open={openStageId ? stage.id === openStageId : items.length > 0}
-              className="rounded-2xl border border-neutral-200 bg-white"
-            >
-              <summary className="flex cursor-pointer items-center justify-between px-4 py-3 text-sm font-medium text-neutral-800">
-                <span className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: stage.color }} />
-                  {stage.name}
-                </span>
-                <span className="text-neutral-400">{items.length}</span>
-              </summary>
-              <div className="max-h-[24rem] space-y-2 overflow-y-auto border-t border-neutral-100 p-3">
-                {items.length === 0 ? (
-                  <p className="py-2 text-center text-xs text-neutral-400">No contacts in this stage.</p>
-                ) : (
-                  items.map((c) => <PipelineCard key={c.id} contact={c} stages={stages} />)
-                )}
-              </div>
-            </details>
-          );
-        })}
-      </div>
+  const extras = await getPipelineExtras(contacts, stages);
 
-      {/* Desktop: kanban columns, wrapping into new rows instead of an
-          ever-widening single row - visible stage count shouldn't force
-          horizontal scrolling to see the rest of the board. */}
-      <div className="hidden gap-4 px-6 pb-6 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {stages.map((stage) => {
-          const items = byStage.get(stage.id) ?? [];
-          return (
-            <div key={stage.id} className="flex flex-col">
-              <div className="mb-3 flex items-center gap-2 px-1">
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: stage.color }} />
-                <h3 className="text-sm font-semibold text-neutral-800">{stage.name}</h3>
-                <span className="text-xs text-neutral-400">{items.length}</span>
-              </div>
-              <div className="max-h-[32rem] space-y-2 overflow-y-auto rounded-2xl bg-neutral-100/60 p-2">
-                {items.length === 0 ? (
-                  <p className="py-6 text-center text-xs text-neutral-400">Empty</p>
-                ) : (
-                  items.map((c) => <PipelineCard key={c.id} contact={c} stages={stages} />)
-                )}
-              </div>
+  const underContractStage = stages.find((s) => s.is_under_contract);
+  const hotStage = stages.find((s) => s.name.toLowerCase().includes("hot"));
+  const newLeadStage = stages.find((s) => s.name.toLowerCase().includes("new lead"));
+
+  const featured = [underContractStage, hotStage, newLeadStage].filter((s): s is PipelineStage => !!s);
+  const featuredIds = new Set(featured.map((s) => s.id));
+  const rest = stages.filter((s) => !featuredIds.has(s.id));
+  const ordered = [...featured, ...rest];
+
+  function summaryFor(stage: PipelineStage, items: ContactWithRelations[]): { text: string; quiet: boolean } | null {
+    if (stage.is_under_contract) {
+      const total = items.reduce((sum, c) => sum + (extras.pendingDealByContact.get(c.id)?.netCommission ?? 0), 0);
+      return total > 0 ? { text: `${formatCurrency(total)} projected`, quiet: false } : null;
+    }
+    if (stage.id === hotStage?.id) {
+      const goneQuiet = items.filter((c) => extras.coldFromHotIds.has(c.id)).length;
+      return goneQuiet > 0 ? { text: `${goneQuiet} gone quiet 30+ days`, quiet: true } : null;
+    }
+    if (stage.id === newLeadStage?.id) {
+      const neverCalled = items.filter((c) => extras.neverCalledIds.has(c.id)).length;
+      return neverCalled > 0 ? { text: `${neverCalled} never called`, quiet: false } : null;
+    }
+    return null;
+  }
+
+  return (
+    <div className="space-y-2.5 px-4 pb-8 md:px-6">
+      {ordered.map((stage) => {
+        const items = byStage.get(stage.id) ?? [];
+        const summary = summaryFor(stage, items);
+        const defaultOpen = stage.id === underContractStage?.id || stage.id === hotStage?.id;
+        return (
+          <Section
+            key={stage.id}
+            sectionKey={`pipeline:stage:${stage.id}`}
+            title={stage.name}
+            meta={`${items.length}`}
+            defaultOpen={defaultOpen}
+            forceOpen={openStageId ? stage.id === openStageId : undefined}
+            action={
+              summary ? <span className={`shrink-0 text-[15px] font-semibold ${summary.quiet ? "text-red-700" : "text-neutral-600"}`}>{summary.text}</span> : undefined
+            }
+          >
+            <div className="space-y-2 bg-[#fcfbfa] p-3.5">
+              {items.length === 0 ? (
+                <p className="py-4 text-center text-sm text-neutral-400">Nobody in this stage.</p>
+              ) : (
+                items.map((c) => <PipelineCard key={c.id} contact={c} stage={stage} stages={stages} extras={extras} />)
+              )}
             </div>
-          );
-        })}
-      </div>
-    </>
+          </Section>
+        );
+      })}
+      <p className="px-0.5 pt-2 text-[15px] leading-[22px] text-neutral-500">
+        Stages are ordered by how close they are to money, not by pipeline order — the two you act on sit at the top, the rest stay shut until you want
+        them.
+      </p>
+    </div>
   );
 }
