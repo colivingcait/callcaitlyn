@@ -5,8 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import type { RecruitStage } from "@/types/database";
 
 // The only mutation this feature needs now - creating/editing an agent
-// contact goes through the real contact form (contact_type: "agent"),
-// not a bespoke path. Stamps recruit_joined_at/recruit_fee_received_at
+// contact goes through the real contact form (tagged "Agent"), not a
+// bespoke path. Stamps recruit_joined_at/recruit_fee_received_at
 // the first time a contact reaches that stage, so the totals on the
 // recruiting page are dated by when it actually happened.
 export async function changeRecruitStage(contactId: string, stage: RecruitStage | null) {

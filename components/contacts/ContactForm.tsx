@@ -21,18 +21,20 @@ export function ContactForm({
   tags,
   existingContacts = [],
   defaultContactType,
+  defaultTagIds,
 }: {
   contact?: ContactWithRelations;
   stages: PipelineStage[];
   tags: Tag[];
   existingContacts?: MergeCandidate[];
   defaultContactType?: ContactFormValues["contact_type"];
+  defaultTagIds?: string[];
 }) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(
-    contact?.contact_tags.map((ct) => ct.tags.id) ?? [],
+    contact?.contact_tags.map((ct) => ct.tags.id) ?? defaultTagIds ?? [],
   );
 
   const {
@@ -80,8 +82,8 @@ export function ContactForm({
 
   const representing = watch("representing");
   const showListingFields = representing === "seller" || representing === "both";
-  const watchedContactType = watch("contact_type");
-  const showReferralFee = watchedContactType === "agent";
+  const agentTag = tags.find((t) => t.name === "Agent");
+  const showReferralFee = agentTag != null && selectedTagIds.includes(agentTag.id);
 
   const watchedEmail = watch("email");
   const watchedPhone = watch("phone");
@@ -253,15 +255,6 @@ export function ContactForm({
             </Select>
           </div>
         </div>
-        {showReferralFee && (
-          <div>
-            <Label htmlFor="referral_fee">Referral fee</Label>
-            <Input id="referral_fee" type="number" inputMode="decimal" step="0.01" {...register("referral_fee")} placeholder="Fill in once it's agreed" />
-            <p className="mt-1 text-xs text-neutral-400">
-              What the team lead pays if this agent joins the office - shows up on Agent recruiting once known.
-            </p>
-          </div>
-        )}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <Label htmlFor="representing">Representing</Label>
@@ -380,6 +373,15 @@ export function ContactForm({
             );
           })}
         </div>
+        {showReferralFee && (
+          <div>
+            <Label htmlFor="referral_fee">Referral fee</Label>
+            <Input id="referral_fee" type="number" inputMode="decimal" step="0.01" {...register("referral_fee")} placeholder="Fill in once it's agreed" />
+            <p className="mt-1 text-xs text-neutral-400">
+              What the team lead pays if this agent joins the office - shows up on Agent recruiting once known.
+            </p>
+          </div>
+        )}
       </Card>
 
       <Card className="space-y-3">

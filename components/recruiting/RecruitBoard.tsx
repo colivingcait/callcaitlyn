@@ -29,7 +29,7 @@ export function RecruitBoard({ recruits }: { recruits: Contact[] }) {
           {inProgress} in progress · {formatCurrency(feesReceived)} in fees received
         </p>
         <Link
-          href="/contacts/new?type=agent"
+          href="/contacts/new?tag=Agent"
           className="flex items-center gap-1.5 rounded-[10px] bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white"
         >
           <UserPlus size={15} /> Add recruit
@@ -62,7 +62,7 @@ export function RecruitBoard({ recruits }: { recruits: Contact[] }) {
 
       {recruits.length === 0 && (
         <p className="mt-4 text-[15px] text-neutral-500">
-          Mark a contact&apos;s type as &quot;Agent&quot; and they&apos;ll show up here automatically.
+          Tag a contact &quot;Agent&quot; and they&apos;ll show up here automatically.
         </p>
       )}
     </div>

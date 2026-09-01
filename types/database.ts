@@ -13,11 +13,10 @@ export type ContactType =
   | "past_client"
   | "sphere"
   | "attendee"
-  | "agent"
   | "other";
 
 // null (on Contact.recruit_stage) = top of funnel, "Introduced" - every
-// agent-type contact by default, no separate value stored for it.
+// contact tagged "Agent" by default, no separate value stored for it.
 export type RecruitStage = "connected_with_lead" | "joined" | "fee_received" | "not_moving_forward";
 
 export type Timeline =

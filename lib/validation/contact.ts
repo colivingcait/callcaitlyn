@@ -17,7 +17,6 @@ export const contactSchema = z.object({
     "past_client",
     "sphere",
     "attendee",
-    "agent",
     "other",
   ]),
   representing: z.union([z.enum(["buyer", "seller", "both"]), z.literal("")]).nullable().optional(),
