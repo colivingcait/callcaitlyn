@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fullName } from "@/lib/utils";
+import { generateWorthAskingQuestions } from "@/lib/crm/prep-sheet-questions";
 import type { UpcomingCalendarEvent } from "@/lib/google/calendar";
+import type { Activity } from "@/types/database";
 
 export type PrepSheetPayload = {
   eventId: string;
@@ -9,10 +11,17 @@ export type PrepSheetPayload = {
   location: string | null;
   contactId: string;
   contactName: string;
+  contactPhone: string | null;
   sinceLastSpoke: string;
   whatTheyreAfter: { label: string; value: string }[];
   notes: string | null;
   recentActivity: { date: string; label: string }[];
+  timelineActivities: Activity[];
+  openTasks: { title: string; dueAt: string | null }[];
+  lastQuote: { address: string; monthlyOutOfPocket: number; ratePct: number } | null;
+  worthAsking: string[];
+  totalActivityCount: number;
+  firstActivityAt: string | null;
 };
 
 const TIMELINE_LABELS: Record<string, string> = {
@@ -42,19 +51,38 @@ export async function buildPrepSheet(
 ): Promise<PrepSheetPayload | null> {
   const { data: contact } = await admin
     .from("contacts")
-    .select("id, first_name, last_name, budget_min, budget_max, timeline, areas_of_interest, representing, notes, last_event_name, last_event_at")
+    .select("id, first_name, last_name, phone, budget_min, budget_max, timeline, areas_of_interest, representing, notes, last_event_name, last_event_at")
     .eq("id", contactId)
     .eq("owner_id", ownerId)
     .maybeSingle();
   if (!contact) return null;
 
-  const { data: activities } = await admin
-    .from("activities")
-    .select("type, direction, occurred_at, body")
-    .eq("owner_id", ownerId)
-    .eq("contact_id", contactId)
-    .order("occurred_at", { ascending: false })
-    .limit(8);
+  // Uncapped - "Everything, in order" needs the true full history (count
+  // and earliest date included), not just the most-recent slice the old
+  // 8-row cap used for the email digest still uses via recentActivity.
+  const [{ data: activities }, { data: openTasks }, { data: lastQuote }] = await Promise.all([
+    admin
+      .from("activities")
+      .select("id, type, direction, occurred_at, body, source, metadata")
+      .eq("owner_id", ownerId)
+      .eq("contact_id", contactId)
+      .order("occurred_at", { ascending: false }),
+    admin
+      .from("tasks")
+      .select("title, due_at")
+      .eq("owner_id", ownerId)
+      .eq("contact_id", contactId)
+      .is("completed_at", null)
+      .order("due_at", { ascending: true, nullsFirst: false }),
+    admin
+      .from("quotes")
+      .select("property_address, monthly_out_of_pocket, interest_rate_pct")
+      .eq("owner_id", ownerId)
+      .eq("contact_id", contactId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
   const lastOutreach = (activities ?? []).find((a) => ["call", "text", "email"].includes(a.type));
   const daysQuiet = lastOutreach ? Math.floor((Date.now() - new Date(lastOutreach.occurred_at).getTime()) / (24 * 60 * 60 * 1000)) : null;
@@ -90,9 +118,25 @@ export async function buildPrepSheet(
     location: event.location,
     contactId: contact.id,
     contactName: fullName(contact),
+    contactPhone: contact.phone,
     sinceLastSpoke: sinceLastSpokeParts.length > 0 ? `${sinceLastSpokeParts.join(", and ")}.` : "",
     whatTheyreAfter,
     notes: contact.notes,
-    recentActivity: (activities ?? []).map((a) => ({ date: a.occurred_at, label: activityLabel(a) })),
+    recentActivity: (activities ?? []).slice(0, 8).map((a) => ({ date: a.occurred_at, label: activityLabel(a) })),
+    timelineActivities: (activities ?? []) as Activity[],
+    openTasks: (openTasks ?? []).map((t) => ({ title: t.title, dueAt: t.due_at })),
+    lastQuote: lastQuote
+      ? { address: lastQuote.property_address, monthlyOutOfPocket: lastQuote.monthly_out_of_pocket, ratePct: lastQuote.interest_rate_pct }
+      : null,
+    worthAsking: generateWorthAskingQuestions({
+      budgetMin: contact.budget_min,
+      budgetMax: contact.budget_max,
+      timeline: contact.timeline,
+      areasOfInterest: contact.areas_of_interest,
+      representing: contact.representing,
+      notes: contact.notes,
+    }),
+    totalActivityCount: (activities ?? []).length,
+    firstActivityAt: (activities ?? []).length > 0 ? activities![activities!.length - 1].occurred_at : null,
   };
 }
