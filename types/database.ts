@@ -538,29 +538,48 @@ export interface SchedulingSettings {
   updated_at: string;
 }
 
+// Every remaining row is contact-specific now - the generic /book
+// address needs no link row at all (see app/book/page.tsx), only a
+// personalized /book/{slug} link does, for the prefill.
 export interface BookingLink {
   id: string;
   owner_id: string;
-  contact_id: string | null;
+  contact_id: string;
   slug: string;
   created_at: string;
 }
 
-export type BookingRequestStatus = "pending" | "approved" | "declined" | "canceled";
+// A progressive session, not a one-shot submission: 'info' (name/phone
+// given, no time picked yet - this is what makes an abandoned attempt
+// visible to her) -> 'time_selected' (a slot picked, prep form not yet
+// submitted) -> 'pending' (prep form submitted, ready for her review) ->
+// 'approved' | 'declined' | 'canceled'.
+export type BookingRequestStage = "info" | "time_selected" | "pending" | "approved" | "declined" | "canceled";
+
+// Curated subset of ContactType a stranger can meaningfully self-select
+// on the public booking form - excludes CRM-internal classifications
+// (past_client, sphere, attendee) nobody outside the CRM would apply to
+// themselves.
+export type BookingContactType = "buyer" | "seller" | "both" | "investor" | "renter" | "referral_partner" | "vendor" | "other";
 
 export interface BookingRequest {
   id: string;
   owner_id: string;
-  booking_link_id: string;
+  booking_link_id: string | null;
   contact_id: string | null;
   visitor_name: string;
   visitor_phone: string;
   visitor_email: string | null;
-  starts_at: string;
-  ends_at: string;
-  status: BookingRequestStatus;
+  starts_at: string | null;
+  ends_at: string | null;
+  stage: BookingRequestStage;
+  contact_type: BookingContactType | null;
+  timeline: Timeline | null;
+  notes: string | null;
+  questions: string | null;
   google_event_id: string | null;
   created_at: string;
+  submitted_at: string | null;
   decided_at: string | null;
 }
 

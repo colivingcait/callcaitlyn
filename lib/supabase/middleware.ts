@@ -40,8 +40,10 @@ export async function updateSession(request: NextRequest) {
   const isPublicQuote = request.nextUrl.pathname.startsWith("/n/");
   // The self-serve scheduling page - opened by whoever she texted the
   // link to, not the logged-in agent, so it must be reachable without a
-  // session too.
-  const isPublicBooking = request.nextUrl.pathname.startsWith("/book/");
+  // session too. The bare "/book" (no trailing slash) is the easy
+  // generic address, distinct from "/book/{slug}" contact links - both
+  // need the bypass.
+  const isPublicBooking = request.nextUrl.pathname === "/book" || request.nextUrl.pathname.startsWith("/book/");
   // Webhooks (Quo, and any future integration) authenticate via their own
   // signature, not a Supabase session - they must bypass the login guard.
   // Same for cron jobs (authenticate via CRON_SECRET, no browser session),

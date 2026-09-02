@@ -12,7 +12,7 @@ const DURATION_OPTIONS = [15, 20, 30, 45, 60];
 const DAYS_OUT_OPTIONS = [7, 14, 21, 30, 45, 60];
 const VISIBLE_PCT_OPTIONS = [50, 60, 70, 80, 90, 100];
 
-export function SchedulingSettingsCard({ settings, genericLink }: { settings: SchedulingSettings; genericLink: string | null }) {
+export function SchedulingSettingsCard({ settings, genericLink }: { settings: SchedulingSettings; genericLink: string }) {
   const router = useRouter();
   const [duration, setDuration] = useState(settings.duration_minutes);
   const [daysOut, setDaysOut] = useState(settings.days_out);

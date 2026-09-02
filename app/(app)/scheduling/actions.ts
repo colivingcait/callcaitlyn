@@ -8,6 +8,8 @@ import { createMeetingInvite } from "@/lib/google/calendar";
 import { upsertActivity } from "@/lib/crm/activities";
 import { sendTextToContact } from "@/app/(app)/contacts/actions";
 import { buildBookingConfirmedMessage, buildBookingDeclinedMessage } from "@/lib/crm/booking-message";
+import { BOOKING_CONTACT_TYPE_OPTIONS } from "@/lib/crm/booking-form-options";
+import { TIMELINE_LABELS } from "@/lib/utils";
 import { baseUrl } from "@/lib/crm/sequences";
 import type { WeeklyHours } from "@/types/database";
 
@@ -89,14 +91,26 @@ export async function approveBooking(requestId: string) {
 
   const { data: request } = await supabase.from("booking_requests").select("*").eq("id", requestId).eq("owner_id", user.id).maybeSingle();
   if (!request) return { ok: false as const, error: "Request not found" };
-  if (request.status !== "pending") return { ok: false as const, error: "Already decided" };
+  if (request.stage !== "pending") return { ok: false as const, error: "Already decided" };
+  if (!request.starts_at || !request.ends_at) return { ok: false as const, error: "No time attached to this request" };
 
   const admin = createAdminClient();
   const durationMinutes = Math.round((new Date(request.ends_at).getTime() - new Date(request.starts_at).getTime()) / 60_000);
+  const contactTypeLabel = BOOKING_CONTACT_TYPE_OPTIONS.find((o) => o.value === request.contact_type)?.label;
+  const description = [
+    contactTypeLabel ? `${contactTypeLabel}` : null,
+    request.timeline ? `Timeline: ${TIMELINE_LABELS[request.timeline]}` : null,
+    request.notes ? `Notes: ${request.notes}` : null,
+    request.questions ? `Questions: ${request.questions}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
   const invite = await createMeetingInvite(admin, user.id, {
     attendeeEmail: request.visitor_email,
     attendeeName: request.visitor_name,
     title: `Meeting with ${request.visitor_name}`,
+    description: description || undefined,
     startAt: request.starts_at,
     durationMinutes: durationMinutes > 0 ? durationMinutes : 30,
   });
@@ -104,7 +118,7 @@ export async function approveBooking(requestId: string) {
 
   const { error } = await supabase
     .from("booking_requests")
-    .update({ status: "approved", google_event_id: invite.eventId, decided_at: new Date().toISOString() })
+    .update({ stage: "approved", google_event_id: invite.eventId, decided_at: new Date().toISOString() })
     .eq("id", requestId);
   if (error) return { ok: false as const, error: error.message };
 
@@ -143,20 +157,46 @@ export async function declineBooking(requestId: string) {
     .eq("owner_id", user.id)
     .maybeSingle();
   if (!request) return { ok: false as const, error: "Request not found" };
-  if (request.status !== "pending") return { ok: false as const, error: "Already decided" };
+  if (request.stage !== "pending") return { ok: false as const, error: "Already decided" };
+  if (!request.starts_at) return { ok: false as const, error: "No time attached to this request" };
 
-  const { error } = await supabase.from("booking_requests").update({ status: "declined", decided_at: new Date().toISOString() }).eq("id", requestId);
+  const { error } = await supabase.from("booking_requests").update({ stage: "declined", decided_at: new Date().toISOString() }).eq("id", requestId);
   if (error) return { ok: false as const, error: error.message };
 
   const bookingLink = (request as unknown as { booking_links: { slug: string } | null }).booking_links;
-  if (request.contact_id && bookingLink) {
+  if (request.contact_id) {
     const message = buildBookingDeclinedMessage({
       visitorFirstName: request.visitor_name.split(" ")[0] || request.visitor_name,
       startsAt: request.starts_at,
-      rebookLink: `${baseUrl()}/book/${bookingLink.slug}`,
+      // A contact-specific link rebooks through their own prefilled
+      // page; a request that came in through the bare /book address
+      // (no link at all) rebooks through that same easy address.
+      rebookLink: bookingLink ? `${baseUrl()}/book/${bookingLink.slug}` : `${baseUrl()}/book`,
     });
     await sendTextToContact(request.contact_id, request.visitor_phone, message);
   }
+
+  revalidatePath("/scheduling");
+  return { ok: true as const };
+}
+
+// She can cancel an abandoned session herself (e.g. she already reached
+// out directly and it's not worth leaving in the list) - never deletes,
+// same "keep history" reasoning as decline.
+export async function cancelAbandonedSession(requestId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const { error } = await supabase
+    .from("booking_requests")
+    .update({ stage: "canceled", decided_at: new Date().toISOString() })
+    .eq("id", requestId)
+    .eq("owner_id", user.id)
+    .in("stage", ["info", "time_selected"]);
+  if (error) return { ok: false as const, error: error.message };
 
   revalidatePath("/scheduling");
   return { ok: true as const };

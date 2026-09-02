@@ -17,6 +17,11 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
+  // Resolves relative/route-based metadata (og:image from the /book and
+  // /book/[slug] opengraph-image.tsx files) to the real domain rather
+  // than Next's localhost fallback - without this, a texted /book link's
+  // preview card can resolve its image to the wrong host.
+  metadataBase: new URL(process.env.APP_BASE_URL ?? "https://crm.callcaitlyn.com"),
   title: "CallCaitlyn CRM",
   description: "Real estate CRM for leads, follow-ups, and pipeline.",
   manifest: "/manifest.json",

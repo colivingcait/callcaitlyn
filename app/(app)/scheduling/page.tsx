@@ -1,21 +1,22 @@
 import {
   getSchedulingSettings,
-  getOrCreateGenericBookingLink,
   listPendingBookingRequests,
   listUpcomingApprovedBookingRequests,
+  listAbandonedBookingSessions,
 } from "@/lib/data/scheduling";
 import { Section } from "@/components/ui/Section";
 import { BookingRequestRow } from "@/components/scheduling/BookingRequestRow";
+import { AbandonedSessionRow } from "@/components/scheduling/AbandonedSessionRow";
 import { SchedulingSettingsCard } from "@/components/scheduling/SchedulingSettingsCard";
 import { baseUrl } from "@/lib/crm/sequences";
 import { formatLocal } from "@/lib/format-time";
 
 export default async function SchedulingPage() {
-  const [settings, genericLink, pending, upcoming] = await Promise.all([
+  const [settings, pending, upcoming, abandoned] = await Promise.all([
     getSchedulingSettings(),
-    getOrCreateGenericBookingLink(),
     listPendingBookingRequests(),
     listUpcomingApprovedBookingRequests(),
+    listAbandonedBookingSessions(),
   ]);
 
   return (
@@ -32,6 +33,14 @@ export default async function SchedulingPage() {
           )}
         </Section>
 
+        <Section sectionKey="scheduling:abandoned" title="Started but didn't book" meta={`${abandoned.length}`} defaultOpen={abandoned.length > 0}>
+          {abandoned.length === 0 ? (
+            <p className="px-4 py-4 text-center text-sm text-neutral-400">Nobody&apos;s dropped off recently.</p>
+          ) : (
+            abandoned.map((r) => <AbandonedSessionRow key={r.id} request={r} />)
+          )}
+        </Section>
+
         <Section sectionKey="scheduling:upcoming" title="Upcoming" meta={`${upcoming.length}`} defaultOpen={false}>
           {upcoming.length === 0 ? (
             <p className="px-4 py-4 text-center text-sm text-neutral-400">Nothing booked yet.</p>
@@ -40,7 +49,7 @@ export default async function SchedulingPage() {
               <div key={r.id} className="flex items-center justify-between border-b border-neutral-100 px-4 py-3 last:border-b-0">
                 <div>
                   <p className="text-[15px] font-semibold text-neutral-900">{r.contact_name || r.visitor_name}</p>
-                  <p className="text-sm text-neutral-500">{formatLocal(r.starts_at, "EEE, MMM d 'at' h:mm a")}</p>
+                  {r.starts_at && <p className="text-sm text-neutral-500">{formatLocal(r.starts_at, "EEE, MMM d 'at' h:mm a")}</p>}
                 </div>
               </div>
             ))
@@ -48,9 +57,7 @@ export default async function SchedulingPage() {
         </Section>
 
         <Section sectionKey="scheduling:settings" title="Settings" defaultOpen={false}>
-          {settings && (
-            <SchedulingSettingsCard settings={settings} genericLink={genericLink ? `${baseUrl()}/book/${genericLink.slug}` : null} />
-          )}
+          {settings && <SchedulingSettingsCard settings={settings} genericLink={`${baseUrl()}/book`} />}
         </Section>
       </div>
     </div>

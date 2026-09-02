@@ -26,11 +26,13 @@ export type AvailabilitySettings = {
   weeklyHours: WeeklyHours;
 };
 
-// Real Google Calendar busy time, plus any of her own pending/approved
-// booking requests (so two visitors can't both land on the same not-yet-
-// synced-to-Google slot), subtracted from her configured weekly hours -
-// then the visible_slot_pct filter is applied last, on top of what's
-// genuinely open.
+// Real Google Calendar busy time, plus any of her own in-progress or
+// approved booking requests that already have a time attached (so two
+// visitors can't both land on the same not-yet-synced-to-Google slot -
+// this covers a session someone is mid-flow on right now too, not just
+// ones that reached her review queue), subtracted from her configured
+// weekly hours - then the visible_slot_pct filter is applied last, on
+// top of what's genuinely open.
 export async function computeAvailableSlots(admin: SupabaseClient, ownerId: string, settings: AvailabilitySettings): Promise<Slot[]> {
   const now = new Date();
   const timeMin = now.toISOString();
@@ -42,7 +44,8 @@ export async function computeAvailableSlots(admin: SupabaseClient, ownerId: stri
       .from("booking_requests")
       .select("starts_at, ends_at")
       .eq("owner_id", ownerId)
-      .in("status", ["pending", "approved"])
+      .in("stage", ["time_selected", "pending", "approved"])
+      .not("starts_at", "is", null)
       .gte("starts_at", timeMin)
       .lte("starts_at", timeMax),
   ]);
