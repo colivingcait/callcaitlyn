@@ -23,6 +23,7 @@ export type AvailabilitySettings = {
   durationMinutes: number;
   daysOut: number;
   visibleSlotPct: number;
+  bufferMinutes: number;
   weeklyHours: WeeklyHours;
 };
 
@@ -50,12 +51,17 @@ export async function computeAvailableSlots(admin: SupabaseClient, ownerId: stri
       .lte("starts_at", timeMax),
   ]);
 
+  // Buffer pads every busy interval on both sides before the overlap
+  // check - the slot grid itself still only ever starts on :00/:30
+  // (below), the padding just makes a slot too close to an existing
+  // commitment un-selectable rather than shifting the grid around.
+  const bufferMs = settings.bufferMinutes * 60_000;
   const busy: { start: number; end: number }[] = events.map((e) => ({
-    start: new Date(e.startAt).getTime(),
-    end: new Date(e.endAt).getTime(),
+    start: new Date(e.startAt).getTime() - bufferMs,
+    end: new Date(e.endAt).getTime() + bufferMs,
   }));
   for (const b of pendingOrApproved ?? []) {
-    busy.push({ start: new Date(b.starts_at).getTime(), end: new Date(b.ends_at).getTime() });
+    busy.push({ start: new Date(b.starts_at).getTime() - bufferMs, end: new Date(b.ends_at).getTime() + bufferMs });
   }
 
   const durationMs = settings.durationMinutes * 60_000;

@@ -17,13 +17,13 @@ const OWNER_ID = process.env.CRM_OWNER_USER_ID;
 const SLUG_FORMAT = /^[A-Za-z0-9_-]{8}$/;
 
 const DEFAULT_WEEKLY_HOURS: WeeklyHours = {
-  mon: { enabled: true, start: "09:00", end: "17:00" },
-  tue: { enabled: true, start: "09:00", end: "17:00" },
-  wed: { enabled: true, start: "09:00", end: "17:00" },
-  thu: { enabled: true, start: "09:00", end: "17:00" },
-  fri: { enabled: true, start: "09:00", end: "17:00" },
-  sat: { enabled: false, start: "09:00", end: "17:00" },
-  sun: { enabled: false, start: "09:00", end: "17:00" },
+  mon: { enabled: true, start: "10:00", end: "18:00" },
+  tue: { enabled: true, start: "10:00", end: "18:00" },
+  wed: { enabled: true, start: "10:00", end: "18:00" },
+  thu: { enabled: true, start: "10:00", end: "18:00" },
+  fri: { enabled: true, start: "10:00", end: "18:00" },
+  sat: { enabled: false, start: "10:00", end: "18:00" },
+  sun: { enabled: false, start: "10:00", end: "18:00" },
 };
 
 // A booking link (or the bare /book address) can be used before she's
@@ -34,7 +34,8 @@ function withDefaults(row: SchedulingSettings | null) {
   return {
     durationMinutes: row?.duration_minutes ?? 30,
     daysOut: row?.days_out ?? 14,
-    visibleSlotPct: row?.visible_slot_pct ?? 100,
+    visibleSlotPct: row?.visible_slot_pct ?? 50,
+    bufferMinutes: row?.buffer_minutes ?? 15,
     weeklyHours: row?.weekly_hours ?? DEFAULT_WEEKLY_HOURS,
   };
 }
@@ -153,7 +154,7 @@ export async function selectBookingSlot(sessionId: string, startsAt: string): Pr
 // picture so she has everything she needs before deciding.
 export async function submitBookingDetails(
   sessionId: string,
-  input: { contactType: BookingContactType | null; timeline: Timeline | null; notes: string; questions: string },
+  input: { contactType: BookingContactType | null; timeline: Timeline | null; questions: string },
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!OWNER_ID) return { ok: false, error: "server not configured" };
   const admin = createAdminClient();
@@ -162,7 +163,6 @@ export async function submitBookingDetails(
   if (!session || !session.starts_at) return { ok: false, error: "Pick a time first." };
   if (!ACTIVE_STAGES.has(session.stage)) return { ok: false, error: "This booking session isn't active anymore." };
 
-  const notes = input.notes.trim() || null;
   const questions = input.questions.trim() || null;
 
   const { error } = await admin
@@ -170,7 +170,6 @@ export async function submitBookingDetails(
     .update({
       contact_type: input.contactType,
       timeline: input.timeline,
-      notes,
       questions,
       stage: "pending",
       submitted_at: new Date().toISOString(),
@@ -182,7 +181,6 @@ export async function submitBookingDetails(
     await enrichContactFromBooking(admin, OWNER_ID, session.contact_id, sessionId, {
       contactType: input.contactType,
       timeline: input.timeline,
-      notes,
       questions,
     });
   }
@@ -210,7 +208,7 @@ async function enrichContactFromBooking(
   ownerId: string,
   contactId: string,
   sessionId: string,
-  input: { contactType: BookingContactType | null; timeline: Timeline | null; notes: string | null; questions: string | null },
+  input: { contactType: BookingContactType | null; timeline: Timeline | null; questions: string | null },
 ) {
   const { data: contact } = await admin.from("contacts").select("contact_type, timeline, representing").eq("id", contactId).maybeSingle();
   if (contact) {
@@ -225,7 +223,7 @@ async function enrichContactFromBooking(
     }
   }
 
-  const noteParts = [input.notes ? `Notes: ${input.notes}` : null, input.questions ? `Questions: ${input.questions}` : null].filter(Boolean);
+  const noteParts = [input.questions ? `Questions: ${input.questions}` : null].filter(Boolean);
   if (noteParts.length === 0) return;
 
   // Distinct dedupe field from the "booked" confirmation activity

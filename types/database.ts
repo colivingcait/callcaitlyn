@@ -534,6 +534,7 @@ export interface SchedulingSettings {
   duration_minutes: number;
   days_out: number;
   visible_slot_pct: number;
+  buffer_minutes: number;
   weekly_hours: WeeklyHours;
   updated_at: string;
 }
@@ -575,7 +576,6 @@ export interface BookingRequest {
   stage: BookingRequestStage;
   contact_type: BookingContactType | null;
   timeline: Timeline | null;
-  notes: string | null;
   questions: string | null;
   google_event_id: string | null;
   created_at: string;

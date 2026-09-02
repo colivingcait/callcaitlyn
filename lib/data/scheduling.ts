@@ -2,13 +2,13 @@ import { createClient } from "@/lib/supabase/server";
 import type { SchedulingSettings, BookingRequest, WeeklyHours } from "@/types/database";
 
 const DEFAULT_WEEKLY_HOURS: WeeklyHours = {
-  mon: { enabled: true, start: "09:00", end: "17:00" },
-  tue: { enabled: true, start: "09:00", end: "17:00" },
-  wed: { enabled: true, start: "09:00", end: "17:00" },
-  thu: { enabled: true, start: "09:00", end: "17:00" },
-  fri: { enabled: true, start: "09:00", end: "17:00" },
-  sat: { enabled: false, start: "09:00", end: "17:00" },
-  sun: { enabled: false, start: "09:00", end: "17:00" },
+  mon: { enabled: true, start: "10:00", end: "18:00" },
+  tue: { enabled: true, start: "10:00", end: "18:00" },
+  wed: { enabled: true, start: "10:00", end: "18:00" },
+  thu: { enabled: true, start: "10:00", end: "18:00" },
+  fri: { enabled: true, start: "10:00", end: "18:00" },
+  sat: { enabled: false, start: "10:00", end: "18:00" },
+  sun: { enabled: false, start: "10:00", end: "18:00" },
 };
 
 // Lazily creates the settings row on first read rather than requiring a

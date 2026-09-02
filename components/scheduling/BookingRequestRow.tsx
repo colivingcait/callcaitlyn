@@ -56,7 +56,6 @@ export function BookingRequestRow({ request }: { request: BookingRequestWithCont
               {[contactTypeLabel, request.timeline ? TIMELINE_LABELS[request.timeline] : null].filter(Boolean).join(" · ")}
             </p>
           )}
-          {request.notes && <p className="mt-1 text-sm text-neutral-600">{request.notes}</p>}
           {request.questions && (
             <p className="mt-1 text-sm text-neutral-600">
               <span className="font-medium text-neutral-500">Questions:</span> {request.questions}

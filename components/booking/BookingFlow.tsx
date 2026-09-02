@@ -28,7 +28,6 @@ export function BookingFlow({ slug }: { slug: string | null }) {
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [contactType, setContactType] = useState<BookingContactType | "">("");
   const [timeline, setTimeline] = useState<Timeline | "">("");
-  const [notes, setNotes] = useState("");
   const [questions, setQuestions] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
@@ -81,7 +80,6 @@ export function BookingFlow({ slug }: { slug: string | null }) {
     const result = await submitBookingDetails(sessionId, {
       contactType: contactType || null,
       timeline: timeline || null,
-      notes,
       questions,
     });
     setSubmitting(false);
@@ -209,19 +207,29 @@ export function BookingFlow({ slug }: { slug: string | null }) {
 
           {step === "details" && (
             <div className="space-y-3">
+              <p className="font-serif text-lg font-semibold text-neutral-900">Help me prepare for this meeting:</p>
               {selectedSlot && (
                 <p className="text-[15px] font-semibold text-neutral-900">{formatInTimeZone(selectedSlot, APP_TIMEZONE, "EEEE, MMM d 'at' h:mm a")}</p>
               )}
               <div>
                 <label className="text-xs font-medium text-neutral-500">What best describes you? (optional)</label>
-                <select value={contactType} onChange={(e) => setContactType(e.target.value as BookingContactType | "")} className={inputClass}>
-                  <option value="">Prefer not to say</option>
-                  {BOOKING_CONTACT_TYPE_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
+                <div className="mt-1.5 flex flex-wrap gap-2">
+                  {BOOKING_CONTACT_TYPE_OPTIONS.map((o) => {
+                    const active = contactType === o.value;
+                    return (
+                      <button
+                        key={o.value}
+                        type="button"
+                        onClick={() => setContactType(active ? "" : o.value)}
+                        className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                          active ? "border-transparent bg-brand-600 text-white" : "border-neutral-200 text-neutral-600"
+                        }`}
+                      >
+                        {o.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               <div>
                 <label className="text-xs font-medium text-neutral-500">Timeline (optional)</label>
@@ -237,12 +245,8 @@ export function BookingFlow({ slug }: { slug: string | null }) {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-neutral-500">Anything else worth knowing? (optional)</label>
-                <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className={inputClass} />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-neutral-500">Specific questions for the meeting? (optional)</label>
-                <textarea value={questions} onChange={(e) => setQuestions(e.target.value)} rows={2} className={inputClass} />
+                <label className="text-xs font-medium text-neutral-500">Anything you&apos;d like to share or specific topics you&apos;d like to cover? (optional)</label>
+                <textarea value={questions} onChange={(e) => setQuestions(e.target.value)} rows={3} className={inputClass} />
               </div>
 
               {error && <p className="text-sm text-red-600">{error}</p>}

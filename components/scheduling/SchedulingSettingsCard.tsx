@@ -11,12 +11,14 @@ const DAY_ORDER: Weekday[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const DURATION_OPTIONS = [15, 20, 30, 45, 60];
 const DAYS_OUT_OPTIONS = [7, 14, 21, 30, 45, 60];
 const VISIBLE_PCT_OPTIONS = [50, 60, 70, 80, 90, 100];
+const BUFFER_OPTIONS = [0, 15, 20, 30, 45];
 
 export function SchedulingSettingsCard({ settings, genericLink }: { settings: SchedulingSettings; genericLink: string }) {
   const router = useRouter();
   const [duration, setDuration] = useState(settings.duration_minutes);
   const [daysOut, setDaysOut] = useState(settings.days_out);
   const [visiblePct, setVisiblePct] = useState(settings.visible_slot_pct);
+  const [bufferMinutes, setBufferMinutes] = useState(settings.buffer_minutes);
   const [hours, setHours] = useState<WeeklyHours>(settings.weekly_hours);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -29,7 +31,7 @@ export function SchedulingSettingsCard({ settings, genericLink }: { settings: Sc
 
   async function save() {
     setSaving(true);
-    await updateSchedulingSettings({ durationMinutes: duration, daysOut, visibleSlotPct: visiblePct, weeklyHours: hours });
+    await updateSchedulingSettings({ durationMinutes: duration, daysOut, visibleSlotPct: visiblePct, bufferMinutes, weeklyHours: hours });
     setSaving(false);
     setSaved(true);
     router.refresh();
@@ -117,6 +119,25 @@ export function SchedulingSettingsCard({ settings, genericLink }: { settings: Sc
         <p className="mt-1 text-xs text-neutral-400">
           Lower this to look busier on the page — the hidden slots are still really open, they just don&apos;t show.
         </p>
+      </div>
+
+      <div>
+        <label className="text-xs font-medium text-neutral-500">Buffer between meetings</label>
+        <select
+          value={bufferMinutes}
+          onChange={(e) => {
+            setBufferMinutes(Number(e.target.value));
+            setSaved(false);
+          }}
+          className="mt-1 w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm text-neutral-900"
+        >
+          {BUFFER_OPTIONS.map((b) => (
+            <option key={b} value={b}>
+              {b === 0 ? "No buffer" : `${b} min`}
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-xs text-neutral-400">Blocks this much time around your existing commitments so nothing books back to back.</p>
       </div>
 
       <div>

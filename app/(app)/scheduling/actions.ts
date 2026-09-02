@@ -17,6 +17,7 @@ export async function updateSchedulingSettings(input: {
   durationMinutes: number;
   daysOut: number;
   visibleSlotPct: number;
+  bufferMinutes: number;
   weeklyHours: WeeklyHours;
 }) {
   const supabase = await createClient();
@@ -32,6 +33,7 @@ export async function updateSchedulingSettings(input: {
       duration_minutes: input.durationMinutes,
       days_out: input.daysOut,
       visible_slot_pct: input.visibleSlotPct,
+      buffer_minutes: input.bufferMinutes,
       weekly_hours: input.weeklyHours,
       updated_at: new Date().toISOString(),
     });
@@ -100,7 +102,6 @@ export async function approveBooking(requestId: string) {
   const description = [
     contactTypeLabel ? `${contactTypeLabel}` : null,
     request.timeline ? `Timeline: ${TIMELINE_LABELS[request.timeline]}` : null,
-    request.notes ? `Notes: ${request.notes}` : null,
     request.questions ? `Questions: ${request.questions}` : null,
   ]
     .filter(Boolean)
