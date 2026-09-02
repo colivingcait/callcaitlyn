@@ -15,6 +15,7 @@ import { processJotformSubmission, type JotformFormEvent } from "@/lib/jotform/p
 import { listGranolaNoteIds, fetchGranolaNote } from "@/lib/granola/client";
 import { processGranolaNote } from "@/lib/granola/process-note";
 import type { GranolaNoteEvent } from "@/lib/granola/parse-event";
+import { backfillBlinqShares } from "@/lib/google/backfill-blinq";
 import type { ParsedContactRow } from "@/lib/crm/bulk-import-contacts";
 
 const QUO_BACKFILL_BATCH_SIZE = 25;
@@ -350,4 +351,18 @@ export async function backfillGranolaNotes() {
   }
 
   return { ok: true as const, notes: noteIds.length, processed, notReady, failed };
+}
+
+export async function backfillBlinq() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const admin = createAdminClient();
+  const result = await backfillBlinqShares(admin, user.id);
+  if (!result) return { ok: false as const, error: "Connect Gmail first (Settings > Connections)" };
+
+  return { ok: true as const, found: result.found, added: result.added };
 }

@@ -3,6 +3,7 @@ import { EventbriteSyncBackfill } from "@/components/settings/EventbriteSyncBack
 import { JotformSyncBackfill } from "@/components/settings/JotformSyncBackfill";
 import { QuoSyncBackfill } from "@/components/settings/QuoSyncBackfill";
 import { GranolaSyncBackfill } from "@/components/settings/GranolaSyncBackfill";
+import { BlinqShareBackfill } from "@/components/settings/BlinqShareBackfill";
 import { BacklogCleanup } from "@/components/settings/BacklogCleanup";
 import { TagSuggestionBackfill } from "@/components/settings/TagSuggestionBackfill";
 import { EventOrdersCsvImport } from "@/components/settings/EventOrdersCsvImport";
@@ -19,6 +20,7 @@ export function DataRepairCard() {
         <JotformSyncBackfill />
         <QuoSyncBackfill />
         <GranolaSyncBackfill />
+        <BlinqShareBackfill />
         <BacklogCleanup />
         <TagSuggestionBackfill />
       </div>

@@ -17,7 +17,7 @@ function extractEmails(headerVal: string): string[] {
   return (matches ?? []).map((e) => e.toLowerCase());
 }
 
-function extractPlainTextBody(payload: gmail_v1.Schema$MessagePart | undefined): string {
+export function extractPlainTextBody(payload: gmail_v1.Schema$MessagePart | undefined): string {
   if (!payload) return "";
   if (payload.mimeType === "text/plain" && payload.body?.data) {
     return Buffer.from(payload.body.data, "base64").toString("utf-8");
