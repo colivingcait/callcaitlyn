@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { listUpcomingEvents } from "@/lib/google/calendar";
+import { APP_TIMEZONE } from "@/lib/format-time";
 import type { WeeklyHours, Weekday } from "@/types/database";
 
 const WEEKDAY_KEYS: Weekday[] = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
@@ -70,14 +72,19 @@ export async function computeAvailableSlots(admin: SupabaseClient, ownerId: stri
   notBefore.setMinutes(Math.ceil(notBefore.getMinutes() / 30) * 30, 0, 0);
 
   for (let dayOffset = 0; dayOffset <= settings.daysOut; dayOffset++) {
-    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset);
-    const hours = settings.weeklyHours[WEEKDAY_KEYS[day.getDay()]];
+    // Her weekly_hours are wall-clock times in APP_TIMEZONE (Eastern), not
+    // server-local time - a server running in UTC (Vercel) would otherwise
+    // read "10:00" as 10:00 UTC (6am Eastern in summer), four-plus hours
+    // off from what she actually configured. dayKey is computed the same
+    // way (in Eastern) so the weekday lookup and the day-of-week itself
+    // are consistent with her calendar, not the server's.
+    const dayKey = formatInTimeZone(new Date(now.getTime() + dayOffset * 24 * 60 * 60 * 1000), APP_TIMEZONE, "yyyy-MM-dd");
+    const [y, m, d] = dayKey.split("-").map(Number);
+    const hours = settings.weeklyHours[WEEKDAY_KEYS[new Date(y, m - 1, d).getDay()]];
     if (!hours?.enabled) continue;
 
-    const [startH, startM] = hours.start.split(":").map(Number);
-    const [endH, endM] = hours.end.split(":").map(Number);
-    const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate(), startH, startM, 0, 0).getTime();
-    const dayEnd = new Date(day.getFullYear(), day.getMonth(), day.getDate(), endH, endM, 0, 0).getTime();
+    const dayStart = fromZonedTime(`${dayKey} ${hours.start}:00`, APP_TIMEZONE).getTime();
+    const dayEnd = fromZonedTime(`${dayKey} ${hours.end}:00`, APP_TIMEZONE).getTime();
 
     for (let t = dayStart; t + durationMs <= dayEnd; t += durationMs) {
       if (t < notBefore.getTime()) continue;
