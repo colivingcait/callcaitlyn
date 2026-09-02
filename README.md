@@ -306,7 +306,15 @@ Leave all three variables unset and this integration just stays dormant — the 
 
 ## Setting up Blinq (digital business card capture)
 
-When you share your Blinq digital business card at a meetup and someone shares theirs back, this pulls their contact into the CRM automatically — tagged **"Blinq"**, with their company/title (if given) logged as a note on their activity timeline. Requires **Blinq Business** (their Zapier integration is gated behind that tier) — Blinq itself has no native webhook, so this goes through Zapier's generic "Webhooks by Zapier" action instead:
+When you share your Blinq digital business card at a meetup and someone shares theirs back, this pulls their contact into the CRM automatically — tagged **"Blinq"**, with their company/title (if given) logged as a note on their activity timeline. There are two ways this can happen; most people only need the first one.
+
+### Free (default, no Blinq subscription needed)
+
+Blinq emails you a notification every time someone shares their card back — subject line "🎉 {Name} has sent you their details" — on every plan, including free. The Gmail sync (`lib/google/parse-blinq-email.ts`, wired into `lib/google/sync-inbox.ts`) recognizes that exact email and parses the name (from the subject) and phone/email (from the body) straight out of it — nothing to configure beyond having Gmail sync already connected (see the Gmail section above). Confirm it works by sharing cards with a test contact and checking they show up in Contacts tagged "Blinq" after the next sync run.
+
+### Blinq Business (optional, only if you're already paying for it)
+
+Blinq Business also offers a Zapier integration ("Contact Created" trigger) that reaches the CRM a different way — Zapier's generic "Webhooks by Zapier" action, since Blinq has no native webhook of its own. Skip this whole section unless you're specifically on Blinq Business already; the free email path above does the same thing at no extra cost.
 
 1. **Run the new migration**: [`supabase/migrations/0055_blinq_activity_source.sql`](./supabase/migrations/0055_blinq_activity_source.sql).
 2. Pick any long random string — this is `BLINQ_WEBHOOK_SECRET`. Add it to Vercel and redeploy.
@@ -324,7 +332,7 @@ When you share your Blinq digital business card at a meetup and someone shares t
    `blinq_contact_id` is what stops a redelivered/retried Zap run from logging the same "shared a business card" note twice — worth mapping even though it's not required, since without it every retry adds a duplicate note.
 5. Turn the Zap on, share cards with a test contact, and confirm they show up in Contacts tagged "Blinq" with a note on their timeline.
 
-Leave `BLINQ_WEBHOOK_SECRET` unset and this integration just stays dormant, same as any other webhook before it's configured.
+Leave `BLINQ_WEBHOOK_SECRET` unset and just the Business path stays dormant — the free email path above works either way, same as any other webhook before it's configured.
 
 ## Setting up the House Hacking site (website signups)
 

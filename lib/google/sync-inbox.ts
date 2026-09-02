@@ -3,6 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAuthorizedGoogleClient } from "@/lib/google/oauth";
 import { upsertActivity } from "@/lib/crm/activities";
 import { analyzeContactActivity } from "@/lib/ai/analyze-contact";
+import { looksLikeBlinqShareEmail, parseBlinqShareEmail } from "@/lib/google/parse-blinq-email";
+import { recordBlinqContact } from "@/lib/crm/blinq-contact";
 
 function headerValue(headers: gmail_v1.Schema$MessagePartHeader[] | undefined, name: string) {
   return headers?.find((h) => h.name?.toLowerCase() === name.toLowerCase())?.value ?? "";
@@ -34,7 +36,11 @@ function extractPlainTextBody(payload: gmail_v1.Schema$MessagePart | undefined):
 
 // Only logs mail to/from a contact already in the CRM - no classification
 // needed, no marketing/spam to filter, since the address itself is the
-// filter. New leads are added to the CRM by hand, not discovered here.
+// filter. New leads are added to the CRM by hand, not discovered here -
+// with one deliberate exception: Blinq's own "X has sent you their
+// details" share notifications are recognized by subject and parsed
+// directly, since the sender there is Blinq itself, never a real
+// contact (see the Blinq branch below).
 export async function syncGmailInbox(admin: SupabaseClient, ownerId: string) {
   const { data: account } = await admin.from("gmail_accounts").select("*").eq("owner_id", ownerId).maybeSingle();
   if (!account) return { synced: 0, skipped: "not_connected" as const };
@@ -56,7 +62,6 @@ export async function syncGmailInbox(admin: SupabaseClient, ownerId: string) {
 
   const { data: contacts } = await admin.from("contacts").select("id, email").eq("owner_id", ownerId).not("email", "is", null);
   const contactByEmail = new Map((contacts ?? []).map((c) => [c.email!.toLowerCase(), c.id]));
-  if (contactByEmail.size === 0) return { synced: 0, skipped: "no_contact_emails" as const };
 
   let messageIds = new Set<string>();
   let pageToken: string | undefined;
@@ -99,9 +104,25 @@ export async function syncGmailInbox(admin: SupabaseClient, ownerId: string) {
       });
 
       const from = extractEmails(headerValue(meta.payload?.headers, "From"))[0] ?? "";
+      const metaSubject = headerValue(meta.payload?.headers, "Subject");
       const to = extractEmails(headerValue(meta.payload?.headers, "To"));
       const cc = extractEmails(headerValue(meta.payload?.headers, "Cc"));
       const isOutbound = from === myEmail;
+
+      // Blinq's own free-tier "X has sent you their details" share
+      // notification - the sender is Blinq, never a real contact, so this
+      // has to be checked before the "not a known contact" skip below,
+      // not folded into the normal per-contact activity log.
+      if (!isOutbound && looksLikeBlinqShareEmail(metaSubject)) {
+        const { data: full } = await gmail.users.messages.get({ userId: "me", id: messageId, format: "full" });
+        const bodyText = extractPlainTextBody(full.payload);
+        const parsed = parseBlinqShareEmail(metaSubject, bodyText);
+        if (parsed && (parsed.email || parsed.phone)) {
+          await recordBlinqContact(admin, ownerId, { ...parsed, dedupeId: messageId });
+          synced++;
+        }
+        continue;
+      }
 
       const counterpartEmails = isOutbound ? [...to, ...cc] : [from];
       const contactId = counterpartEmails.map((e) => contactByEmail.get(e)).find(Boolean);

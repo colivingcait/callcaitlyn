@@ -1,8 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { findOrCreateContact, addTagByName } from "@/lib/crm/find-or-create-contact";
-import { upsertActivity } from "@/lib/crm/activities";
-import { notifyNewLead } from "@/lib/push/send-push";
+import { recordBlinqContact } from "@/lib/crm/blinq-contact";
 
 const OWNER_ID = process.env.CRM_OWNER_USER_ID;
 
@@ -10,12 +8,16 @@ function str(v: unknown): string | null {
   return typeof v === "string" && v.trim() ? v.trim() : null;
 }
 
-// Blinq (Business tier) has no native webhook of its own - this is reached
-// via Zapier's "Webhooks by Zapier" action on Blinq's "Contact Created"
-// trigger, POSTing whatever JSON body she maps in Zapier's step (see
-// README's Blinq section for the exact field names to map). Same
-// secret-in-URL auth as Eventbrite/Jotform/Granola, since neither Blinq
-// nor Zapier's generic webhook action offers request signing.
+// Blinq Business only (Zapier's "Webhooks by Zapier" action on Blinq's
+// "Contact Created" trigger - see README's Blinq section for the exact
+// field names to map). Most people won't need this: lib/google/parse-
+// blinq-email.ts catches the same shares for free by reading Blinq's own
+// "X has sent you their details" notification email straight out of the
+// Gmail sync, no Zapier or Business tier required. This route stays for
+// whoever does have Business, going through the same recordBlinqContact
+// helper either way. Same secret-in-URL auth as Eventbrite/Jotform/
+// Granola, since neither Blinq nor Zapier's generic webhook action
+// offers request signing.
 export async function POST(request: NextRequest) {
   const secret = request.nextUrl.searchParams.get("secret");
   if (!process.env.BLINQ_WEBHOOK_SECRET || secret !== process.env.BLINQ_WEBHOOK_SECRET) {
@@ -50,35 +52,8 @@ export async function POST(request: NextRequest) {
   }
 
   const admin = createAdminClient();
-
   try {
-    const contact = await findOrCreateContact(admin, OWNER_ID, {
-      email,
-      phone,
-      firstName,
-      lastName,
-      leadSource: "Blinq",
-    });
-    if (!contact) return NextResponse.json({ received: true });
-
-    await addTagByName(admin, OWNER_ID, contact.id, "Blinq");
-
-    const details = [company, jobTitle].filter(Boolean).join(" · ");
-    await upsertActivity(admin, OWNER_ID, contact.id, "blinq", "blinq_contact_id", blinqContactId, {
-      type: "note",
-      direction: "none",
-      occurred_at: new Date().toISOString(),
-      body: details ? `Shared a Blinq digital business card - ${details}` : "Shared a Blinq digital business card",
-      metadata: { company, job_title: jobTitle, raw: body },
-    });
-
-    if (contact.wasCreated) {
-      await notifyNewLead(admin, OWNER_ID, {
-        title: "New contact via Blinq",
-        body: `${firstName ?? email ?? phone} shared their digital business card`,
-        url: `/contacts/${contact.id}`,
-      });
-    }
+    await recordBlinqContact(admin, OWNER_ID, { firstName, lastName, email, phone, company, jobTitle, dedupeId: blinqContactId });
   } catch (err) {
     console.error("Error processing Blinq webhook", err);
   }
