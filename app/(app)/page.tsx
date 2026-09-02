@@ -4,6 +4,7 @@ import { listMergeCandidates, listTags } from "@/lib/data/contacts";
 import { createClient } from "@/lib/supabase/server";
 import { formatLocal } from "@/lib/format-time";
 import { Section } from "@/components/ui/Section";
+import { BookingRequestRow } from "@/components/scheduling/BookingRequestRow";
 import { SuggestedRow } from "@/components/contacts/SuggestedRow";
 import { WorklistGroup } from "@/components/dashboard/WorklistGroup";
 import { TodayTasksGroup } from "@/components/dashboard/TodayTasksGroup";
@@ -43,7 +44,7 @@ export default async function TodayPage() {
   const activePrepSheets = (pinnedPrepSheets ?? []).filter((p) => new Date((p.payload as unknown as PrepSheetPayload).startAt).getTime() > Date.now());
 
   const ownerId = user?.id ?? "";
-  const openItems = today.calls.length + today.repliesOwed.length + today.myTasks.length + today.registeredNoFollowUp.length;
+  const openItems = today.calls.length + today.repliesOwed.length + today.myTasks.length + today.registeredNoFollowUp.length + today.bookingRequests.length;
   const lateCalls = today.calls.filter((c) => c.late).length;
 
   return (
@@ -79,6 +80,14 @@ export default async function TodayPage() {
       </div>
 
       <div className="mt-3 space-y-3">
+        {today.bookingRequests.length > 0 && (
+          <Section sectionKey="today:booking-requests" title="Meeting requests" meta={`${today.bookingRequests.length}`} defaultOpen>
+            {today.bookingRequests.map((r) => (
+              <BookingRequestRow key={r.id} request={r} />
+            ))}
+          </Section>
+        )}
+
         {today.justFinished.length > 0 && (
           <Section sectionKey="today:just-finished" title="Just finished" meta={`${today.justFinished.length}`}>
             <WorklistGroup people={today.justFinished} />

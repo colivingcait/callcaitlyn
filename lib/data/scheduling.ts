@@ -50,6 +50,20 @@ export async function listPendingBookingRequests(): Promise<BookingRequestWithCo
   return (data ?? []).map(withContactName);
 }
 
+// She proposed a different time (stage 'time_proposed') and is waiting on
+// the visitor to confirm it through their own link - distinct from
+// 'pending' (waiting on her) so it doesn't double-count in either queue.
+export async function listProposedBookingRequests(): Promise<BookingRequestWithContact[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("booking_requests")
+    .select("*, contacts(first_name, last_name)")
+    .eq("stage", "time_proposed")
+    .order("created_at", { ascending: false });
+
+  return (data ?? []).map(withContactName);
+}
+
 export async function listUpcomingApprovedBookingRequests(): Promise<BookingRequestWithContact[]> {
   const supabase = await createClient();
   const { data } = await supabase

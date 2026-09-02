@@ -7,7 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createMeetingInvite } from "@/lib/google/calendar";
 import { upsertActivity } from "@/lib/crm/activities";
 import { sendTextToContact } from "@/app/(app)/contacts/actions";
-import { buildBookingConfirmedMessage, buildBookingDeclinedMessage } from "@/lib/crm/booking-message";
+import { buildBookingConfirmedMessage, buildBookingDeclinedMessage, buildProposeNewTimeMessage } from "@/lib/crm/booking-message";
 import { BOOKING_CONTACT_TYPE_OPTIONS } from "@/lib/crm/booking-form-options";
 import { TIMELINE_LABELS } from "@/lib/utils";
 import { baseUrl } from "@/lib/crm/sequences";
@@ -176,6 +176,77 @@ export async function declineBooking(requestId: string) {
     });
     await sendTextToContact(request.contact_id, request.visitor_phone, message);
   }
+
+  revalidatePath("/scheduling");
+  return { ok: true as const };
+}
+
+// Her "I need to decline but offer something else" path - instead of a
+// flat decline, she picks a different time and the visitor confirms it
+// themselves through a link (app/confirm/[token]) - that confirmation is
+// what actually books it, not this action. Nothing's final yet, so the
+// request moves to 'time_proposed' rather than 'declined'.
+export async function proposeNewTime(requestId: string, proposedStartsAt: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const { data: request } = await supabase.from("booking_requests").select("*").eq("id", requestId).eq("owner_id", user.id).maybeSingle();
+  if (!request) return { ok: false as const, error: "Request not found" };
+  if (request.stage !== "pending") return { ok: false as const, error: "Already decided" };
+  if (!request.starts_at || !request.ends_at) return { ok: false as const, error: "No time attached to this request" };
+
+  const durationMs = new Date(request.ends_at).getTime() - new Date(request.starts_at).getTime();
+  const proposedEndsAt = new Date(new Date(proposedStartsAt).getTime() + (durationMs > 0 ? durationMs : 30 * 60_000)).toISOString();
+
+  let token = "";
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const candidate = generateSlug();
+    const { error } = await supabase
+      .from("booking_requests")
+      .update({ proposed_starts_at: proposedStartsAt, proposed_ends_at: proposedEndsAt, propose_token: candidate, stage: "time_proposed" })
+      .eq("id", requestId);
+    if (!error) {
+      token = candidate;
+      break;
+    }
+    if (error.code !== "23505") return { ok: false as const, error: "Couldn't save that - try again" };
+  }
+  if (!token) return { ok: false as const, error: "Couldn't generate a unique link - try again" };
+
+  if (request.contact_id) {
+    const message = buildProposeNewTimeMessage({
+      visitorFirstName: request.visitor_name.split(" ")[0] || request.visitor_name,
+      originalStartsAt: request.starts_at,
+      proposedStartsAt,
+      confirmLink: `${baseUrl()}/confirm/${token}`,
+    });
+    await sendTextToContact(request.contact_id, request.visitor_phone, message);
+  }
+
+  revalidatePath("/scheduling");
+  return { ok: true as const };
+}
+
+// Pulls a proposal back to 'pending' (not a delete - same "keep history,
+// let her decide again" reasoning as everywhere else in this file) if she
+// wants to reconsider before the visitor confirms it.
+export async function cancelProposedTime(requestId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const { error } = await supabase
+    .from("booking_requests")
+    .update({ stage: "pending", proposed_starts_at: null, proposed_ends_at: null, propose_token: null })
+    .eq("id", requestId)
+    .eq("owner_id", user.id)
+    .eq("stage", "time_proposed");
+  if (error) return { ok: false as const, error: error.message };
 
   revalidatePath("/scheduling");
   return { ok: true as const };

@@ -5,6 +5,7 @@ import { filterByQueue } from "@/lib/crm/contact-queue-filter";
 import { listContacts } from "@/lib/data/contacts";
 import { listNewRegistrationsQueue } from "@/lib/data/dialer";
 import { listWonDeals, listPendingDeals } from "@/lib/data/commissions";
+import { listPendingBookingRequests } from "@/lib/data/scheduling";
 import { computeDeals, summarizeDeals, capYearKey, capYearStart, KW_CAP } from "@/lib/crm/commission";
 import type { AiInsight, PipelineStage, Representing } from "@/types/database";
 
@@ -248,17 +249,23 @@ export async function getTodayData() {
   const { data: stagesData } = await supabase.from("pipeline_stages").select("*").order("sort_order", { ascending: true });
   const stages = (stagesData ?? []) as PipelineStage[];
 
-  const [calls, repliesOwed, myTasks, registeredNoFollowUp, suggested, justFinished, statStrip, commissionYear, newLeads] = await Promise.all([
-    getCallsGroup(),
-    getRepliesOwedGroup(),
-    getMyTasksGroup(),
-    getRegisteredNoFollowUpGroup(stages),
-    getSuggestedInsights(),
-    getJustFinishedGroup(),
-    getStatStrip(stages),
-    getCommissionYearSummary(),
-    listNewRegistrationsQueue(),
-  ]);
+  const [calls, repliesOwed, myTasks, registeredNoFollowUp, suggested, justFinished, statStrip, commissionYear, newLeads, bookingRequests] =
+    await Promise.all([
+      getCallsGroup(),
+      getRepliesOwedGroup(),
+      getMyTasksGroup(),
+      getRegisteredNoFollowUpGroup(stages),
+      getSuggestedInsights(),
+      getJustFinishedGroup(),
+      getStatStrip(stages),
+      getCommissionYearSummary(),
+      listNewRegistrationsQueue(),
+      // Someone actively waiting on her to approve a meeting time is
+      // higher priority than anything else on Today - surfaced separately
+      // (not folded into WorklistPerson) so the row keeps its own
+      // Approve/Decline actions instead of just linking out.
+      listPendingBookingRequests(),
+    ]);
 
   return {
     stages,
@@ -271,5 +278,6 @@ export async function getTodayData() {
     statStrip,
     commissionYear,
     newLeadsNeverCalled: newLeads.contacts.length,
+    bookingRequests,
   };
 }

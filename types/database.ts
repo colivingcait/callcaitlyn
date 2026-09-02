@@ -555,7 +555,7 @@ export interface BookingLink {
 // visible to her) -> 'time_selected' (a slot picked, prep form not yet
 // submitted) -> 'pending' (prep form submitted, ready for her review) ->
 // 'approved' | 'declined' | 'canceled'.
-export type BookingRequestStage = "info" | "time_selected" | "pending" | "approved" | "declined" | "canceled";
+export type BookingRequestStage = "info" | "time_selected" | "pending" | "time_proposed" | "approved" | "declined" | "canceled";
 
 // Curated subset of ContactType a stranger can meaningfully self-select
 // on the public booking form - excludes CRM-internal classifications
@@ -581,5 +581,9 @@ export interface BookingRequest {
   created_at: string;
   submitted_at: string | null;
   decided_at: string | null;
+  reminder_sent_at: string | null;
+  proposed_starts_at: string | null;
+  proposed_ends_at: string | null;
+  propose_token: string | null;
 }
 

@@ -1,20 +1,23 @@
 import {
   getSchedulingSettings,
   listPendingBookingRequests,
+  listProposedBookingRequests,
   listUpcomingApprovedBookingRequests,
   listAbandonedBookingSessions,
 } from "@/lib/data/scheduling";
 import { Section } from "@/components/ui/Section";
 import { BookingRequestRow } from "@/components/scheduling/BookingRequestRow";
+import { ProposedRequestRow } from "@/components/scheduling/ProposedRequestRow";
 import { AbandonedSessionRow } from "@/components/scheduling/AbandonedSessionRow";
 import { SchedulingSettingsCard } from "@/components/scheduling/SchedulingSettingsCard";
 import { baseUrl } from "@/lib/crm/sequences";
 import { formatLocal } from "@/lib/format-time";
 
 export default async function SchedulingPage() {
-  const [settings, pending, upcoming, abandoned] = await Promise.all([
+  const [settings, pending, proposed, upcoming, abandoned] = await Promise.all([
     getSchedulingSettings(),
     listPendingBookingRequests(),
+    listProposedBookingRequests(),
     listUpcomingApprovedBookingRequests(),
     listAbandonedBookingSessions(),
   ]);
@@ -32,6 +35,14 @@ export default async function SchedulingPage() {
             pending.map((r) => <BookingRequestRow key={r.id} request={r} />)
           )}
         </Section>
+
+        {proposed.length > 0 && (
+          <Section sectionKey="scheduling:proposed" title="Waiting on their confirmation" meta={`${proposed.length}`} defaultOpen>
+            {proposed.map((r) => (
+              <ProposedRequestRow key={r.id} request={r} />
+            ))}
+          </Section>
+        )}
 
         <Section sectionKey="scheduling:abandoned" title="Started but didn't book" meta={`${abandoned.length}`} defaultOpen={abandoned.length > 0}>
           {abandoned.length === 0 ? (

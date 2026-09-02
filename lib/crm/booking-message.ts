@@ -12,12 +12,21 @@ function describeWhen(startsAtIso: string): string {
 export function buildBookingConfirmedMessage(input: { visitorFirstName: string; startsAt: string; meetLink: string | null }): string {
   const when = describeWhen(input.startsAt);
   const meet = input.meetLink ? ` Video call link: ${input.meetLink}` : "";
-  return `Hi ${input.visitorFirstName}, you're booked in for ${when}! Talk soon.${meet}`;
+  return `Thanks for booking - looking forward to meeting with you on ${when}!${meet}`;
 }
 
 export function buildBookingDeclinedMessage(input: { visitorFirstName: string; startsAt: string; rebookLink: string }): string {
   const when = describeWhen(input.startsAt);
   return `Hi ${input.visitorFirstName}, sorry - ${when} doesn't work after all. Mind grabbing another time here? ${input.rebookLink}`;
+}
+
+// Sent when she proposes a different time instead of a flat decline - the
+// visitor confirms through confirmLink themselves, which is what actually
+// books it (see app/confirm/[token]).
+export function buildProposeNewTimeMessage(input: { visitorFirstName: string; originalStartsAt: string; proposedStartsAt: string; confirmLink: string }): string {
+  const originalWhen = describeWhen(input.originalStartsAt);
+  const proposedWhen = describeWhen(input.proposedStartsAt);
+  return `Hi ${input.visitorFirstName}, I'm so sorry, something came up for ${originalWhen}. Would ${proposedWhen} work instead? If yes, please confirm here and it'll send the calendar invite: ${input.confirmLink} Thank you!`;
 }
 
 export function buildSchedulingLinkMessage(input: { firstName: string; link: string }): string {
