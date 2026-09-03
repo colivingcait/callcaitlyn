@@ -273,7 +273,7 @@ export async function listLeadSources() {
 
 export async function listSegments() {
   const supabase = await createClient();
-  const { data } = await supabase.from("contact_segments").select("*").order("created_at", { ascending: true });
+  const { data } = await supabase.from("contact_segments").select("*").order("sort_order", { ascending: true });
   return (data ?? []) as ContactSegment[];
 }
 

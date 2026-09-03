@@ -113,6 +113,7 @@ export interface ContactSegment {
   owner_id: string;
   name: string;
   filters: ContactFilterState;
+  sort_order: number;
   created_at: string;
 }
 

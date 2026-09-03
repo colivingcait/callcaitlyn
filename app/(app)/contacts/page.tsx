@@ -16,6 +16,7 @@ import { ContactsList } from "@/components/contacts/ContactsList";
 import { ContactFilters } from "@/components/contacts/ContactFilters";
 import { SegmentBar } from "@/components/contacts/SegmentBar";
 import { BulkImportContactsButton } from "@/components/contacts/BulkImportContactsButton";
+import { PeopleMobile } from "@/components/contacts/mobile/PeopleMobile";
 import { Button } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 
@@ -52,7 +53,18 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
   const withPhoneCount = contacts.filter((c) => c.phone).length;
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <>
+      <PeopleMobile
+        contacts={contacts}
+        stages={stages}
+        tags={tags}
+        leadSources={leadSources}
+        eventNames={registeredEventNames}
+        segments={segments}
+        sequences={sequences.map((s) => ({ id: s.id, name: s.name, type: s.type }))}
+        ownerId={user?.id ?? ""}
+      />
+      <div className="mx-auto hidden max-w-3xl md:block">
       <div className="flex items-start justify-between gap-3 px-4 pt-6 pb-2 sm:px-0">
         <div>
           <h1 className="font-serif text-2xl font-semibold leading-9 text-neutral-900 sm:text-[28px]">Contacts</h1>
@@ -103,6 +115,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
           lastActivityLabels={lastActivityLabels}
         />
       </div>
-    </div>
+      </div>
+    </>
   );
 }
