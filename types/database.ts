@@ -86,6 +86,17 @@ export interface Tag {
   created_at: string;
 }
 
+export interface TextTemplate {
+  id: string;
+  owner_id: string;
+  label: string;
+  body: string;
+  is_default_draft: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ContactFilterState {
   q?: string;
   stage?: string;

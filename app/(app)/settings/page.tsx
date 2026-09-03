@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { listStages, listTags } from "@/lib/data/contacts";
+import { listTextTemplates } from "@/lib/data/text-templates";
 import { PipelineStagesAndTags } from "@/components/settings/PipelineStagesAndTags";
+import { TextTemplatesManager } from "@/components/settings/TextTemplatesManager";
 import { ConnectionsCard, type ConnectionRow } from "@/components/settings/ConnectionsCard";
 import { NotificationsCard } from "@/components/settings/NotificationsCard";
 import { GmailConnect } from "@/components/settings/GmailConnect";
@@ -31,9 +33,10 @@ export default async function SettingsPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const [stages, tags, gmailAccount, warmSettings, granolaMatchingSettings, latestRate, stageCountRows] = await Promise.all([
+  const [stages, tags, textTemplates, gmailAccount, warmSettings, granolaMatchingSettings, latestRate, stageCountRows] = await Promise.all([
     listStages(),
     listTags(),
+    listTextTemplates(),
     supabase.from("gmail_accounts").select("email_address").maybeSingle().then((r) => r.data),
     supabase.from("warm_notification_settings").select("*").maybeSingle().then((r) => r.data),
     supabase.from("granola_matching_settings").select("*").maybeSingle().then((r) => r.data),
@@ -145,6 +148,12 @@ export default async function SettingsPage({
       </Link>
 
       {user && <PipelineStagesAndTags stages={stages} tags={tags} ownerId={user.id} stageCounts={stageCounts} />}
+
+      {user && (
+        <Card>
+          <TextTemplatesManager templates={textTemplates} ownerId={user.id} />
+        </Card>
+      )}
 
       <ConnectionsCard rows={connectionRows} />
 

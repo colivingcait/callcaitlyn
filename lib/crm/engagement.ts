@@ -54,3 +54,19 @@ export async function updateEngagementTag(admin: SupabaseClient, ownerId: string
     await admin.from("contact_tags").delete().eq("contact_id", contactId).eq("tag_id", tag.id);
   }
 }
+
+// The mobile contact record shows a real count next to the "Engaged" tag
+// ("Engaged · 4 texts this week") rather than just the boolean - same
+// 7-day window as the tag above, but texts only (not the tag's
+// call+text+email union), since that's the specific number the chip
+// copy promises.
+export async function countRecentTexts(admin: SupabaseClient, contactId: string): Promise<number> {
+  const since = new Date(Date.now() - ENGAGEMENT_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const { count } = await admin
+    .from("activities")
+    .select("id", { count: "exact", head: true })
+    .eq("contact_id", contactId)
+    .eq("type", "text")
+    .gte("occurred_at", since);
+  return count ?? 0;
+}
