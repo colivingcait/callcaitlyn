@@ -15,22 +15,25 @@ import {
 } from "@/app/(app)/dialer/actions";
 import { sendTextToContact } from "@/app/(app)/contacts/actions";
 import { newRegistrationTemplate, returningRegistrationTemplate } from "@/lib/crm/event-text-templates";
+import { applyMergeFields } from "@/lib/crm/merge-fields";
 import { Button, Select, Textarea, Badge } from "@/components/ui";
 import { formatDistanceToNow } from "date-fns";
 import { X, PhoneCall, MessageSquareText, History, Clock } from "lucide-react";
 import { fullName, formatPhone } from "@/lib/utils";
-import type { PipelineStage } from "@/types/database";
+import type { PipelineStage, TextTemplate } from "@/types/database";
 import type { DialerContact, DialerMode } from "@/lib/data/dialer";
 
 export function DialerCallModal({
   contact,
   stages,
   mode,
+  defaultDraftTemplate,
   onClose,
 }: {
   contact: DialerContact;
   stages: PipelineStage[];
   mode: DialerMode;
+  defaultDraftTemplate?: TextTemplate | null;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -181,8 +184,12 @@ export function DialerCallModal({
                     <MessageSquareText size={13} /> Welcome back
                   </Button>
                 )}
-                <Button variant="secondary" size="sm" onClick={() => openTexting("")}>
-                  <MessageSquareText size={13} /> Blank text
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => openTexting(defaultDraftTemplate ? applyMergeFields(defaultDraftTemplate.body, contact) : "")}
+                >
+                  <MessageSquareText size={13} /> {defaultDraftTemplate?.label ?? "Blank text"}
                 </Button>
               </div>
             ) : (

@@ -1,21 +1,32 @@
 import Link from "next/link";
 import { listNewRegistrationsQueue, listEventFollowupQueue } from "@/lib/data/dialer";
 import { listStages } from "@/lib/data/contacts";
+import { getDefaultDraftTemplate } from "@/lib/data/text-templates";
 import { DialerQueue } from "@/components/dialer/DialerQueue";
+import { FollowUpQueueMobile } from "@/components/dialer/mobile/FollowUpQueueMobile";
 import { cn } from "@/lib/utils";
 
 export default async function DialerPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const { tab } = await searchParams;
   const activeTab = tab === "followup" ? "followup" : "new";
 
-  const [{ contacts: registrations, error: registrationsError }, { contacts: followups, error: followupError }, stages] =
-    await Promise.all([listNewRegistrationsQueue(), listEventFollowupQueue(), listStages()]);
+  const [{ contacts: registrations, error: registrationsError }, { contacts: followups, error: followupError }, stages, defaultDraftTemplate] =
+    await Promise.all([listNewRegistrationsQueue(), listEventFollowupQueue(), listStages(), getDefaultDraftTemplate()]);
 
   const contacts = activeTab === "followup" ? followups : registrations;
   const error = activeTab === "followup" ? followupError : registrationsError;
 
   return (
-    <div className="mx-auto max-w-2xl overflow-x-hidden">
+    <>
+      <FollowUpQueueMobile
+        contacts={contacts}
+        mode={activeTab === "followup" ? "event-followup" : "new-registration"}
+        activeTab={activeTab}
+        newCount={registrations.length}
+        followupCount={followups.length}
+        defaultDraftTemplate={defaultDraftTemplate}
+      />
+      <div className="mx-auto hidden max-w-2xl overflow-x-hidden md:block">
       <div className="px-4 pt-6 pb-2">
         <h1 className="font-serif text-2xl font-semibold text-neutral-900">Dialer</h1>
         <p className="mt-0.5 text-sm text-neutral-500">
@@ -60,7 +71,9 @@ export default async function DialerPage({ searchParams }: { searchParams: Promi
         emptyMessage={
           activeTab === "followup" ? "No one's waiting on a follow-up call." : "Nobody left to call — you're caught up."
         }
+        defaultDraftTemplate={defaultDraftTemplate}
       />
-    </div>
+      </div>
+    </>
   );
 }

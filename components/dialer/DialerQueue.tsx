@@ -7,18 +7,20 @@ import { DialerCallModal } from "@/components/dialer/DialerCallModal";
 import { Badge } from "@/components/ui";
 import { fullName, formatPhone, initials } from "@/lib/utils";
 import type { DialerContact, DialerMode } from "@/lib/data/dialer";
-import type { PipelineStage } from "@/types/database";
+import type { PipelineStage, TextTemplate } from "@/types/database";
 
 export function DialerQueue({
   contacts,
   stages,
   mode,
   emptyMessage = "Nobody left to call — you're caught up.",
+  defaultDraftTemplate,
 }: {
   contacts: DialerContact[];
   stages: PipelineStage[];
   mode: DialerMode;
   emptyMessage?: string;
+  defaultDraftTemplate?: TextTemplate | null;
 }) {
   const [selected, setSelected] = useState<DialerContact | null>(null);
 
@@ -64,7 +66,9 @@ export function DialerQueue({
         </button>
       ))}
 
-      {selected && <DialerCallModal contact={selected} stages={stages} mode={mode} onClose={() => setSelected(null)} />}
+      {selected && (
+        <DialerCallModal contact={selected} stages={stages} mode={mode} defaultDraftTemplate={defaultDraftTemplate} onClose={() => setSelected(null)} />
+      )}
     </div>
   );
 }
