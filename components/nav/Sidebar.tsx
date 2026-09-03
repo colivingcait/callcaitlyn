@@ -4,23 +4,19 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Plus } from "lucide-react";
 import { useState } from "react";
-import { NAV_GROUPS } from "./nav-items";
+import { NAV_GROUPS, type NavCounts } from "./nav-items";
 import { SignOutButton } from "./SignOutButton";
 import { QuickAddMenu } from "./QuickAddMenu";
+import { countFor as countForCounts } from "@/lib/nav/countFor";
 import { cn } from "@/lib/utils";
 
-export type NavCounts = { contacts?: number; dialer?: number; messages?: number; notes?: number };
+export type { NavCounts };
 
 export function Sidebar({ userEmail, counts = {} }: { userEmail?: string | null; counts?: NavCounts }) {
   const pathname = usePathname();
   const [quickAddOpen, setQuickAddOpen] = useState(false);
 
-  const countFor: Record<string, { value: number; waiting?: boolean } | undefined> = {
-    "/contacts": counts.contacts !== undefined ? { value: counts.contacts } : undefined,
-    "/dialer": counts.dialer !== undefined ? { value: counts.dialer } : undefined,
-    "/messages": counts.messages !== undefined ? { value: counts.messages, waiting: counts.messages > 0 } : undefined,
-    "/notes": counts.notes !== undefined && counts.notes > 0 ? { value: counts.notes, waiting: true } : undefined,
-  };
+  const countFor = countForCounts(counts);
 
   return (
     <aside className="hidden w-[220px] shrink-0 flex-col border-r border-neutral-100 bg-[#fcfbfa] px-3 py-[22px] md:flex">

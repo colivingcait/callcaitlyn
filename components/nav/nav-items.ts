@@ -15,11 +15,13 @@ import {
   Settings,
   NotebookText,
   UserPlus,
+  Menu,
   type LucideIcon,
 } from "lucide-react";
 
 export type NavItem = { href: string; label: string; icon: LucideIcon };
 export type NavGroup = { label: string; items: NavItem[] };
+export type NavCounts = { contacts?: number; dialer?: number; messages?: number; notes?: number };
 
 // Thirteen items in three groups - about the ceiling before a sidebar
 // becomes a list you scan instead of a map you know. Insights, Sphere,
@@ -59,12 +61,18 @@ export const NAV_GROUPS: NavGroup[] = [
   { label: "Business", items: BUSINESS_ITEMS },
 ];
 
-// Five along the bottom - what she touches standing up. Everything else
-// sits behind a More sheet on mobile (unchanged from before).
-export const MOBILE_NAV_ITEMS: NavItem[] = [
-  WORK_ITEMS[0], // Today
-  WORK_ITEMS[2], // Messages
-  PEOPLE_ITEMS[0], // Contacts
-  WORK_ITEMS[3], // Dialer
-  PEOPLE_ITEMS[3], // Events
+// Five along the bottom - what she touches standing up. An explicit list,
+// not a positional slice of WORK_ITEMS/PEOPLE_ITEMS (the old approach broke
+// silently the moment a new item was inserted rather than appended) -
+// everything else lives behind the More sheet, grouped exactly like
+// NAV_GROUPS above. "More" has no href - it opens a sheet over whatever
+// screen is already showing, so it's a distinct kind rather than a link.
+export type MobileNavItem = { kind: "link"; href: string; label: string; icon: LucideIcon } | { kind: "more"; label: string; icon: LucideIcon };
+
+export const MOBILE_NAV_ITEMS: MobileNavItem[] = [
+  { kind: "link", href: "/", label: "Today", icon: Sunrise },
+  { kind: "link", href: "/messages", label: "Inbox", icon: MessageCircle },
+  { kind: "link", href: "/contacts", label: "People", icon: Users },
+  { kind: "link", href: "/pipeline", label: "Pipeline", icon: KanbanSquare },
+  { kind: "more", label: "More", icon: Menu },
 ];

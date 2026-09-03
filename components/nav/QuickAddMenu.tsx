@@ -13,9 +13,9 @@ type ContactOption = { id: string; first_name: string; last_name: string };
 // option, since a task doesn't have to be about anyone (contact_id is
 // nullable) and shouldn't require detouring through a specific contact's
 // page just to jot one down.
-export function QuickAddMenu({ onClose }: { onClose: () => void }) {
+export function QuickAddMenu({ onClose, initialMode = "pick" }: { onClose: () => void; initialMode?: "pick" | "task" }) {
   const router = useRouter();
-  const [mode, setMode] = useState<"pick" | "task">("pick");
+  const [mode, setMode] = useState<"pick" | "task">(initialMode);
   const [contacts, setContacts] = useState<ContactOption[] | null>(null);
   const [title, setTitle] = useState("");
   const [contactId, setContactId] = useState("");

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/nav/Sidebar";
 import { BottomNav } from "@/components/nav/BottomNav";
 import { QuickAddButton } from "@/components/nav/QuickAddButton";
+import { LogPill } from "@/components/nav/LogPill";
 import { SignOutButton } from "@/components/nav/SignOutButton";
 import { listConversations } from "@/lib/data/messages";
 import { listNewRegistrationsQueue } from "@/lib/data/dialer";
@@ -42,8 +43,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </header>
         <main className="flex-1 bg-neutral-50/60 pb-28 md:pb-8">{children}</main>
       </div>
-      <QuickAddButton />
-      <BottomNav />
+      {/* Mobile's FAB slot is Today-only-Log now (LogPill below); New
+          contact/New task move to People's header button (Phase 3) and
+          the More sheet respectively, so QuickAddButton stays desktop-only. */}
+      <div className="hidden md:block">
+        <QuickAddButton />
+      </div>
+      {user && <LogPill ownerId={user.id} />}
+      <BottomNav counts={navCounts} userEmail={user?.email} />
     </div>
   );
 }
