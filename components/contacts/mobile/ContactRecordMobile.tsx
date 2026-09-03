@@ -12,12 +12,9 @@ import { LogSheet } from "@/components/contacts/mobile/LogSheet";
 import { OverviewTab } from "@/components/contacts/mobile/OverviewTab";
 import { ActivityTab } from "@/components/contacts/mobile/ActivityTab";
 import { DealsTab } from "@/components/contacts/mobile/DealsTab";
-import { sendTextToContact } from "@/app/(app)/contacts/actions";
 import { openQuoCall } from "@/lib/quo/call-link";
 import { formatLocal } from "@/lib/format-time";
 import { CONTACT_TYPE_LABELS, fullName, formatPhone } from "@/lib/utils";
-import { useToast } from "@/lib/hooks/useToast";
-import { Toast } from "@/components/mobile/Toast";
 import { cn } from "@/lib/utils";
 import type { Activity, AiInsight, ContactWithRelations, Deal, PipelineStage, Tag, TextTemplate } from "@/types/database";
 import type { MergeCandidate } from "@/lib/data/contacts";
@@ -50,12 +47,10 @@ export function ContactRecordMobile({
   openTasks: { id: string; title: string; due_at: string | null }[];
 }) {
   const router = useRouter();
-  const { toast, showToast } = useToast();
   const [tab, setTab] = useState<Tab>("overview");
   const [stageSheetOpen, setStageSheetOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const [texting, setTexting] = useState(false);
 
   const name = fullName(contact);
   const stage = stages.find((s) => s.id === contact.stage_id);
@@ -70,13 +65,8 @@ export function ContactRecordMobile({
   const lastText = activities.find((a) => a.type === "text" && a.body);
   const lastExchange = lastText ? { body: lastText.body ?? "", occurred_at: lastText.occurred_at } : null;
 
-  async function quickText() {
-    if (!contact.phone) return;
-    setTexting(true);
-    const res = await sendTextToContact(contact.id, contact.phone, `Hi ${contact.first_name}, following up!`);
-    setTexting(false);
-    if (!res.ok) showToast("Couldn't send that text", "error");
-    else router.refresh();
+  function goToThread() {
+    router.push(`/messages/${contact.id}`);
   }
 
   return (
@@ -197,11 +187,11 @@ export function ContactRecordMobile({
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={quickText}
-            disabled={!contact.phone || texting}
+            onClick={goToThread}
+            disabled={!contact.phone}
             className="flex h-[54px] flex-1 items-center justify-center gap-2 rounded-xl bg-brand-600 text-[15px] font-semibold text-white disabled:opacity-40"
           >
-            <MessageSquare size={17} /> {texting ? "Sending…" : "Text"}
+            <MessageSquare size={17} /> Text
           </button>
           <button
             type="button"
@@ -247,7 +237,6 @@ export function ContactRecordMobile({
         representing={contact.representing}
       />
       <LogSheet open={logOpen} onClose={() => setLogOpen(false)} ownerId={ownerId} contactId={contact.id} contactName={name} />
-      <Toast toast={toast} />
     </div>
   );
 }

@@ -7,7 +7,6 @@ import { ListRow } from "@/components/mobile/ListRow";
 import { SwipeActions } from "@/components/mobile/SwipeActions";
 import { StickyGroupHeader } from "@/components/mobile/StickyGroupHeader";
 import { LogSheet } from "@/components/contacts/mobile/LogSheet";
-import { sendTextToContact } from "@/app/(app)/contacts/actions";
 import { snoozeFollowUp } from "@/app/(app)/today-actions";
 import { groupContacts } from "@/lib/crm/contact-grouping";
 import { useToast } from "@/lib/hooks/useToast";
@@ -32,13 +31,6 @@ export function PeopleList({
 
   const groups = groupContacts(contacts, grouped ? "stage" : "none", stages);
 
-  async function quickText(contact: ContactWithRelations) {
-    if (!contact.phone) return;
-    const res = await sendTextToContact(contact.id, contact.phone, `Hi ${contact.first_name}, just checking in!`);
-    if (!res.ok) showToast("Couldn't send that text", "error");
-    else router.refresh();
-  }
-
   async function snooze(contactId: string) {
     const res = await snoozeFollowUp(contactId);
     if (!res.ok) showToast("Couldn't snooze that", "error");
@@ -60,7 +52,9 @@ export function PeopleList({
             {group.contacts.map((contact) => {
               const name = `${contact.first_name} ${contact.last_name}`.trim();
               const actions = [
-                ...(contact.phone ? [{ icon: MessageSquareText, label: "Text", bg: "#e7e5e4", onClick: () => quickText(contact) }] : []),
+                ...(contact.phone
+                  ? [{ icon: MessageSquareText, label: "Text", bg: "#e7e5e4", onClick: () => router.push(`/messages/${contact.id}`) }]
+                  : []),
                 { icon: StickyNote, label: "Log", bg: "#292524", onClick: () => setLogContact({ id: contact.id, name }) },
                 { icon: Clock, label: "Snooze", bg: "#ac3826", onClick: () => snooze(contact.id) },
               ];

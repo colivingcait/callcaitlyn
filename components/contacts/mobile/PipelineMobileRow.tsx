@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { Phone, MessageSquare } from "lucide-react";
 import { Avatar } from "@/components/ui";
-import { sendTextToContact } from "@/app/(app)/contacts/actions";
 import { openQuoCall } from "@/lib/quo/call-link";
 import { getPipelineCardContext } from "@/lib/crm/pipeline-card-context";
 import { formatCurrency, fullName } from "@/lib/utils";
@@ -24,11 +23,9 @@ export function PipelineMobileRow({
   const context = getPipelineCardContext(contact, stage, extras);
   const deal = stage?.is_under_contract ? extras.pendingDealByContact.get(contact.id) : undefined;
 
-  async function quickText(e: React.MouseEvent) {
+  function goToThread(e: React.MouseEvent) {
     e.preventDefault();
-    if (!contact.phone) return;
-    const res = await sendTextToContact(contact.id, contact.phone, `Hi ${contact.first_name}, checking in!`);
-    if (res.ok) router.refresh();
+    router.push(`/messages/${contact.id}`);
   }
 
   function call(e: React.MouseEvent) {
@@ -51,7 +48,7 @@ export function PipelineMobileRow({
       {contact.phone && (
         <button
           type="button"
-          onClick={stage?.is_under_contract ? call : quickText}
+          onClick={stage?.is_under_contract ? call : goToThread}
           aria-label={stage?.is_under_contract ? "Call" : "Text"}
           className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-neutral-200 text-neutral-600"
         >

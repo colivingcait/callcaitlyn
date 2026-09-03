@@ -4,10 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { MessageSquareText, Phone } from "lucide-react";
 import { ListRow } from "@/components/mobile/ListRow";
-import { sendTextToContact } from "@/app/(app)/contacts/actions";
 import { openQuoCall } from "@/lib/quo/call-link";
-import { useToast } from "@/lib/hooks/useToast";
-import { Toast } from "@/components/mobile/Toast";
 import { cn } from "@/lib/utils";
 import type { WorklistPerson } from "@/lib/data/today";
 
@@ -15,7 +12,6 @@ export type TodayChipKey = "late" | "dueToday" | "owed" | "neverTexted";
 
 export function TodayWorklist({ groups }: { groups: Record<TodayChipKey, WorklistPerson[]> }) {
   const router = useRouter();
-  const { toast, showToast } = useToast();
   const chips: { key: TodayChipKey; label: string }[] = [
     { key: "late", label: `Late ${groups.late.length}` },
     { key: "dueToday", label: `Due today ${groups.dueToday.length}` },
@@ -24,13 +20,6 @@ export function TodayWorklist({ groups }: { groups: Record<TodayChipKey, Worklis
   ];
   const firstNonEmpty = chips.find((c) => groups[c.key].length > 0)?.key ?? "late";
   const [active, setActive] = useState<TodayChipKey>(firstNonEmpty);
-
-  async function quickText(person: WorklistPerson) {
-    if (!person.phone) return;
-    const res = await sendTextToContact(person.id, person.phone, `Hi ${person.name.split(" ")[0]}, just following up!`);
-    if (!res.ok) showToast("Couldn't send that text", "error");
-    else router.refresh();
-  }
 
   const people = groups[active];
 
@@ -68,14 +57,13 @@ export function TodayWorklist({ groups }: { groups: Record<TodayChipKey, Worklis
                 person.phone
                   ? active === "late"
                     ? { icon: Phone, variant: "secondary", "aria-label": "Call", onClick: () => openQuoCall(person.phone!) }
-                    : { icon: MessageSquareText, variant: "primary", "aria-label": "Text", onClick: () => quickText(person) }
+                    : { icon: MessageSquareText, variant: "primary", "aria-label": "Text", onClick: () => router.push(`/messages/${person.id}`) }
                   : undefined
               }
             />
           ))
         )}
       </div>
-      <Toast toast={toast} />
     </div>
   );
 }
