@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { applyStageChange, type DealModalMode, type PendingDealSummary } from "@/lib/crm/stage-transition";
+import { useApplyStageChange } from "@/lib/hooks/useApplyStageChange";
 import { DealCelebrationModal } from "@/components/contacts/DealCelebrationModal";
 import { PendingDealCleanupModal } from "@/components/contacts/PendingDealCleanupModal";
 import type { DealSide, PipelineStage, Representing } from "@/types/database";
@@ -32,35 +30,14 @@ export function MoveToMenu({
   contactCreatedAt: string;
   representing: Representing | null;
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [dealModal, setDealModal] = useState<{ id: string; mode: DealModalMode } | null>(null);
-  const [pendingCleanup, setPendingCleanup] = useState<PendingDealSummary[] | null>(null);
+  const { move: applyMove, busy, dealModal, pendingCleanup, clearDealModal, clearPendingCleanup } = useApplyStageChange(ownerId);
 
   async function move(newStageId: string) {
     setOpen(false);
-    setBusy(true);
-    const supabase = createClient();
     const oldStage = stages.find((s) => s.id === currentStageId);
     const newStage = stages.find((s) => s.id === newStageId);
-
-    const { error, dealId, dealMode, pendingAtRisk } = await applyStageChange(supabase, ownerId, contactId, oldStage, newStage);
-
-    if (!error) {
-      await supabase.from("activities").insert({
-        owner_id: ownerId,
-        contact_id: contactId,
-        type: "status_change",
-        direction: "none",
-        source: "manual",
-        body: `Stage changed from ${oldStage?.name ?? "None"} to ${newStage?.name ?? "None"}`,
-      });
-      if (dealId && dealMode) setDealModal({ id: dealId, mode: dealMode });
-      if (pendingAtRisk) setPendingCleanup(pendingAtRisk);
-      router.refresh();
-    }
-    setBusy(false);
+    await applyMove(contactId, oldStage, newStage);
   }
 
   return (
@@ -118,10 +95,10 @@ export function MoveToMenu({
           defaultLeadStartedAt={contactCreatedAt}
           defaultSide={(representing === "buyer" || representing === "seller" ? representing : null) as DealSide | null}
           mode={dealModal.mode ?? "celebrate"}
-          onClose={() => setDealModal(null)}
+          onClose={clearDealModal}
         />
       )}
-      {pendingCleanup && <PendingDealCleanupModal deals={pendingCleanup} onClose={() => setPendingCleanup(null)} />}
+      {pendingCleanup && <PendingDealCleanupModal deals={pendingCleanup} onClose={clearPendingCleanup} />}
     </div>
   );
 }

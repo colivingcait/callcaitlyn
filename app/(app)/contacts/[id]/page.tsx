@@ -29,10 +29,15 @@ import { ConsentStatus } from "@/components/contacts/ConsentStatus";
 import { getInstagramSenderId } from "@/lib/data/instagram";
 import { getContactEventHistory } from "@/lib/data/contact-events";
 import { ContactEventHistory } from "@/components/contacts/ContactEventHistory";
+import { listTextTemplates } from "@/lib/data/text-templates";
+import { countRecentTexts } from "@/lib/crm/engagement";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { ContactRecordMobile } from "@/components/contacts/mobile/ContactRecordMobile";
 
 export default async function ContactDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [contact, activities, tasks, stages, insights, deals, mergeCandidates, tags, readyTranscript, instagramSenderId, eventHistory] =
+  const admin = createAdminClient();
+  const [contact, activities, tasks, stages, insights, deals, mergeCandidates, tags, readyTranscript, instagramSenderId, eventHistory, textTemplates, textsThisWeek] =
     await Promise.all([
       getContact(id),
       getContactActivities(id),
@@ -45,6 +50,8 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
       getLatestReadyTranscriptForContact(id),
       getInstagramSenderId(id),
       getContactEventHistory(id),
+      listTextTemplates(),
+      countRecentTexts(admin, id),
     ]);
 
   if (!contact) notFound();
@@ -59,7 +66,21 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
     : 0;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6">
+    <>
+      <ContactRecordMobile
+        contact={contact}
+        stages={stages}
+        tags={tags}
+        activities={activities}
+        deals={deals}
+        insights={insights}
+        mergeCandidates={mergeCandidates}
+        textTemplates={textTemplates}
+        ownerId={contact.owner_id}
+        textsThisWeek={textsThisWeek}
+        openTasks={openTasks.map((t) => ({ id: t.id, title: t.title, due_at: t.due_at }))}
+      />
+      <div className="mx-auto hidden max-w-3xl px-4 py-6 md:block">
       <div className="flex flex-wrap items-start gap-[18px]">
         <div className="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full bg-neutral-100 text-xl font-semibold text-neutral-600">
           {initials(contact.first_name, contact.last_name)}
@@ -175,6 +196,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
         <MergeContactButton contactId={contact.id} contactName={fullName(contact)} candidates={mergeCandidates} />
         <ArchiveButton contactId={contact.id} />
       </div>
-    </div>
+      </div>
+    </>
   );
 }

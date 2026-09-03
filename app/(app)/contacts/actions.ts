@@ -54,6 +54,44 @@ export async function sendTextToContact(contactId: string, toNumber: string, bod
   return { ok: true as const };
 }
 
+// The mobile Log sheet's full spec (outcome + next-follow-up) - a real
+// superset of what AddActivityForm saves today (type/direction/body
+// only, no outcome or follow-up scheduling). AddActivityForm itself is
+// left as-is; this is the Log sheet's own action.
+export async function logActivityWithOutcome(input: {
+  contactId: string;
+  type: import("@/types/database").ActivityType;
+  body: string | null;
+  outcome?: "connected" | "no_answer" | "left_voicemail";
+  nextFollowUpAt?: string | null;
+}) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const { data: contact } = await supabase.from("contacts").select("id").eq("id", input.contactId).maybeSingle();
+  if (!contact) return { ok: false as const, error: "Contact not found" };
+
+  const { error } = await supabase.from("activities").insert({
+    owner_id: user.id,
+    contact_id: input.contactId,
+    type: input.type,
+    direction: "none",
+    body: input.body,
+    source: "manual",
+    metadata: input.outcome ? { outcome: input.outcome } : {},
+  });
+  if (error) return { ok: false as const, error: error.message };
+
+  if (input.nextFollowUpAt !== undefined) {
+    await supabase.from("contacts").update({ next_follow_up_at: input.nextFollowUpAt }).eq("id", input.contactId);
+  }
+
+  return { ok: true as const };
+}
+
 export async function sendEmailToContact(contactId: string, toEmail: string, subject: string, body: string) {
   const supabase = await createClient();
   const {

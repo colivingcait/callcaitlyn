@@ -18,9 +18,14 @@ export async function applyStageChange(
   contactId: string,
   oldStage: PipelineStage | undefined,
   newStage: PipelineStage | undefined,
+  // Mobile's Stage & tags sheet lets her set the next follow-up in the
+  // same action as the stage move ("Then follow up: Tomorrow/3 days/...")
+  // - folded into this same patch so it's genuinely one write, not two.
+  nextFollowUpAt?: string | null,
 ) {
   const patch: Record<string, unknown> = { stage_id: newStage?.id ?? null };
   if (newStage?.is_trash) patch.archived = true;
+  if (nextFollowUpAt !== undefined) patch.next_follow_up_at = nextFollowUpAt;
 
   const { error } = await supabase.from("contacts").update(patch).eq("id", contactId);
   if (error) return { error, dealId: null, dealMode: null as DealModalMode, pendingAtRisk: null };

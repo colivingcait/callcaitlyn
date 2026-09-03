@@ -2,14 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Phone, MessageSquare, StickyNote, Users, Home, Mail } from "lucide-react";
+import { Phone, MessageSquare, StickyNote, Users, Home, Mail, Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { logActivityWithOutcome } from "@/app/(app)/contacts/actions";
 import { BottomSheet } from "@/components/mobile/BottomSheet";
-import { Button, Select, Textarea } from "@/components/ui";
+import { Button, Select, Textarea, Input } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import type { ActivityType } from "@/types/database";
 
 type ContactOption = { id: string; first_name: string; last_name: string };
+type Outcome = "connected" | "no_answer" | "left_voicemail";
 
 const TYPE_TILES: { value: ActivityType; label: string; icon: React.ComponentType<{ size?: number }> }[] = [
   { value: "call", label: "Call", icon: Phone },
@@ -20,10 +22,18 @@ const TYPE_TILES: { value: ActivityType; label: string; icon: React.ComponentTyp
   { value: "email", label: "Email", icon: Mail },
 ];
 
-// Minimal Phase 1 shell - the Log pill (mobile-only, Today) needs a real
-// destination immediately. Extended to the full spec (outcome chips,
-// next-follow-up) in Phase 4, backed by logActivityWithOutcome; for now
-// this saves the same shape AddActivityForm already does.
+const OUTCOME_OPTIONS: { value: Outcome; label: string }[] = [
+  { value: "connected", label: "Connected" },
+  { value: "no_answer", label: "No answer" },
+  { value: "left_voicemail", label: "Left voicemail" },
+];
+
+const FOLLOW_UP_OPTIONS: { label: string; days: number }[] = [
+  { label: "Tomorrow", days: 1 },
+  { label: "In 3 days", days: 3 },
+  { label: "Next week", days: 7 },
+];
+
 export function LogSheet({
   open,
   onClose,
@@ -41,7 +51,10 @@ export function LogSheet({
   const [contacts, setContacts] = useState<ContactOption[] | null>(null);
   const [contactId, setContactId] = useState(prefilledContactId ?? "");
   const [type, setType] = useState<ActivityType>("call");
+  const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [body, setBody] = useState("");
+  const [followUpDays, setFollowUpDays] = useState<number | null>(null);
+  const [followUpDate, setFollowUpDate] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -56,21 +69,33 @@ export function LogSheet({
   }, [open, prefilledContactId, contacts]);
 
   useEffect(() => {
-    if (open) setContactId(prefilledContactId ?? "");
+    if (open) {
+      setContactId(prefilledContactId ?? "");
+      setOutcome(null);
+      setFollowUpDays(null);
+      setFollowUpDate("");
+    }
   }, [open, prefilledContactId]);
+
+  const showsOutcome = type === "call" || type === "text";
 
   async function save() {
     if (!contactId) return;
     setSaving(true);
-    const supabase = createClient();
-    await supabase.from("activities").insert({
-      owner_id: ownerId,
-      contact_id: contactId,
+    const nextFollowUpAt = followUpDate
+      ? new Date(followUpDate).toISOString()
+      : followUpDays
+        ? new Date(Date.now() + followUpDays * 24 * 60 * 60 * 1000).toISOString()
+        : undefined;
+
+    await logActivityWithOutcome({
+      contactId,
       type,
-      direction: "none",
       body: body.trim() || null,
-      source: "manual",
+      outcome: showsOutcome && outcome ? outcome : undefined,
+      nextFollowUpAt,
     });
+
     setSaving(false);
     setBody("");
     setType("call");
@@ -129,7 +154,61 @@ export function LogSheet({
             ))}
           </div>
         </div>
+
+        {showsOutcome && (
+          <div>
+            <p className="mb-1.5 text-xs font-medium uppercase tracking-[.09em] text-neutral-400">Outcome (optional)</p>
+            <div className="flex flex-wrap gap-2">
+              {OUTCOME_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setOutcome(outcome === opt.value ? null : opt.value)}
+                  className={cn(
+                    "flex h-11 items-center gap-1.5 rounded-full px-3.5 text-[14px] font-medium",
+                    outcome === opt.value ? "bg-neutral-900 text-white" : "border border-neutral-200 text-neutral-600",
+                  )}
+                >
+                  {outcome === opt.value && <Check size={14} />}
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <Textarea rows={3} placeholder="Notes (optional)" value={body} onChange={(e) => setBody(e.target.value)} />
+
+        <div>
+          <p className="mb-1.5 text-xs font-medium uppercase tracking-[.09em] text-neutral-400">Next follow-up (optional)</p>
+          <div className="flex flex-wrap items-center gap-2">
+            {FOLLOW_UP_OPTIONS.map((opt) => (
+              <button
+                key={opt.days}
+                type="button"
+                onClick={() => {
+                  setFollowUpDays(followUpDays === opt.days ? null : opt.days);
+                  setFollowUpDate("");
+                }}
+                className={cn(
+                  "h-11 rounded-full px-3.5 text-[14px] font-medium",
+                  followUpDays === opt.days ? "bg-neutral-900 text-white" : "border border-neutral-200 text-neutral-600",
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+            <Input
+              type="date"
+              value={followUpDate}
+              onChange={(e) => {
+                setFollowUpDate(e.target.value);
+                setFollowUpDays(null);
+              }}
+              className="!h-11 w-auto !py-0"
+            />
+          </div>
+        </div>
       </div>
     </BottomSheet>
   );
