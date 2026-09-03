@@ -56,15 +56,23 @@ export function parseBlinqShareEmail(subject: string, bodyText: string): ParsedB
 
   if (!phone && !email) return null;
 
-  const name = extractNameNearContactInfo(bodyText, phoneMatch?.[0]) ?? subject.match(NAME_FROM_SUBJECT)?.[1]?.trim() ?? null;
+  const name =
+    extractNameNearContactInfo(bodyText, phoneMatch?.[0], email ?? undefined) ?? subject.match(NAME_FROM_SUBJECT)?.[1]?.trim() ?? null;
   const [firstName, ...rest] = (name ?? "").split(/\s+/).filter(Boolean);
 
   return { firstName: firstName || null, lastName: rest.join(" ") || null, phone, email };
 }
 
-function extractNameNearContactInfo(bodyText: string, phoneText: string | undefined): string | null {
-  const anchorIdx = phoneText ? bodyText.indexOf(phoneText) : -1;
-  if (anchorIdx < 0) return null;
+// Anchors on whichever of phone/email appears first in the body - a share
+// with only an email (no phone) used to fall straight through to the
+// subject-line fallback below, since the old version anchored on the phone
+// alone and bailed out with no phone match at all.
+function extractNameNearContactInfo(bodyText: string, phoneText: string | undefined, emailText: string | undefined): string | null {
+  const phoneIdx = phoneText ? bodyText.indexOf(phoneText) : -1;
+  const emailIdx = emailText ? bodyText.indexOf(emailText) : -1;
+  const candidateIdxs = [phoneIdx, emailIdx].filter((i) => i >= 0);
+  if (candidateIdxs.length === 0) return null;
+  const anchorIdx = Math.min(...candidateIdxs);
 
   const viewInBlinqMatch = bodyText.match(VIEW_IN_BLINQ);
   const start =
