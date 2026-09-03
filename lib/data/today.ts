@@ -278,6 +278,9 @@ export async function getTodayData() {
     statStrip,
     commissionYear,
     newLeadsNeverCalled: newLeads.contacts.length,
+    // The mobile "Never texted" filter chip needs the actual people, not
+    // just the count the desktop DialerStrip uses.
+    newLeadsNeverCalledContacts: newLeads.contacts,
     bookingRequests,
   };
 }

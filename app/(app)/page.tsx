@@ -1,7 +1,9 @@
 import { getTodayData } from "@/lib/data/today";
 import { dismissReplyOwed } from "@/app/(app)/today-actions";
 import { listMergeCandidates, listTags } from "@/lib/data/contacts";
+import { getDefaultDraftTemplate } from "@/lib/data/text-templates";
 import { createClient } from "@/lib/supabase/server";
+import { TodayMobile } from "@/components/dashboard/mobile/TodayMobile";
 import { formatLocal } from "@/lib/format-time";
 import { Section } from "@/components/ui/Section";
 import { BookingRequestRow } from "@/components/scheduling/BookingRequestRow";
@@ -29,6 +31,7 @@ export default async function TodayPage() {
     tags,
     { data: pinnedWeeklyReview },
     { data: pinnedPrepSheets },
+    defaultDraftTemplate,
   ] = await Promise.all([
     supabase.auth.getUser(),
     getTodayData(),
@@ -36,6 +39,7 @@ export default async function TodayPage() {
     listTags(),
     supabase.from("pinned_today_items").select("id, payload").eq("kind", "weekly_review").is("cleared_at", null).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("pinned_today_items").select("id, payload").eq("kind", "prep_sheet").is("cleared_at", null).order("created_at", { ascending: false }).limit(5),
+    getDefaultDraftTemplate(),
   ]);
 
   // A prep sheet clears itself once its meeting's start time passes, even
@@ -48,7 +52,15 @@ export default async function TodayPage() {
   const lateCalls = today.calls.filter((c) => c.late).length;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6">
+    <>
+      <TodayMobile
+        today={today}
+        contacts={contacts}
+        activePrepSheets={activePrepSheets}
+        pinnedWeeklyReview={pinnedWeeklyReview ?? null}
+        defaultDraftTemplate={defaultDraftTemplate}
+      />
+      <div className="mx-auto hidden max-w-3xl px-4 py-6 md:block">
       <h1 className="font-serif text-2xl font-semibold text-neutral-900 sm:text-[28px]">{formatLocal(new Date(), "EEEE, MMMM d")}</h1>
       <p className="mt-1 text-[15px] text-neutral-500">{openItems} open item{openItems === 1 ? "" : "s"} today</p>
 
@@ -146,6 +158,7 @@ export default async function TodayPage() {
           kwCapUsedPct={today.commissionYear.kwCapUsedPct}
         />
       </div>
-    </div>
+      </div>
+    </>
   );
 }
