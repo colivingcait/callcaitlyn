@@ -1,4 +1,8 @@
 import { PipelineCard } from "@/components/contacts/PipelineCard";
+import { PipelineMobileRow } from "@/components/contacts/mobile/PipelineMobileRow";
+import { PipelineMoneyStrip } from "@/components/contacts/mobile/PipelineMoneyStrip";
+import { StageJumpChips } from "@/components/contacts/mobile/StageJumpChips";
+import { StickyGroupHeader } from "@/components/mobile/StickyGroupHeader";
 import { Section } from "@/components/ui/Section";
 import { getPipelineExtras } from "@/lib/data/pipeline";
 import { formatCurrency } from "@/lib/utils";
@@ -11,7 +15,9 @@ import type { ContactWithRelations, PipelineStage } from "@/types/database";
 // until she wants it. One collapse mechanism (Section/useSectionOpen)
 // for all 9 stages rather than two different ones for a "top 3" vs. "the
 // rest" grouping - simpler, and every stage gets the same persisted
-// open/closed state across visits.
+// open/closed state across visits. The mobile branch reuses the exact
+// same useSectionOpen key via StickyGroupHeader, so open/closed state is
+// shared between mobile and desktop views of the same page.
 export async function PipelineBoard({
   stages,
   contacts,
@@ -54,38 +60,82 @@ export async function PipelineBoard({
     return null;
   }
 
+  const underContractItems = underContractStage ? byStage.get(underContractStage.id) ?? [] : [];
+  const underContractTotal = underContractItems.reduce((sum, c) => sum + (extras.pendingDealByContact.get(c.id)?.netCommission ?? 0), 0);
+  const hotItems = hotStage ? byStage.get(hotStage.id) ?? [] : [];
+  const goneQuietCount = hotItems.filter((c) => extras.coldFromHotIds.has(c.id)).length;
+  const newLeadItems = newLeadStage ? byStage.get(newLeadStage.id) ?? [] : [];
+  const neverCalledCount = newLeadItems.filter((c) => extras.neverCalledIds.has(c.id)).length;
+
   return (
-    <div className="space-y-2.5 px-4 pb-8 md:px-6">
-      {ordered.map((stage) => {
-        const items = byStage.get(stage.id) ?? [];
-        const summary = summaryFor(stage, items);
-        const defaultOpen = stage.id === underContractStage?.id || stage.id === hotStage?.id;
-        return (
-          <Section
-            key={stage.id}
-            sectionKey={`pipeline:stage:${stage.id}`}
-            title={stage.name}
-            meta={`${items.length}`}
-            defaultOpen={defaultOpen}
-            forceOpen={openStageId ? stage.id === openStageId : undefined}
-            action={
-              summary ? <span className={`shrink-0 text-[15px] font-semibold ${summary.quiet ? "text-red-700" : "text-neutral-600"}`}>{summary.text}</span> : undefined
-            }
-          >
-            <div className="space-y-2 bg-[#fcfbfa] p-3.5">
-              {items.length === 0 ? (
-                <p className="py-4 text-center text-sm text-neutral-400">Nobody in this stage.</p>
-              ) : (
-                items.map((c) => <PipelineCard key={c.id} contact={c} stage={stage} stages={stages} extras={extras} />)
-              )}
+    <div>
+      <PipelineMoneyStrip
+        underContractTotal={underContractTotal}
+        hotCount={hotItems.length}
+        goneQuietCount={goneQuietCount}
+        neverCalledCount={neverCalledCount}
+      />
+      <StageJumpChips stages={ordered.map((s) => ({ ...s, count: (byStage.get(s.id) ?? []).length }))} />
+
+      <div className="space-y-2.5 px-4 pb-8 md:px-6">
+        {ordered.map((stage) => {
+          const items = byStage.get(stage.id) ?? [];
+          const summary = summaryFor(stage, items);
+          const defaultOpen = stage.id === underContractStage?.id || stage.id === hotStage?.id;
+          return (
+            <div key={stage.id} id={`pipeline-stage-${stage.id}`} style={{ scrollMarginTop: 130 }}>
+              {/* Mobile: StickyGroupHeader + plain rows */}
+              <div className="rounded-[16px] border border-[#ebe9e7] bg-white md:hidden">
+                <StickyGroupHeader
+                  label={stage.name}
+                  count={items.length}
+                  summary={summary?.text}
+                  summaryTone={summary?.quiet ? "danger" : "default"}
+                  collapsible
+                  sectionKey={`pipeline:stage:${stage.id}`}
+                  defaultOpen={defaultOpen}
+                >
+                  <div className="divide-y divide-neutral-100">
+                    {items.length === 0 ? (
+                      <p className="py-4 text-center text-sm text-neutral-400">Nobody in this stage.</p>
+                    ) : (
+                      items.map((c) => <PipelineMobileRow key={c.id} contact={c} stage={stage} extras={extras} />)
+                    )}
+                  </div>
+                </StickyGroupHeader>
+              </div>
+
+              {/* Desktop: unchanged Section + PipelineCard */}
+              <div className="hidden md:block">
+                <Section
+                  sectionKey={`pipeline:stage:${stage.id}`}
+                  title={stage.name}
+                  meta={`${items.length}`}
+                  defaultOpen={defaultOpen}
+                  forceOpen={openStageId ? stage.id === openStageId : undefined}
+                  action={
+                    summary ? (
+                      <span className={`shrink-0 text-[15px] font-semibold ${summary.quiet ? "text-red-700" : "text-neutral-600"}`}>{summary.text}</span>
+                    ) : undefined
+                  }
+                >
+                  <div className="space-y-2 bg-[#fcfbfa] p-3.5">
+                    {items.length === 0 ? (
+                      <p className="py-4 text-center text-sm text-neutral-400">Nobody in this stage.</p>
+                    ) : (
+                      items.map((c) => <PipelineCard key={c.id} contact={c} stage={stage} stages={stages} extras={extras} />)
+                    )}
+                  </div>
+                </Section>
+              </div>
             </div>
-          </Section>
-        );
-      })}
-      <p className="px-0.5 pt-2 text-[15px] leading-[22px] text-neutral-500">
-        Stages are ordered by how close they are to money, not by pipeline order — the two you act on sit at the top, the rest stay shut until you want
-        them.
-      </p>
+          );
+        })}
+        <p className="hidden px-0.5 pt-2 text-[15px] leading-[22px] text-neutral-500 md:block">
+          Stages are ordered by how close they are to money, not by pipeline order — the two you act on sit at the top, the rest stay shut until you want
+          them.
+        </p>
+      </div>
     </div>
   );
 }
