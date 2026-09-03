@@ -14,6 +14,7 @@ import { ContactContextBar } from "@/components/messages/ContactContextBar";
 import { ConversationActions } from "@/components/messages/ConversationActions";
 import { AiInsightCard } from "@/components/contacts/AiInsightCard";
 import { createClient } from "@/lib/supabase/server";
+import { listTextTemplates } from "@/lib/data/text-templates";
 
 export default async function MessageThreadPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -21,11 +22,12 @@ export default async function MessageThreadPage({ params }: { params: Promise<{ 
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const [contact, thread, stages, insights] = await Promise.all([
+  const [contact, thread, stages, insights, textTemplates] = await Promise.all([
     getContact(id),
     getContactThread(id),
     listStages(),
     getContactInsights(id),
+    listTextTemplates(),
   ]);
 
   if (!contact) notFound();
@@ -84,7 +86,7 @@ export default async function MessageThreadPage({ params }: { params: Promise<{ 
         <ScrollToBottomOnLoad />
       </div>
 
-      <ThreadComposer contactId={contact.id} phone={contact.phone} />
+      <ThreadComposer contactId={contact.id} phone={contact.phone} firstName={contact.first_name} textTemplates={textTemplates} />
     </div>
   );
 }

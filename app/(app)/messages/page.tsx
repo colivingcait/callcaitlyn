@@ -2,10 +2,12 @@ import Link from "next/link";
 import { listConversations, listTextableContacts } from "@/lib/data/messages";
 import { listMergeCandidates } from "@/lib/data/contacts";
 import { getUnmatchedInstagramThreads } from "@/lib/data/instagram";
+import { createClient } from "@/lib/supabase/server";
 import { ConversationRow } from "@/components/messages/ConversationRow";
 import { NewMessageButton } from "@/components/messages/NewMessageButton";
 import { InstagramStrangerRow } from "@/components/messages/InstagramStrangerRow";
 import { MessageFilters } from "@/components/messages/MessageFilters";
+import { InboxMobile } from "@/components/messages/mobile/InboxMobile";
 import { Section } from "@/components/ui/Section";
 
 export default async function MessagesPage({ searchParams }: { searchParams: Promise<{ hidden?: string; filter?: string }> }) {
@@ -13,6 +15,10 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
   const hidden = hiddenParam === "1";
   const filter: "owed" | "all" | "calls" = filterParam === "owed" || filterParam === "calls" ? filterParam : "all";
 
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const [conversations, contacts, instagramThreads, mergeCandidates] = await Promise.all([
     listConversations({ hidden }),
     listTextableContacts(),
@@ -31,7 +37,17 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
   const notOwedVisible = visible.filter((c) => !c.owed);
 
   return (
-    <div className="mx-auto max-w-2xl overflow-x-hidden">
+    <>
+      {!hidden && (
+        <InboxMobile
+          conversations={conversations}
+          contacts={contacts}
+          instagramThreads={instagramThreads}
+          mergeCandidates={mergeCandidates}
+          ownerId={user?.id ?? ""}
+        />
+      )}
+      <div className={hidden ? "mx-auto max-w-2xl overflow-x-hidden" : "mx-auto hidden max-w-2xl overflow-x-hidden md:block"}>
       <div className="flex items-start justify-between gap-3 px-4 pt-6 pb-4">
         <div>
           <h1 className="font-serif text-2xl font-semibold text-neutral-900">{hidden ? "Hidden threads" : "Messages"}</h1>
@@ -87,6 +103,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
           </>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }

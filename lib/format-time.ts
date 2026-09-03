@@ -24,3 +24,19 @@ export function isTodayLocal(date: string | Date): boolean {
 export function relativeTime(date: string | Date): string {
   return formatDistanceToNowStrict(new Date(date), { addSuffix: true });
 }
+
+// "12m" / "2h" / "1d" - the mobile Inbox row's right-aligned timestamp,
+// deliberately shorter than relativeTime's "12 minutes ago" so it fits
+// next to the name on a narrow row without crowding the preview text.
+export function formatShortRelative(date: string | Date): string {
+  const ms = Date.now() - new Date(date).getTime();
+  const minutes = Math.floor(ms / 60_000);
+  if (minutes < 1) return "now";
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d`;
+  const weeks = Math.floor(days / 7);
+  return `${weeks}w`;
+}
