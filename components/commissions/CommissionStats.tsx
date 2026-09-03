@@ -22,7 +22,25 @@ export function CommissionStats({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      {/* Mobile hero - one dark card instead of ten small tiles */}
+      <div className="rounded-[20px] bg-neutral-900 p-4 md:hidden">
+        <p className="text-[13px] font-semibold uppercase tracking-[.05em] text-white/50">Net commission</p>
+        <p className="mt-1 font-serif text-[44px] font-semibold leading-none text-white">{formatCurrency(stats.netCommissionIncome)}</p>
+        {pendingNetCommission > 0 && <p className="mt-1.5 text-[15px] font-medium text-[#fbbf24]">+{formatCurrency(pendingNetCommission)} under contract</p>}
+        <div className="mt-3.5 flex items-center gap-4 border-t border-white/15 pt-3 text-[14px] text-white/70">
+          <span>{stats.totalDeals} deals</span>
+          <span>{formatCurrency(stats.totalVolume)} volume</span>
+          <span>{formatCurrency(stats.totalGCI)} GCI</span>
+        </div>
+      </div>
+      <div className="rounded-[16px] border border-[#ebe9e7] bg-white p-4 md:hidden">
+        <CapMeter size="large" label="KW" paid={stats.totalKW} cap={KW_CAP} remaining={kwRemaining} projected={pendingKw} />
+        <div className="mt-3">
+          <CapMeter size="large" label="KWRI" paid={stats.totalKWRI} cap={KWRI_CAP} remaining={kwriRemaining} projected={pendingKwri} />
+        </div>
+      </div>
+
+      <div className="hidden grid-cols-2 gap-3 md:grid md:grid-cols-4">
         <StatTile label="Deals closed" value={stats.totalDeals} />
         <StatTile label="Total volume" value={formatCurrency(stats.totalVolume)} />
         <StatTile label="Total GCI" value={formatCurrency(stats.totalGCI)} />
@@ -34,7 +52,7 @@ export function CommissionStats({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="hidden grid-cols-2 gap-3 md:grid md:grid-cols-4">
         <StatTile label="Avg sale price" value={formatCurrency(stats.avgSalePrice)} />
         <StatTile label="Avg commission rate" value={formatPercent(stats.avgCommissionRate, 2)} />
         <StatTile label="Avg net per deal" value={formatCurrency(stats.avgNetPerDeal)} />
@@ -44,7 +62,7 @@ export function CommissionStats({
         />
       </div>
 
-      <div>
+      <div className="hidden md:block">
         <h3 className="mb-2 text-sm font-semibold text-neutral-700">Fees paid this commission year</h3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Card className="space-y-1.5 text-sm">
@@ -125,31 +143,34 @@ function CapMeter({
   cap,
   remaining,
   projected = 0,
+  size = "default",
 }: {
   label: string;
   paid: number;
   cap: number;
   remaining: number;
   projected?: number;
+  size?: "default" | "large";
 }) {
   const paidPct = Math.min((paid / cap) * 100, 100);
   const projectedPct = Math.min(((paid + projected) / cap) * 100, 100) - paidPct;
   const capped = remaining <= 0;
   const remainingAfterProjected = Math.max(remaining - projected, 0);
+  const large = size === "large";
 
   return (
     <div>
-      <div className="flex items-baseline justify-between text-xs">
-        <span className="text-neutral-500">{label}</span>
+      <div className={cn("flex items-baseline justify-between", large ? "text-sm" : "text-xs")}>
+        <span className="font-medium text-neutral-600">{label}</span>
         <span className={capped ? "font-semibold text-red-600" : "text-neutral-700"}>
           {capped ? "Capped" : `${formatCurrency(remaining)} left`}
         </span>
       </div>
-      <div className="mt-1 flex h-1.5 overflow-hidden rounded-full bg-neutral-100">
+      <div className={cn("mt-1 flex overflow-hidden rounded-full bg-neutral-100", large ? "h-2.5" : "h-1.5")}>
         <div className={cn("h-full", capped ? "bg-red-500" : "bg-brand-500")} style={{ width: `${paidPct}%` }} />
         {projected > 0 && <div className="h-full bg-amber-400" style={{ width: `${projectedPct}%` }} />}
       </div>
-      <p className="mt-0.5 text-[10px] text-neutral-400">
+      <p className={cn("mt-1 text-neutral-400", large ? "text-[13px]" : "text-[10px]")}>
         {formatCurrency(paid)} of {formatCurrency(cap)} paid
         {projected > 0 &&
           ` · +${formatCurrency(projected)} projected from deals under contract, ${formatCurrency(remainingAfterProjected)} would remain`}

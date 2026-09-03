@@ -58,13 +58,13 @@ export default async function CommissionsPage({
             Not closed yet — these numbers show what each deal would owe based on cap room used so far, and
             aren&apos;t counted in the totals above until they actually close.
           </p>
-          <CommissionTable deals={pending} pending />
+          <CommissionTable deals={pending} pending mobileLabel="Under contract" />
         </div>
       )}
 
       <div>
         <h2 className="mb-3 text-sm font-semibold text-neutral-700">Deals this commission year</h2>
-        <CommissionTable deals={won} />
+        <CommissionTable deals={won} mobileLabel="Closed this year" />
       </div>
     </div>
   );

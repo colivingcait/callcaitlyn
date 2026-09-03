@@ -10,7 +10,7 @@ export function CapYearToggle({ years, current }: { years: string[]; current: st
           key={year}
           href={`/commissions?year=${year}`}
           className={cn(
-            "rounded-full border px-3 py-1.5 text-xs font-medium",
+            "flex h-11 items-center rounded-full border px-3.5 text-[13px] font-medium md:h-auto md:px-3 md:py-1.5 md:text-xs",
             year === current ? "border-transparent bg-brand-600 text-white" : "border-neutral-200 text-neutral-600",
           )}
         >

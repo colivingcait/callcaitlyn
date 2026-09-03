@@ -2,15 +2,18 @@ import Link from "next/link";
 import { formatCurrency, formatPercent, fullName, PROPERTY_TYPE_LABELS, cn } from "@/lib/utils";
 import { formatLocal } from "@/lib/format-time";
 import { DealRowActions } from "@/components/commissions/DealRowActions";
+import { StickyGroupHeader } from "@/components/mobile/StickyGroupHeader";
 import type { DealComputedFields } from "@/lib/crm/commission";
 import type { DealWithContact } from "@/lib/data/commissions";
 
 export function CommissionTable({
   deals,
   pending = false,
+  mobileLabel,
 }: {
   deals: (DealWithContact & DealComputedFields)[];
   pending?: boolean;
+  mobileLabel?: string;
 }) {
   if (deals.length === 0) {
     return (
@@ -47,10 +50,24 @@ export function CommissionTable({
           columns tucked behind "Fee breakdown" - the desktop table's 18
           columns in an overflow-x-auto strip just meant endless sideways
           scrolling through tiny text on a phone. */}
-      <div className="space-y-2.5 md:hidden">
-        {deals.map((deal) => (
-          <CommissionCard key={deal.id} deal={deal} pending={pending} />
-        ))}
+      <div className="md:hidden">
+        {mobileLabel ? (
+          <div className="rounded-[16px] border border-[#ebe9e7] bg-white">
+            <StickyGroupHeader label={mobileLabel} count={deals.length}>
+              <div className="space-y-2.5 bg-[#fcfbfa] p-3">
+                {deals.map((deal) => (
+                  <CommissionCard key={deal.id} deal={deal} pending={pending} />
+                ))}
+              </div>
+            </StickyGroupHeader>
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {deals.map((deal) => (
+              <CommissionCard key={deal.id} deal={deal} pending={pending} />
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="hidden overflow-x-auto rounded-2xl border border-neutral-200/70 bg-white shadow-card md:block">
@@ -122,7 +139,7 @@ function CommissionCard({ deal, pending }: { deal: DealWithContact & DealCompute
   const commRate = deal.sale_price && deal.gross_commission ? (deal.gross_commission / deal.sale_price) * 100 : null;
 
   return (
-    <div className={cn("rounded-2xl border border-neutral-200/70 bg-white p-3.5 shadow-card", pending && "bg-amber-50/40")}>
+    <div className={cn("rounded-2xl border border-neutral-200/70 bg-white p-3.5 shadow-card", pending && "border-[#fde68a] bg-[#fffbeb]")}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           {deal.contacts ? (
@@ -147,7 +164,7 @@ function CommissionCard({ deal, pending }: { deal: DealWithContact & DealCompute
         <span className="text-xs text-neutral-400">
           {pending ? "Entered UC" : "Closed"} {formatLocal(deal.closed_at, "MMM d, yyyy")}
         </span>
-        <span className="font-semibold text-neutral-900">{formatCurrency(deal.netCommission)}</span>
+        <span className={cn("font-semibold", pending ? "text-[#d97706]" : "text-neutral-900")}>{formatCurrency(deal.netCommission)}</span>
       </div>
 
       <details className="mt-2.5 border-t border-neutral-100 pt-2.5">
