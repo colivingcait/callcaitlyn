@@ -34,6 +34,34 @@ export function extractPlainTextBody(payload: gmail_v1.Schema$MessagePart | unde
   return "";
 }
 
+function findHtmlBody(payload: gmail_v1.Schema$MessagePart | undefined): string | null {
+  if (!payload) return null;
+  if (payload.mimeType === "text/html" && payload.body?.data) {
+    const html = Buffer.from(payload.body.data, "base64").toString("utf-8");
+    return html
+      .replace(/&nbsp;/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+  for (const part of payload.parts ?? []) {
+    const found = findHtmlBody(part);
+    if (found) return found;
+  }
+  return null;
+}
+
+// Confirmed against a real share notification: Blinq's plain-text
+// alternative part ships with the actual merge fields (name/phone/email)
+// blank, while the HTML part carries them correctly - the opposite of the
+// usual "plain text is the reliable fallback" assumption extractPlainTextBody
+// makes for everything else synced here. Blinq parsing reads the HTML part
+// directly instead, only falling back to the (likely still-broken) plain
+// text if no HTML part exists at all.
+export function extractBlinqBodyText(payload: gmail_v1.Schema$MessagePart | undefined): string {
+  return findHtmlBody(payload) ?? extractPlainTextBody(payload);
+}
+
 // Only logs mail to/from a contact already in the CRM - no classification
 // needed, no marketing/spam to filter, since the address itself is the
 // filter. New leads are added to the CRM by hand, not discovered here -
@@ -115,7 +143,7 @@ export async function syncGmailInbox(admin: SupabaseClient, ownerId: string) {
       // not folded into the normal per-contact activity log.
       if (!isOutbound && looksLikeBlinqShareEmail(metaSubject)) {
         const { data: full } = await gmail.users.messages.get({ userId: "me", id: messageId, format: "full" });
-        const bodyText = extractPlainTextBody(full.payload);
+        const bodyText = extractBlinqBodyText(full.payload);
         const parsed = parseBlinqShareEmail(metaSubject, bodyText);
         if (parsed && (parsed.email || parsed.phone)) {
           await recordBlinqContact(admin, ownerId, { ...parsed, dedupeId: messageId });

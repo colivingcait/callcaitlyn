@@ -1,7 +1,7 @@
 import { google, gmail_v1 } from "googleapis";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAuthorizedGoogleClient } from "@/lib/google/oauth";
-import { extractPlainTextBody } from "@/lib/google/sync-inbox";
+import { extractBlinqBodyText } from "@/lib/google/sync-inbox";
 import { looksLikeBlinqShareEmail, parseBlinqShareEmail } from "@/lib/google/parse-blinq-email";
 import { recordBlinqContact } from "@/lib/crm/blinq-contact";
 
@@ -44,7 +44,7 @@ export async function backfillBlinqShares(admin: SupabaseClient, ownerId: string
       const subject = headerValue(full.payload?.headers, "Subject");
       if (!looksLikeBlinqShareEmail(subject)) continue;
 
-      const bodyText = extractPlainTextBody(full.payload);
+      const bodyText = extractBlinqBodyText(full.payload);
       const parsed = parseBlinqShareEmail(subject, bodyText);
       if (!parsed || (!parsed.email && !parsed.phone)) continue;
 
