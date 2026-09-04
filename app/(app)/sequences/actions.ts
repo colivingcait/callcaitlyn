@@ -30,6 +30,29 @@ export async function sendTestStepEmail(stepId: string) {
   return { ok: true as const };
 }
 
+// Same test-send as sendTestStepEmail, but for a step that hasn't been
+// saved yet - the new-step form's draft subject/body, passed straight
+// through rather than read back from a saved row. Lets her check a real
+// inbox render (formatting, links) before adding the step at all, not
+// just after.
+export async function sendTestEmailDraft(subject: string, body: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const { data: account } = await supabase.from("gmail_accounts").select("email_address").eq("owner_id", user.id).maybeSingle();
+  if (!account) return { ok: false as const, error: "Connect Gmail in Settings first" };
+
+  const admin = createAdminClient();
+  const testSubject = `[Test] ${applyMergeFields(subject, PREVIEW_CONTACT)}`;
+  const html = textToHtml(applyMergeFields(body, PREVIEW_CONTACT));
+  const result = await sendGmailMessage(admin, user.id, account.email_address, testSubject, html);
+  if (!result.ok) return { ok: false as const, error: result.error };
+  return { ok: true as const };
+}
+
 export async function duplicateSequence(sequenceId: string) {
   const supabase = await createClient();
   const {

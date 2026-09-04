@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { sendTestStepEmail } from "@/app/(app)/sequences/actions";
-import { Button, Input, Textarea, Select, Card, Label, Badge } from "@/components/ui";
+import { sendTestStepEmail, sendTestEmailDraft } from "@/app/(app)/sequences/actions";
+import { Button, Input, Select, Card, Label, Badge } from "@/components/ui";
+import { EmailBodyEditor } from "@/components/sequences/EmailBodyEditor";
 import { RateBar } from "@/components/sequences/RateBar";
 import { formatLocal } from "@/lib/format-time";
 import { fullName, shortenUrl } from "@/lib/utils";
@@ -93,149 +94,23 @@ export function StepManager({
 
   return (
     <div className="space-y-3">
-      {sorted.map((step, i) => {
-        const s = stats.get(step.id);
-        const links = linkBreakdown.get(step.id) ?? [];
-        return (
-          <Card key={step.id} className="space-y-2">
-            <div className="flex items-start justify-between gap-2">
-              <div className="mt-1 flex items-center gap-2">
-                <span className="shrink-0 text-xs font-medium text-neutral-400">Step {i + 1}</span>
-                <StatusChip step={step} type={type} />
-              </div>
-              <div className="flex shrink-0 items-center gap-1">
-                <button
-                  onClick={() => updateStep(step.id, { active: !step.active })}
-                  className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100"
-                  aria-label={step.active ? "Pause this step" : "Resume this step"}
-                  title={step.active ? "Pause this step" : "Resume this step"}
-                >
-                  {step.active ? <Pause size={14} /> : <Play size={14} />}
-                </button>
-                <button
-                  onClick={() => move(i, -1)}
-                  disabled={i === 0}
-                  className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 disabled:opacity-30"
-                  aria-label="Move up"
-                >
-                  <ArrowUp size={14} />
-                </button>
-                <button
-                  onClick={() => move(i, 1)}
-                  disabled={i === sorted.length - 1}
-                  className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 disabled:opacity-30"
-                  aria-label="Move down"
-                >
-                  <ArrowDown size={14} />
-                </button>
-                <button
-                  onClick={() => deleteStep(step.id)}
-                  className="rounded-lg p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600"
-                  aria-label="Delete step"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </div>
-            <Input
-              defaultValue={step.subject}
-              placeholder="Subject"
-              onBlur={(e) => e.target.value !== step.subject && updateStep(step.id, { subject: e.target.value })}
-            />
-            <Textarea
-              defaultValue={step.body}
-              rows={3}
-              placeholder="Email body — use {{first_name}} to personalize"
-              onBlur={(e) => e.target.value !== step.body && updateStep(step.id, { body: e.target.value })}
-            />
-            {type !== "drip" ? (
-              <div>
-                <Label htmlFor={`step-send-at-${step.id}`}>Send at (Eastern time)</Label>
-                <Input
-                  id={`step-send-at-${step.id}`}
-                  type="datetime-local"
-                  defaultValue={toDatetimeLocal(step.send_at)}
-                  onBlur={(e) => e.target.value && updateStep(step.id, { send_at: new Date(e.target.value).toISOString() })}
-                />
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor={`step-delay-${step.id}`}>Delay {i === 0 ? "after joining" : "after previous step"}</Label>
-                  <Input
-                    id={`step-delay-${step.id}`}
-                    type="number"
-                    min={0}
-                    defaultValue={step.delay_amount ?? 0}
-                    onBlur={(e) => updateStep(step.id, { delay_amount: Number(e.target.value) })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor={`step-delay-unit-${step.id}`}>Unit</Label>
-                  <Select
-                    id={`step-delay-unit-${step.id}`}
-                    defaultValue={step.delay_unit ?? "days"}
-                    onChange={(e) => updateStep(step.id, { delay_unit: e.target.value })}
-                  >
-                    <option value="hours">Hours</option>
-                    <option value="days">Days</option>
-                  </Select>
-                </div>
-              </div>
-            )}
-
-            <div className="flex items-center justify-between gap-2 border-t border-neutral-100 pt-2">
-              <button
-                onClick={() => sendTest(step.id)}
-                disabled={testingId === step.id}
-                className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-brand-600 disabled:opacity-50"
-              >
-                <Send size={13} /> {testingId === step.id ? "Sending…" : "Send test to myself"}
-              </button>
-              {testResult?.id === step.id && (
-                <span className={`text-xs ${testResult.ok ? "text-emerald-600" : "text-red-600"}`}>{testResult.message}</span>
-              )}
-            </div>
-
-            {s && s.sent > 0 && (
-              <div className="grid grid-cols-3 gap-3 border-t border-neutral-100 pt-2">
-                <RateBar label="Opened" count={s.opened} total={s.sent} color="bg-brand-500" />
-                <RateBar label="Clicked" count={s.clicked} total={s.sent} color="bg-emerald-500" />
-                <RateBar label="Unsubscribed" count={s.unsubscribed} total={s.sent} color="bg-red-400" />
-              </div>
-            )}
-            {s && s.sent > 0 && type !== "drip" && step.send_at && (
-              <p className="text-[10px] text-neutral-400">Sent {formatLocal(step.send_at, "MMM d, h:mm a")}</p>
-            )}
-
-            {links.length > 0 && (
-              <div className="space-y-1.5 border-t border-neutral-100 pt-2">
-                <p className="text-xs font-medium text-neutral-500">Link clicks</p>
-                {links.map((l) => (
-                  <div key={l.url}>
-                    <div className="flex items-center justify-between gap-2 text-xs">
-                      <a
-                        href={l.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="min-w-0 flex-1 truncate text-brand-600 hover:underline"
-                      >
-                        {shortenUrl(l.url)}
-                      </a>
-                      <span className="shrink-0 text-neutral-400">{l.count}×</span>
-                    </div>
-                    {l.contacts.length > 0 && (
-                      <p className="mt-0.5 truncate text-[11px] text-neutral-400">
-                        {l.contacts.map((c) => fullName(c)).join(", ")}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
-        );
-      })}
+      {sorted.map((step, i) => (
+        <StepCard
+          key={step.id}
+          step={step}
+          type={type}
+          index={i}
+          isLast={i === sorted.length - 1}
+          stats={stats.get(step.id)}
+          links={linkBreakdown.get(step.id) ?? []}
+          updateStep={updateStep}
+          deleteStep={deleteStep}
+          move={move}
+          sendTest={sendTest}
+          testing={testingId === step.id}
+          testResult={testResult?.id === step.id ? testResult : null}
+        />
+      ))}
 
       {adding ? (
         <NewStepForm
@@ -254,6 +129,165 @@ export function StepManager({
         </Button>
       )}
     </div>
+  );
+}
+
+function StepCard({
+  step,
+  type,
+  index,
+  isLast,
+  stats,
+  links,
+  updateStep,
+  deleteStep,
+  move,
+  sendTest,
+  testing,
+  testResult,
+}: {
+  step: EmailSequenceStep;
+  type: SequenceType;
+  index: number;
+  isLast: boolean;
+  stats: StepStats | undefined;
+  links: LinkClickBreakdown[];
+  updateStep: (id: string, patch: Record<string, unknown>) => Promise<void>;
+  deleteStep: (id: string) => Promise<void>;
+  move: (index: number, direction: -1 | 1) => Promise<void>;
+  sendTest: (id: string) => Promise<void>;
+  testing: boolean;
+  testResult: { ok: boolean; message: string } | null;
+}) {
+  const [body, setBody] = useState(step.body);
+
+  return (
+    <Card className="space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <div className="mt-1 flex items-center gap-2">
+          <span className="shrink-0 text-xs font-medium text-neutral-400">Step {index + 1}</span>
+          <StatusChip step={step} type={type} />
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            onClick={() => updateStep(step.id, { active: !step.active })}
+            className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100"
+            aria-label={step.active ? "Pause this step" : "Resume this step"}
+            title={step.active ? "Pause this step" : "Resume this step"}
+          >
+            {step.active ? <Pause size={14} /> : <Play size={14} />}
+          </button>
+          <button
+            onClick={() => move(index, -1)}
+            disabled={index === 0}
+            className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 disabled:opacity-30"
+            aria-label="Move up"
+          >
+            <ArrowUp size={14} />
+          </button>
+          <button
+            onClick={() => move(index, 1)}
+            disabled={isLast}
+            className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 disabled:opacity-30"
+            aria-label="Move down"
+          >
+            <ArrowDown size={14} />
+          </button>
+          <button
+            onClick={() => deleteStep(step.id)}
+            className="rounded-lg p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600"
+            aria-label="Delete step"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </div>
+      <Input
+        defaultValue={step.subject}
+        placeholder="Subject"
+        onBlur={(e) => e.target.value !== step.subject && updateStep(step.id, { subject: e.target.value })}
+      />
+      <EmailBodyEditor
+        value={body}
+        onChange={setBody}
+        placeholder="Email body — use {{first_name}} to personalize"
+        onBlur={() => body !== step.body && updateStep(step.id, { body })}
+      />
+      {type !== "drip" ? (
+        <div>
+          <Label htmlFor={`step-send-at-${step.id}`}>Send at (Eastern time)</Label>
+          <Input
+            id={`step-send-at-${step.id}`}
+            type="datetime-local"
+            defaultValue={toDatetimeLocal(step.send_at)}
+            onBlur={(e) => e.target.value && updateStep(step.id, { send_at: new Date(e.target.value).toISOString() })}
+          />
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label htmlFor={`step-delay-${step.id}`}>Delay {index === 0 ? "after joining" : "after previous step"}</Label>
+            <Input
+              id={`step-delay-${step.id}`}
+              type="number"
+              min={0}
+              defaultValue={step.delay_amount ?? 0}
+              onBlur={(e) => updateStep(step.id, { delay_amount: Number(e.target.value) })}
+            />
+          </div>
+          <div>
+            <Label htmlFor={`step-delay-unit-${step.id}`}>Unit</Label>
+            <Select
+              id={`step-delay-unit-${step.id}`}
+              defaultValue={step.delay_unit ?? "days"}
+              onChange={(e) => updateStep(step.id, { delay_unit: e.target.value })}
+            >
+              <option value="hours">Hours</option>
+              <option value="days">Days</option>
+            </Select>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between gap-2 border-t border-neutral-100 pt-2">
+        <button
+          onClick={() => sendTest(step.id)}
+          disabled={testing}
+          className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-brand-600 disabled:opacity-50"
+        >
+          <Send size={13} /> {testing ? "Sending…" : "Send test to myself"}
+        </button>
+        {testResult && <span className={`text-xs ${testResult.ok ? "text-emerald-600" : "text-red-600"}`}>{testResult.message}</span>}
+      </div>
+
+      {stats && stats.sent > 0 && (
+        <div className="grid grid-cols-3 gap-3 border-t border-neutral-100 pt-2">
+          <RateBar label="Opened" count={stats.opened} total={stats.sent} color="bg-brand-500" />
+          <RateBar label="Clicked" count={stats.clicked} total={stats.sent} color="bg-emerald-500" />
+          <RateBar label="Unsubscribed" count={stats.unsubscribed} total={stats.sent} color="bg-red-400" />
+        </div>
+      )}
+      {stats && stats.sent > 0 && type !== "drip" && step.send_at && (
+        <p className="text-[10px] text-neutral-400">Sent {formatLocal(step.send_at, "MMM d, h:mm a")}</p>
+      )}
+
+      {links.length > 0 && (
+        <div className="space-y-1.5 border-t border-neutral-100 pt-2">
+          <p className="text-xs font-medium text-neutral-500">Link clicks</p>
+          {links.map((l) => (
+            <div key={l.url}>
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <a href={l.url} target="_blank" rel="noopener noreferrer" className="min-w-0 flex-1 truncate text-brand-600 hover:underline">
+                  {shortenUrl(l.url)}
+                </a>
+                <span className="shrink-0 text-neutral-400">{l.count}×</span>
+              </div>
+              {l.contacts.length > 0 && <p className="mt-0.5 truncate text-[11px] text-neutral-400">{l.contacts.map((c) => fullName(c)).join(", ")}</p>}
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
   );
 }
 
@@ -276,6 +310,16 @@ function NewStepForm({
   const [delayAmount, setDelayAmount] = useState("1");
   const [delayUnit, setDelayUnit] = useState<"hours" | "days">("days");
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+
+  async function sendTest() {
+    setTesting(true);
+    setTestResult(null);
+    const result = await sendTestEmailDraft(subject, body);
+    setTesting(false);
+    setTestResult({ ok: result.ok, message: result.ok ? "Sent to your inbox" : result.error });
+  }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -300,17 +344,23 @@ function NewStepForm({
     <Card className="space-y-2">
       <form onSubmit={handleAdd} className="space-y-2">
         <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject" />
-        <Textarea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          rows={3}
-          placeholder="Email body — use {{first_name}} to personalize"
-        />
+        <EmailBodyEditor value={body} onChange={setBody} placeholder="Email body — use {{first_name}} to personalize" />
         {body && (
           <p className="rounded-lg bg-neutral-50 px-3 py-2 text-xs text-neutral-500">
             Preview: {body.replace(/\{\{\s*first_name\s*\}\}/gi, "Jamie").replace(/\{\{\s*last_name\s*\}\}/gi, "Example")}
           </p>
         )}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={sendTest}
+            disabled={testing || !subject.trim() || !body.trim()}
+            className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-brand-600 disabled:opacity-50"
+          >
+            <Send size={13} /> {testing ? "Sending…" : "Send test to myself"}
+          </button>
+          {testResult && <span className={`text-xs ${testResult.ok ? "text-emerald-600" : "text-red-600"}`}>{testResult.message}</span>}
+        </div>
         {type !== "drip" ? (
           <div>
             <Label htmlFor="new-step-send-at">Send at (Eastern time)</Label>
