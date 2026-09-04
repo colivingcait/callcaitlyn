@@ -7,6 +7,7 @@
     { "path": "/api/cron/prep-sheet", "schedule": "*/5 * * * *" },
     { "path": "/api/cron/rate-feed", "schedule": "0 14 * * *" },
     { "path": "/api/cron/reply-reminders", "schedule": "*/15 * * * *" },
-    { "path": "/api/cron/booking-reminders", "schedule": "*/15 * * * *" }
+    { "path": "/api/cron/booking-reminders", "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/auto-stage", "schedule": "0 * * * *" }
   ]
 }
