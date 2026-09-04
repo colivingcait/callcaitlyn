@@ -4,6 +4,7 @@ import { JotformSyncBackfill } from "@/components/settings/JotformSyncBackfill";
 import { QuoSyncBackfill } from "@/components/settings/QuoSyncBackfill";
 import { GranolaSyncBackfill } from "@/components/settings/GranolaSyncBackfill";
 import { BlinqShareBackfill } from "@/components/settings/BlinqShareBackfill";
+import { AutoStageRunNow } from "@/components/settings/AutoStageRunNow";
 import { BacklogCleanup } from "@/components/settings/BacklogCleanup";
 import { TagSuggestionBackfill } from "@/components/settings/TagSuggestionBackfill";
 import { EventOrdersCsvImport } from "@/components/settings/EventOrdersCsvImport";
@@ -21,6 +22,7 @@ export function DataRepairCard() {
         <QuoSyncBackfill />
         <GranolaSyncBackfill />
         <BlinqShareBackfill />
+        <AutoStageRunNow />
         <BacklogCleanup />
         <TagSuggestionBackfill />
       </div>
