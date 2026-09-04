@@ -9,6 +9,12 @@ export type SequenceListItem = SequenceWithTag & {
   activeEnrolled: number; // drip only - contacts currently mid-sequence
   sentTotal: number;
   openRate: number;
+  // A step's send_at has already passed but nothing's landed yet - either
+  // the every-15-min cron hasn't ticked since, or every recipient in the
+  // target tag turned out unreachable. Distinct from "Next send" (still in
+  // the future) so a batch/broadcast email doesn't sit with no status at
+  // all in the gap between its scheduled time and its first real send.
+  sendingNow: boolean;
 };
 
 // One pass over steps/enrollments/sends instead of a per-sequence query,
@@ -24,8 +30,13 @@ export async function listSequencesWithSummary(): Promise<SequenceListItem[]> {
 
   const now = Date.now();
   const nextSendBySeq = new Map<string, string>();
+  const dueStepBySeq = new Set<string>();
   for (const step of steps ?? []) {
-    if (!step.active || !step.send_at || new Date(step.send_at).getTime() <= now) continue;
+    if (!step.active || !step.send_at) continue;
+    if (new Date(step.send_at).getTime() <= now) {
+      dueStepBySeq.add(step.sequence_id);
+      continue;
+    }
     const current = nextSendBySeq.get(step.sequence_id);
     if (!current || new Date(step.send_at) < new Date(current)) nextSendBySeq.set(step.sequence_id, step.send_at);
   }
@@ -49,6 +60,7 @@ export async function listSequencesWithSummary(): Promise<SequenceListItem[]> {
       activeEnrolled: enrolledBySeq.get(seq.id) ?? 0,
       sentTotal: sendStats.sent,
       openRate: sendStats.sent ? (sendStats.opened / sendStats.sent) * 100 : 0,
+      sendingNow: dueStepBySeq.has(seq.id) && sendStats.sent === 0,
     };
   });
 }

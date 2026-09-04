@@ -47,6 +47,7 @@ export default async function SequencesPage() {
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-500">
                 {seq.type === "drip" && <span>{seq.activeEnrolled} enrolled</span>}
                 {seq.type !== "drip" && seq.nextSendAt && <span>Next send: {formatLocal(seq.nextSendAt, "MMM d, h:mm a")}</span>}
+                {seq.type !== "drip" && seq.sendingNow && <span className="font-medium text-amber-600">Sending…</span>}
                 {seq.sentTotal > 0 && (
                   <span>
                     {seq.sentTotal} sent · {seq.openRate.toFixed(0)}% opened

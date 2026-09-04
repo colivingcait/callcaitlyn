@@ -20,15 +20,21 @@ function toDatetimeLocal(value: string | null) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function StatusChip({ step, type }: { step: EmailSequenceStep; type: SequenceType }) {
+// sentCount comes from real email_sequence_sends rows, not just clock
+// time - the previous version called a step "Sent" purely because its
+// send_at had passed, even if the cron hadn't actually run yet (or every
+// recipient turned out unreachable). "Sending…" covers that in-between
+// state honestly instead of claiming a send that hasn't happened.
+function StatusChip({ step, type, sentCount }: { step: EmailSequenceStep; type: SequenceType; sentCount: number }) {
   if (!step.active) return <Badge className="bg-neutral-100 text-neutral-500">Paused</Badge>;
   if (type === "drip") return null;
   if (!step.send_at) return null;
+  if (sentCount > 0) return <Badge className="bg-emerald-50 text-emerald-700">Sent</Badge>;
   const isFuture = new Date(step.send_at).getTime() > Date.now();
   return isFuture ? (
     <Badge className="bg-brand-50 text-brand-700">Scheduled</Badge>
   ) : (
-    <Badge className="bg-emerald-50 text-emerald-700">Sent</Badge>
+    <Badge className="bg-amber-50 text-amber-700">Sending…</Badge>
   );
 }
 
@@ -166,7 +172,7 @@ function StepCard({
       <div className="flex items-start justify-between gap-2">
         <div className="mt-1 flex items-center gap-2">
           <span className="shrink-0 text-xs font-medium text-neutral-400">Step {index + 1}</span>
-          <StatusChip step={step} type={type} />
+          <StatusChip step={step} type={type} sentCount={stats?.sent ?? 0} />
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <button
