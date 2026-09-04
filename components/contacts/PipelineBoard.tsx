@@ -54,8 +54,8 @@ export async function PipelineBoard({
       return goneQuiet > 0 ? { text: `${goneQuiet} gone quiet 30+ days`, quiet: true } : null;
     }
     if (stage.id === newLeadStage?.id) {
-      const neverCalled = items.filter((c) => extras.neverCalledIds.has(c.id)).length;
-      return neverCalled > 0 ? { text: `${neverCalled} never called`, quiet: false } : null;
+      const noContact = items.filter((c) => extras.noContactIds.has(c.id)).length;
+      return noContact > 0 ? { text: `${noContact} not yet contacted`, quiet: false } : null;
     }
     return null;
   }
@@ -65,7 +65,7 @@ export async function PipelineBoard({
   const hotItems = hotStage ? byStage.get(hotStage.id) ?? [] : [];
   const goneQuietCount = hotItems.filter((c) => extras.coldFromHotIds.has(c.id)).length;
   const newLeadItems = newLeadStage ? byStage.get(newLeadStage.id) ?? [] : [];
-  const neverCalledCount = newLeadItems.filter((c) => extras.neverCalledIds.has(c.id)).length;
+  const noContactCount = newLeadItems.filter((c) => extras.noContactIds.has(c.id)).length;
 
   return (
     <div>
@@ -73,7 +73,7 @@ export async function PipelineBoard({
         underContractTotal={underContractTotal}
         hotCount={hotItems.length}
         goneQuietCount={goneQuietCount}
-        neverCalledCount={neverCalledCount}
+        noContactCount={noContactCount}
       />
       <StageJumpChips stages={ordered.map((s) => ({ ...s, count: (byStage.get(s.id) ?? []).length }))} />
 

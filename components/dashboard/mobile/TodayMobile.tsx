@@ -5,6 +5,7 @@ import { UpNextCard } from "@/components/dashboard/mobile/UpNextCard";
 import { TodayWorklist, type TodayChipKey } from "@/components/dashboard/mobile/TodayWorklist";
 import { TodayFooterLine } from "@/components/dashboard/mobile/TodayFooterLine";
 import { TodaySearch } from "@/components/dashboard/mobile/TodaySearch";
+import { newRegistrationTemplate, returningRegistrationTemplate } from "@/lib/crm/event-text-templates";
 import type { getTodayData, WorklistPerson } from "@/lib/data/today";
 import type { WeeklyReviewPayload } from "@/lib/data/weekly-review";
 import type { PrepSheetPayload } from "@/lib/data/prep-sheet";
@@ -41,10 +42,23 @@ export function TodayMobile({
     })),
   };
 
+  // Same welcome/welcome-back template the Dialer drafts for these exact
+  // contacts (today.newLeadsNeverCalledContacts is the Dialer's own new-
+  // registrations queue) - keyed by contact id so both the worklist row's
+  // Text tap and the Up next card can prefill it instead of a blank box.
+  const neverTextedDrafts: Record<string, string> = {};
+  for (const c of today.newLeadsNeverCalledContacts) {
+    neverTextedDrafts[c.id] =
+      c.isNew === false
+        ? returningRegistrationTemplate(c.first_name, c.registrationAccount, c.registrationLabel)
+        : newRegistrationTemplate(c.first_name, c.registrationAccount, c.registrationLabel);
+  }
+
   // Priority: overdue > due today > owed reply > never texted - the
   // highest-priority non-empty group's first person becomes Up next.
   let upNext: (WorklistPerson & { source: "call" | "reply" }) | null = null;
   let upNextReason = "";
+  let upNextOverrideDraft: string | undefined;
   if (groups.late[0]) {
     upNext = { ...groups.late[0], source: "call" };
     upNextReason = groups.late[0].meta;
@@ -57,6 +71,7 @@ export function TodayMobile({
   } else if (groups.neverTexted[0]) {
     upNext = { ...groups.neverTexted[0], source: "call" };
     upNextReason = "Never texted";
+    upNextOverrideDraft = neverTextedDrafts[groups.neverTexted[0].id];
   }
 
   return (
@@ -83,10 +98,10 @@ export function TodayMobile({
         </div>
       )}
 
-      <UpNextCard item={upNext} reason={upNextReason} draftTemplate={defaultDraftTemplate} />
+      <UpNextCard item={upNext} reason={upNextReason} draftTemplate={defaultDraftTemplate} overrideDraft={upNextOverrideDraft} />
 
       <div className="mt-4">
-        <TodayWorklist groups={groups} />
+        <TodayWorklist groups={groups} drafts={neverTextedDrafts} />
       </div>
 
       <TodayFooterLine

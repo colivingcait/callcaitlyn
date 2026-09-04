@@ -4,12 +4,12 @@ export function PipelineMoneyStrip({
   underContractTotal,
   hotCount,
   goneQuietCount,
-  neverCalledCount,
+  noContactCount,
 }: {
   underContractTotal: number;
   hotCount: number;
   goneQuietCount: number;
-  neverCalledCount: number;
+  noContactCount: number;
 }) {
   return (
     <div className="mx-4 mb-3 rounded-[20px] bg-neutral-900 p-4 md:hidden">
@@ -27,11 +27,11 @@ export function PipelineMoneyStrip({
           <p className="mt-0.5 text-[17px] font-semibold text-[#fbbf24]">{goneQuietCount}</p>
         </div>
       </div>
-      {(goneQuietCount > 0 || neverCalledCount > 0) && (
+      {(goneQuietCount > 0 || noContactCount > 0) && (
         <p className="mt-2.5 text-[14px] text-white/70">
           {goneQuietCount > 0 && `${goneQuietCount} in Hot/Ready gone quiet 30+ days`}
-          {goneQuietCount > 0 && neverCalledCount > 0 && " · "}
-          {neverCalledCount > 0 && `${neverCalledCount} new leads never contacted`}
+          {goneQuietCount > 0 && noContactCount > 0 && " · "}
+          {noContactCount > 0 && `${noContactCount} new leads never contacted`}
         </p>
       )}
     </div>

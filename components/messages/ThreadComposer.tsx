@@ -12,14 +12,19 @@ export function ThreadComposer({
   phone,
   firstName,
   textTemplates,
+  initialBody,
 }: {
   contactId: string;
   phone: string | null;
   firstName?: string;
   textTemplates?: TextTemplate[];
+  // Prefills the composer - used by Today's "Never texted" flow to hand
+  // off the Dialer's own welcome/welcome-back draft (via a ?draft= link)
+  // instead of opening to a blank box.
+  initialBody?: string;
 }) {
   const router = useRouter();
-  const [body, setBody] = useState("");
+  const [body, setBody] = useState(initialBody ?? "");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
 

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MessageSquareText, Phone } from "lucide-react";
+import { MessageSquareText, Phone, ChevronRight } from "lucide-react";
+import Link from "next/link";
 import { ListRow } from "@/components/mobile/ListRow";
 import { openQuoCall } from "@/lib/quo/call-link";
 import { cn } from "@/lib/utils";
@@ -10,7 +11,17 @@ import type { WorklistPerson } from "@/lib/data/today";
 
 export type TodayChipKey = "late" | "dueToday" | "owed" | "neverTexted";
 
-export function TodayWorklist({ groups }: { groups: Record<TodayChipKey, WorklistPerson[]> }) {
+export function TodayWorklist({
+  groups,
+  drafts,
+}: {
+  groups: Record<TodayChipKey, WorklistPerson[]>;
+  // Never-texted only: contact id -> the Dialer's own welcome/welcome-back
+  // template text, prefilled into the message thread on tap instead of a
+  // blank compose box - same template a new registration would get from
+  // the Dialer, just reachable from Today too.
+  drafts?: Record<string, string>;
+}) {
   const router = useRouter();
   const chips: { key: TodayChipKey; label: string }[] = [
     { key: "late", label: `Late ${groups.late.length}` },
@@ -57,13 +68,27 @@ export function TodayWorklist({ groups }: { groups: Record<TodayChipKey, Worklis
                 person.phone
                   ? active === "late"
                     ? { icon: Phone, variant: "secondary", "aria-label": "Call", onClick: () => openQuoCall(person.phone!) }
-                    : { icon: MessageSquareText, variant: "primary", "aria-label": "Text", onClick: () => router.push(`/messages/${person.id}`) }
+                    : {
+                        icon: MessageSquareText,
+                        variant: "primary",
+                        "aria-label": "Text",
+                        onClick: () => {
+                          const draft = drafts?.[person.id];
+                          router.push(draft ? `/messages/${person.id}?draft=${encodeURIComponent(draft)}` : `/messages/${person.id}`);
+                        },
+                      }
                   : undefined
               }
             />
           ))
         )}
       </div>
+
+      {active === "neverTexted" && people.length > 0 && (
+        <Link href="/dialer" className="mt-2 flex items-center justify-center gap-1 py-1 text-[14px] font-medium text-brand-600">
+          Work through these one at a time in the Dialer <ChevronRight size={14} />
+        </Link>
+      )}
     </div>
   );
 }

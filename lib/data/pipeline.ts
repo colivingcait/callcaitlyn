@@ -9,7 +9,7 @@ export type PipelinePendingDeal = { address: string | null; expectedClosingDate:
 export type PipelineExtras = {
   lastActivityLabels: Map<string, string>;
   coldFromHotIds: Set<string>;
-  neverCalledIds: Set<string>;
+  noContactIds: Set<string>;
   pendingDealByContact: Map<string, PipelinePendingDeal>;
 };
 
@@ -21,10 +21,10 @@ export type PipelineExtras = {
 // lib/data/today.ts's getCommissionYearSummary already uses - "projected"
 // commission here is an estimate, not a promise.
 export async function getPipelineExtras(contacts: ContactWithRelations[], stages: PipelineStage[]): Promise<PipelineExtras> {
-  const [lastActivityLabels, coldFromHot, neverCalled, pendingDeals] = await Promise.all([
+  const [lastActivityLabels, coldFromHot, noContact, pendingDeals] = await Promise.all([
     getLastActivityLabels(contacts.map((c) => c.id)),
     filterByQueue(contacts, "cold_from_hot", stages),
-    filterByQueue(contacts, "never_called", stages),
+    filterByQueue(contacts, "no_contact", stages),
     listPendingDeals(),
   ]);
 
@@ -45,7 +45,7 @@ export async function getPipelineExtras(contacts: ContactWithRelations[], stages
   return {
     lastActivityLabels,
     coldFromHotIds: new Set(coldFromHot.map((c) => c.id)),
-    neverCalledIds: new Set(neverCalled.map((c) => c.id)),
+    noContactIds: new Set(noContact.map((c) => c.id)),
     pendingDealByContact,
   };
 }

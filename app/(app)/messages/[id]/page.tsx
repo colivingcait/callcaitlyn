@@ -16,8 +16,15 @@ import { AiInsightCard } from "@/components/contacts/AiInsightCard";
 import { createClient } from "@/lib/supabase/server";
 import { listTextTemplates } from "@/lib/data/text-templates";
 
-export default async function MessageThreadPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function MessageThreadPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ draft?: string }>;
+}) {
   const { id } = await params;
+  const { draft } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -86,7 +93,7 @@ export default async function MessageThreadPage({ params }: { params: Promise<{ 
         <ScrollToBottomOnLoad />
       </div>
 
-      <ThreadComposer contactId={contact.id} phone={contact.phone} firstName={contact.first_name} textTemplates={textTemplates} />
+      <ThreadComposer contactId={contact.id} phone={contact.phone} firstName={contact.first_name} textTemplates={textTemplates} initialBody={draft} />
     </div>
   );
 }

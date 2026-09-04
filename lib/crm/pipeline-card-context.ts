@@ -7,8 +7,10 @@ export type PipelineCardContext = { line: string; quiet: boolean };
 
 // The one fact that matters for this stage, per the design brief: an
 // address and closing date under contract, recency and timeline when
-// hot, "never called" for a brand-new lead - falling back to whatever
-// activity/timeline data is on file for everything else.
+// hot, the most recent communication on any channel for everything else
+// - not call status specifically, since calling isn't how she primarily
+// reaches people (texts, emails, and Instagram DMs all count the same
+// here - see getLastActivityLabels).
 export function getPipelineCardContext(
   contact: ContactWithRelations,
   stage: PipelineStage | undefined,
@@ -25,17 +27,16 @@ export function getPipelineCardContext(
 
   const contactType = CONTACT_TYPE_LABELS[contact.contact_type];
   const timelineLabel = contact.timeline ? TIMELINE_LABELS[contact.timeline] : null;
+  const lastActivity = extras.lastActivityLabels.get(contact.id);
 
   if (extras.coldFromHotIds.has(contact.id)) {
-    const lastActivity = extras.lastActivityLabels.get(contact.id);
     return { line: lastActivity ? `Last ${lastActivity}` : "No outreach yet", quiet: true };
   }
 
-  if (extras.neverCalledIds.has(contact.id)) {
-    return { line: [contactType, "never called"].filter(Boolean).join(" · "), quiet: false };
+  if (!lastActivity) {
+    return { line: [contactType, "no contact yet"].filter(Boolean).join(" · "), quiet: false };
   }
 
-  const lastActivity = extras.lastActivityLabels.get(contact.id);
   const line = [lastActivity, timelineLabel].filter(Boolean).join(" · ") || contactType;
   return { line: line ?? "", quiet: false };
 }

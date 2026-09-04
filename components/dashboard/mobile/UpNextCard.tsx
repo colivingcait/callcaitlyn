@@ -16,17 +16,25 @@ export function UpNextCard({
   item,
   reason,
   draftTemplate,
+  overrideDraft,
 }: {
   item: (WorklistPerson & { source: "call" | "reply" }) | null;
   reason: string;
   draftTemplate: TextTemplate | null;
+  // Never-texted new registrations get the Dialer's own welcome/welcome-back
+  // template here instead of the generic quick-text default - same intro
+  // she'd get from the Dialer, just reachable straight from Up next too.
+  overrideDraft?: string;
 }) {
   const router = useRouter();
   const { toast, showToast } = useToast();
   const [handled, setHandled] = useState(false);
   const firstName = item?.name.split(" ")[0] ?? "";
   const lastName = item?.name.split(" ").slice(1).join(" ") ?? "";
-  const [draft, setDraft] = useState(() => (draftTemplate ? applyMergeFields(draftTemplate.body, { first_name: firstName, last_name: lastName }) : ""));
+  const hasDraft = !!overrideDraft || !!draftTemplate;
+  const [draft, setDraft] = useState(
+    () => overrideDraft ?? (draftTemplate ? applyMergeFields(draftTemplate.body, { first_name: firstName, last_name: lastName }) : ""),
+  );
   const [editing, setEditing] = useState(false);
   const [sending, setSending] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -81,7 +89,7 @@ export function UpNextCard({
       <p className="mt-1.5 font-serif text-2xl font-semibold text-white">{item.name}</p>
       <p className="mt-1 text-[15px] text-white/72">{item.meta}</p>
 
-      {draftTemplate && item.phone && (
+      {hasDraft && item.phone && (
         <div className="mt-3.5 rounded-[14px] bg-white/10 p-3.5">
           <div className="mb-1.5 flex items-center justify-between">
             <span className="text-[11px] font-semibold uppercase tracking-[.09em] text-white/50">Draft</span>
@@ -107,7 +115,7 @@ export function UpNextCard({
       )}
 
       <div className="mt-3.5 flex gap-2">
-        {item.phone && draftTemplate && (
+        {item.phone && hasDraft && (
           <button
             type="button"
             onClick={send}

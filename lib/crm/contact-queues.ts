@@ -12,6 +12,7 @@ export type ContactQueue =
   | "attended_gone_quiet"
   | "cold_from_hot"
   | "never_called"
+  | "no_contact"
   | "repeat_attendees"
   | "ai_flagged"
   | "duplicate_risk"
@@ -23,6 +24,7 @@ export const QUEUES: { value: ContactQueue; label: string; description: string }
   { value: "attended_gone_quiet", label: "Attended, gone quiet", description: "Checked in at an event, nothing logged since" },
   { value: "cold_from_hot", label: "Went cold from Hot/Ready", description: "High likelihood to close, no activity in 30+ days" },
   { value: "never_called", label: "Never called", description: "No call logged, ever" },
+  { value: "no_contact", label: "No contact yet", description: "No call, text, or email logged, ever" },
   { value: "repeat_attendees", label: "Repeat attendees", description: "Checked in at 2+ events - your regulars" },
   { value: "ai_flagged", label: "AI flagged, not actioned", description: "Has a pending AI insight you haven't applied or dismissed" },
   { value: "duplicate_risk", label: "Possible duplicates", description: "Matches another contact by email or phone" },

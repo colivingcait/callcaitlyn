@@ -111,6 +111,10 @@ export async function filterByQueue(
     return contacts.filter((c) => agg.get(c.id)?.lastCallAt == null);
   }
 
+  if (queue === "no_contact") {
+    return contacts.filter((c) => agg.get(c.id)?.lastOutreachAt == null);
+  }
+
   if (queue === "repeat_attendees") {
     return contacts.filter((c) => (agg.get(c.id)?.jotformCheckinCount ?? 0) >= 2);
   }

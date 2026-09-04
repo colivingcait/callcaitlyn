@@ -66,7 +66,13 @@ export function FollowUpQueueMobile({
 
       <div className="mt-4">
         {current ? (
-          <PersonCard contact={current} mode={mode} defaultDraftTemplate={defaultDraftTemplate} onAdvance={() => setQueue((q) => q.slice(1))} />
+          <PersonCard
+            key={current.id}
+            contact={current}
+            mode={mode}
+            defaultDraftTemplate={defaultDraftTemplate}
+            onAdvance={() => setQueue((q) => q.slice(1))}
+          />
         ) : (
           <div className="rounded-[20px] border border-[#ebe9e7] bg-white p-8 text-center">
             <p className="text-[16px] font-medium text-neutral-600">
