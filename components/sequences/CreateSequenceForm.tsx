@@ -4,23 +4,34 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { sendTestEmailDraft } from "@/app/(app)/sequences/actions";
+import { applyMergeFields, PREVIEW_CONTACT } from "@/lib/crm/merge-fields";
 import { Button, Input, Textarea, Select, Card, Label } from "@/components/ui";
 import { EmailBodyEditor } from "@/components/sequences/EmailBodyEditor";
-import { Plus, Send } from "lucide-react";
-import type { Tag } from "@/types/database";
+import { AudiencePicker, type AudienceCriteria } from "@/components/sequences/AudiencePicker";
+import { Plus, Send, Eye, EyeOff } from "lucide-react";
+import type { Tag, PipelineStage } from "@/types/database";
 
 type CreateType = "broadcast" | "drip" | "batch";
 
-export function CreateSequenceForm({ tags, ownerId }: { tags: Tag[]; ownerId: string }) {
+// Mirrors lib/google/send-email.ts's textToHtml exactly - duplicated
+// rather than imported, since that module also pulls in googleapis
+// (server-only) which can't ship in a client bundle.
+function draftToHtml(text: string) {
+  return text
+    .split(/\n{2,}/)
+    .map((para) => `<p>${para.replace(/\n/g, "<br>")}</p>`)
+    .join("\n");
+}
+
+const EMPTY_CRITERIA: AudienceCriteria = { targetTagIds: [], excludeTagIds: [], excludeStageIds: [], excludeTimelines: [] };
+
+export function CreateSequenceForm({ tags, stages, ownerId }: { tags: Tag[]; stages: PipelineStage[]; ownerId: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState<CreateType>("broadcast");
-  const [tagId, setTagId] = useState(tags[0]?.id ?? "");
-  const [creatingTag, setCreatingTag] = useState(false);
-  const [newTagName, setNewTagName] = useState("");
-  const [creatingTagSaving, setCreatingTagSaving] = useState(false);
+  const [criteria, setCriteria] = useState<AudienceCriteria>(EMPTY_CRITERIA);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -33,6 +44,7 @@ export function CreateSequenceForm({ tags, ownerId }: { tags: Tag[]; ownerId: st
   const [sendAt, setSendAt] = useState("");
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   async function sendTest() {
     setTesting(true);
@@ -50,23 +62,9 @@ export function CreateSequenceForm({ tags, ownerId }: { tags: Tag[]; ownerId: st
     );
   }
 
-  async function createTag() {
-    if (!newTagName.trim()) return;
-    setCreatingTagSaving(true);
-    const supabase = createClient();
-    const { data } = await supabase.from("tags").insert({ owner_id: ownerId, name: newTagName.trim(), color: "#94a3b8" }).select("id").single();
-    setCreatingTagSaving(false);
-    if (data) {
-      setTagId(data.id);
-      setNewTagName("");
-      setCreatingTag(false);
-      router.refresh();
-    }
-  }
-
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || !tagId) return;
+    if (!name.trim() || criteria.targetTagIds.length === 0) return;
     if (type === "batch") {
       if (!subject.trim() || !body.trim()) return;
       if (sendTiming === "later" && !sendAt) return;
@@ -77,7 +75,16 @@ export function CreateSequenceForm({ tags, ownerId }: { tags: Tag[]; ownerId: st
 
     const { data, error: insertError } = await supabase
       .from("email_sequences")
-      .insert({ owner_id: ownerId, name: name.trim(), description: description.trim() || null, type, target_tag_id: tagId })
+      .insert({
+        owner_id: ownerId,
+        name: name.trim(),
+        description: description.trim() || null,
+        type,
+        target_tag_ids: criteria.targetTagIds,
+        exclude_tag_ids: criteria.excludeTagIds,
+        exclude_stage_ids: criteria.excludeStageIds,
+        exclude_timelines: criteria.excludeTimelines,
+      })
       .select("id")
       .single();
 
@@ -124,45 +131,21 @@ export function CreateSequenceForm({ tags, ownerId }: { tags: Tag[]; ownerId: st
             placeholder="What this is for, strategy notes, etc."
           />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label htmlFor="seq-type">Type</Label>
-            <Select id="seq-type" value={type} onChange={(e) => setType(e.target.value as CreateType)}>
-              <option value="broadcast">Sequence (Scheduled Date)</option>
-              <option value="drip">Drip</option>
-              <option value="batch">Batch Email (one-off)</option>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="seq-tag">Target tag</Label>
-            {creatingTag ? (
-              <div className="flex gap-1.5">
-                <Input autoFocus placeholder="New tag" value={newTagName} onChange={(e) => setNewTagName(e.target.value)} />
-                <Button type="button" size="sm" onClick={createTag} disabled={creatingTagSaving}>
-                  Add
-                </Button>
-              </div>
-            ) : (
-              <Select
-                id="seq-tag"
-                value={tagId}
-                onChange={(e) => (e.target.value === "__new__" ? setCreatingTag(true) : setTagId(e.target.value))}
-              >
-                {tags.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-                <option value="__new__">+ Create new tag…</option>
-              </Select>
-            )}
-          </div>
+        <div>
+          <Label htmlFor="seq-type">Type</Label>
+          <Select id="seq-type" value={type} onChange={(e) => setType(e.target.value as CreateType)}>
+            <option value="broadcast">Sequence (Scheduled Date)</option>
+            <option value="drip">Drip</option>
+            <option value="batch">Batch Email (one-off)</option>
+          </Select>
         </div>
         <p className="text-xs text-neutral-400">
-          {type === "broadcast" && "Each step fires on a fixed date/time, to whoever currently has this tag."}
-          {type === "drip" && "Each contact starts their own clock the moment they get this tag; steps fire at a delay relative to that."}
-          {type === "batch" && "One email, sent once, to whoever currently has this tag - no ongoing steps."}
+          {type === "broadcast" && "Each step fires on a fixed date/time, to whoever's in the audience below at send time."}
+          {type === "drip" && "Each contact starts their own clock the moment they enter the audience below; steps fire at a delay relative to that."}
+          {type === "batch" && "One email, sent once, to whoever's in the audience below - no ongoing steps."}
         </p>
+
+        <AudiencePicker criteria={criteria} onChange={setCriteria} tags={tags} stages={stages} ownerId={ownerId} onTagCreated={() => router.refresh()} />
 
         {type === "batch" && (
           <div className="space-y-3 border-t border-neutral-100 pt-3">
@@ -174,7 +157,7 @@ export function CreateSequenceForm({ tags, ownerId }: { tags: Tag[]; ownerId: st
               <Label htmlFor="batch-body">Body</Label>
               <EmailBodyEditor value={body} onChange={setBody} rows={5} placeholder="Email body — use {{first_name}} to personalize" />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
                 onClick={sendTest}
@@ -183,8 +166,33 @@ export function CreateSequenceForm({ tags, ownerId }: { tags: Tag[]; ownerId: st
               >
                 <Send size={13} /> {testing ? "Sending…" : "Send test to myself"}
               </button>
+              <button
+                type="button"
+                onClick={() => setShowPreview((v) => !v)}
+                disabled={!subject.trim() && !body.trim()}
+                className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-brand-600 disabled:opacity-50"
+              >
+                {showPreview ? <EyeOff size={13} /> : <Eye size={13} />} {showPreview ? "Hide preview" : "Preview email"}
+              </button>
               {testResult && <span className={`text-xs ${testResult.ok ? "text-emerald-600" : "text-red-600"}`}>{testResult.message}</span>}
             </div>
+            {showPreview && (
+              <div className="overflow-hidden rounded-lg border border-neutral-200">
+                <div className="border-b border-neutral-100 bg-neutral-50 px-3 py-2 text-[11px] font-medium text-neutral-400">
+                  As {PREVIEW_CONTACT.first_name} {PREVIEW_CONTACT.last_name} would see it
+                </div>
+                <div className="p-4">
+                  <p className="mb-2 border-b border-neutral-100 pb-2 text-sm font-semibold text-neutral-900">
+                    {applyMergeFields(subject, PREVIEW_CONTACT) || "(no subject)"}
+                  </p>
+                  {/* eslint-disable-next-line react/no-danger -- her own authored draft, rendered exactly as it will be sent (same textToHtml transform) */}
+                  <div
+                    className="text-sm leading-relaxed text-neutral-800"
+                    dangerouslySetInnerHTML={{ __html: draftToHtml(applyMergeFields(body, PREVIEW_CONTACT)) || "<p class='text-neutral-400'>(empty)</p>" }}
+                  />
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label htmlFor="batch-timing">Send</Label>
@@ -211,7 +219,7 @@ export function CreateSequenceForm({ tags, ownerId }: { tags: Tag[]; ownerId: st
             disabled={
               saving ||
               !name.trim() ||
-              !tagId ||
+              criteria.targetTagIds.length === 0 ||
               (type === "batch" && (!subject.trim() || !body.trim() || (sendTiming === "later" && !sendAt)))
             }
           >

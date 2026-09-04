@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { listSequencesWithSummary, getAllSequencesSummary } from "@/lib/data/sequences";
-import { listTags } from "@/lib/data/contacts";
+import { listTags, listStages } from "@/lib/data/contacts";
 import { CreateSequenceForm } from "@/components/sequences/CreateSequenceForm";
 import { SequencesDashboard } from "@/components/sequences/SequencesDashboard";
 import { CampaignsTabNav } from "@/components/sequences/CampaignsTabNav";
@@ -13,7 +13,12 @@ export default async function SequencesPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const [sequences, tags, summary] = await Promise.all([listSequencesWithSummary(), listTags(), getAllSequencesSummary()]);
+  const [sequences, tags, stages, summary] = await Promise.all([
+    listSequencesWithSummary(),
+    listTags(),
+    listStages(),
+    getAllSequencesSummary(),
+  ]);
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 px-4 py-6">
@@ -28,7 +33,7 @@ export default async function SequencesPage() {
 
       {summary.totalCount > 0 && <SequencesDashboard summary={summary} />}
 
-      {user && <CreateSequenceForm tags={tags} ownerId={user.id} />}
+      {user && <CreateSequenceForm tags={tags} stages={stages} ownerId={user.id} />}
 
       <div className="space-y-2">
         {sequences.map((seq) => (
@@ -42,7 +47,13 @@ export default async function SequencesPage() {
                     {!seq.active && " · Paused"}
                   </p>
                 </div>
-                {seq.tags && <Badge className="max-w-[8rem] shrink-0 truncate" color={seq.tags.color}>{seq.tags.name}</Badge>}
+                <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                  {seq.targetTags.map((t) => (
+                    <Badge key={t.id} className="max-w-[8rem] truncate" color={t.color}>
+                      {t.name}
+                    </Badge>
+                  ))}
+                </div>
               </div>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-500">
                 {seq.type === "drip" && <span>{seq.activeEnrolled} enrolled</span>}

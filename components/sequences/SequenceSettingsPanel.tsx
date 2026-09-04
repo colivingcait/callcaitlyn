@@ -4,30 +4,37 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { duplicateSequence } from "@/app/(app)/sequences/actions";
-import { Button, Input, Textarea, Select, Card, Label } from "@/components/ui";
+import { Button, Input, Textarea, Card, Label } from "@/components/ui";
+import { AudiencePicker, type AudienceCriteria } from "@/components/sequences/AudiencePicker";
 import { Settings, Copy, X } from "lucide-react";
-import type { Tag } from "@/types/database";
+import type { Tag, PipelineStage } from "@/types/database";
 
 export function SequenceSettingsPanel({
   sequenceId,
   ownerId,
   name,
   description,
-  targetTagId,
+  targetTagIds,
+  excludeTagIds,
+  excludeStageIds,
+  excludeTimelines,
   tags,
+  stages,
 }: {
   sequenceId: string;
   ownerId: string;
   name: string;
   description: string | null;
-  targetTagId: string | null;
+  targetTagIds: string[];
+  excludeTagIds: string[];
+  excludeStageIds: string[];
+  excludeTimelines: string[];
   tags: Tag[];
+  stages: PipelineStage[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [tagChoice, setTagChoice] = useState(targetTagId ?? "");
-  const [newTagName, setNewTagName] = useState("");
-  const [creatingTag, setCreatingTag] = useState(false);
+  const [criteria, setCriteria] = useState<AudienceCriteria>({ targetTagIds, excludeTagIds, excludeStageIds, excludeTimelines });
   const [duplicating, setDuplicating] = useState(false);
 
   async function saveField(patch: Record<string, unknown>) {
@@ -36,29 +43,14 @@ export function SequenceSettingsPanel({
     router.refresh();
   }
 
-  async function handleTagChange(value: string) {
-    if (value === "__new__") {
-      setCreatingTag(true);
-      return;
-    }
-    setTagChoice(value);
-    await saveField({ target_tag_id: value });
-  }
-
-  async function createTagAndAssign() {
-    if (!newTagName.trim()) return;
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("tags")
-      .insert({ owner_id: ownerId, name: newTagName.trim(), color: "#94a3b8" })
-      .select("id")
-      .single();
-    if (data) {
-      setTagChoice(data.id);
-      await saveField({ target_tag_id: data.id });
-    }
-    setNewTagName("");
-    setCreatingTag(false);
+  async function handleCriteriaChange(next: AudienceCriteria) {
+    setCriteria(next);
+    await saveField({
+      target_tag_ids: next.targetTagIds,
+      exclude_tag_ids: next.excludeTagIds,
+      exclude_stage_ids: next.excludeStageIds,
+      exclude_timelines: next.excludeTimelines,
+    });
   }
 
   async function handleDuplicate() {
@@ -107,30 +99,15 @@ export function SequenceSettingsPanel({
         />
       </div>
       <div>
-        <Label htmlFor="seq-settings-tag">Target tag</Label>
-        {creatingTag ? (
-          <div className="flex gap-2">
-            <Input autoFocus placeholder="New tag name" value={newTagName} onChange={(e) => setNewTagName(e.target.value)} />
-            <Button type="button" size="sm" onClick={createTagAndAssign}>
-              Add
-            </Button>
-            <Button type="button" size="sm" variant="secondary" onClick={() => setCreatingTag(false)}>
-              Cancel
-            </Button>
-          </div>
-        ) : (
-          <Select id="seq-settings-tag" value={tagChoice} onChange={(e) => handleTagChange(e.target.value)}>
-            {tags.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-            <option value="__new__">+ Create new tag…</option>
-          </Select>
-        )}
-        <p className="mt-1 text-xs text-neutral-400">
-          Changing this changes who gets future sends — it doesn&apos;t move anyone already enrolled.
-        </p>
+        <AudiencePicker
+          criteria={criteria}
+          onChange={handleCriteriaChange}
+          tags={tags}
+          stages={stages}
+          ownerId={ownerId}
+          onTagCreated={() => router.refresh()}
+        />
+        <p className="mt-1 text-xs text-neutral-400">Changing this changes who gets future sends — it doesn&apos;t move anyone already enrolled.</p>
       </div>
       <Button type="button" size="sm" variant="secondary" onClick={handleDuplicate} disabled={duplicating}>
         <Copy size={14} /> {duplicating ? "Duplicating…" : "Duplicate as a new sequence"}

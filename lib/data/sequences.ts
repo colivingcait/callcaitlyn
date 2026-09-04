@@ -1,10 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { computeDripDueAt } from "@/lib/crm/sequences";
+import { resolveEmailAudience, type EmailAudienceCriteria } from "@/lib/crm/email-audience";
 import type { EmailSequence, EmailSequenceStep, EmailSequenceEnrollment, Tag } from "@/types/database";
 
-export type SequenceWithTag = EmailSequence & { tags: Tag | null };
+export type SequenceWithTags = EmailSequence & { targetTags: Tag[] };
 
-export type SequenceListItem = SequenceWithTag & {
+export type SequenceListItem = SequenceWithTags & {
   nextSendAt: string | null; // broadcast only - earliest not-yet-fired step
   activeEnrolled: number; // drip only - contacts currently mid-sequence
   sentTotal: number;
@@ -21,12 +22,17 @@ export type SequenceListItem = SequenceWithTag & {
 // so the list page stays cheap regardless of how many sequences exist.
 export async function listSequencesWithSummary(): Promise<SequenceListItem[]> {
   const supabase = await createClient();
-  const [{ data: sequences }, { data: steps }, { data: enrollments }, { data: sends }] = await Promise.all([
-    supabase.from("email_sequences").select("*, tags(*)").order("created_at", { ascending: false }),
+  const [{ data: sequences }, { data: steps }, { data: enrollments }, { data: sends }, { data: allTags }] = await Promise.all([
+    supabase.from("email_sequences").select("*").order("created_at", { ascending: false }),
     supabase.from("email_sequence_steps").select("sequence_id, send_at, active"),
     supabase.from("email_sequence_enrollments").select("sequence_id").eq("status", "active"),
     supabase.from("email_sequence_sends").select("sequence_id, opened_at"),
+    supabase.from("tags").select("*"),
   ]);
+  // target_tag_ids is an array FK, so it can't ride along on the
+  // embedded-relation shorthand a single FK gets (the old ", tags(*)")
+  // - one tags fetch up front, then a per-sequence id lookup below.
+  const tagById = new Map((allTags ?? []).map((t) => [t.id, t as Tag]));
 
   const now = Date.now();
   const nextSendBySeq = new Map<string, string>();
@@ -52,10 +58,11 @@ export async function listSequencesWithSummary(): Promise<SequenceListItem[]> {
     sendStatsBySeq.set(s.sequence_id, cur);
   }
 
-  return ((sequences ?? []) as SequenceWithTag[]).map((seq) => {
+  return ((sequences ?? []) as EmailSequence[]).map((seq) => {
     const sendStats = sendStatsBySeq.get(seq.id) ?? { sent: 0, opened: 0 };
     return {
       ...seq,
+      targetTags: seq.target_tag_ids.map((id) => tagById.get(id)).filter((t): t is Tag => !!t),
       nextSendAt: nextSendBySeq.get(seq.id) ?? null,
       activeEnrolled: enrolledBySeq.get(seq.id) ?? 0,
       sentTotal: sendStats.sent,
@@ -95,10 +102,13 @@ export async function getAllSequencesSummary(): Promise<SequencesSummary> {
   };
 }
 
-export async function getSequence(id: string): Promise<SequenceWithTag | null> {
+export async function getSequence(id: string): Promise<SequenceWithTags | null> {
   const supabase = await createClient();
-  const { data } = await supabase.from("email_sequences").select("*, tags(*)").eq("id", id).maybeSingle();
-  return data as SequenceWithTag | null;
+  const { data: seq } = await supabase.from("email_sequences").select("*").eq("id", id).maybeSingle();
+  if (!seq) return null;
+  const targetTags =
+    seq.target_tag_ids.length > 0 ? ((await supabase.from("tags").select("*").in("id", seq.target_tag_ids)).data ?? []) : [];
+  return { ...(seq as EmailSequence), targetTags: targetTags as Tag[] };
 }
 
 export async function getSequenceSteps(sequenceId: string): Promise<EmailSequenceStep[]> {
@@ -271,7 +281,11 @@ export async function getSequenceRollup(sequenceId: string): Promise<SequenceRol
 
 export type UpcomingBroadcastStep = EmailSequenceStep & { audienceCount: number };
 
-export async function getUpcomingBroadcastSteps(sequenceId: string, targetTagId: string | null): Promise<UpcomingBroadcastStep[]> {
+export async function getUpcomingBroadcastSteps(
+  sequenceId: string,
+  ownerId: string,
+  criteria: EmailAudienceCriteria,
+): Promise<UpcomingBroadcastStep[]> {
   const supabase = await createClient();
   const { data: steps } = await supabase
     .from("email_sequence_steps")
@@ -282,17 +296,11 @@ export async function getUpcomingBroadcastSteps(sequenceId: string, targetTagId:
   const upcoming = ((steps ?? []) as EmailSequenceStep[]).filter((s) => s.send_at && new Date(s.send_at).getTime() > Date.now());
   if (upcoming.length === 0) return [];
 
-  const audienceCount = targetTagId ? await getTagAudienceCount(targetTagId) : 0;
-  return upcoming.map((s) => ({ ...s, audienceCount }));
-}
-
-export async function getTagAudienceCount(tagId: string): Promise<number> {
-  const supabase = await createClient();
-  const { data } = await supabase.from("contact_tags").select("contacts(archived)").eq("tag_id", tagId);
-  return (data ?? []).filter((r) => {
-    const c = r.contacts as unknown as { archived: boolean } | null;
-    return c && !c.archived;
-  }).length;
+  // Real eligible count (opt-out/known-personally/exclude-aware), not
+  // raw tag membership - matches what actually sends, same resolver
+  // processBroadcastSequence uses.
+  const { eligible } = await resolveEmailAudience(supabase, ownerId, criteria);
+  return upcoming.map((s) => ({ ...s, audienceCount: eligible.length }));
 }
 
 export type DripEnrollmentDetail = {

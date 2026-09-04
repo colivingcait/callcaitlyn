@@ -2,18 +2,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendGmailMessage, textToHtml } from "@/lib/google/send-email";
 import { upsertActivity } from "@/lib/crm/activities";
 import { applyMergeFields } from "@/lib/crm/merge-fields";
+import { resolveEmailAudience, type SequenceContact } from "@/lib/crm/email-audience";
 import type { EmailSequence, EmailSequenceStep } from "@/types/database";
 
 export { applyMergeFields };
-
-type SequenceContact = {
-  id: string;
-  email: string | null;
-  first_name: string;
-  last_name: string;
-  archived: boolean;
-  unsubscribe_token: string;
-};
+export type { SequenceContact };
 
 export function baseUrl() {
   return (process.env.APP_BASE_URL ?? "https://www.callcaitlyn.com").replace(/\/$/, "");
@@ -132,7 +125,7 @@ async function sendStepToContact(
 }
 
 async function processBroadcastSequence(admin: SupabaseClient, ownerId: string, sequence: EmailSequence, budget: { remaining: number }) {
-  if (!sequence.target_tag_id) return;
+  if (sequence.target_tag_ids.length === 0) return;
   const { data: steps } = await admin
     .from("email_sequence_steps")
     .select("*")
@@ -142,14 +135,12 @@ async function processBroadcastSequence(admin: SupabaseClient, ownerId: string, 
   const dueSteps = (steps ?? []).filter((s) => s.active && s.send_at && new Date(s.send_at) <= new Date());
   if (dueSteps.length === 0) return;
 
-  const { data: members } = await admin
-    .from("contact_tags")
-    .select("contacts(id, email, first_name, last_name, archived, unsubscribe_token)")
-    .eq("tag_id", sequence.target_tag_id);
-
-  const contacts = (members ?? [])
-    .map((m) => m.contacts as unknown as SequenceContact | null)
-    .filter((c): c is SequenceContact => !!c && !c.archived);
+  const { eligible: contacts } = await resolveEmailAudience(admin, ownerId, {
+    targetTagIds: sequence.target_tag_ids,
+    excludeTagIds: sequence.exclude_tag_ids,
+    excludeStageIds: sequence.exclude_stage_ids,
+    excludeTimelines: sequence.exclude_timelines,
+  });
 
   for (const step of dueSteps) {
     for (const contact of contacts) {

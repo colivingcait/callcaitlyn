@@ -12,7 +12,7 @@ import {
   getStepLinkBreakdown,
   getSequenceLinkRollup,
 } from "@/lib/data/sequences";
-import { listContacts, listTags } from "@/lib/data/contacts";
+import { listContacts, listTags, listStages } from "@/lib/data/contacts";
 import { StepManager } from "@/components/sequences/StepManager";
 import { SequenceToggle } from "@/components/sequences/SequenceToggle";
 import { SequenceSettingsPanel } from "@/components/sequences/SequenceSettingsPanel";
@@ -34,20 +34,28 @@ export default async function SequenceDetailPage({ params }: { params: Promise<{
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [sequence, steps, stats, rollup, exclusions, tags, linkBreakdown, linkRollup] = await Promise.all([
+  const [sequence, steps, stats, rollup, exclusions, tags, stages, linkBreakdown, linkRollup] = await Promise.all([
     getSequence(id),
     getSequenceSteps(id),
     getSequenceStepStats(id),
     getSequenceRollup(id),
     getSequenceExclusions(id),
     listTags(),
+    listStages(),
     getStepLinkBreakdown(id),
     getSequenceLinkRollup(id),
   ]);
   if (!sequence) notFound();
 
   const [upcomingSteps, dripEnrollments, activity, allContacts] = await Promise.all([
-    sequence.type !== "drip" ? getUpcomingBroadcastSteps(id, sequence.target_tag_id) : Promise.resolve([]),
+    sequence.type !== "drip"
+      ? getUpcomingBroadcastSteps(id, user?.id ?? "", {
+          targetTagIds: sequence.target_tag_ids,
+          excludeTagIds: sequence.exclude_tag_ids,
+          excludeStageIds: sequence.exclude_stage_ids,
+          excludeTimelines: sequence.exclude_timelines,
+        })
+      : Promise.resolve([]),
     sequence.type === "drip" ? getDripEnrollmentsDetailed(id) : Promise.resolve([]),
     getRecentSequenceActivity(id, 25),
     sequence.type === "drip" ? listContacts({}) : Promise.resolve([]),
@@ -67,7 +75,11 @@ export default async function SequenceDetailPage({ params }: { params: Promise<{
           {sequence.description && <p className="mt-0.5 text-sm text-neutral-500">{sequence.description}</p>}
           <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-neutral-500">
             {typeLabel}
-            {sequence.tags && <Badge color={sequence.tags.color}>{sequence.tags.name}</Badge>}
+            {sequence.targetTags.map((t) => (
+              <Badge key={t.id} color={t.color}>
+                {t.name}
+              </Badge>
+            ))}
             {!sequence.active && <Badge className="bg-neutral-100 text-neutral-600">Paused</Badge>}
           </p>
           {sequence.type === "drip" && (
@@ -83,8 +95,12 @@ export default async function SequenceDetailPage({ params }: { params: Promise<{
               ownerId={user.id}
               name={sequence.name}
               description={sequence.description}
-              targetTagId={sequence.target_tag_id}
+              targetTagIds={sequence.target_tag_ids}
+              excludeTagIds={sequence.exclude_tag_ids}
+              excludeStageIds={sequence.exclude_stage_ids}
+              excludeTimelines={sequence.exclude_timelines}
               tags={tags}
+              stages={stages}
             />
           )}
           <SequenceToggle sequenceId={sequence.id} active={sequence.active} />

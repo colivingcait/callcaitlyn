@@ -420,7 +420,10 @@ export interface EmailSequence {
   owner_id: string;
   name: string;
   type: SequenceType;
-  target_tag_id: string | null;
+  target_tag_ids: string[]; // any of these tags = in the audience
+  exclude_tag_ids: string[];
+  exclude_stage_ids: string[];
+  exclude_timelines: Timeline[];
   description: string | null;
   active: boolean;
   created_at: string;

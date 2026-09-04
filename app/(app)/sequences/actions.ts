@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendGmailMessage, textToHtml } from "@/lib/google/send-email";
 import { applyMergeFields } from "@/lib/crm/sequences";
+import { resolveEmailAudience, type EmailAudienceCriteria } from "@/lib/crm/email-audience";
+import { fullName } from "@/lib/utils";
 
 // Clearly-fake sample data, not her real contacts - a test send previews
 // merge-field placement and tone, not a real personalization.
@@ -53,6 +55,39 @@ export async function sendTestEmailDraft(subject: string, body: string) {
   return { ok: true as const };
 }
 
+export type AudiencePreview = {
+  count: number;
+  names: string[]; // capped - see below
+  excludedCount: number;
+  optedOutCount: number;
+  noEmailCount: number;
+};
+
+const AUDIENCE_PREVIEW_NAME_CAP = 30;
+
+// Backs the live "who's this going to" panel in CreateSequenceForm and
+// SequenceSettingsPanel - same resolveEmailAudience the actual send uses
+// (lib/crm/sequences.ts's processBroadcastSequence), so what she sees
+// here is exactly who gets it, not a separate approximation that could
+// drift. Names are capped for a reasonable payload size; count is exact.
+export async function previewEmailAudience(criteria: EmailAudienceCriteria): Promise<AudiencePreview> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { count: 0, names: [], excludedCount: 0, optedOutCount: 0, noEmailCount: 0 };
+
+  const admin = createAdminClient();
+  const result = await resolveEmailAudience(admin, user.id, criteria);
+  return {
+    count: result.eligible.length,
+    names: result.eligible.slice(0, AUDIENCE_PREVIEW_NAME_CAP).map((c) => fullName(c)),
+    excludedCount: result.excludedCount,
+    optedOutCount: result.optedOutCount,
+    noEmailCount: result.noEmailCount,
+  };
+}
+
 export async function duplicateSequence(sequenceId: string) {
   const supabase = await createClient();
   const {
@@ -75,7 +110,10 @@ export async function duplicateSequence(sequenceId: string) {
       owner_id: user.id,
       name: `${original.name} (copy)`,
       type: original.type,
-      target_tag_id: original.target_tag_id,
+      target_tag_ids: original.target_tag_ids,
+      exclude_tag_ids: original.exclude_tag_ids,
+      exclude_stage_ids: original.exclude_stage_ids,
+      exclude_timelines: original.exclude_timelines,
       description: original.description,
       active: false,
     })
