@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { sendTestEmailDraft } from "@/app/(app)/sequences/actions";
 import { Button, Input, Textarea, Select, Card, Label } from "@/components/ui";
-import { Plus } from "lucide-react";
+import { EmailBodyEditor } from "@/components/sequences/EmailBodyEditor";
+import { Plus, Send } from "lucide-react";
 import type { Tag } from "@/types/database";
 
 type CreateType = "broadcast" | "drip" | "batch";
@@ -29,6 +31,16 @@ export function CreateSequenceForm({ tags, ownerId }: { tags: Tag[]; ownerId: st
   const [body, setBody] = useState("");
   const [sendTiming, setSendTiming] = useState<"now" | "later">("now");
   const [sendAt, setSendAt] = useState("");
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+
+  async function sendTest() {
+    setTesting(true);
+    setTestResult(null);
+    const result = await sendTestEmailDraft(subject, body);
+    setTesting(false);
+    setTestResult({ ok: result.ok, message: result.ok ? "Sent to your inbox" : result.error });
+  }
 
   if (!open) {
     return (
@@ -160,13 +172,18 @@ export function CreateSequenceForm({ tags, ownerId }: { tags: Tag[]; ownerId: st
             </div>
             <div>
               <Label htmlFor="batch-body">Body</Label>
-              <Textarea
-                id="batch-body"
-                rows={5}
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                placeholder="Email body — use {{first_name}} to personalize"
-              />
+              <EmailBodyEditor value={body} onChange={setBody} rows={5} placeholder="Email body — use {{first_name}} to personalize" />
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={sendTest}
+                disabled={testing || !subject.trim() || !body.trim()}
+                className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-brand-600 disabled:opacity-50"
+              >
+                <Send size={13} /> {testing ? "Sending…" : "Send test to myself"}
+              </button>
+              {testResult && <span className={`text-xs ${testResult.ok ? "text-emerald-600" : "text-red-600"}`}>{testResult.message}</span>}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
