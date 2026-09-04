@@ -402,5 +402,5 @@ export async function backfillBlinq() {
   const result = await backfillBlinqShares(admin, user.id);
   if (!result) return { ok: false as const, error: "Connect Gmail first (Settings > Connections)" };
 
-  return { ok: true as const, found: result.found, added: result.added };
+  return { ok: true as const, found: result.found, added: result.added, capped: result.capped };
 }

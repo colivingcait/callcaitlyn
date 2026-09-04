@@ -1,5 +1,12 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+
+// The Data repair backfills below (Blinq especially) can make a real
+// number of Gmail API round trips - raises the ceiling on how long a
+// Server Action invoked from this page is allowed to run, same reason
+// send-text-blasts' cron route sets this. Only a ceiling, not a forced
+// wait - every other action here still returns as fast as it always did.
+export const maxDuration = 60;
 import { listStages, listTags } from "@/lib/data/contacts";
 import { listTextTemplates } from "@/lib/data/text-templates";
 import { PipelineStagesAndTags } from "@/components/settings/PipelineStagesAndTags";
