@@ -233,11 +233,13 @@ export function ContactRow({
           </p>
 
           <div className="mt-3.5 flex flex-wrap items-center gap-2">
-            {contact.contact_tags.map((ct) => (
-              <span key={ct.tags.id} className="rounded-full bg-neutral-100 px-3 py-1 text-sm font-medium text-neutral-700">
-                {ct.tags.name}
-              </span>
-            ))}
+            {contact.contact_tags
+              .filter((ct) => ct.tags)
+              .map((ct) => (
+                <span key={ct.tags!.id} className="rounded-full bg-neutral-100 px-3 py-1 text-sm font-medium text-neutral-700">
+                  {ct.tags!.name}
+                </span>
+              ))}
             <Link href={`/contacts/${contact.id}`} className="ml-auto flex items-center gap-1.5 text-[15px] font-semibold text-neutral-900">
               Open full record <ArrowRight size={15} />
             </Link>

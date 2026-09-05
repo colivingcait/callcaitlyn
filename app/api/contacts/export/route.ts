@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       c.last_name ?? "",
       c.email ?? "",
       formatPhone(c.phone),
-      c.contact_tags.map((ct) => ct.tags.name).join("; "),
+      c.contact_tags.filter((ct) => ct.tags).map((ct) => ct.tags!.name).join("; "),
       c.pipeline_stages?.name ?? "",
       c.contact_type,
       c.lead_source ?? "",

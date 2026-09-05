@@ -1,7 +1,7 @@
 import { formatLocal } from "@/lib/format-time";
 import { CONTACT_TYPE_LABELS, TIMELINE_LABELS } from "@/lib/utils";
 import type { ContactWithRelations, PipelineStage } from "@/types/database";
-import type { PipelineExtras } from "@/lib/data/pipeline";
+import type { PipelineExtras, PipelinePendingDeal } from "@/lib/data/pipeline";
 
 export type PipelineCardContext = { line: string; quiet: boolean };
 
@@ -15,9 +15,15 @@ export function getPipelineCardContext(
   contact: ContactWithRelations,
   stage: PipelineStage | undefined,
   extras: PipelineExtras,
+  // A contact can have more than one deal under contract at once - the
+  // board renders one row per deal in that case (see PipelineBoard.tsx),
+  // and passes the specific deal for this row here instead of letting
+  // this function guess which one. Falls back to the first on file for
+  // any caller that doesn't pass one.
+  dealOverride?: PipelinePendingDeal,
 ): PipelineCardContext {
   if (stage?.is_under_contract) {
-    const deal = extras.pendingDealByContact.get(contact.id);
+    const deal = dealOverride ?? extras.pendingDealByContact.get(contact.id)?.[0];
     if (deal) {
       const parts = [deal.address, deal.expectedClosingDate ? `closing ${formatLocal(deal.expectedClosingDate, "MMM d")}` : null].filter(Boolean);
       if (parts.length > 0) return { line: parts.join(" · "), quiet: false };

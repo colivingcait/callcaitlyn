@@ -1,5 +1,5 @@
 import { getTodayData } from "@/lib/data/today";
-import { dismissReplyOwed } from "@/app/(app)/today-actions";
+import { dismissReplyOwed, clearFollowUp } from "@/app/(app)/today-actions";
 import { listMergeCandidates, listTags } from "@/lib/data/contacts";
 import { getDefaultDraftTemplate } from "@/lib/data/text-templates";
 import { createClient } from "@/lib/supabase/server";
@@ -127,7 +127,7 @@ export default async function TodayPage() {
         )}
 
         <Section sectionKey="today:calls" title="Calls" meta={lateCalls > 0 ? `${today.calls.length} · ${lateCalls} late` : `${today.calls.length}`}>
-          <WorklistGroup people={today.calls} />
+          <WorklistGroup people={today.calls} onClearFollowUp={clearFollowUp} />
         </Section>
 
         <Section sectionKey="today:replies" title="Replies owed" meta={`${today.repliesOwed.length}`}>

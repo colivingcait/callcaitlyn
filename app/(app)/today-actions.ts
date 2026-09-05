@@ -68,6 +68,23 @@ export async function snoozeFollowUp(contactId: string) {
   return { ok: true as const };
 }
 
+// Genuinely clears the follow-up (vs. snoozeFollowUp's "push it a day") -
+// for Today's Calls worklist, which had no dismiss at all: a contact with
+// next_follow_up_at set kept showing up every single day with no way to
+// say "I don't need to call this person" short of opening their record
+// and clearing the date by hand.
+export async function clearFollowUp(contactId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  await supabase.from("contacts").update({ next_follow_up_at: null }).eq("id", contactId).eq("owner_id", user.id);
+  revalidatePath("/");
+  return { ok: true as const };
+}
+
 export async function markKnownPersonally(contactId: string) {
   const supabase = await createClient();
   const {

@@ -27,8 +27,14 @@ export function groupContacts(contacts: ContactWithRelations[], groupBy: Contact
       const stage = stages.find((s) => s.id === c.stage_id);
       push(stage?.id ?? "none", stage?.name ?? "No stage", c);
     } else if (groupBy === "tag") {
-      const firstTag = [...c.contact_tags].sort((a, b) => a.tags.name.localeCompare(b.tags.name))[0];
-      push(firstTag?.tags.id ?? "none", firstTag?.tags.name ?? "No tag", c);
+      // ct.tags can come back null - a contact_tags row can pass its own
+      // RLS (scoped through the parent contact) while the embedded tags
+      // row fails its own RLS independently (e.g. a tag created by an
+      // admin-client webhook path) - PostgREST returns null rather than
+      // dropping the row, so this can never be treated as always-present.
+      const withTag = c.contact_tags.filter((ct) => ct.tags);
+      const firstTag = [...withTag].sort((a, b) => a.tags!.name.localeCompare(b.tags!.name))[0];
+      push(firstTag?.tags!.id ?? "none", firstTag?.tags!.name ?? "No tag", c);
     } else if (groupBy === "source") {
       push(c.lead_source ?? "none", c.lead_source ?? "No source", c);
     } else if (groupBy === "month") {

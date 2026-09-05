@@ -12,16 +12,25 @@ const CAP = 10;
 // Shared row treatment for Calls / Replies owed / Registered-no-follow-up -
 // same person-row shape as ContactRow, just without the expand/edit
 // affordances (this is a worklist, not the record itself; "Open full
-// record" lives one click away via the name link). onDismiss is opt-in
-// (only Replies owed passes it) and only renders for a row that actually
-// has an activityId to dismiss - Calls/Registered rows are keyed by
-// contact, not a single message, so there's nothing there to dismiss.
-export function WorklistGroup({ people, onDismiss }: { people: WorklistPerson[]; onDismiss?: (activityId: string) => Promise<{ ok: boolean }> }) {
+// record" lives one click away via the name link). onDismiss (keyed by
+// activityId) is opt-in for Replies owed; onClearFollowUp (keyed by
+// contact id) is opt-in for Calls - that group used to have no dismiss
+// at all, so a contact with next_follow_up_at set kept reappearing every
+// day with no way to say "I don't need to call this person."
+export function WorklistGroup({
+  people,
+  onDismiss,
+  onClearFollowUp,
+}: {
+  people: WorklistPerson[];
+  onDismiss?: (activityId: string) => Promise<{ ok: boolean }>;
+  onClearFollowUp?: (contactId: string) => Promise<{ ok: boolean }>;
+}) {
   const [showAll, setShowAll] = useState(false);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [dismissing, setDismissing] = useState<string | null>(null);
 
-  const remaining = people.filter((p) => !p.activityId || !dismissed.has(p.activityId));
+  const remaining = people.filter((p) => !dismissed.has(p.activityId ?? p.id));
   const visible = showAll ? remaining : remaining.slice(0, CAP);
 
   async function handleDismiss(activityId: string) {
@@ -30,6 +39,14 @@ export function WorklistGroup({ people, onDismiss }: { people: WorklistPerson[];
     await onDismiss(activityId);
     setDismissing(null);
     setDismissed((prev) => new Set(prev).add(activityId));
+  }
+
+  async function handleClearFollowUp(contactId: string) {
+    if (!onClearFollowUp) return;
+    setDismissing(contactId);
+    await onClearFollowUp(contactId);
+    setDismissing(null);
+    setDismissed((prev) => new Set(prev).add(contactId));
   }
 
   if (remaining.length === 0) {
@@ -71,6 +88,17 @@ export function WorklistGroup({ people, onDismiss }: { people: WorklistPerson[];
               onClick={() => handleDismiss(person.activityId!)}
               disabled={dismissing === person.activityId}
               title="I don't need to reply to this"
+              className="shrink-0 rounded-[10px] border border-neutral-200 bg-white p-2 text-neutral-400 disabled:opacity-50"
+            >
+              <X size={15} />
+            </button>
+          )}
+          {onClearFollowUp && (
+            <button
+              type="button"
+              onClick={() => handleClearFollowUp(person.id)}
+              disabled={dismissing === person.id}
+              title="Clear this follow-up"
               className="shrink-0 rounded-[10px] border border-neutral-200 bg-white p-2 text-neutral-400 disabled:opacity-50"
             >
               <X size={15} />

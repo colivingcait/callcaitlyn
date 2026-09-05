@@ -31,11 +31,13 @@ export function ContactContextBar({ contact, stages }: { contact: ContactWithRel
             {TIMELINE_LABELS[contact.timeline]}
           </span>
         )}
-        {contact.contact_tags.map((ct) => (
-          <Badge key={ct.tags.id} color={ct.tags.color} className="max-w-[10rem] truncate px-2 py-0.5 text-[11px]">
-            {ct.tags.name}
-          </Badge>
-        ))}
+        {contact.contact_tags
+          .filter((ct) => ct.tags)
+          .map((ct) => (
+            <Badge key={ct.tags!.id} color={ct.tags!.color} className="max-w-[10rem] truncate px-2 py-0.5 text-[11px]">
+              {ct.tags!.name}
+            </Badge>
+          ))}
       </div>
       {(contact.next_follow_up_at || hasBudget) && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-neutral-500">

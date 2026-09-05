@@ -45,6 +45,7 @@ const FILTERS = [
   { value: "all", label: "All" },
   { value: "call", label: "Calls" },
   { value: "text", label: "Texts" },
+  { value: "email", label: "Emails" },
 ] as const;
 
 function asString(v: unknown): string | null {

@@ -54,7 +54,7 @@ export function ContactRecordMobile({
 
   const name = fullName(contact);
   const stage = stages.find((s) => s.id === contact.stage_id);
-  const engagedTag = contact.contact_tags.find((ct) => ct.tags.name === "Engaged");
+  const engagedTag = contact.contact_tags.find((ct) => ct.tags?.name === "Engaged");
   const isOverdue = !!contact.next_follow_up_at && new Date(contact.next_follow_up_at).getTime() < Date.now();
   const daysLate = isOverdue
     ? Math.max(1, Math.floor((Date.now() - new Date(contact.next_follow_up_at!).getTime()) / (24 * 60 * 60 * 1000)))
@@ -121,14 +121,14 @@ export function ContactRecordMobile({
             </span>
           )}
           {contact.contact_tags
-            .filter((ct) => ct.tags.name !== "Engaged")
+            .filter((ct) => ct.tags && ct.tags.name !== "Engaged")
             .map((ct) => (
               <span
-                key={ct.tags.id}
+                key={ct.tags!.id}
                 className="flex h-[45px] items-center rounded-full px-3.5 text-[15px] font-medium text-white"
-                style={{ backgroundColor: ct.tags.color }}
+                style={{ backgroundColor: ct.tags!.color }}
               >
-                {ct.tags.name}
+                {ct.tags!.name}
               </span>
             ))}
           <button
@@ -231,7 +231,7 @@ export function ContactRecordMobile({
         currentStageId={contact.stage_id}
         stages={stages}
         tags={tags}
-        currentTagIds={contact.contact_tags.map((ct) => ct.tags.id)}
+        currentTagIds={contact.contact_tags.filter((ct) => ct.tags).map((ct) => ct.tags!.id)}
         contactName={name}
         contactCreatedAt={contact.created_at}
         representing={contact.representing}

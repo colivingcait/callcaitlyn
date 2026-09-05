@@ -165,7 +165,7 @@ export async function listContacts(filters: ContactListFilters) {
 
   if (filters.tagIds?.length) {
     const tagIds = filters.tagIds;
-    contacts = contacts.filter((c) => c.contact_tags.some((ct) => tagIds.includes(ct.tags.id)));
+    contacts = contacts.filter((c) => c.contact_tags.some((ct) => ct.tags && tagIds.includes(ct.tags.id)));
   }
 
   if (filters.registeredEventName) {
@@ -209,9 +209,13 @@ export async function listContacts(filters: ContactListFilters) {
       return new Date(a.next_follow_up_at).getTime() - new Date(b.next_follow_up_at).getTime();
     });
   } else if (sort === "tag_asc") {
+    const firstTagName = (c: ContactWithRelations) =>
+      [...c.contact_tags]
+        .filter((ct) => ct.tags)
+        .sort((x, y) => x.tags!.name.localeCompare(y.tags!.name))[0]?.tags!.name;
     contacts = [...contacts].sort((a, b) => {
-      const tagA = [...a.contact_tags].sort((x, y) => x.tags.name.localeCompare(y.tags.name))[0]?.tags.name;
-      const tagB = [...b.contact_tags].sort((x, y) => x.tags.name.localeCompare(y.tags.name))[0]?.tags.name;
+      const tagA = firstTagName(a);
+      const tagB = firstTagName(b);
       if (!tagA && !tagB) return 0;
       if (!tagA) return 1;
       if (!tagB) return -1;

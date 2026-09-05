@@ -27,7 +27,7 @@ export function computeLikelihood(contact: ContactWithRelations, stages: Pipelin
   const stageScore = activeStages.length > 1 ? (idx / (activeStages.length - 1)) * 3 : 1.5;
 
   const timelineScore = TIMELINE_SCORE[contact.timeline] ?? 0;
-  const engaged = contact.contact_tags.some((ct) => ct.tags.name === "Engaged");
+  const engaged = contact.contact_tags.some((ct) => ct.tags?.name === "Engaged");
 
   const total = stageScore + timelineScore + (engaged ? 2 : 0);
   if (total >= 5) return "high";

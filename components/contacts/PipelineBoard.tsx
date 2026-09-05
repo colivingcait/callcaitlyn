@@ -7,6 +7,20 @@ import { Section } from "@/components/ui/Section";
 import { getPipelineExtras } from "@/lib/data/pipeline";
 import { formatCurrency } from "@/lib/utils";
 import type { ContactWithRelations, PipelineStage } from "@/types/database";
+import type { PipelinePendingDeal, PipelineExtras } from "@/lib/data/pipeline";
+
+// A contact can be under contract on more than one deal at once (e.g.
+// representing them as both buyer and seller) - Under Contract renders
+// one row per deal instead of one row per contact so neither is silently
+// hidden. Every other stage keeps a plain one-row-per-contact list.
+function rowsForStage(stage: PipelineStage, items: ContactWithRelations[], extras: PipelineExtras) {
+  if (!stage.is_under_contract) return items.map((contact) => ({ contact, deal: undefined as PipelinePendingDeal | undefined }));
+  return items.flatMap((contact) => {
+    const deals = extras.pendingDealByContact.get(contact.id) ?? [];
+    if (deals.length === 0) return [{ contact, deal: undefined as PipelinePendingDeal | undefined }];
+    return deals.map((deal) => ({ contact, deal }));
+  });
+}
 
 // Stages ordered by closeness to money rather than pipeline sequence -
 // Under Contract and Hot/Ready are the two she actually acts on day to
@@ -46,7 +60,7 @@ export async function PipelineBoard({
 
   function summaryFor(stage: PipelineStage, items: ContactWithRelations[]): { text: string; quiet: boolean } | null {
     if (stage.is_under_contract) {
-      const total = items.reduce((sum, c) => sum + (extras.pendingDealByContact.get(c.id)?.netCommission ?? 0), 0);
+      const total = items.reduce((sum, c) => sum + (extras.pendingDealByContact.get(c.id) ?? []).reduce((s, d) => s + d.netCommission, 0), 0);
       return total > 0 ? { text: `${formatCurrency(total)} projected`, quiet: false } : null;
     }
     if (stage.id === hotStage?.id) {
@@ -61,7 +75,10 @@ export async function PipelineBoard({
   }
 
   const underContractItems = underContractStage ? byStage.get(underContractStage.id) ?? [] : [];
-  const underContractTotal = underContractItems.reduce((sum, c) => sum + (extras.pendingDealByContact.get(c.id)?.netCommission ?? 0), 0);
+  const underContractTotal = underContractItems.reduce(
+    (sum, c) => sum + (extras.pendingDealByContact.get(c.id) ?? []).reduce((s, d) => s + d.netCommission, 0),
+    0,
+  );
   const hotItems = hotStage ? byStage.get(hotStage.id) ?? [] : [];
   const goneQuietCount = hotItems.filter((c) => extras.coldFromHotIds.has(c.id)).length;
   const newLeadItems = newLeadStage ? byStage.get(newLeadStage.id) ?? [] : [];
@@ -75,11 +92,12 @@ export async function PipelineBoard({
         goneQuietCount={goneQuietCount}
         noContactCount={noContactCount}
       />
-      <StageJumpChips stages={ordered.map((s) => ({ ...s, count: (byStage.get(s.id) ?? []).length }))} />
+      <StageJumpChips stages={ordered.map((s) => ({ ...s, count: rowsForStage(s, byStage.get(s.id) ?? [], extras).length }))} />
 
       <div className="space-y-2.5 px-4 pb-8 md:px-6">
         {ordered.map((stage) => {
           const items = byStage.get(stage.id) ?? [];
+          const rows = rowsForStage(stage, items, extras);
           const summary = summaryFor(stage, items);
           const defaultOpen = stage.id === underContractStage?.id || stage.id === hotStage?.id;
           return (
@@ -88,7 +106,7 @@ export async function PipelineBoard({
               <div className="rounded-[16px] border border-[#ebe9e7] bg-white md:hidden">
                 <StickyGroupHeader
                   label={stage.name}
-                  count={items.length}
+                  count={rows.length}
                   summary={summary?.text}
                   summaryTone={summary?.quiet ? "danger" : "default"}
                   collapsible
@@ -96,10 +114,12 @@ export async function PipelineBoard({
                   defaultOpen={defaultOpen}
                 >
                   <div className="divide-y divide-neutral-100">
-                    {items.length === 0 ? (
+                    {rows.length === 0 ? (
                       <p className="py-4 text-center text-sm text-neutral-400">Nobody in this stage.</p>
                     ) : (
-                      items.map((c) => <PipelineMobileRow key={c.id} contact={c} stage={stage} extras={extras} />)
+                      rows.map(({ contact, deal }) => (
+                        <PipelineMobileRow key={deal ? `${contact.id}:${deal.id}` : contact.id} contact={contact} stage={stage} extras={extras} dealOverride={deal} />
+                      ))
                     )}
                   </div>
                 </StickyGroupHeader>
@@ -110,7 +130,7 @@ export async function PipelineBoard({
                 <Section
                   sectionKey={`pipeline:stage:${stage.id}`}
                   title={stage.name}
-                  meta={`${items.length}`}
+                  meta={`${rows.length}`}
                   defaultOpen={defaultOpen}
                   forceOpen={openStageId ? stage.id === openStageId : undefined}
                   action={
@@ -120,10 +140,12 @@ export async function PipelineBoard({
                   }
                 >
                   <div className="space-y-2 bg-[#fcfbfa] p-3.5">
-                    {items.length === 0 ? (
+                    {rows.length === 0 ? (
                       <p className="py-4 text-center text-sm text-neutral-400">Nobody in this stage.</p>
                     ) : (
-                      items.map((c) => <PipelineCard key={c.id} contact={c} stage={stage} stages={stages} extras={extras} />)
+                      rows.map(({ contact, deal }) => (
+                        <PipelineCard key={deal ? `${contact.id}:${deal.id}` : contact.id} contact={contact} stage={stage} stages={stages} extras={extras} dealOverride={deal} />
+                      ))
                     )}
                   </div>
                 </Section>

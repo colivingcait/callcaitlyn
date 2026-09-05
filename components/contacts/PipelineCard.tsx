@@ -4,20 +4,22 @@ import { fullName, initials } from "@/lib/utils";
 import { MoveToMenu } from "@/components/contacts/MoveToMenu";
 import { getPipelineCardContext } from "@/lib/crm/pipeline-card-context";
 import type { ContactWithRelations, PipelineStage } from "@/types/database";
-import type { PipelineExtras } from "@/lib/data/pipeline";
+import type { PipelineExtras, PipelinePendingDeal } from "@/lib/data/pipeline";
 
 export function PipelineCard({
   contact,
   stage,
   stages,
   extras,
+  dealOverride,
 }: {
   contact: ContactWithRelations;
   stage: PipelineStage | undefined;
   stages: PipelineStage[];
   extras: PipelineExtras;
+  dealOverride?: PipelinePendingDeal;
 }) {
-  const context = getPipelineCardContext(contact, stage, extras);
+  const context = getPipelineCardContext(contact, stage, extras, dealOverride);
 
   return (
     <div className="flex items-center gap-3.5 rounded-xl border border-[#ebe9e7] bg-white p-3.5">

@@ -38,7 +38,7 @@ export function ContactDetailsCard({
   const [submitting, setSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
   const [serverError, setServerError] = useState("");
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>(contact.contact_tags.map((ct) => ct.tags.id));
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>(contact.contact_tags.filter((ct) => ct.tags).map((ct) => ct.tags!.id));
   const [addingTag, setAddingTag] = useState(false);
 
   const {

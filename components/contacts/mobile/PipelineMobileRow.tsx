@@ -8,20 +8,22 @@ import { getPipelineCardContext } from "@/lib/crm/pipeline-card-context";
 import { formatCurrency, fullName } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import type { ContactWithRelations, PipelineStage } from "@/types/database";
-import type { PipelineExtras } from "@/lib/data/pipeline";
+import type { PipelineExtras, PipelinePendingDeal } from "@/lib/data/pipeline";
 
 export function PipelineMobileRow({
   contact,
   stage,
   extras,
+  dealOverride,
 }: {
   contact: ContactWithRelations;
   stage: PipelineStage | undefined;
   extras: PipelineExtras;
+  dealOverride?: PipelinePendingDeal;
 }) {
   const router = useRouter();
-  const context = getPipelineCardContext(contact, stage, extras);
-  const deal = stage?.is_under_contract ? extras.pendingDealByContact.get(contact.id) : undefined;
+  const context = getPipelineCardContext(contact, stage, extras, dealOverride);
+  const deal = stage?.is_under_contract ? (dealOverride ?? extras.pendingDealByContact.get(contact.id)?.[0]) : undefined;
 
   function goToThread(e: React.MouseEvent) {
     e.preventDefault();

@@ -34,7 +34,7 @@ export function ContactForm({
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(
-    contact?.contact_tags.map((ct) => ct.tags.id) ?? defaultTagIds ?? [],
+    contact?.contact_tags.filter((ct) => ct.tags).map((ct) => ct.tags!.id) ?? defaultTagIds ?? [],
   );
 
   const {
