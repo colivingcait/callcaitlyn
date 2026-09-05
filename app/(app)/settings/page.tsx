@@ -21,6 +21,7 @@ import { GranolaConnect } from "@/components/settings/GranolaConnect";
 import { GranolaMatchingSettings } from "@/components/settings/GranolaMatchingSettings";
 import { RateManualEntry } from "@/components/settings/RateManualEntry";
 import { DataRepairCard } from "@/components/settings/DataRepairCard";
+import { OptOutList } from "@/components/settings/OptOutList";
 import { SignOutButton } from "@/components/nav/SignOutButton";
 import { RATE_PRODUCT } from "@/lib/crm/rate-feed";
 import { Card, Button } from "@/components/ui";
@@ -57,6 +58,21 @@ export default async function SettingsPage({
       .then((r) => r.data),
     supabase.from("contacts").select("stage_id").eq("archived", false).then((r) => r.data),
   ]);
+
+  // Opt-outs used to be visible only one contact at a time (ConsentStatus
+  // on their profile) or as an ephemeral count inside a blast's audience
+  // preview - no persistent, browsable list existed anywhere to review or
+  // re-subscribe someone from.
+  const { data: optedOutRows } = await supabase
+    .from("contacts")
+    .select("id, first_name, last_name, opted_out_at")
+    .not("opted_out_at", "is", null)
+    .order("opted_out_at", { ascending: false });
+  const optedOutContacts = (optedOutRows ?? []).map((c) => ({
+    id: c.id,
+    name: `${c.first_name} ${c.last_name}`.trim(),
+    optedOutAt: c.opted_out_at as string,
+  }));
 
   const stageCounts: Record<string, number> = {};
   for (const row of stageCountRows ?? []) {
@@ -169,6 +185,8 @@ export default async function SettingsPage({
       <Card>
         <RateManualEntry latestRatePct={latestRate?.rate_pct ?? null} latestRateDate={latestRate?.rate_date ?? null} />
       </Card>
+
+      <OptOutList contacts={optedOutContacts} />
 
       <DataRepairCard />
 
