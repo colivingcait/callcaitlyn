@@ -81,7 +81,11 @@ export async function processGranolaNote(
     direction: "none",
     occurred_at: event.occurredAt,
     body: event.summary || event.title,
-    metadata: { granola_note_id: event.noteId },
+    // ActivityTimeline already renders a "Transcript" expand/collapse for
+    // any activity carrying metadata.transcript (built for Quo calls) -
+    // reusing that same field here, rather than a separate mechanism,
+    // gets the same affordance for free on a Granola note.
+    metadata: { granola_note_id: event.noteId, transcript: event.transcript || null },
   });
 
   if (!wasCreated) return { wasCreated: false };
