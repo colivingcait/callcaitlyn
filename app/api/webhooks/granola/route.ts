@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
       }
 
       event.transcript = note.transcriptText;
+      if (note.summary) event.summary = note.summary;
       if (note.title) event.title = note.title;
       if (note.calendarEventId) event.calendarEventId = note.calendarEventId;
       if (note.participants.length > 0) event.participants = note.participants;

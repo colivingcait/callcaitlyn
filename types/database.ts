@@ -54,6 +54,7 @@ export type ActivitySource =
   | "instagram"
   | "blinq"
   | "scheduling"
+  | "granola"
   | "ai"
   | "system";
 

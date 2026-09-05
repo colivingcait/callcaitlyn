@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { extractStoredTranscriptText } from "@/lib/granola/parse-event";
+import { extractStoredTranscriptText, extractStoredSummary } from "@/lib/granola/parse-event";
 import { findNameCandidates, getGranolaMatchingRules } from "@/lib/crm/note-name-match";
 import type { MeetingTranscript } from "@/types/database";
 
@@ -52,11 +52,16 @@ export async function getNotesInboxData(): Promise<{ unmatched: UnmatchedNote[];
 
   const unmatched: UnmatchedNote[] = ((unmatchedRows ?? []) as MeetingTranscript[]).map((t) => {
     const transcriptText = extractStoredTranscriptText(t.raw_payload);
+    const summaryText = extractStoredSummary(t.raw_payload);
+    // Name-candidate matching still scans the full transcript (a name
+    // mentioned once mid-conversation might never make it into Granola's
+    // own summary) - only the preview shown to her prefers the summary,
+    // since it's the readable version of "what was this note about."
     const candidates = rules.ask_when_ambiguous ? findNameCandidates(contacts ?? [], transcriptText).map((c) => ({ id: c.id, name: `${c.first_name} ${c.last_name}`.trim() })) : [];
     return {
       id: t.id,
       occurredAt: t.occurred_at,
-      preview: preview(transcriptText || t.summary_bullets.join(" ") || "No transcript text captured."),
+      preview: preview(summaryText || transcriptText || t.summary_bullets.join(" ") || "No transcript text captured."),
       participantNames: t.participants.map((p) => p.name).filter((n): n is string => !!n),
       candidates,
     };

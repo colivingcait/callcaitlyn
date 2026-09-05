@@ -379,6 +379,7 @@ export async function backfillGranolaNotes() {
       noteId,
       title: note.title ?? "Meeting",
       transcript: note.transcriptText,
+      summary: note.summary ?? "",
       occurredAt: note.occurredAt ?? new Date().toISOString(),
       durationSeconds: null,
       calendarEventId: note.calendarEventId,

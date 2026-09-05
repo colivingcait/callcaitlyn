@@ -37,6 +37,7 @@ const SOURCE_LABELS: Record<string, string> = {
   calendly: "Calendly",
   eventbrite: "Eventbrite",
   jotform: "Jotform",
+  granola: "Granola",
   ai: "AI",
   system: "System",
 };
@@ -46,6 +47,7 @@ const FILTERS = [
   { value: "call", label: "Calls" },
   { value: "text", label: "Texts" },
   { value: "email", label: "Emails" },
+  { value: "meeting", label: "Notes" },
 ] as const;
 
 function asString(v: unknown): string | null {

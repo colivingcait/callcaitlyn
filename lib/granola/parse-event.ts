@@ -15,6 +15,11 @@ export type GranolaNoteEvent = {
   noteId: string;
   title: string;
   transcript: string;
+  // Granola's own AI-generated recap of the note - what actually gets
+  // logged as the contact's "Notes" timeline entry (see process-note.ts).
+  // The full transcript is kept around for extraction only; it's too long
+  // to be a readable history entry on its own.
+  summary: string;
   occurredAt: string;
   durationSeconds: number | null;
   calendarEventId: string | null;
@@ -75,6 +80,15 @@ export function extractStoredTranscriptText(rawPayload: Record<string, unknown>)
   return parseGranolaEvent(webhookBody).transcript;
 }
 
+// Same recovery as extractStoredTranscriptText, for Granola's own summary
+// (Get Note's "summary" field) instead of the transcript.
+export function extractStoredSummary(rawPayload: Record<string, unknown>): string {
+  const note = rawPayload.note as { summary?: string | null } | undefined;
+  if (note?.summary) return note.summary;
+  const webhookBody = (rawPayload.webhook as Record<string, unknown> | undefined) ?? rawPayload;
+  return parseGranolaEvent(webhookBody).summary;
+}
+
 export function parseGranolaEvent(body: Record<string, unknown>): GranolaNoteEvent {
   const rawAttendees = pick(body, "attendees", "participants");
   const attendeeList = Array.isArray(rawAttendees) ? rawAttendees : [];
@@ -93,6 +107,7 @@ export function parseGranolaEvent(body: Record<string, unknown>): GranolaNoteEve
     noteId: asString(pick(body, "note_id", "noteId", "id")) ?? "",
     title: asString(pick(body, "title", "meeting_title")) ?? "Meeting",
     transcript: asString(pick(body, "transcript", "transcript_text")) ?? "",
+    summary: asString(pick(body, "summary")) ?? "",
     occurredAt: asString(pick(body, "occurred_at", "start_time", "startTime", "date", "created_at")) ?? new Date().toISOString(),
     durationSeconds: computeDuration(body),
     calendarEventId: asString(pick(body, "calendar_event_id", "calendarEventId")),

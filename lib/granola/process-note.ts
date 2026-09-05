@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { matchByCalendarEventId, matchByAttendeeEmail } from "@/lib/crm/meeting-match";
 import { findNameCandidates, matchByRememberedName, getGranolaMatchingRules } from "@/lib/crm/note-name-match";
 import { createOrGetTranscript, runExtraction } from "@/lib/data/meeting-transcripts";
+import { upsertActivity } from "@/lib/crm/activities";
 import type { TranscriptParticipant } from "@/types/database";
 import type { GranolaNoteEvent } from "@/lib/granola/parse-event";
 
@@ -61,12 +62,29 @@ export async function processGranolaNote(
     occurredAt: event.occurredAt,
   });
 
-  if (!wasCreated) return { wasCreated: false };
-
   // Unmatched (in-person coffee, phone call, or a video meeting nobody
   // recognized) - still saved, surfaces in the Notes inbox, nothing lost
   // either way.
-  if (!contactId) return { wasCreated: true };
+  if (!contactId) return { wasCreated };
+
+  // Granola's own AI recap becomes a "meeting" activity on the contact's
+  // timeline (the Notes filter, alongside calls/texts/emails) - the full
+  // transcript is far too long for a readable history entry, this is what
+  // she actually wants to skim back through later. Logged even for a
+  // contact she knows personally (known_personally only gates automated
+  // AI *suggestions* below, not the plain record that a meeting happened).
+  // Not gated on wasCreated, and upsertActivity dedupes on the note id, so
+  // re-running "Sync recent notes" also backfills this for meetings that
+  // were already matched before this existed.
+  await upsertActivity(admin, ownerId, contactId, "granola", "granola_note_id", event.noteId, {
+    type: "meeting",
+    direction: "none",
+    occurred_at: event.occurredAt,
+    body: event.summary || event.title,
+    metadata: { granola_note_id: event.noteId },
+  });
+
+  if (!wasCreated) return { wasCreated: false };
 
   const { data: contact } = await admin.from("contacts").select("known_personally").eq("id", contactId).maybeSingle();
   if (contact?.known_personally) {
