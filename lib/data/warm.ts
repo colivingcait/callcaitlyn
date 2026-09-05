@@ -57,9 +57,20 @@ export async function getWarmRanking(): Promise<WarmContact[]> {
     const contact = row.contacts as unknown as { id: string; first_name: string; last_name: string; phone: string | null; known_personally: boolean; archived: boolean };
     if (!contact || contact.archived || contact.known_personally) continue;
 
-    const openSignal = row.opened_at && row.opened_at >= since ? (row.open_count ?? 0) : 0;
+    // The first open on any send is discounted to zero, not counted as a
+    // real signal - Apple Mail's Mail Privacy Protection (on by default
+    // since 2021) auto-fetches every tracking pixel the moment mail is
+    // delivered, whether or not the person ever looks at it, so open_count
+    // hitting 1 is closer to noise than interest. A genuine second (or
+    // third+) open still requires someone actually reopening the email
+    // later, which a background prefetch doesn't do - same "2+ opens is
+    // the real signal" threshold lib/crm/engagement.ts's
+    // hasRecentEmailEngagement already uses for the Engaged tag, applied
+    // here too so warm-ranking can't be inflated by the same false
+    // positive.
+    const openSignal = row.opened_at && row.opened_at >= since ? Math.max(0, (row.open_count ?? 0) - 1) : 0;
     const clickSignal = row.clicked_at && row.clicked_at >= since ? (row.click_count ?? 0) * 2 : 0;
-    const openThisWeek = row.opened_at && row.opened_at >= weekAgo ? (row.open_count ?? 0) : 0;
+    const openThisWeek = row.opened_at && row.opened_at >= weekAgo ? Math.max(0, (row.open_count ?? 0) - 1) : 0;
     const clickThisWeek = row.clicked_at && row.clicked_at >= weekAgo ? (row.click_count ?? 0) * 2 : 0;
 
     const entry = byContact.get(contact.id) ?? { name: `${contact.first_name} ${contact.last_name}`.trim(), phone: contact.phone, thisWeek: 0, total: 0, events: [] };
