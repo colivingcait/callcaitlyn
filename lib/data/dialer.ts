@@ -16,9 +16,14 @@ export type DialerContact = Pick<
   | "dialer_snoozed_at"
   | "stage_id"
 > & {
-  // New-registrations queue only: true if this contact has never
-  // registered before (this is their only Eventbrite/Calendly activity
-  // on file). Not used by the event-followup queue.
+  // New-registrations queue only: true if this contact has never actually
+  // attended one of her events (contacts.last_event_at is null) - not
+  // "never registered before." A lot of people register multiple times and
+  // never show up, and re-registering shouldn't make them "returning" if
+  // they've genuinely never been to one; last_event_at only ever gets set
+  // by a real check-in (see lib/crm/events.ts's recordEventAttendance), so
+  // it's already the right signal without a separate registration count.
+  // Not used by the event-followup queue.
   isNew?: boolean;
   // New-registrations queue only: the specific event name from their
   // MOST RECENT registration's activity record, not the contact's static
@@ -104,9 +109,7 @@ export async function listNewRegistrationsQueue(): Promise<{ contacts: DialerCon
   const latestRegByContact = new Map<string, string>();
   const latestEventNameByContact = new Map<string, string | null>();
   const latestEventAccountByContact = new Map<string, string | null>();
-  const registrationCountByContact = new Map<string, number>();
   for (const row of registrations ?? []) {
-    registrationCountByContact.set(row.contact_id, (registrationCountByContact.get(row.contact_id) ?? 0) + 1);
     // First hit per contact wins the "latest" slot since the query is
     // ordered newest-first.
     if (!latestRegByContact.has(row.contact_id)) {
@@ -137,7 +140,7 @@ export async function listNewRegistrationsQueue(): Promise<{ contacts: DialerCon
       (c) =>
         ({
           ...c,
-          isNew: (registrationCountByContact.get(c.id) ?? 0) <= 1,
+          isNew: !c.last_event_at,
           registrationLabel: latestEventNameByContact.get(c.id) ?? c.lead_source,
           registrationAccount: latestEventAccountByContact.get(c.id) ?? null,
         }) as DialerContact,
