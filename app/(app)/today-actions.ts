@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { writeDismissal } from "@/lib/crm/dismissed-insights";
 
 export async function clearPinnedItem(id: string) {
   const supabase = await createClient();
@@ -81,6 +82,25 @@ export async function clearFollowUp(contactId: string) {
   if (!user) return { ok: false as const, error: "Not signed in" };
 
   await supabase.from("contacts").update({ next_follow_up_at: null }).eq("id", contactId).eq("owner_id", user.id);
+  revalidatePath("/");
+  return { ok: true as const };
+}
+
+// "No action needed for this registration" - Today's "Registered, no
+// follow-up" group used to have no dismiss at all (only Calls/Replies
+// owed did), so a vendor or plus-one who isn't a real lead reappeared
+// every single day with no escape hatch. Reuses the same dismissed_insights
+// table Insights/Sphere already write to (see lib/crm/contact-queue-filter.ts's
+// filter, which only honors the dismissal while it's newer than the
+// registration that triggered it).
+export async function dismissRegisteredNoFollowUp(contactId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  await writeDismissal(supabase, user.id, "registered_no_followup", contactId);
   revalidatePath("/");
   return { ok: true as const };
 }

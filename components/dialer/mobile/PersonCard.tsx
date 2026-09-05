@@ -11,10 +11,8 @@ import { sendTextToContact } from "@/app/(app)/contacts/actions";
 import {
   markDialerConnected,
   markDialerSnoozed,
-  markDialerDismissed,
   markEventFollowupConnected,
   markEventFollowupSnoozed,
-  markEventFollowupDismissed,
 } from "@/app/(app)/dialer/actions";
 import { newRegistrationTemplate, returningRegistrationTemplate } from "@/lib/crm/event-text-templates";
 import { applyMergeFields } from "@/lib/crm/merge-fields";
@@ -93,10 +91,15 @@ export function PersonCard({
     onAdvance();
   }
 
+  // A true skip - "not right now," not "no action needed." Uses the same
+  // snooze write as "No answer" (pushes them below anyone not yet tried,
+  // lib/data/dialer.ts's sort), not the dismiss action, which permanently
+  // clears the contact from this queue - a rushed tap here during a quick
+  // session should never silently drop a lead for good.
   async function skip() {
     setMarking(true);
-    if (mode === "event-followup") await markEventFollowupDismissed(contact.id);
-    else await markDialerDismissed(contact.id);
+    if (mode === "event-followup") await markEventFollowupSnoozed(contact.id);
+    else await markDialerSnoozed(contact.id);
     setMarking(false);
     router.refresh();
     onAdvance();

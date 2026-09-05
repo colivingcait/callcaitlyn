@@ -8,6 +8,7 @@ import { applyMergeFields, PREVIEW_CONTACT } from "@/lib/crm/merge-fields";
 import { Button, Input, Textarea, Select, Card, Label } from "@/components/ui";
 import { EmailBodyEditor } from "@/components/sequences/EmailBodyEditor";
 import { AudiencePicker, type AudienceCriteria } from "@/components/sequences/AudiencePicker";
+import type { AudiencePreview } from "@/app/(app)/sequences/actions";
 import { Plus, Send, Eye, EyeOff } from "lucide-react";
 import type { Tag, PipelineStage } from "@/types/database";
 
@@ -45,6 +46,7 @@ export function CreateSequenceForm({ tags, stages, ownerId }: { tags: Tag[]; sta
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [audience, setAudience] = useState<AudiencePreview | null>(null);
 
   async function sendTest() {
     setTesting(true);
@@ -68,6 +70,22 @@ export function CreateSequenceForm({ tags, stages, ownerId }: { tags: Tag[]; sta
     if (type === "batch") {
       if (!subject.trim() || !body.trim()) return;
       if (sendTiming === "later" && !sendAt) return;
+      // A batch email sends the moment it's created (or at the scheduled
+      // time, unattended) - unlike broadcast/drip, which only create an
+      // empty container here. Block an audience that resolved to nobody
+      // (every match opted out, excluded, or missing an email) rather than
+      // letting "Create & send" silently create a sequence that sends to
+      // no one, and require a real confirmation showing who it's going to
+      // before this irreversible send is queued.
+      if (!audience || audience.count === 0) {
+        setError("Nobody's eligible to receive this - check the audience above before sending.");
+        return;
+      }
+      const when = sendTiming === "now" ? "now" : `at ${new Date(sendAt).toLocaleString()}`;
+      const confirmed = window.confirm(
+        `Send "${subject.trim()}" to ${audience.count} ${audience.count === 1 ? "person" : "people"} ${when}? This can't be undone.`,
+      );
+      if (!confirmed) return;
     }
     setSaving(true);
     setError("");
@@ -145,7 +163,15 @@ export function CreateSequenceForm({ tags, stages, ownerId }: { tags: Tag[]; sta
           {type === "batch" && "One email, sent once, to whoever's in the audience below - no ongoing steps."}
         </p>
 
-        <AudiencePicker criteria={criteria} onChange={setCriteria} tags={tags} stages={stages} ownerId={ownerId} onTagCreated={() => router.refresh()} />
+        <AudiencePicker
+          criteria={criteria}
+          onChange={setCriteria}
+          tags={tags}
+          stages={stages}
+          ownerId={ownerId}
+          onTagCreated={() => router.refresh()}
+          onAudienceChange={setAudience}
+        />
 
         {type === "batch" && (
           <div className="space-y-3 border-t border-neutral-100 pt-3">
@@ -220,7 +246,8 @@ export function CreateSequenceForm({ tags, stages, ownerId }: { tags: Tag[]; sta
               saving ||
               !name.trim() ||
               criteria.targetTagIds.length === 0 ||
-              (type === "batch" && (!subject.trim() || !body.trim() || (sendTiming === "later" && !sendAt)))
+              (type === "batch" &&
+                (!subject.trim() || !body.trim() || (sendTiming === "later" && !sendAt) || !audience || audience.count === 0))
             }
           >
             {saving ? "Creating…" : type === "batch" ? "Create & send" : "Create & add steps"}

@@ -71,9 +71,25 @@ export async function filterByQueue(
   const agg = await fetchActivityAggregates();
 
   if (queue === "no_followup_after_registration") {
+    // "No action needed for this one" (a vendor re-registering, a plus-one
+    // who isn't a real lead) - dismissed_insights keyed per-contact, same
+    // table Insights/Sphere already use. No fixed expiry window: a
+    // dismissal only counts while it's newer than the registration that
+    // triggered it, so a genuinely new registration later naturally
+    // reopens the reminder instead of staying silenced for N days.
+    const supabase = await createClient();
+    const { data: dismissals } = await supabase
+      .from("dismissed_insights")
+      .select("contact_id, dismissed_at")
+      .eq("insight_key", "registered_no_followup")
+      .not("contact_id", "is", null);
+    const dismissedAt = new Map((dismissals ?? []).map((d) => [d.contact_id as string, new Date(d.dismissed_at as string).getTime()]));
+
     return contacts.filter((c) => {
       const a = agg.get(c.id);
       if (!a?.lastEventbriteAt) return false;
+      const dismissed = dismissedAt.get(c.id);
+      if (dismissed !== undefined && dismissed >= a.lastEventbriteAt) return false;
       return a.lastOutreachAt === null || a.lastOutreachAt < a.lastEventbriteAt;
     });
   }

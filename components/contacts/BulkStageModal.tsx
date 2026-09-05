@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { applyStageChange } from "@/lib/crm/stage-transition";
+import { applyStageChange, type PendingDealSummary } from "@/lib/crm/stage-transition";
 import { Button, Select } from "@/components/ui";
+import { PendingDealCleanupModal } from "@/components/contacts/PendingDealCleanupModal";
 import { X } from "lucide-react";
 import type { ContactWithRelations, PipelineStage } from "@/types/database";
 
@@ -23,6 +24,13 @@ export function BulkStageModal({
   const [stageId, setStageId] = useState(stages[0]?.id ?? "");
   const [saving, setSaving] = useState(false);
   const [progress, setProgress] = useState(0);
+  // A single-contact move surfaces PendingDealCleanupModal when it leaves
+  // Under Contract without closing (see MoveToMenu/useApplyStageChange) -
+  // the bulk loop below used to just discard that same signal per contact,
+  // so moving several people off Under Contract at once could silently
+  // leave orphaned "pending" deal rows with no warning at all. Collected
+  // across every contact in the loop and shown once, after it finishes.
+  const [pendingCleanup, setPendingCleanup] = useState<PendingDealSummary[] | null>(null);
 
   const newStage = stages.find((s) => s.id === stageId);
   // Same side effects as changing one contact's stage by hand (archiving
@@ -42,10 +50,11 @@ export function BulkStageModal({
     setSaving(true);
     setProgress(0);
     const supabase = createClient();
+    const atRisk: PendingDealSummary[] = [];
 
     for (const contact of contacts) {
       const oldStage = contact.pipeline_stages ?? undefined;
-      const { error } = await applyStageChange(supabase, ownerId, contact.id, oldStage, newStage);
+      const { error, pendingAtRisk } = await applyStageChange(supabase, ownerId, contact.id, oldStage, newStage);
       if (!error) {
         await supabase.from("activities").insert({
           owner_id: ownerId,
@@ -55,12 +64,18 @@ export function BulkStageModal({
           source: "manual",
           body: `Stage changed from ${oldStage?.name ?? "None"} to ${newStage.name}`,
         });
+        if (pendingAtRisk) atRisk.push(...pendingAtRisk);
       }
       setProgress((p) => p + 1);
     }
 
     setSaving(false);
-    onDone();
+    if (atRisk.length > 0) setPendingCleanup(atRisk);
+    else onDone();
+  }
+
+  if (pendingCleanup) {
+    return <PendingDealCleanupModal deals={pendingCleanup} onClose={onDone} />;
   }
 
   return (

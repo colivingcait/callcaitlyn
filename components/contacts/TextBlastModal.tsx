@@ -153,6 +153,11 @@ export function TextBlastModal({ target, onClose }: { target: BlastTarget; onClo
   }, [audienceMode, excludeRecent, excludeDays, selectedEventId, attendanceStatus]);
 
   async function send() {
+    if (!audience?.count) return;
+    const confirmed = window.confirm(
+      `Send this text to ${audience.count} ${audience.count === 1 ? "person" : "people"}? This can't be undone.`,
+    );
+    if (!confirmed) return;
     setSending(true);
     let outcome;
     if (target.kind === "tag") {

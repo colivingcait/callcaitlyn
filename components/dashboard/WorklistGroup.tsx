@@ -13,18 +13,22 @@ const CAP = 10;
 // same person-row shape as ContactRow, just without the expand/edit
 // affordances (this is a worklist, not the record itself; "Open full
 // record" lives one click away via the name link). onDismiss (keyed by
-// activityId) is opt-in for Replies owed; onClearFollowUp (keyed by
-// contact id) is opt-in for Calls - that group used to have no dismiss
-// at all, so a contact with next_follow_up_at set kept reappearing every
-// day with no way to say "I don't need to call this person."
+// activityId) is opt-in for Replies owed; onDismissContact (keyed by
+// contact id, with its own label) is opt-in for any group whose dismiss
+// isn't tied to a specific activity - Calls ("clear this follow-up") and
+// Registered-no-follow-up ("no action needed") both use it. Both of those
+// groups used to have no dismiss at all, so a stale entry reappeared every
+// single day with no way to say "I don't need to act on this."
 export function WorklistGroup({
   people,
   onDismiss,
-  onClearFollowUp,
+  onDismissContact,
+  dismissContactLabel = "Dismiss",
 }: {
   people: WorklistPerson[];
   onDismiss?: (activityId: string) => Promise<{ ok: boolean }>;
-  onClearFollowUp?: (contactId: string) => Promise<{ ok: boolean }>;
+  onDismissContact?: (contactId: string) => Promise<{ ok: boolean }>;
+  dismissContactLabel?: string;
 }) {
   const [showAll, setShowAll] = useState(false);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
@@ -41,10 +45,10 @@ export function WorklistGroup({
     setDismissed((prev) => new Set(prev).add(activityId));
   }
 
-  async function handleClearFollowUp(contactId: string) {
-    if (!onClearFollowUp) return;
+  async function handleDismissContact(contactId: string) {
+    if (!onDismissContact) return;
     setDismissing(contactId);
-    await onClearFollowUp(contactId);
+    await onDismissContact(contactId);
     setDismissing(null);
     setDismissed((prev) => new Set(prev).add(contactId));
   }
@@ -93,12 +97,12 @@ export function WorklistGroup({
               <X size={15} />
             </button>
           )}
-          {onClearFollowUp && (
+          {onDismissContact && (
             <button
               type="button"
-              onClick={() => handleClearFollowUp(person.id)}
+              onClick={() => handleDismissContact(person.id)}
               disabled={dismissing === person.id}
-              title="Clear this follow-up"
+              title={dismissContactLabel}
               className="shrink-0 rounded-[10px] border border-neutral-200 bg-white p-2 text-neutral-400 disabled:opacity-50"
             >
               <X size={15} />

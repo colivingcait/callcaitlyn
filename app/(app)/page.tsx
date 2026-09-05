@@ -1,5 +1,5 @@
 import { getTodayData } from "@/lib/data/today";
-import { dismissReplyOwed, clearFollowUp } from "@/app/(app)/today-actions";
+import { dismissReplyOwed, clearFollowUp, dismissRegisteredNoFollowUp } from "@/app/(app)/today-actions";
 import { listMergeCandidates, listTags } from "@/lib/data/contacts";
 import { getDefaultDraftTemplate } from "@/lib/data/text-templates";
 import { createClient } from "@/lib/supabase/server";
@@ -127,7 +127,7 @@ export default async function TodayPage() {
         )}
 
         <Section sectionKey="today:calls" title="Calls" meta={lateCalls > 0 ? `${today.calls.length} · ${lateCalls} late` : `${today.calls.length}`}>
-          <WorklistGroup people={today.calls} onClearFollowUp={clearFollowUp} />
+          <WorklistGroup people={today.calls} onDismissContact={clearFollowUp} dismissContactLabel="Clear this follow-up" />
         </Section>
 
         <Section sectionKey="today:replies" title="Replies owed" meta={`${today.repliesOwed.length}`}>
@@ -145,7 +145,7 @@ export default async function TodayPage() {
           defaultOpen={false}
           action={<TextAllButton contactIds={today.registeredNoFollowUp.map((p) => p.id)} label="Registered, no follow-up" />}
         >
-          <WorklistGroup people={today.registeredNoFollowUp} />
+          <WorklistGroup people={today.registeredNoFollowUp} onDismissContact={dismissRegisteredNoFollowUp} dismissContactLabel="No action needed for this one" />
         </Section>
       </div>
 

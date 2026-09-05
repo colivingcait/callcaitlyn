@@ -36,6 +36,7 @@ export function AudiencePicker({
   stages,
   ownerId,
   onTagCreated,
+  onAudienceChange,
 }: {
   criteria: AudienceCriteria;
   onChange: (next: AudienceCriteria) => void;
@@ -45,6 +46,12 @@ export function AudiencePicker({
   // Parent owns refetching the tags list (router.refresh()) after a new
   // tag is created here, so the `tags` prop catches up.
   onTagCreated?: (tagId: string) => void;
+  // Lets a parent that actually sends (CreateSequenceForm's batch type)
+  // block submit on a 0-recipient audience and show the real count in a
+  // send confirmation - without this, only the visual preview below knew
+  // the count, so a tag selection resolving to nobody could still be
+  // submitted.
+  onAudienceChange?: (audience: AudiencePreview | null) => void;
 }) {
   const [showExcludes, setShowExcludes] = useState(
     criteria.excludeTagIds.length > 0 || criteria.excludeStageIds.length > 0 || criteria.excludeTimelines.length > 0,
@@ -63,12 +70,14 @@ export function AudiencePicker({
   useEffect(() => {
     if (criteria.targetTagIds.length === 0) {
       setAudience(null);
+      onAudienceChange?.(null);
       return;
     }
     setLoading(true);
     const t = setTimeout(async () => {
       const result = await previewEmailAudience(criteria);
       setAudience(result);
+      onAudienceChange?.(result);
       setLoading(false);
     }, 400);
     return () => clearTimeout(t);
