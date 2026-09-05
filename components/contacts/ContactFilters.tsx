@@ -8,7 +8,11 @@ import { QUEUES } from "@/lib/crm/contact-queues";
 import { ContactFiltersSheet } from "@/components/contacts/ContactFiltersSheet";
 import type { PipelineStage, Tag } from "@/types/database";
 
-const SORT_OPTIONS: { value: string; label: string }[] = [
+// Shared with PeopleMobile's sort control, so the phone view can offer the
+// exact same options (including "Likelihood (hot first)," which used to
+// only exist on desktop even though listContacts already computes it) -
+// one list, not two that could drift.
+export const SORT_OPTIONS: { value: string; label: string }[] = [
   { value: "updated_desc", label: "Recently updated" },
   { value: "created_desc", label: "Recently added" },
   { value: "created_asc", label: "Oldest added" },

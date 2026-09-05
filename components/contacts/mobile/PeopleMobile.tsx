@@ -9,6 +9,7 @@ import { PeopleList } from "@/components/contacts/mobile/PeopleList";
 import { MyLists } from "@/components/contacts/mobile/MyLists";
 import { InsideList } from "@/components/contacts/mobile/InsideList";
 import { ContactFiltersSheet } from "@/components/contacts/ContactFiltersSheet";
+import { SORT_OPTIONS } from "@/components/contacts/ContactFilters";
 import type { ContactWithRelations, PipelineStage, Tag, ContactSegment } from "@/types/database";
 
 type SequenceOption = { id: string; name: string; type: string };
@@ -23,6 +24,7 @@ export function PeopleMobile({
   segments,
   sequences,
   ownerId,
+  lastActivityLabels,
 }: {
   contacts: ContactWithRelations[];
   stages: PipelineStage[];
@@ -32,6 +34,7 @@ export function PeopleMobile({
   segments: ContactSegment[];
   sequences: SequenceOption[];
   ownerId: string;
+  lastActivityLabels: Map<string, string>;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -42,11 +45,22 @@ export function PeopleMobile({
   const listLabel = searchParams.get("list");
   const insideList = view === "my-lists" && !!listLabel;
 
-  const activeFilterCount = Array.from(searchParams.keys()).filter((k) => !["view", "list"].includes(k)).length;
+  const activeFilterCount = Array.from(searchParams.keys()).filter((k) => !["view", "list", "sort"].includes(k)).length;
+  const currentSort = searchParams.get("sort") ?? "updated_desc";
 
   function setView(next: PeopleView) {
     const params = new URLSearchParams();
     params.set("view", next);
+    router.push(`/contacts?${params.toString()}`);
+  }
+
+  // Likelihood-to-close sorting already exists server-side (listContacts)
+  // but was only ever wired into the desktop Filters bar - the phone view,
+  // where she actually works most of the time, had no sort control at all.
+  function setSort(value: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value === "updated_desc") params.delete("sort");
+    else params.set("sort", value);
     router.push(`/contacts?${params.toString()}`);
   }
 
@@ -104,13 +118,27 @@ export function PeopleMobile({
               <p className="text-[14px] text-neutral-500">
                 {view === "by-stage" ? "Grouped by stage" : "Everyone"} · {textableCount} textable
               </p>
-              <button
-                type="button"
-                onClick={() => setFiltersOpen(true)}
-                className="flex h-10 items-center gap-1.5 rounded-full border border-brand-300 bg-brand-50 px-3 text-[13px] font-semibold text-brand-700"
-              >
-                <SlidersHorizontal size={14} /> Filters{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ""}
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                <select
+                  value={currentSort}
+                  onChange={(e) => setSort(e.target.value)}
+                  aria-label="Sort"
+                  className="h-10 rounded-full border border-neutral-200 bg-white px-3 text-[13px] font-semibold text-neutral-700"
+                >
+                  {SORT_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setFiltersOpen(true)}
+                  className="flex h-10 items-center gap-1.5 rounded-full border border-brand-300 bg-brand-50 px-3 text-[13px] font-semibold text-brand-700"
+                >
+                  <SlidersHorizontal size={14} /> Filters{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ""}
+                </button>
+              </div>
             </div>
           )}
 
@@ -118,7 +146,7 @@ export function PeopleMobile({
             {view === "my-lists" ? (
               <MyLists contacts={contacts} eventNames={eventNames} leadSources={leadSources} segments={segments} />
             ) : (
-              <PeopleList contacts={searched} stages={stages} ownerId={ownerId} grouped={view === "by-stage"} />
+              <PeopleList contacts={searched} stages={stages} ownerId={ownerId} grouped={view === "by-stage"} lastActivityLabels={lastActivityLabels} />
             )}
           </div>
         </>

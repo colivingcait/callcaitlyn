@@ -72,6 +72,17 @@ export function ContactsList({
     afterAction();
   }
 
+  // Counterpart to bulk archive - reachable when viewing the archived list
+  // (People filters' Status: Archived) so a bulk archive isn't a one-way
+  // door. Non-destructive, so no confirm step needed.
+  async function handleRestore() {
+    setArchiving(true);
+    const supabase = createClient();
+    await supabase.from("contacts").update({ archived: false }).in("id", selectedIds);
+    setArchiving(false);
+    afterAction();
+  }
+
   const selectedIds = [...selected];
   const selectedContacts = contacts.filter((c) => selected.has(c.id));
   const selectedWithPhone = selectedContacts.filter((c) => c.phone).length;
@@ -164,9 +175,15 @@ export function ContactsList({
                       <button onClick={() => setModal("sequence")} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50">
                         Sequence…
                       </button>
-                      <button onClick={() => setConfirmingArchive(true)} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">
-                        Archive
-                      </button>
+                      {selectedContacts.every((c) => c.archived) ? (
+                        <button onClick={handleRestore} disabled={archiving} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50">
+                          {archiving ? "Restoring…" : "Restore"}
+                        </button>
+                      ) : (
+                        <button onClick={() => setConfirmingArchive(true)} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">
+                          Archive
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

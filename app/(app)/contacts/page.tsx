@@ -63,6 +63,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
         segments={segments}
         sequences={sequences.map((s) => ({ id: s.id, name: s.name, type: s.type }))}
         ownerId={user?.id ?? ""}
+        lastActivityLabels={lastActivityLabels}
       />
       <div className="mx-auto hidden max-w-3xl md:block">
       <div className="flex items-start justify-between gap-3 px-4 pt-6 pb-2 sm:px-0">

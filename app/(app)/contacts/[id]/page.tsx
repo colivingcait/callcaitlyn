@@ -194,7 +194,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
 
       <div className="mt-6 flex items-center gap-2 border-t border-neutral-100 pt-5">
         <MergeContactButton contactId={contact.id} contactName={fullName(contact)} candidates={mergeCandidates} />
-        <ArchiveButton contactId={contact.id} />
+        <ArchiveButton contactId={contact.id} archived={contact.archived} />
       </div>
       </div>
     </>

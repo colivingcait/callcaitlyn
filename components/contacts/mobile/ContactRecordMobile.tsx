@@ -77,7 +77,7 @@ export function ContactRecordMobile({
         </button>
         <div className="flex items-center gap-1">
           <MergeContactButton contactId={contact.id} contactName={name} candidates={mergeCandidates} />
-          <ArchiveButton contactId={contact.id} />
+          <ArchiveButton contactId={contact.id} archived={contact.archived} />
         </div>
       </div>
 

@@ -68,9 +68,12 @@ export function ContactRow({
     router.refresh();
   }
 
-  async function archive() {
+  // Same action toggles both ways - archiving had no undo anywhere in the
+  // app, so viewing the archived list (?archived=archived) via the People
+  // filters left no way back short of editing the row by hand.
+  async function toggleArchive() {
     const supabase = createClient();
-    await supabase.from("contacts").update({ archived: true }).eq("id", contact.id);
+    await supabase.from("contacts").update({ archived: !contact.archived }).eq("id", contact.id);
     router.refresh();
   }
 
@@ -144,11 +147,18 @@ export function ContactRow({
             </button>
             {moreOpen && (
               <div className="absolute right-0 top-full z-10 mt-1 w-40 rounded-xl border border-neutral-200 bg-white p-1 shadow-lg">
-                {confirmingArchive ? (
+                {contact.archived ? (
+                  <button
+                    onClick={toggleArchive}
+                    className="w-full rounded-lg px-2.5 py-1.5 text-left text-sm text-neutral-700 hover:bg-neutral-50"
+                  >
+                    Restore
+                  </button>
+                ) : confirmingArchive ? (
                   <div className="space-y-1 p-1.5">
                     <p className="text-xs text-neutral-600">Archive contact?</p>
                     <div className="flex gap-1.5">
-                      <button onClick={archive} className="rounded-lg bg-red-600 px-2 py-1 text-xs font-semibold text-white">
+                      <button onClick={toggleArchive} className="rounded-lg bg-red-600 px-2 py-1 text-xs font-semibold text-white">
                         Confirm
                       </button>
                       <button onClick={() => setConfirmingArchive(false)} className="rounded-lg px-2 py-1 text-xs text-neutral-500">

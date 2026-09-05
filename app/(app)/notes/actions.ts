@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { parseGranolaEvent } from "@/lib/granola/parse-event";
+import { extractStoredTranscriptText } from "@/lib/granola/parse-event";
 import { rememberNameMatch } from "@/lib/crm/note-name-match";
 import { runExtraction } from "@/lib/data/meeting-transcripts";
 
@@ -29,9 +29,14 @@ async function matchAndExtract(ownerId: string, transcriptId: string, contactId:
     return { ok: true as const };
   }
 
-  const event = parseGranolaEvent(transcript.raw_payload as Record<string, unknown>);
-  const participantNames = event.participants.map((p) => p.name).filter((n): n is string => !!n);
-  await runExtraction(admin, ownerId, transcriptId, contactId, event.transcript, participantNames);
+  // Participant names come from the row's own already-parsed `participants`
+  // column (set correctly at creation time - see createOrGetTranscript),
+  // not a re-parse of raw_payload, which is shaped differently depending on
+  // how the note's content originally arrived (see extractStoredTranscriptText).
+  const transcriptText = extractStoredTranscriptText(transcript.raw_payload as Record<string, unknown>);
+  const participants = (transcript.participants ?? []) as { name: string | null }[];
+  const participantNames = participants.map((p) => p.name).filter((n): n is string => !!n);
+  await runExtraction(admin, ownerId, transcriptId, contactId, transcriptText, participantNames);
   return { ok: true as const };
 }
 

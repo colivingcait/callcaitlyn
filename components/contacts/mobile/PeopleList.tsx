@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MessageSquareText, StickyNote, Clock } from "lucide-react";
+import { MessageSquareText, StickyNote, Clock, PhoneOff } from "lucide-react";
 import { ListRow } from "@/components/mobile/ListRow";
 import { SwipeActions } from "@/components/mobile/SwipeActions";
 import { StickyGroupHeader } from "@/components/mobile/StickyGroupHeader";
@@ -11,18 +11,36 @@ import { snoozeFollowUp } from "@/app/(app)/today-actions";
 import { groupContacts } from "@/lib/crm/contact-grouping";
 import { useToast } from "@/lib/hooks/useToast";
 import { Toast } from "@/components/mobile/Toast";
+import { CONTACT_TYPE_LABELS, formatPhone } from "@/lib/utils";
 import type { ContactWithRelations, PipelineStage } from "@/types/database";
+
+// Mirrors desktop ContactRow's meta line (type · phone · last activity) and
+// its "No phone number · email only" fallback - the mobile list used to
+// show only lead_source, dropping both signals on the screen she scans
+// most.
+function rowMeta(contact: ContactWithRelations, lastActivityLabel: string | undefined) {
+  if (!contact.phone) {
+    return (
+      <span className="flex items-center gap-1.5">
+        <PhoneOff size={14} className="shrink-0 text-neutral-400" /> No phone number · email only
+      </span>
+    );
+  }
+  return [CONTACT_TYPE_LABELS[contact.contact_type], formatPhone(contact.phone), lastActivityLabel].filter(Boolean).join(" · ");
+}
 
 export function PeopleList({
   contacts,
   stages,
   ownerId,
   grouped,
+  lastActivityLabels,
 }: {
   contacts: ContactWithRelations[];
   stages: PipelineStage[];
   ownerId: string;
   grouped: boolean;
+  lastActivityLabels: Map<string, string>;
 }) {
   const router = useRouter();
   const { toast, showToast } = useToast();
@@ -64,7 +82,7 @@ export function PeopleList({
                     href={`/contacts/${contact.id}`}
                     avatar={{ firstName: contact.first_name, lastName: contact.last_name }}
                     name={name}
-                    secondaryText={contact.lead_source ?? undefined}
+                    secondaryText={rowMeta(contact, lastActivityLabels.get(contact.id))}
                   />
                 </SwipeActions>
               );

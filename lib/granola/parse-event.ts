@@ -53,6 +53,28 @@ function pick(body: Record<string, unknown>, ...keys: string[]): unknown {
   return undefined;
 }
 
+// meeting_transcripts.raw_payload's actual shape depends on how the note's
+// content reached processGranolaNote (see process-note.ts): {note:
+// GranolaNote} from the manual backfill, {webhook: <original body>, note:
+// GranolaNote} from the live webhook once it had to fetch the content via
+// the API - which per the comment above is true for essentially every
+// note, since the webhook body itself never carries the transcript. Only
+// the (seemingly unused in practice) case where a webhook payload directly
+// carried the transcript stores the flat body as-is. Re-parsing raw_payload
+// with parseGranolaEvent as if it were always that flat shape silently
+// produced an empty transcript for almost every stored note (Get Note's
+// field is transcriptText, nested under raw_payload.note, not a top-level
+// "transcript" key) - this recovers the real shape first, wherever the
+// caller needs the actual transcript text back out of a saved row (the
+// Notes inbox preview, and re-running extraction once she manually matches
+// a contact).
+export function extractStoredTranscriptText(rawPayload: Record<string, unknown>): string {
+  const note = rawPayload.note as { transcriptText?: string | null } | undefined;
+  if (note?.transcriptText) return note.transcriptText;
+  const webhookBody = (rawPayload.webhook as Record<string, unknown> | undefined) ?? rawPayload;
+  return parseGranolaEvent(webhookBody).transcript;
+}
+
 export function parseGranolaEvent(body: Record<string, unknown>): GranolaNoteEvent {
   const rawAttendees = pick(body, "attendees", "participants");
   const attendeeList = Array.isArray(rawAttendees) ? rawAttendees : [];

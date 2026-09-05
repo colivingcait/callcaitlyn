@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { parseGranolaEvent } from "@/lib/granola/parse-event";
+import { extractStoredTranscriptText } from "@/lib/granola/parse-event";
 import { findNameCandidates, getGranolaMatchingRules } from "@/lib/crm/note-name-match";
 import type { MeetingTranscript } from "@/types/database";
 
@@ -51,12 +51,12 @@ export async function getNotesInboxData(): Promise<{ unmatched: UnmatchedNote[];
   ]);
 
   const unmatched: UnmatchedNote[] = ((unmatchedRows ?? []) as MeetingTranscript[]).map((t) => {
-    const event = parseGranolaEvent(t.raw_payload);
-    const candidates = rules.ask_when_ambiguous ? findNameCandidates(contacts ?? [], event.transcript).map((c) => ({ id: c.id, name: `${c.first_name} ${c.last_name}`.trim() })) : [];
+    const transcriptText = extractStoredTranscriptText(t.raw_payload);
+    const candidates = rules.ask_when_ambiguous ? findNameCandidates(contacts ?? [], transcriptText).map((c) => ({ id: c.id, name: `${c.first_name} ${c.last_name}`.trim() })) : [];
     return {
       id: t.id,
       occurredAt: t.occurred_at,
-      preview: preview(event.transcript || t.summary_bullets.join(" ") || "No transcript text captured."),
+      preview: preview(transcriptText || t.summary_bullets.join(" ") || "No transcript text captured."),
       participantNames: t.participants.map((p) => p.name).filter((n): n is string => !!n),
       candidates,
     };
