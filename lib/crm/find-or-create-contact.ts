@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { phonesMatch } from "@/lib/phone";
 import { syncContactToQuo } from "@/lib/quo/sync-contact";
+import { hasPlaceholderName } from "@/lib/crm/merge-fields";
 
 // Shared across integrations (Quo, Calendly, Eventbrite, Jotform): find an
 // existing contact by email and/or phone, or create a bare one so nothing
@@ -117,13 +118,7 @@ async function enrichContact(
 ) {
   const patch: Record<string, string> = {};
 
-  const isPlaceholderName =
-    !contact.first_name ||
-    contact.first_name === "Unknown" ||
-    contact.first_name === contact.phone ||
-    contact.first_name === contact.email;
-
-  if (isPlaceholderName && incoming.firstName?.trim()) {
+  if (hasPlaceholderName(contact) && incoming.firstName?.trim()) {
     patch.first_name = incoming.firstName.trim();
     if (incoming.lastName?.trim()) patch.last_name = incoming.lastName.trim();
   }

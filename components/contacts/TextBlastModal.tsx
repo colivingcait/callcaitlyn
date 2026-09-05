@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { X, MessageSquareText, Send, Users, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
 import { Button, Textarea, Input } from "@/components/ui";
-import { applyMergeFields, PREVIEW_CONTACT } from "@/lib/crm/merge-fields";
+import { applyMergeFields, PREVIEW_CONTACT, usesFirstNameMergeField } from "@/lib/crm/merge-fields";
 import { MESSAGE_TEMPLATE_CATEGORIES, type MessageTemplateCategory } from "@/lib/crm/event-text-templates";
 import { estimatedTextBlastMinutes } from "@/lib/crm/text-blast-timing";
 import { tagBlastLabel } from "@/lib/crm/text-blasts";
@@ -198,6 +198,13 @@ export function TextBlastModal({ target, onClose }: { target: BlastTarget; onClo
 
   const preview = message.trim() ? applyMergeFields(message, PREVIEW_CONTACT) : "";
   const duplicateCount = audience?.recipients.filter((r) => r.duplicatePhone || r.duplicateName).length ?? 0;
+  // Only a real problem if the message actually greets by name - a contact
+  // whose first_name on file is just their phone number (never a real name)
+  // would otherwise get sent "Hi 5739992048," so the send loop skips them
+  // instead. Flagged here so she sees who that affects before she sends,
+  // not just after.
+  const greetsByName = usesFirstNameMergeField(message);
+  const noNameCount = greetsByName ? (audience?.noNameCount ?? 0) : 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
@@ -241,21 +248,33 @@ export function TextBlastModal({ target, onClose }: { target: BlastTarget; onClo
                           <AlertTriangle size={11} /> {duplicateCount} possible {duplicateCount === 1 ? "duplicate" : "duplicates"}
                         </span>
                       )}
+                      {noNameCount > 0 && (
+                        <span className="ml-1.5 inline-flex items-center gap-1 font-medium text-amber-700">
+                          <AlertTriangle size={11} /> {noNameCount} no name on file
+                        </span>
+                      )}
                     </span>
                     {recipientsOpen ? <ChevronUp size={14} className="shrink-0 text-neutral-400" /> : <ChevronDown size={14} className="shrink-0 text-neutral-400" />}
                   </>
                 )}
               </button>
+              {noNameCount > 0 && (
+                <p className="text-[11px] text-amber-700">
+                  Your message uses {"{{first_name}}"} - {noNameCount} {noNameCount === 1 ? "person" : "people"} below have no real name on file (just their
+                  phone/email), so {noNameCount === 1 ? "they" : "they"} will be skipped rather than getting texted their own number as a greeting.
+                </p>
+              )}
               {recipientsOpen && audience.count > 0 && (
                 <div className="max-h-40 space-y-0.5 overflow-y-auto rounded-lg border border-neutral-200 bg-white p-1.5">
                   {audience.recipients.map((r) => (
                     <div
                       key={r.id}
-                      className={`flex items-center justify-between gap-2 rounded-md px-1.5 py-1 text-xs ${r.duplicatePhone || r.duplicateName ? "bg-amber-50" : ""}`}
+                      className={`flex items-center justify-between gap-2 rounded-md px-1.5 py-1 text-xs ${r.duplicatePhone || r.duplicateName || (greetsByName && r.noRealName) ? "bg-amber-50" : ""}`}
                     >
                       <span className="flex min-w-0 items-center gap-1 truncate font-medium text-neutral-700">
-                        {(r.duplicatePhone || r.duplicateName) && <AlertTriangle size={11} className="shrink-0 text-amber-600" />}
+                        {(r.duplicatePhone || r.duplicateName || (greetsByName && r.noRealName)) && <AlertTriangle size={11} className="shrink-0 text-amber-600" />}
                         <span className="truncate">{r.name}</span>
+                        {greetsByName && r.noRealName && <span className="shrink-0 text-[10px] text-amber-700">will be skipped</span>}
                       </span>
                       <span className="shrink-0 text-neutral-400">{r.phone}</span>
                     </div>

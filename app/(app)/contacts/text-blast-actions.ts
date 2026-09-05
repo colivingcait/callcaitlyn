@@ -4,10 +4,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendQuoText } from "@/lib/quo/send-message";
-import { applyMergeFields, PREVIEW_CONTACT } from "@/lib/crm/merge-fields";
+import { applyMergeFields, PREVIEW_CONTACT, hasPlaceholderName } from "@/lib/crm/merge-fields";
 import { withProgress, tagBlastLabel, type TextBlastWithProgress } from "@/lib/crm/text-blasts";
 
-type AudienceContact = { id: string; first_name: string; last_name: string; phone: string };
+type AudienceContact = { id: string; first_name: string; last_name: string; phone: string; email: string | null };
 type AudienceResolution = { eligible: AudienceContact[]; optedOutCount: number };
 
 // Split out from the id-in-list query every resolver below already runs -
@@ -21,7 +21,7 @@ type AudienceResolution = { eligible: AudienceContact[]; optedOutCount: number }
 function splitByOptOut(rows: (AudienceContact & { opted_out_at: string | null })[]): AudienceResolution {
   const eligible: AudienceContact[] = rows
     .filter((c) => !c.opted_out_at)
-    .map((c) => ({ id: c.id, first_name: c.first_name, last_name: c.last_name, phone: c.phone }));
+    .map((c) => ({ id: c.id, first_name: c.first_name, last_name: c.last_name, phone: c.phone, email: c.email }));
   return { eligible, optedOutCount: rows.length - eligible.length };
 }
 
@@ -59,7 +59,7 @@ async function resolveEventAudience(
 
   const { data: contacts } = await admin
     .from("contacts")
-    .select("id, first_name, last_name, phone, opted_out_at")
+    .select("id, first_name, last_name, phone, email, opted_out_at")
     .in("id", contactIds)
     .eq("archived", false)
     .not("phone", "is", null);
@@ -107,7 +107,7 @@ async function resolveOccurrenceAudience(
 
   const { data: contacts } = await admin
     .from("contacts")
-    .select("id, first_name, last_name, phone, opted_out_at")
+    .select("id, first_name, last_name, phone, email, opted_out_at")
     .in("id", contactIds)
     .eq("archived", false)
     .not("phone", "is", null);
@@ -125,7 +125,7 @@ async function resolveTagAudience(admin: SupabaseClient, ownerId: string, tagId:
 
   const { data: contacts } = await admin
     .from("contacts")
-    .select("id, first_name, last_name, phone, opted_out_at")
+    .select("id, first_name, last_name, phone, email, opted_out_at")
     .in("id", contactIds)
     .eq("owner_id", ownerId)
     .eq("archived", false)
@@ -141,7 +141,7 @@ async function resolveContactsAudience(admin: SupabaseClient, ownerId: string, c
 
   const { data: contacts } = await admin
     .from("contacts")
-    .select("id, first_name, last_name, phone, opted_out_at")
+    .select("id, first_name, last_name, phone, email, opted_out_at")
     .in("id", contactIds)
     .eq("owner_id", ownerId)
     .eq("archived", false)
@@ -255,8 +255,8 @@ export async function getEventAccount(eventName: string): Promise<string | null>
   return typeof metadata?.eventbrite_account === "string" ? metadata.eventbrite_account : null;
 }
 
-export type TextBlastRecipient = { id: string; name: string; phone: string; duplicatePhone: boolean; duplicateName: boolean };
-export type TextBlastAudiencePreview = { count: number; recipients: TextBlastRecipient[]; optedOutCount: number };
+export type TextBlastRecipient = { id: string; name: string; phone: string; duplicatePhone: boolean; duplicateName: boolean; noRealName: boolean };
+export type TextBlastAudiencePreview = { count: number; recipients: TextBlastRecipient[]; optedOutCount: number; noNameCount: number };
 
 // Full recipient list rather than a truncated sample - a "sending to 41
 // people: Jamie, Alex +39 more" summary doesn't let her actually check who
@@ -266,7 +266,10 @@ export type TextBlastAudiencePreview = { count: number; recipients: TextBlastRec
 // loop keys strictly off contact_id, so this WOULD fire twice); duplicateName
 // flags a same-name collision even without a shared phone, since that's
 // the more common shape a duplicate contact takes (re-entered with a typo'd
-// or different number).
+// or different number). noRealName flags a contact whose first_name is just
+// their phone/email on file (never a real name) - if the message greets by
+// {{first_name}}, the actual send loop skips these rather than texting "Hi
+// 5739992048," but she should see who that affects before she even sends.
 function buildAudiencePreview(audience: AudienceContact[], optedOutCount = 0): TextBlastAudiencePreview {
   const phoneCounts = new Map<string, number>();
   const nameCounts = new Map<string, number>();
@@ -276,20 +279,24 @@ function buildAudiencePreview(audience: AudienceContact[], optedOutCount = 0): T
     nameCounts.set(normalizedName, (nameCounts.get(normalizedName) ?? 0) + 1);
   }
 
+  let noNameCount = 0;
   const recipients = audience
     .map((c) => {
       const name = `${c.first_name} ${c.last_name}`.trim() || "Unnamed";
+      const noRealName = hasPlaceholderName(c);
+      if (noRealName) noNameCount++;
       return {
         id: c.id,
         name,
         phone: c.phone,
         duplicatePhone: (phoneCounts.get(c.phone) ?? 0) > 1,
         duplicateName: (nameCounts.get(name.toLowerCase()) ?? 0) > 1,
+        noRealName,
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  return { count: audience.length, recipients, optedOutCount };
+  return { count: audience.length, recipients, optedOutCount, noNameCount };
 }
 
 export async function getTextBlastAudiencePreview(
@@ -301,7 +308,7 @@ export async function getTextBlastAudiencePreview(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { count: 0, recipients: [], optedOutCount: 0 };
+  if (!user) return { count: 0, recipients: [], optedOutCount: 0, noNameCount: 0 };
 
   const admin = createAdminClient();
   const { eligible, optedOutCount } = occurrence
@@ -326,7 +333,7 @@ export async function getTagAudiencePreview(tagId: string): Promise<TextBlastAud
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { count: 0, recipients: [], optedOutCount: 0 };
+  if (!user) return { count: 0, recipients: [], optedOutCount: 0, noNameCount: 0 };
 
   const admin = createAdminClient();
   const { eligible, optedOutCount } = await resolveTagAudience(admin, user.id, tagId);
@@ -364,7 +371,7 @@ export async function getContactsAudiencePreview(contactIds: string[]): Promise<
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { count: 0, recipients: [], optedOutCount: 0 };
+  if (!user) return { count: 0, recipients: [], optedOutCount: 0, noNameCount: 0 };
 
   const admin = createAdminClient();
   const { eligible, optedOutCount } = await resolveContactsAudience(admin, user.id, contactIds);

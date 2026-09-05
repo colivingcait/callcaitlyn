@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendQuoText } from "@/lib/quo/send-message";
-import { applyMergeFields } from "@/lib/crm/merge-fields";
+import { applyMergeFields, hasPlaceholderName, usesFirstNameMergeField } from "@/lib/crm/merge-fields";
 import { upsertActivity } from "@/lib/crm/activities";
 import { updateEngagementTag } from "@/lib/crm/engagement";
 import { TEXT_BLAST_SENDS_PER_RUN } from "@/lib/crm/text-blast-timing";
@@ -55,7 +55,7 @@ async function spaceSends() {
 type PendingRecipient = {
   id: string;
   contact_id: string;
-  contacts: { id: string; first_name: string; last_name: string; phone: string | null } | null;
+  contacts: { id: string; first_name: string; last_name: string; phone: string | null; email: string | null } | null;
 };
 
 export async function processPendingTextBlasts(admin: SupabaseClient, ownerId: string) {
@@ -73,16 +73,29 @@ export async function processPendingTextBlasts(admin: SupabaseClient, ownerId: s
 
     const { data: pending } = await admin
       .from("text_blast_recipients")
-      .select("id, contact_id, contacts(id, first_name, last_name, phone)")
+      .select("id, contact_id, contacts(id, first_name, last_name, phone, email)")
       .eq("blast_id", blast.id)
       .eq("status", "pending")
       .limit(remaining);
+
+    const greetsBy = usesFirstNameMergeField(blast.message);
 
     for (const recipient of (pending ?? []) as unknown as PendingRecipient[]) {
       const contact = recipient.contacts;
 
       if (!contact?.phone) {
         await admin.from("text_blast_recipients").update({ status: "skipped", error: "No phone number" }).eq("id", recipient.id);
+        continue;
+      }
+
+      // A contact created from a bare phone number (or email) with no name
+      // ever collected has first_name literally set to that phone/email as
+      // a placeholder - sending "Hi {{first_name}}" as-is would read as
+      // "Hi 5739992048." Only matters when the message actually greets by
+      // name; skipped (not sent with a blank/awkward substitute) so she can
+      // follow up with them by hand instead.
+      if (greetsBy && hasPlaceholderName(contact)) {
+        await admin.from("text_blast_recipients").update({ status: "skipped", error: "No name on file" }).eq("id", recipient.id);
         continue;
       }
 
