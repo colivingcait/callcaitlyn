@@ -84,6 +84,7 @@ export default async function TodayPage() {
           newLeadsWeek={today.statStrip.newLeadsWeek}
           hotCount={today.statStrip.hotCount}
           underContractCount={today.statStrip.underContractCount}
+          callsToday={today.statStrip.callsToday}
         />
       </div>
 

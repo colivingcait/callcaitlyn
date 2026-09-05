@@ -109,6 +109,7 @@ export function TodayMobile({
         hotCount={today.statStrip.hotCount}
         underContractCount={today.statStrip.underContractCount}
         underContractNet={today.commissionYear.underContractNet}
+        callsToday={today.statStrip.callsToday}
       />
     </div>
   );

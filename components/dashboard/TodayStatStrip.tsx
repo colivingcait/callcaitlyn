@@ -5,13 +5,16 @@ export function TodayStatStrip({
   newLeadsWeek,
   hotCount,
   underContractCount,
+  callsToday,
 }: {
   totalActive: number;
   newLeadsWeek: number;
   hotCount: number;
   underContractCount: number;
+  callsToday: number;
 }) {
   const stats = [
+    { label: "Calls today", value: callsToday },
     { label: "Active", value: totalActive },
     { label: "New this week", value: newLeadsWeek },
     { label: "Hot", value: hotCount },

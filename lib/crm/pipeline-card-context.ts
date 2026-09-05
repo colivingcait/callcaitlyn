@@ -25,8 +25,20 @@ export function getPipelineCardContext(
   if (stage?.is_under_contract) {
     const deal = dealOverride ?? extras.pendingDealByContact.get(contact.id)?.[0];
     if (deal) {
-      const parts = [deal.address, deal.expectedClosingDate ? `closing ${formatLocal(deal.expectedClosingDate, "MMM d")}` : null].filter(Boolean);
-      if (parts.length > 0) return { line: parts.join(" · "), quiet: false };
+      // A deal whose expected closing date has already passed with no
+      // status change looks identical to one closing next week otherwise -
+      // exactly the "which deals are about to blow up" gap that mattered
+      // most for a phone-first agent. Reuses the same quiet:true → red/bold
+      // treatment PipelineCard/PipelineMobileRow already apply for "gone
+      // quiet," so no UI change was needed to surface it.
+      const overdue = !!deal.expectedClosingDate && new Date(deal.expectedClosingDate) < new Date();
+      const closingLabel = deal.expectedClosingDate
+        ? overdue
+          ? `was closing ${formatLocal(deal.expectedClosingDate, "MMM d")} - past due`
+          : `closing ${formatLocal(deal.expectedClosingDate, "MMM d")}`
+        : null;
+      const parts = [deal.address, closingLabel].filter(Boolean);
+      if (parts.length > 0) return { line: parts.join(" · "), quiet: overdue };
     }
     return { line: CONTACT_TYPE_LABELS[contact.contact_type] ?? "", quiet: false };
   }

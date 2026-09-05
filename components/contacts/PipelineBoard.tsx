@@ -15,10 +15,19 @@ import type { PipelinePendingDeal, PipelineExtras } from "@/lib/data/pipeline";
 // hidden. Every other stage keeps a plain one-row-per-contact list.
 function rowsForStage(stage: PipelineStage, items: ContactWithRelations[], extras: PipelineExtras) {
   if (!stage.is_under_contract) return items.map((contact) => ({ contact, deal: undefined as PipelinePendingDeal | undefined }));
-  return items.flatMap((contact) => {
+  const rows = items.flatMap((contact) => {
     const deals = extras.pendingDealByContact.get(contact.id) ?? [];
     if (deals.length === 0) return [{ contact, deal: undefined as PipelinePendingDeal | undefined }];
     return deals.map((deal) => ({ contact, deal }));
+  });
+  // Soonest (and any already-overdue) closing date first - "which deals
+  // are about to blow up" is the actual question this stage answers, not
+  // whatever order contacts happened to load in. No date at all sorts
+  // last, not first, since it's the least urgent case, not the most.
+  return rows.sort((a, b) => {
+    const aDate = a.deal?.expectedClosingDate ? new Date(a.deal.expectedClosingDate).getTime() : Infinity;
+    const bDate = b.deal?.expectedClosingDate ? new Date(b.deal.expectedClosingDate).getTime() : Infinity;
+    return aDate - bDate;
   });
 }
 

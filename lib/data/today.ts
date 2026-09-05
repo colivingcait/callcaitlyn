@@ -206,10 +206,18 @@ function daysAgo(n: number) {
 
 async function getStatStrip(stages: PipelineStage[]) {
   const supabase = await createClient();
-  const [{ data: contacts }, { count: newLeadsWeek }] = await Promise.all([
+  // "How many calls have I actually made today" - the single most basic
+  // accountability number for a phone-first agent working in short bursts,
+  // and nothing tracked it anywhere. Queried over the last 36h then
+  // filtered to true calendar-day-in-Eastern-time with isTodayLocal (same
+  // pattern getCallsGroup already uses), rather than a UTC day boundary
+  // that would cut off early-morning/late-evening calls incorrectly.
+  const [{ data: contacts }, { count: newLeadsWeek }, { data: recentCalls }] = await Promise.all([
     supabase.from("contacts").select("id, stage_id").eq("archived", false),
     supabase.from("contacts").select("id", { count: "exact", head: true }).eq("archived", false).gte("lead_date", daysAgo(7)),
+    supabase.from("activities").select("occurred_at").eq("type", "call").eq("direction", "outbound").gte("occurred_at", daysAgo(1.5)),
   ]);
+  const callsToday = (recentCalls ?? []).filter((c) => isTodayLocal(c.occurred_at as string)).length;
 
   const stageCounts = new Map<string, number>();
   for (const c of contacts ?? []) {
@@ -223,7 +231,7 @@ async function getStatStrip(stages: PipelineStage[]) {
   const underContractStage = stages.find((s) => s.is_under_contract);
   const underContractCount = underContractStage ? stageCounts.get(underContractStage.id) ?? 0 : 0;
 
-  return { totalActive, newLeadsWeek: newLeadsWeek ?? 0, hotCount, underContractCount, stageCounts };
+  return { totalActive, newLeadsWeek: newLeadsWeek ?? 0, hotCount, underContractCount, stageCounts, callsToday };
 }
 
 async function getCommissionYearSummary() {
