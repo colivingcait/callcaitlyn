@@ -3,6 +3,7 @@ import { findOrCreateContact, addTagByName } from "@/lib/crm/find-or-create-cont
 import { upsertActivity } from "@/lib/crm/activities";
 import { recordEventAttendance } from "@/lib/crm/events";
 import { resolveNearestEbEvent, type EventSeriesKey } from "@/lib/crm/nearest-event";
+import { sendCheckinRecapEmail } from "@/lib/checkin/send-recap-email";
 
 export const SERIES_TAG: Record<EventSeriesKey, string> = { house_hacking: "House Hacking", womens_rei: "Women's REI" };
 export const SERIES_LABEL: Record<EventSeriesKey, string> = { house_hacking: "House Hacking Meetup", womens_rei: "Women's REI Meetup" };
@@ -37,10 +38,19 @@ export async function processCheckIn(
   const eventName = nearest.eventName ?? SERIES_LABEL[series];
 
   let contactId = input.contactId ?? null;
+  // Tracked separately from input.email/firstName so the recap email below
+  // gets the contact's real name/email on file even on the "matched" flow,
+  // where input.firstName/email only carry newly-typed corrections (blank
+  // when nothing needed fixing).
+  let contactEmail = input.email.trim() || null;
+  let contactFirstName = input.firstName.trim() || null;
 
   if (contactId) {
-    const { data: existing } = await admin.from("contacts").select("id, email, phone").eq("id", contactId).maybeSingle();
+    const { data: existing } = await admin.from("contacts").select("id, first_name, email, phone").eq("id", contactId).maybeSingle();
     if (!existing) return { ok: false, error: "That contact no longer exists - try searching again." };
+
+    contactEmail = existing.email || contactEmail;
+    contactFirstName = existing.first_name || contactFirstName;
 
     const patch: Record<string, string> = {};
     if (!existing.email && input.email) patch.email = input.email;
@@ -82,6 +92,13 @@ export async function processCheckIn(
   });
 
   await recordEventAttendance(admin, contactId, eventName, now);
+
+  // Only on a genuine first check-in for this event - a resubmission (e.g.
+  // someone checking in twice, or the "That's not me" flow retried) would
+  // otherwise re-send the same recap.
+  if (activity.wasCreated) {
+    await sendCheckinRecapEmail(admin, ownerId, { id: contactId, email: contactEmail, phone: input.phone.trim() || null, first_name: contactFirstName }, series, eventName);
+  }
 
   return { ok: true, alreadyCheckedIn: !activity.wasCreated, contactId };
 }

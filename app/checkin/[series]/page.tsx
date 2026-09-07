@@ -3,72 +3,14 @@
 import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { searchContacts, submitCheckIn, type ContactMatch } from "./actions";
+import { CAITLYN_CARD, CONTACT_CARDS, SERIES_EVENTS_URL } from "@/lib/checkin/contact-cards";
 
 const SERIES_TITLES: Record<string, string> = {
   house_hacking: "House Hacking Meetup",
   womens_rei: "Women's REI Meetup",
 };
 
-// "See more events" destination per series - real Eventbrite organizer/
-// event pages already in use elsewhere in her ecosystem, not guessed.
-const SERIES_EVENTS_URL: Record<string, string> = {
-  house_hacking: "https://www.eventbrite.com/cc/house-hacking-atl-4861227",
-  womens_rei: "https://www.eventbrite.com/e/women-real-estate-investors-meetup-tickets-1990612059255",
-};
-
 const HOW_HEARD_OPTIONS = ["Eventbrite", "Meetup.com", "Facebook", "Instagram/Social Media", "Another attendee", "From the speaker/sponsor", "Other"];
-
-type ContactCard = {
-  name: string;
-  role: string;
-  photo: string;
-  phone?: string;
-  email?: string;
-  bookingUrl?: string;
-  // CSS object-position for the circular thumbnail crop - only needed when
-  // the source photo isn't a tight square headshot, so a straight center
-  // crop cuts the face off-center (e.g. a tall portrait with lots of
-  // hair/torso below the face). Defaults to "center" when omitted.
-  photoPosition?: string;
-};
-
-// Caitlyn's card is identical on both series - only her "book a call" link
-// differs from the other sponsors' cards, which just show contact info.
-const CAITLYN_CARD: ContactCard = {
-  name: "Caitlyn Verdugo",
-  role: "Realtor | Investor",
-  photo: "/images/checkin/caitlyn.jpg",
-  phone: "(678) 884-8494",
-  email: "cv.sellshomes@gmail.com",
-  bookingUrl: "/book",
-};
-
-// Who shows up in "Get in touch" on the success screen, per series.
-const CONTACT_CARDS: Record<string, ContactCard[]> = {
-  house_hacking: [
-    CAITLYN_CARD,
-    {
-      name: "Krishen Shah",
-      role: "Mortgage Banker | NMLS #1958810, Highland Mortgage",
-      photo: "/images/checkin/krishen.png",
-      photoPosition: "center 20%",
-      phone: "(706) 399-8289",
-      email: "krishen.shah@highlandmtg.com",
-    },
-    {
-      name: "Whitney Mckee",
-      role: "Licensed Insurance Agent, Allstate - Lion Heart Team",
-      photo: "/images/checkin/whitney.jpeg",
-      photoPosition: "center 15%",
-      phone: "(678) 933-9981",
-      email: "whitneymckee1@allstate.com",
-    },
-  ],
-  womens_rei: [
-    CAITLYN_CARD,
-    { name: "Jasmine Brown", role: "Hard Money Lender, Conventus Lending", photo: "/images/checkin/jasmine.png", phone: "(404) 789-5791", email: "jbrown@cvlending.com" },
-  ],
-};
 
 const NETWORKING_TIPS = [
   "Ask one person tonight what deal they're most excited about right now.",
@@ -102,10 +44,10 @@ export default function CheckInPage() {
   const params = useParams<{ series: string }>();
   const series = params.series;
   const title = SERIES_TITLES[series] ?? "Meetup";
-  const eventsUrl = SERIES_EVENTS_URL[series];
   const validSeries = series === "house_hacking" || series === "womens_rei";
+  const eventsUrl = series === "house_hacking" || series === "womens_rei" ? SERIES_EVENTS_URL[series] : undefined;
   const tip = useMemo(() => NETWORKING_TIPS[Math.floor(Math.random() * NETWORKING_TIPS.length)], []);
-  const contactCards = CONTACT_CARDS[series] ?? [];
+  const contactCards = series === "house_hacking" || series === "womens_rei" ? CONTACT_CARDS[series] : [];
   const [selectedCard, setSelectedCard] = useState<string | null>(CAITLYN_CARD.name);
   const [phoneChoiceOpen, setPhoneChoiceOpen] = useState(false);
 
