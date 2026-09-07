@@ -49,8 +49,10 @@ export function renderCheckinRecapEmail(payload: CheckinRecapPayload): string {
 
   return `
     <p>${greeting}</p>
-    <p>Thanks for coming out to ${esc(payload.eventName)}! Here's how to reach everyone from tonight, in case you didn't get a chance to save it in the room:</p>
+    <p>Thanks for coming out to the ${esc(payload.eventName)}! Here's how to reach everyone from tonight, in case you didn't get a chance to save it in the room:</p>
     ${cardRows}
+    <p>Thanks again for being part of it - hope to see you at the next one!</p>
     ${payload.eventsUrl ? `<p><a href="${esc(payload.eventsUrl)}">See more upcoming events →</a></p>` : ""}
+    <p>— Caitlyn</p>
   `;
 }

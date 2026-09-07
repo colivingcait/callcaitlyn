@@ -29,7 +29,7 @@ export async function sendCheckinRecapEmail(
       eventsUrl: SERIES_EVENTS_URL[series],
     });
 
-    const result = await sendGmailMessage(admin, ownerId, contact.email, `Thanks for coming to ${eventName}!`, html);
+    const result = await sendGmailMessage(admin, ownerId, contact.email, `Thanks for coming to the ${eventName}!`, html);
     if (!result.ok) {
       console.error("Check-in recap email failed", result.error);
       return;
@@ -39,7 +39,7 @@ export async function sendCheckinRecapEmail(
       type: "email",
       direction: "outbound",
       occurred_at: new Date().toISOString(),
-      body: `Thanks for coming to ${eventName}!`,
+      body: `Thanks for coming to the ${eventName}!`,
       metadata: { gmail_message_id: result.messageId, checkin_recap: true, series },
     });
   } catch (err) {
