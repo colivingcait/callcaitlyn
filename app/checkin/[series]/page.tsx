@@ -345,15 +345,14 @@ export default function CheckInPage() {
                           <p className="text-sm text-neutral-500">{c.role}</p>
                           <div className="mt-2 space-y-1">
                             {c.phone && (
-                              <div className="flex items-center gap-3">
-                                <span className="text-base font-medium text-neutral-700">{c.phone}</span>
-                                <a href={`tel:${c.phone.replace(/[^\d+]/g, "")}`} className="text-sm font-semibold text-brand-600 underline underline-offset-2">
-                                  Call
+                              <>
+                                <a href={`tel:${c.phone.replace(/[^\d+]/g, "")}`} className="block text-base font-medium text-brand-600">
+                                  Call {c.phone}
                                 </a>
-                                <a href={`sms:${c.phone.replace(/[^\d+]/g, "")}`} className="text-sm font-semibold text-brand-600 underline underline-offset-2">
-                                  Text
+                                <a href={`sms:${c.phone.replace(/[^\d+]/g, "")}`} className="block text-base font-medium text-brand-600">
+                                  Text {c.phone}
                                 </a>
-                              </div>
+                              </>
                             )}
                             {c.email && (
                               <a href={`mailto:${c.email}`} className="block text-base font-medium text-brand-600">
