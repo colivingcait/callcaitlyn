@@ -96,8 +96,12 @@ export function ApprovePanel({
     }
 
     const nameParts = (p.name ?? p.email ?? "Unknown").trim().split(/\s+/);
-    const { data: firstStage } = await supabase.from("pipeline_stages").select("id").order("sort_order", { ascending: true }).limit(1).maybeSingle();
-    const { data: created } = await supabase
+    const { data: firstStage, error: stageError } = await supabase.from("pipeline_stages").select("id").order("sort_order", { ascending: true }).limit(1).maybeSingle();
+    if (stageError) {
+      setAddingContact(null);
+      return;
+    }
+    const { data: created, error: createError } = await supabase
       .from("contacts")
       .insert({
         owner_id: user.id,
@@ -110,14 +114,18 @@ export function ApprovePanel({
       })
       .select("id")
       .single();
-    if (!created) {
+    if (createError || !created) {
       setAddingContact(null);
       return;
     }
 
     const updated = participants.map((row, i) => (i === index ? { ...row, isContact: true, contactId: created.id } : row));
+    const { error: updateError } = await supabase.from("meeting_transcripts").update({ participants: updated }).eq("id", transcript.id);
+    if (updateError) {
+      setAddingContact(null);
+      return;
+    }
     setParticipants(updated);
-    await supabase.from("meeting_transcripts").update({ participants: updated }).eq("id", transcript.id);
     setAddingContact(null);
     router.refresh();
   }

@@ -12,6 +12,8 @@ import { listTextTemplates } from "@/lib/data/text-templates";
 import { PipelineStagesAndTags } from "@/components/settings/PipelineStagesAndTags";
 import { TextTemplatesManager } from "@/components/settings/TextTemplatesManager";
 import { ConnectionsCard, type ConnectionRow } from "@/components/settings/ConnectionsCard";
+import { QaReportCard } from "@/components/settings/QaReportCard";
+import { getQaReport } from "@/lib/qa/checks";
 import { NotificationsCard } from "@/components/settings/NotificationsCard";
 import { GmailConnect } from "@/components/settings/GmailConnect";
 import { QuoSyncBackfill } from "@/components/settings/QuoSyncBackfill";
@@ -41,7 +43,7 @@ export default async function SettingsPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const [stages, tags, textTemplates, gmailAccount, warmSettings, granolaMatchingSettings, latestRate, stageCountRows] = await Promise.all([
+  const [stages, tags, textTemplates, gmailAccount, warmSettings, granolaMatchingSettings, latestRate, stageCountRows, qaSections] = await Promise.all([
     listStages(),
     listTags(),
     listTextTemplates(),
@@ -57,6 +59,7 @@ export default async function SettingsPage({
       .maybeSingle()
       .then((r) => r.data),
     supabase.from("contacts").select("stage_id").eq("archived", false).then((r) => r.data),
+    getQaReport(),
   ]);
 
   // Opt-outs used to be visible only one contact at a time (ConsentStatus
@@ -179,6 +182,8 @@ export default async function SettingsPage({
       )}
 
       <ConnectionsCard rows={connectionRows} />
+
+      <QaReportCard sections={qaSections} />
 
       <NotificationsCard warmSettings={warmSettings} vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY} />
 
