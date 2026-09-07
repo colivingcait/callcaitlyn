@@ -38,21 +38,21 @@ const CONTACT_CARDS: Record<string, ContactCard[]> = {
     {
       name: "Krishen Shah",
       role: "Mortgage Banker | NMLS #1958810, Highland Mortgage",
-      photo: "/images/checkin/krishen.jpg",
+      photo: "/images/checkin/krishen.png",
       phone: "(706) 399-8289",
       email: "krishen.shah@highlandmtg.com",
     },
     {
       name: "Whitney Mckee",
       role: "Licensed Insurance Agent, Allstate - Lion Heart Team",
-      photo: "/images/checkin/whitney.jpg",
+      photo: "/images/checkin/whitney.jpeg",
       phone: "(678) 933-9981",
       email: "whitneymckee1@allstate.com",
     },
   ],
   womens_rei: [
     CAITLYN_CARD,
-    { name: "Jasmine Brown", role: "Hard Money Lender, Conventus Lending", photo: "/images/checkin/jasmine.jpg", phone: "(404) 789-5791", email: "jbrown@cvlending.com" },
+    { name: "Jasmine Brown", role: "Hard Money Lender, Conventus Lending", photo: "/images/checkin/jasmine.png", phone: "(404) 789-5791", email: "jbrown@cvlending.com" },
   ],
 };
 
