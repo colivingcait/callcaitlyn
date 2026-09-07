@@ -18,15 +18,40 @@ const SERIES_EVENTS_URL: Record<string, string> = {
 
 const HOW_HEARD_OPTIONS = ["Eventbrite", "Meetup.com", "Facebook", "Instagram/Social Media", "Another attendee", "From the speaker/sponsor", "Other"];
 
-type ContactCard = { name: string; role: string; photo: string; phone?: string; email?: string };
+type ContactCard = { name: string; role: string; photo: string; phone?: string; email?: string; bookingUrl?: string };
+
+// Caitlyn's card is identical on both series - only her "book a call" link
+// differs from the other sponsors' cards, which just show contact info.
+const CAITLYN_CARD: ContactCard = {
+  name: "Caitlyn Verdugo",
+  role: "Realtor | Investor",
+  photo: "/images/checkin/caitlyn.jpg",
+  phone: "(678) 884-8494",
+  email: "cv.sellshomes@gmail.com",
+  bookingUrl: "/book",
+};
 
 // Who shows up in "Get in touch" on the success screen, per series.
 const CONTACT_CARDS: Record<string, ContactCard[]> = {
   house_hacking: [
-    { name: "Caitlyn Verdugo", role: "Realtor | Investor", photo: "/images/checkin/caitlyn.jpg", phone: "(678) 884-8494", email: "cv.sellshomes@gmail.com" },
+    CAITLYN_CARD,
+    {
+      name: "Krishen Shah",
+      role: "Mortgage Banker | NMLS #1958810, Highland Mortgage",
+      photo: "/images/checkin/krishen.jpg",
+      phone: "(706) 399-8289",
+      email: "krishen.shah@highlandmtg.com",
+    },
+    {
+      name: "Whitney Mckee",
+      role: "Licensed Insurance Agent, Allstate - Lion Heart Team",
+      photo: "/images/checkin/whitney.jpg",
+      phone: "(678) 933-9981",
+      email: "whitneymckee1@allstate.com",
+    },
   ],
   womens_rei: [
-    { name: "Caitlyn Verdugo", role: "Realtor | Investor", photo: "/images/checkin/caitlyn.jpg", phone: "(678) 884-8494", email: "cv.sellshomes@gmail.com" },
+    CAITLYN_CARD,
     { name: "Jasmine Brown", role: "Hard Money Lender, Conventus Lending", photo: "/images/checkin/jasmine.jpg", phone: "(404) 789-5791", email: "jbrown@cvlending.com" },
   ],
 };
@@ -288,7 +313,7 @@ export default function CheckInPage() {
                     </button>
                   ) : (
                     <div className="space-y-3 text-left">
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className={`grid gap-3 ${contactCards.length >= 3 ? "grid-cols-3" : "grid-cols-2"}`}>
                         {contactCards.map((c) => (
                           <button
                             key={c.name}
@@ -316,6 +341,11 @@ export default function CheckInPage() {
                               {c.email && (
                                 <a href={`mailto:${c.email}`} className="block text-base font-medium text-brand-600">
                                   {c.email}
+                                </a>
+                              )}
+                              {c.bookingUrl && (
+                                <a href={c.bookingUrl} className="block text-base font-medium text-brand-600 underline underline-offset-2">
+                                  Book a call with me →
                                 </a>
                               )}
                             </div>
