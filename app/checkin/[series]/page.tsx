@@ -107,6 +107,7 @@ export default function CheckInPage() {
   const tip = useMemo(() => NETWORKING_TIPS[Math.floor(Math.random() * NETWORKING_TIPS.length)], []);
   const contactCards = CONTACT_CARDS[series] ?? [];
   const [selectedCard, setSelectedCard] = useState<string | null>(CAITLYN_CARD.name);
+  const [phoneChoiceOpen, setPhoneChoiceOpen] = useState(false);
 
   const [step, setStep] = useState<Step>({ name: "name-entry" });
   const [firstName, setFirstName] = useState("");
@@ -323,7 +324,10 @@ export default function CheckInPage() {
                       {contactCards.map((c) => (
                         <button
                           key={c.name}
-                          onClick={() => setSelectedCard(selectedCard === c.name ? null : c.name)}
+                          onClick={() => {
+                            setSelectedCard(selectedCard === c.name ? null : c.name);
+                            setPhoneChoiceOpen(false);
+                          }}
                           className={`rounded-2xl border-2 p-3 text-center ${selectedCard === c.name ? "border-brand-500 bg-brand-50" : "border-neutral-200"}`}
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -345,14 +349,25 @@ export default function CheckInPage() {
                           <p className="text-sm text-neutral-500">{c.role}</p>
                           <div className="mt-2 space-y-1">
                             {c.phone && (
-                              <>
-                                <a href={`tel:${c.phone.replace(/[^\d+]/g, "")}`} className="block text-base font-medium text-brand-600">
-                                  Call {c.phone}
-                                </a>
-                                <a href={`sms:${c.phone.replace(/[^\d+]/g, "")}`} className="block text-base font-medium text-brand-600">
-                                  Text {c.phone}
-                                </a>
-                              </>
+                              <div>
+                                <button
+                                  type="button"
+                                  onClick={() => setPhoneChoiceOpen((v) => !v)}
+                                  className="block text-base font-medium text-brand-600"
+                                >
+                                  {c.phone}
+                                </button>
+                                {phoneChoiceOpen && (
+                                  <div className="mt-1 flex gap-4">
+                                    <a href={`tel:${c.phone.replace(/[^\d+]/g, "")}`} className="text-sm font-semibold text-brand-600 underline underline-offset-2">
+                                      Call
+                                    </a>
+                                    <a href={`sms:${c.phone.replace(/[^\d+]/g, "")}`} className="text-sm font-semibold text-brand-600 underline underline-offset-2">
+                                      Text
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
                             )}
                             {c.email && (
                               <a href={`mailto:${c.email}`} className="block text-base font-medium text-brand-600">
