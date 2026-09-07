@@ -67,3 +67,13 @@ export const SERIES_EVENTS_URL: Record<EventSeriesKey, string> = {
   house_hacking: "https://www.eventbrite.com/cc/house-hacking-atl-4861227",
   womens_rei: "https://www.eventbrite.com/e/women-real-estate-investors-meetup-tickets-1990612059255",
 };
+
+// House Hacking's own community links - only that series has a Facebook
+// group and standalone site today, so this is deliberately a partial map
+// rather than a Record<EventSeriesKey, ...>.
+export const SERIES_COMMUNITY_LINKS: Partial<Record<EventSeriesKey, { facebookUrl: string; websiteUrl: string }>> = {
+  house_hacking: {
+    facebookUrl: "https://www.facebook.com/groups/househackingatlanta",
+    websiteUrl: "https://househackingatl.com",
+  },
+};

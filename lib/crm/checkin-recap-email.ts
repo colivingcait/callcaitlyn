@@ -16,6 +16,9 @@ export type CheckinRecapPayload = {
   eventName: string;
   cards: ContactCard[];
   eventsUrl?: string;
+  // Only House Hacking has a Facebook group and standalone site today - see
+  // SERIES_COMMUNITY_LINKS in lib/checkin/contact-cards.ts.
+  communityLinks?: { facebookUrl: string; websiteUrl: string };
 };
 
 // Sent once per genuine check-in (see lib/checkin/process-checkin.ts) so
@@ -51,6 +54,11 @@ export function renderCheckinRecapEmail(payload: CheckinRecapPayload): string {
     <p>${greeting}</p>
     <p>Thanks for coming out to the ${esc(payload.eventName)}! Here's how to reach everyone from tonight, in case you didn't get a chance to save it in the room:</p>
     ${cardRows}
+    ${
+      payload.communityLinks
+        ? `<p>Join the <a href="${esc(payload.communityLinks.facebookUrl)}">Facebook group</a> to keep the conversation going, and check out <a href="${esc(payload.communityLinks.websiteUrl)}">${esc(payload.communityLinks.websiteUrl.replace(/^https?:\/\//, ""))}</a> for more.</p>`
+        : ""
+    }
     <p>Thanks again for being part of it - hope to see you at the next one!</p>
     ${payload.eventsUrl ? `<p><a href="${esc(payload.eventsUrl)}">See more upcoming events →</a></p>` : ""}
     <p>— Caitlyn</p>

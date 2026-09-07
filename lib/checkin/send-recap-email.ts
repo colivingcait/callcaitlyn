@@ -3,7 +3,7 @@ import { sendGmailMessage } from "@/lib/google/send-email";
 import { upsertActivity } from "@/lib/crm/activities";
 import { hasPlaceholderName } from "@/lib/crm/merge-fields";
 import { renderCheckinRecapEmail } from "@/lib/crm/checkin-recap-email";
-import { CONTACT_CARDS, SERIES_EVENTS_URL } from "@/lib/checkin/contact-cards";
+import { CONTACT_CARDS, SERIES_EVENTS_URL, SERIES_COMMUNITY_LINKS } from "@/lib/checkin/contact-cards";
 import type { EventSeriesKey } from "@/lib/crm/nearest-event";
 
 // Best-effort, non-blocking: a Gmail hiccup (not connected, rate limited,
@@ -27,6 +27,7 @@ export async function sendCheckinRecapEmail(
       eventName,
       cards: CONTACT_CARDS[series],
       eventsUrl: SERIES_EVENTS_URL[series],
+      communityLinks: SERIES_COMMUNITY_LINKS[series],
     });
 
     const result = await sendGmailMessage(admin, ownerId, contact.email, `Thanks for coming to the ${eventName}!`, html);
