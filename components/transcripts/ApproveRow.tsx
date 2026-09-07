@@ -82,6 +82,8 @@ function describe(p: ProposedChange, stages: PipelineStage[]) {
   }
 }
 
+type WriteResult = { ok: true } | { ok: false; error: string };
+
 export function ApproveRow({
   proposal,
   stages,
@@ -90,8 +92,8 @@ export function ApproveRow({
 }: {
   proposal: ProposedChange;
   stages: PipelineStage[];
-  onAccept: (p: ProposedChange) => Promise<void>;
-  onReject: (p: ProposedChange) => Promise<void>;
+  onAccept: (p: ProposedChange) => Promise<WriteResult>;
+  onReject: (p: ProposedChange) => Promise<WriteResult>;
 }) {
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(() => {
@@ -103,6 +105,7 @@ export function ApproveRow({
   });
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<"accepted" | "rejected" | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const { proposed, meta } = describe(proposal, stages);
   const isEditableText = ["decision_maker", "objection", "note", "task", "areas_of_interest", "showing"].includes(proposal.field);
@@ -110,20 +113,24 @@ export function ApproveRow({
 
   async function handleAccept() {
     setBusy(true);
+    setError(null);
     if (editing && isEditableText) {
       const key = proposal.field === "task" ? "title" : proposal.field === "areas_of_interest" ? "area" : proposal.field === "showing" ? "address" : "text";
       proposal.proposed_value = { ...(proposal.proposed_value as Record<string, unknown>), [key]: editValue };
     }
-    await onAccept(proposal);
+    const result = await onAccept(proposal);
     setBusy(false);
-    setDone("accepted");
+    if (result.ok) setDone("accepted");
+    else setError(result.error);
   }
 
   async function handleReject() {
     setBusy(true);
-    await onReject(proposal);
+    setError(null);
+    const result = await onReject(proposal);
     setBusy(false);
-    setDone("rejected");
+    if (result.ok) setDone("rejected");
+    else setError(result.error);
   }
 
   if (done) {
@@ -184,6 +191,7 @@ export function ApproveRow({
           {busy ? "Saving…" : "Keep this"}
         </button>
       )}
+      {error && <p className="mt-2 text-sm font-medium text-red-600">Couldn&apos;t save: {error} - try again.</p>}
     </div>
   );
 }

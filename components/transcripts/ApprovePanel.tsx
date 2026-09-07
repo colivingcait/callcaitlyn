@@ -57,6 +57,7 @@ export function ApprovePanel({
   const [dealModal, setDealModal] = useState<{ id: string; mode: DealModalMode } | null>(null);
   const [pendingCleanup, setPendingCleanup] = useState<PendingDealSummary[] | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saveAllError, setSaveAllError] = useState<string | null>(null);
   const [participants, setParticipants] = useState(transcript.participants ?? []);
   const [addingContact, setAddingContact] = useState<number | null>(null);
   const [recapOpen, setRecapOpen] = useState(false);
@@ -128,43 +129,56 @@ export function ApprovePanel({
     setRecapSent(true);
   }
 
-  async function writeProposal(p: ProposedChange) {
+  // Every branch below used to fire-and-forget its Supabase call - a
+  // denied/failed write left the UI marking the row "Saved" (and the
+  // proposed_changes row "accepted") with nothing actually changed on the
+  // contact, and no way to tell short of checking the record by hand.
+  // Now every write is checked; the first failure aborts immediately, and
+  // neither the audit-trail activity nor the proposed_changes status flips
+  // to accepted unless the real field write actually succeeded.
+  async function writeProposal(p: ProposedChange): Promise<{ ok: true } | { ok: false; error: string }> {
     const supabase = createClient();
     const currentStage = stages.find((s) => s.id === contactStageId);
 
     switch (p.field) {
       case "budget": {
         const v = p.proposed_value as { min: number | null; max: number | null };
-        await supabase.from("contacts").update({ budget_min: v.min, budget_max: v.max }).eq("id", contactId);
+        const { error } = await supabase.from("contacts").update({ budget_min: v.min, budget_max: v.max }).eq("id", contactId);
+        if (error) return { ok: false, error: error.message };
         break;
       }
       case "timeline": {
         const v = p.proposed_value as { timeline: string };
-        await supabase.from("contacts").update({ timeline: v.timeline }).eq("id", contactId);
+        const { error } = await supabase.from("contacts").update({ timeline: v.timeline }).eq("id", contactId);
+        if (error) return { ok: false, error: error.message };
         break;
       }
       case "areas_of_interest": {
         const v = p.proposed_value as { area: string };
-        const { data: c } = await supabase.from("contacts").select("areas_of_interest").eq("id", contactId).maybeSingle();
+        const { data: c, error: readError } = await supabase.from("contacts").select("areas_of_interest").eq("id", contactId).maybeSingle();
+        if (readError) return { ok: false, error: readError.message };
         const existing: string[] = c?.areas_of_interest ?? [];
         if (!existing.includes(v.area)) {
-          await supabase.from("contacts").update({ areas_of_interest: [...existing, v.area] }).eq("id", contactId);
+          const { error } = await supabase.from("contacts").update({ areas_of_interest: [...existing, v.area] }).eq("id", contactId);
+          if (error) return { ok: false, error: error.message };
         }
         break;
       }
       case "decision_maker": {
         const v = p.proposed_value as { text: string };
-        await supabase.from("contacts").update({ decision_maker: v.text }).eq("id", contactId);
+        const { error } = await supabase.from("contacts").update({ decision_maker: v.text }).eq("id", contactId);
+        if (error) return { ok: false, error: error.message };
         break;
       }
       case "objection": {
         const v = p.proposed_value as { text: string };
-        await supabase.from("contacts").update({ objection: v.text }).eq("id", contactId);
+        const { error } = await supabase.from("contacts").update({ objection: v.text }).eq("id", contactId);
+        if (error) return { ok: false, error: error.message };
         break;
       }
       case "note": {
         const v = p.proposed_value as { text: string };
-        await supabase.from("activities").insert({
+        const { error } = await supabase.from("activities").insert({
           owner_id: ownerId,
           contact_id: contactId,
           type: "note",
@@ -172,16 +186,18 @@ export function ApprovePanel({
           source: "ai",
           body: v.text,
         });
+        if (error) return { ok: false, error: error.message };
         break;
       }
       case "task": {
         const v = p.proposed_value as { title: string; dueAt: string | null };
-        await supabase.from("tasks").insert({ owner_id: ownerId, contact_id: contactId, title: v.title, due_at: v.dueAt });
+        const { error } = await supabase.from("tasks").insert({ owner_id: ownerId, contact_id: contactId, title: v.title, due_at: v.dueAt });
+        if (error) return { ok: false, error: error.message };
         break;
       }
       case "showing": {
         const v = p.proposed_value as { address: string };
-        await supabase.from("activities").insert({
+        const { error } = await supabase.from("activities").insert({
           owner_id: ownerId,
           contact_id: contactId,
           type: "showing",
@@ -189,19 +205,22 @@ export function ApprovePanel({
           source: "ai",
           body: v.address,
         });
+        if (error) return { ok: false, error: error.message };
         break;
       }
       case "stage": {
         const v = p.proposed_value as { stageId: string; stageName: string };
         const newStage = stages.find((s) => s.id === v.stageId);
-        const { dealId, dealMode, pendingAtRisk } = await applyStageChange(supabase, ownerId, contactId, currentStage, newStage);
+        const { error, dealId, dealMode, pendingAtRisk } = await applyStageChange(supabase, ownerId, contactId, currentStage, newStage);
+        if (error) return { ok: false, error: error.message };
         if (dealId && dealMode) setDealModal({ id: dealId, mode: dealMode });
         if (pendingAtRisk) setPendingCleanup(pendingAtRisk);
         break;
       }
       case "tag": {
         const v = p.proposed_value as { tagId: string; name: string };
-        await supabase.from("contact_tags").upsert({ contact_id: contactId, tag_id: v.tagId }, { onConflict: "contact_id,tag_id", ignoreDuplicates: true });
+        const { error } = await supabase.from("contact_tags").upsert({ contact_id: contactId, tag_id: v.tagId }, { onConflict: "contact_id,tag_id", ignoreDuplicates: true });
+        if (error) return { ok: false, error: error.message };
         break;
       }
     }
@@ -209,7 +228,7 @@ export function ApprovePanel({
     // Every accept logs one activity noting where it came from, regardless
     // of field - "Saved changes show up in his activity as 'updated from
     // the Aug 27 call.'"
-    await supabase.from("activities").insert({
+    const { error: logError } = await supabase.from("activities").insert({
       owner_id: ownerId,
       contact_id: contactId,
       type: "status_change",
@@ -217,13 +236,18 @@ export function ApprovePanel({
       source: "ai",
       body: `Updated from the ${new Date(transcript.occurred_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })} ${SOURCE_LABEL[transcript.source].toLowerCase()}`,
     });
+    if (logError) return { ok: false, error: logError.message };
 
-    await supabase.from("proposed_changes").update({ status: "accepted" }).eq("id", p.id);
+    const { error: statusError } = await supabase.from("proposed_changes").update({ status: "accepted" }).eq("id", p.id);
+    if (statusError) return { ok: false, error: statusError.message };
+
+    return { ok: true };
   }
 
-  async function rejectProposal(p: ProposedChange) {
+  async function rejectProposal(p: ProposedChange): Promise<{ ok: true } | { ok: false; error: string }> {
     const supabase = createClient();
-    await supabase.from("proposed_changes").update({ status: "rejected" }).eq("id", p.id);
+    const { error } = await supabase.from("proposed_changes").update({ status: "rejected" }).eq("id", p.id);
+    return error ? { ok: false, error: error.message } : { ok: true };
   }
 
   function removeFromList(id: string) {
@@ -231,31 +255,53 @@ export function ApprovePanel({
   }
 
   async function handleAccept(p: ProposedChange) {
-    await writeProposal(p);
-    removeFromList(p.id);
-    router.refresh();
+    const result = await writeProposal(p);
+    if (result.ok) {
+      removeFromList(p.id);
+      router.refresh();
+    }
+    return result;
   }
 
   async function handleReject(p: ProposedChange) {
-    await rejectProposal(p);
-    removeFromList(p.id);
-    router.refresh();
+    const result = await rejectProposal(p);
+    if (result.ok) {
+      removeFromList(p.id);
+      router.refresh();
+    }
+    return result;
   }
 
   async function saveAll() {
     setSaving(true);
-    for (const p of proposals) await writeProposal(p);
-    setProposals([]);
+    setSaveAllError(null);
+    let failures = 0;
+    for (const p of proposals) {
+      const result = await writeProposal(p);
+      if (result.ok) removeFromList(p.id);
+      else failures++;
+    }
     setSaving(false);
     router.refresh();
+    if (failures > 0) {
+      setSaveAllError(`${failures} of ${proposals.length} couldn't be saved - see which below and try again.`);
+    }
   }
 
   async function saveNothing() {
     setSaving(true);
-    for (const p of proposals) await rejectProposal(p);
-    setProposals([]);
+    setSaveAllError(null);
+    let failures = 0;
+    for (const p of proposals) {
+      const result = await rejectProposal(p);
+      if (result.ok) removeFromList(p.id);
+      else failures++;
+    }
     setSaving(false);
     router.refresh();
+    if (failures > 0) {
+      setSaveAllError(`${failures} of ${proposals.length} couldn't be skipped - see which below and try again.`);
+    }
   }
 
   if (proposals.length === 0) return null;
@@ -356,6 +402,10 @@ export function ApprovePanel({
             </div>
           )}
         </div>
+      )}
+
+      {saveAllError && (
+        <div className="border-t border-neutral-100 bg-red-50 px-[18px] py-2.5 text-sm font-medium text-red-700">{saveAllError}</div>
       )}
 
       <div className="flex flex-wrap items-center gap-2.5 border-t border-neutral-100 px-[18px] py-4">
