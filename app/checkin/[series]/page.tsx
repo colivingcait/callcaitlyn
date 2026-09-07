@@ -18,7 +18,19 @@ const SERIES_EVENTS_URL: Record<string, string> = {
 
 const HOW_HEARD_OPTIONS = ["Eventbrite", "Meetup.com", "Facebook", "Instagram/Social Media", "Another attendee", "From the speaker/sponsor", "Other"];
 
-type ContactCard = { name: string; role: string; photo: string; phone?: string; email?: string; bookingUrl?: string };
+type ContactCard = {
+  name: string;
+  role: string;
+  photo: string;
+  phone?: string;
+  email?: string;
+  bookingUrl?: string;
+  // CSS object-position for the circular thumbnail crop - only needed when
+  // the source photo isn't a tight square headshot, so a straight center
+  // crop cuts the face off-center (e.g. a tall portrait with lots of
+  // hair/torso below the face). Defaults to "center" when omitted.
+  photoPosition?: string;
+};
 
 // Caitlyn's card is identical on both series - only her "book a call" link
 // differs from the other sponsors' cards, which just show contact info.
@@ -39,6 +51,7 @@ const CONTACT_CARDS: Record<string, ContactCard[]> = {
       name: "Krishen Shah",
       role: "Mortgage Banker | NMLS #1958810, Highland Mortgage",
       photo: "/images/checkin/krishen.png",
+      photoPosition: "center 20%",
       phone: "(706) 399-8289",
       email: "krishen.shah@highlandmtg.com",
     },
@@ -46,6 +59,7 @@ const CONTACT_CARDS: Record<string, ContactCard[]> = {
       name: "Whitney Mckee",
       role: "Licensed Insurance Agent, Allstate - Lion Heart Team",
       photo: "/images/checkin/whitney.jpeg",
+      photoPosition: "center 15%",
       phone: "(678) 933-9981",
       email: "whitneymckee1@allstate.com",
     },
@@ -92,8 +106,7 @@ export default function CheckInPage() {
   const validSeries = series === "house_hacking" || series === "womens_rei";
   const tip = useMemo(() => NETWORKING_TIPS[Math.floor(Math.random() * NETWORKING_TIPS.length)], []);
   const contactCards = CONTACT_CARDS[series] ?? [];
-  const [showContacts, setShowContacts] = useState(false);
-  const [selectedCard, setSelectedCard] = useState<string | null>(null);
+  const [selectedCard, setSelectedCard] = useState<string | null>(CAITLYN_CARD.name);
 
   const [step, setStep] = useState<Step>({ name: "name-entry" });
   const [firstName, setFirstName] = useState("");
@@ -304,55 +317,52 @@ export default function CheckInPage() {
 
               {contactCards.length > 0 && (
                 <div className="mt-5">
-                  {!showContacts ? (
-                    <button
-                      onClick={() => setShowContacts(true)}
-                      className="w-full rounded-2xl border-2 border-neutral-200 px-4 py-3.5 text-base font-semibold text-neutral-800 hover:border-brand-500 hover:bg-brand-50"
-                    >
-                      💬 Get in touch
-                    </button>
-                  ) : (
-                    <div className="space-y-3 text-left">
-                      <div className={`grid gap-3 ${contactCards.length >= 3 ? "grid-cols-3" : "grid-cols-2"}`}>
-                        {contactCards.map((c) => (
-                          <button
-                            key={c.name}
-                            onClick={() => setSelectedCard(selectedCard === c.name ? null : c.name)}
-                            className={`rounded-2xl border-2 p-3 text-center ${selectedCard === c.name ? "border-brand-500 bg-brand-50" : "border-neutral-200"}`}
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={c.photo} alt={c.name} className="mx-auto h-16 w-16 rounded-full object-cover" />
-                            <p className="mt-2 text-sm font-semibold text-neutral-900">{c.name}</p>
-                          </button>
-                        ))}
-                      </div>
-                      {contactCards
-                        .filter((c) => c.name === selectedCard)
-                        .map((c) => (
-                          <div key={c.name} className="rounded-2xl bg-neutral-50 p-4">
-                            <p className="text-base font-bold text-neutral-900">{c.name}</p>
-                            <p className="text-sm text-neutral-500">{c.role}</p>
-                            <div className="mt-2 space-y-1">
-                              {c.phone && (
-                                <a href={`tel:${c.phone.replace(/[^\d+]/g, "")}`} className="block text-base font-medium text-brand-600">
-                                  {c.phone}
-                                </a>
-                              )}
-                              {c.email && (
-                                <a href={`mailto:${c.email}`} className="block text-base font-medium text-brand-600">
-                                  {c.email}
-                                </a>
-                              )}
-                              {c.bookingUrl && (
-                                <a href={c.bookingUrl} className="block text-base font-medium text-brand-600 underline underline-offset-2">
-                                  Book a call with me →
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                        ))}
+                  <p className="mb-2.5 text-xs font-bold uppercase tracking-wide text-neutral-400">Get in touch</p>
+                  <div className="space-y-3 text-left">
+                    <div className={`grid gap-3 ${contactCards.length >= 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+                      {contactCards.map((c) => (
+                        <button
+                          key={c.name}
+                          onClick={() => setSelectedCard(selectedCard === c.name ? null : c.name)}
+                          className={`rounded-2xl border-2 p-3 text-center ${selectedCard === c.name ? "border-brand-500 bg-brand-50" : "border-neutral-200"}`}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={c.photo}
+                            alt={c.name}
+                            className="mx-auto h-16 w-16 rounded-full object-cover"
+                            style={{ objectPosition: c.photoPosition ?? "center" }}
+                          />
+                          <p className="mt-2 text-sm font-semibold text-neutral-900">{c.name}</p>
+                        </button>
+                      ))}
                     </div>
-                  )}
+                    {contactCards
+                      .filter((c) => c.name === selectedCard)
+                      .map((c) => (
+                        <div key={c.name} className="rounded-2xl bg-neutral-50 p-4">
+                          <p className="text-base font-bold text-neutral-900">{c.name}</p>
+                          <p className="text-sm text-neutral-500">{c.role}</p>
+                          <div className="mt-2 space-y-1">
+                            {c.phone && (
+                              <a href={`tel:${c.phone.replace(/[^\d+]/g, "")}`} className="block text-base font-medium text-brand-600">
+                                {c.phone}
+                              </a>
+                            )}
+                            {c.email && (
+                              <a href={`mailto:${c.email}`} className="block text-base font-medium text-brand-600">
+                                {c.email}
+                              </a>
+                            )}
+                            {c.bookingUrl && (
+                              <a href={c.bookingUrl} className="block text-base font-medium text-brand-600 underline underline-offset-2">
+                                Book a call with me →
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
                 </div>
               )}
 
