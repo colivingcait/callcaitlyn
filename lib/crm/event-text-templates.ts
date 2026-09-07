@@ -14,6 +14,17 @@ export function eventGroupLabel(account: string | null | undefined, eventName: s
   return "the meetup";
 }
 
+// She's the sole organizer of House Hacking but co-organizes Women's REI,
+// so the self-intro reads differently per group - "the organizer of" only
+// fits the one she runs alone. Mirrors eventGroupLabel's own account/
+// eventName fallback so the two can never disagree about which group a
+// registration belongs to; an unclassifiable one (no account, no event
+// name) falls back to the safer "one of the organizers for" phrasing.
+export function organizerRole(account: string | null | undefined, eventName: string | null | undefined): string {
+  const isHouseHacking = account === "house_hacking" || (account !== "womens_rei" && !!eventName && !/women/i.test(eventName));
+  return isHouseHacking ? "the organizer of" : "one of the organizers for";
+}
+
 // Single-send versions (a real first name, not a merge token) - used by the
 // Dialer's one-off "text this person right now" flow, not the bulk blast
 // composer below. Kept separate from MESSAGE_TEMPLATES since that one needs
@@ -21,12 +32,12 @@ export function eventGroupLabel(account: string | null | undefined, eventName: s
 // per recipient during a staggered send.
 export function newRegistrationTemplate(firstName: string, account: string | null | undefined, eventName: string | null | undefined): string {
   const group = eventGroupLabel(account, eventName);
-  return `Hi ${firstName}, this is Caitlyn Verdugo, one of the organizers for ${group}. Just wanted to introduce myself and welcome you to the group! Any questions I can answer for you? 🙂`;
+  return `Hi ${firstName}, this is Caitlyn Verdugo, ${organizerRole(account, eventName)} ${group}. Just wanted to introduce myself and welcome you to the group! Any questions I can answer for you? 🙂`;
 }
 
 export function returningRegistrationTemplate(firstName: string, account: string | null | undefined, eventName: string | null | undefined): string {
   const group = eventGroupLabel(account, eventName);
-  return `Hey ${firstName}, this is Caitlyn Verdugo, one of the organizers for ${group}. Just got your registration for this month's meetup - looking forward to seeing you again!`;
+  return `Hey ${firstName}, this is Caitlyn Verdugo, ${organizerRole(account, eventName)} ${group}. Just got your registration for this month's meetup - looking forward to seeing you again!`;
 }
 
 export type MessageTemplateOption = { label: string; build: (account: string | null | undefined, eventName: string | null | undefined) => string };
@@ -48,12 +59,12 @@ export const MESSAGE_TEMPLATE_CATEGORIES: MessageTemplateCategory[] = [
       {
         label: "Welcome (new registrant)",
         build: (account, eventName) =>
-          `Hi {{first_name}}, this is Caitlyn Verdugo, one of the organizers for ${eventGroupLabel(account, eventName)}. Just wanted to introduce myself and welcome you to the group! Any questions I can answer for you? 🙂`,
+          `Hi {{first_name}}, this is Caitlyn Verdugo, ${organizerRole(account, eventName)} ${eventGroupLabel(account, eventName)}. Just wanted to introduce myself and welcome you to the group! Any questions I can answer for you? 🙂`,
       },
       {
         label: "Welcome back (returning)",
         build: (account, eventName) =>
-          `Hey {{first_name}}, this is Caitlyn Verdugo, one of the organizers for ${eventGroupLabel(account, eventName)}. Just got your registration for this month's meetup - looking forward to seeing you there! Any questions I can answer? 🙂`,
+          `Hey {{first_name}}, this is Caitlyn Verdugo, ${organizerRole(account, eventName)} ${eventGroupLabel(account, eventName)}. Just got your registration for this month's meetup - looking forward to seeing you there! Any questions I can answer? 🙂`,
       },
     ],
   },
