@@ -286,7 +286,7 @@ export function TextBlastModal({ target, onClose }: { target: BlastTarget; onClo
                 </p>
               )}
               {recipientsOpen && audience.count > 0 && (
-                <div className="max-h-72 space-y-1 overflow-y-auto rounded-lg border border-neutral-200 bg-white p-1.5">
+                <div className="max-h-[28rem] space-y-1 overflow-y-auto rounded-lg border border-neutral-200 bg-white p-1.5">
                   {audience.recipients.map((r) => {
                     const excluded = excludedIds.has(r.id);
                     return (
@@ -315,18 +315,27 @@ export function TextBlastModal({ target, onClose }: { target: BlastTarget; onClo
                             )}
                           </button>
                         </div>
-                        {r.lastText && (
-                          <p className="mt-0.5 truncate pl-0.5 text-[11px] text-neutral-500">
-                            {r.lastText.direction === "inbound" ? "Them" : "You"}: &ldquo;{r.lastText.body}&rdquo;
-                            <span className="text-neutral-400"> · {relativeTime(r.lastText.occurredAt)}</span>
-                          </p>
+                        {r.recentTexts.length > 0 && (
+                          <div className="mt-1 space-y-0.5 border-l-2 border-neutral-100 pl-2">
+                            {r.recentTexts.map((t, i) => (
+                              <p key={i} className="text-[11px] leading-4 text-neutral-500">
+                                <span className={t.direction === "inbound" ? "font-medium text-neutral-700" : "text-neutral-500"}>
+                                  {t.direction === "inbound" ? "Them" : "You"}:
+                                </span>{" "}
+                                &ldquo;{t.body}&rdquo; <span className="text-neutral-400">· {relativeTime(t.occurredAt)}</span>
+                              </p>
+                            ))}
+                          </div>
                         )}
                       </div>
                     );
                   })}
                 </div>
               )}
-              <p className="text-[11px] text-neutral-400">Anyone already texted in the last hour is automatically left out. Tap Skip to leave out someone who already answered.</p>
+              <p className="text-[11px] text-neutral-400">
+                Anyone already texted in the last hour is automatically left out. Scroll to read each person&apos;s recent texts (up to the last
+                month) and tap Skip to leave out someone who already answered.
+              </p>
             </div>
           )}
 
