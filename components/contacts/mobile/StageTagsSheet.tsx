@@ -59,6 +59,7 @@ export function StageTagsSheet({
   const [newTagName, setNewTagName] = useState("");
   const [followUpDays, setFollowUpDays] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   function toggleTag(id: string) {
     setSelectedTagIds((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
@@ -67,26 +68,46 @@ export function StageTagsSheet({
   async function addTag() {
     if (!newTagName.trim()) return;
     const supabase = createClient();
-    const { data } = await supabase.from("tags").insert({ owner_id: ownerId, name: newTagName.trim(), color: "#94a3b8" }).select("id").single();
-    if (data) setSelectedTagIds((prev) => [...prev, data.id]);
+    const { data, error } = await supabase.from("tags").insert({ owner_id: ownerId, name: newTagName.trim(), color: "#94a3b8" }).select("id").single();
+    if (error) {
+      setSaveError(error.message);
+      return;
+    }
+    setSelectedTagIds((prev) => [...prev, data.id]);
     setNewTagName("");
     setAddingTag(false);
   }
 
   async function save() {
     setSaving(true);
+    setSaveError(null);
     const supabase = createClient();
 
     const nextFollowUpAt = followUpDays ? new Date(Date.now() + followUpDays * 24 * 60 * 60 * 1000).toISOString() : undefined;
     if (stageId !== currentStageId || nextFollowUpAt) {
       const oldStage = stages.find((s) => s.id === currentStageId);
       const newStage = stages.find((s) => s.id === stageId);
-      await move(contactId, oldStage, newStage, nextFollowUpAt);
+      const ok = await move(contactId, oldStage, newStage, nextFollowUpAt);
+      if (!ok) {
+        setSaving(false);
+        setSaveError("Couldn't change stage - try again.");
+        return;
+      }
     }
 
-    await supabase.from("contact_tags").delete().eq("contact_id", contactId);
+    const { error: tagDeleteError } = await supabase.from("contact_tags").delete().eq("contact_id", contactId);
+    if (tagDeleteError) {
+      setSaving(false);
+      setSaveError(`Stage saved, but tags couldn't update: ${tagDeleteError.message}`);
+      return;
+    }
     if (selectedTagIds.length > 0) {
-      await supabase.from("contact_tags").insert(selectedTagIds.map((tagId) => ({ contact_id: contactId, tag_id: tagId })));
+      const { error: tagInsertError } = await supabase.from("contact_tags").insert(selectedTagIds.map((tagId) => ({ contact_id: contactId, tag_id: tagId })));
+      if (tagInsertError) {
+        setSaving(false);
+        setSaveError(`Stage saved, but tags couldn't update: ${tagInsertError.message}`);
+        return;
+      }
     }
 
     setSaving(false);
@@ -111,6 +132,7 @@ export function StageTagsSheet({
         }
       >
         <div className="space-y-5 pb-4">
+          {saveError && <p className="text-[14px] font-medium text-red-600">{saveError}</p>}
           <div>
             <p className="mb-1.5 text-xs font-medium uppercase tracking-[.09em] text-neutral-400">Stage</p>
             <div className="divide-y divide-neutral-100 rounded-[14px] border border-neutral-200">

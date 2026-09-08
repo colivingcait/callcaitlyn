@@ -38,6 +38,7 @@ export function ContactRow({
   const [timeline, setTimeline] = useState(contact.timeline);
   const [phoneDraft, setPhoneDraft] = useState(contact.phone ?? "");
   const [savingPhone, setSavingPhone] = useState(false);
+  const [rowError, setRowError] = useState<string | null>(null);
 
   const hasPhone = !!contact.phone;
 
@@ -45,26 +46,44 @@ export function ContactRow({
     e.preventDefault();
     if (!phoneDraft.trim()) return;
     setSavingPhone(true);
+    setRowError(null);
     const supabase = createClient();
-    await supabase.from("contacts").update({ phone: phoneDraft.trim() }).eq("id", contact.id);
+    const { error } = await supabase.from("contacts").update({ phone: phoneDraft.trim() }).eq("id", contact.id);
     setSavingPhone(false);
+    if (error) {
+      setRowError(error.message);
+      return;
+    }
     router.refresh();
   }
   const meta = hasPhone
     ? [CONTACT_TYPE_LABELS[contact.contact_type], formatPhone(contact.phone), lastActivityLabel].filter(Boolean).join(" · ")
     : null;
 
+  // Local state is only flipped after the write succeeds - previously it
+  // updated immediately, so a denied/failed write left the input showing
+  // the new value while the contact's real record never changed.
   async function saveFollowUp(value: string) {
-    setFollowUpAt(value);
+    setRowError(null);
     const supabase = createClient();
-    await supabase.from("contacts").update({ next_follow_up_at: value ? new Date(value).toISOString() : null }).eq("id", contact.id);
+    const { error } = await supabase.from("contacts").update({ next_follow_up_at: value ? new Date(value).toISOString() : null }).eq("id", contact.id);
+    if (error) {
+      setRowError(error.message);
+      return;
+    }
+    setFollowUpAt(value);
     router.refresh();
   }
 
   async function saveTimeline(value: string) {
-    setTimeline(value as typeof contact.timeline);
+    setRowError(null);
     const supabase = createClient();
-    await supabase.from("contacts").update({ timeline: value }).eq("id", contact.id);
+    const { error } = await supabase.from("contacts").update({ timeline: value }).eq("id", contact.id);
+    if (error) {
+      setRowError(error.message);
+      return;
+    }
+    setTimeline(value as typeof contact.timeline);
     router.refresh();
   }
 
@@ -72,8 +91,13 @@ export function ContactRow({
   // app, so viewing the archived list (?archived=archived) via the People
   // filters left no way back short of editing the row by hand.
   async function toggleArchive() {
+    setRowError(null);
     const supabase = createClient();
-    await supabase.from("contacts").update({ archived: !contact.archived }).eq("id", contact.id);
+    const { error } = await supabase.from("contacts").update({ archived: !contact.archived }).eq("id", contact.id);
+    if (error) {
+      setRowError(error.message);
+      return;
+    }
     router.refresh();
   }
 
@@ -156,7 +180,7 @@ export function ContactRow({
                   </button>
                 ) : confirmingArchive ? (
                   <div className="space-y-1 p-1.5">
-                    <p className="text-xs text-neutral-600">Archive contact?</p>
+                    <p className="text-xs text-neutral-600">{rowError ? `Couldn't archive: ${rowError}` : "Archive contact?"}</p>
                     <div className="flex gap-1.5">
                       <button onClick={toggleArchive} className="rounded-lg bg-red-600 px-2 py-1 text-xs font-semibold text-white">
                         Confirm
@@ -188,6 +212,7 @@ export function ContactRow({
 
       {expanded && (
         <div className="border-t border-neutral-100 bg-[#fcfbfa] p-[18px]">
+          {rowError && <p className="mb-3 text-sm font-medium text-red-600">Couldn&apos;t save: {rowError}</p>}
           {!hasPhone && (
             <form onSubmit={savePhone} className="mb-4 flex items-end gap-2">
               <div className="min-w-0 flex-1">

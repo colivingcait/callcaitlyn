@@ -131,9 +131,19 @@ export function ContactDetailsCard({
       return;
     }
 
-    await supabase.from("contact_tags").delete().eq("contact_id", contact.id);
+    const { error: tagDeleteError } = await supabase.from("contact_tags").delete().eq("contact_id", contact.id);
+    if (tagDeleteError) {
+      setServerError(`Contact info saved, but tags couldn't update: ${tagDeleteError.message}`);
+      setSubmitting(false);
+      return;
+    }
     if (selectedTagIds.length > 0) {
-      await supabase.from("contact_tags").insert(selectedTagIds.map((tagId) => ({ contact_id: contact.id, tag_id: tagId })));
+      const { error: tagInsertError } = await supabase.from("contact_tags").insert(selectedTagIds.map((tagId) => ({ contact_id: contact.id, tag_id: tagId })));
+      if (tagInsertError) {
+        setServerError(`Contact info saved, but tags couldn't update: ${tagInsertError.message}`);
+        setSubmitting(false);
+        return;
+      }
     }
     if (payload.phone) void syncContactToQuoAction(contact.id);
 

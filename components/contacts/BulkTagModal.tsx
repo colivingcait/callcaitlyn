@@ -21,22 +21,25 @@ export function BulkTagModal({
 }) {
   const [tagId, setTagId] = useState(tags[0]?.id ?? "");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function apply() {
     if (!tagId) return;
     setSaving(true);
+    setError(null);
     const supabase = createClient();
-    if (mode === "add") {
-      await supabase
-        .from("contact_tags")
-        .upsert(
-          contactIds.map((contact_id) => ({ contact_id, tag_id: tagId })),
-          { onConflict: "contact_id,tag_id" },
-        );
-    } else {
-      await supabase.from("contact_tags").delete().eq("tag_id", tagId).in("contact_id", contactIds);
-    }
+    const { error: applyError } =
+      mode === "add"
+        ? await supabase.from("contact_tags").upsert(
+            contactIds.map((contact_id) => ({ contact_id, tag_id: tagId })),
+            { onConflict: "contact_id,tag_id" },
+          )
+        : await supabase.from("contact_tags").delete().eq("tag_id", tagId).in("contact_id", contactIds);
     setSaving(false);
+    if (applyError) {
+      setError(applyError.message);
+      return;
+    }
     onDone();
   }
 
@@ -66,6 +69,7 @@ export function BulkTagModal({
             </Select>
           )}
         </div>
+        {error && <p className="mt-2 text-sm text-red-600">Couldn&apos;t save: {error}</p>}
         <div className="mt-5 flex gap-3">
           <Button onClick={apply} disabled={saving || !tagId} className="flex-1">
             {saving ? "Saving…" : mode === "add" ? "Add tag" : "Remove tag"}
