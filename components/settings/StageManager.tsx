@@ -21,18 +21,29 @@ export function StageManager({ stages, ownerId, stageCounts }: { stages: Pipelin
   const router = useRouter();
   const [newName, setNewName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const sorted = [...stages].sort((a, b) => a.sort_order - b.sort_order);
 
   async function updateStage(id: string, patch: Partial<PipelineStage>) {
+    setError(null);
     const supabase = createClient();
-    await supabase.from("pipeline_stages").update(patch).eq("id", id);
+    const { error: updateError } = await supabase.from("pipeline_stages").update(patch).eq("id", id);
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
     router.refresh();
   }
 
   async function deleteStage(id: string) {
     if (!confirm("Delete this stage? Contacts in it will be unassigned.")) return;
+    setError(null);
     const supabase = createClient();
-    await supabase.from("pipeline_stages").delete().eq("id", id);
+    const { error: deleteError } = await supabase.from("pipeline_stages").delete().eq("id", id);
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
     router.refresh();
   }
 
@@ -40,11 +51,17 @@ export function StageManager({ stages, ownerId, stageCounts }: { stages: Pipelin
     const target = sorted[index + direction];
     const current = sorted[index];
     if (!target) return;
+    setError(null);
     const supabase = createClient();
-    await Promise.all([
+    const results = await Promise.all([
       supabase.from("pipeline_stages").update({ sort_order: target.sort_order }).eq("id", current.id),
       supabase.from("pipeline_stages").update({ sort_order: current.sort_order }).eq("id", target.id),
     ]);
+    const moveError = results.find((r) => r.error)?.error;
+    if (moveError) {
+      setError(moveError.message);
+      return;
+    }
     router.refresh();
   }
 
@@ -52,15 +69,20 @@ export function StageManager({ stages, ownerId, stageCounts }: { stages: Pipelin
     e.preventDefault();
     if (!newName.trim()) return;
     setSaving(true);
+    setError(null);
     const supabase = createClient();
-    await supabase.from("pipeline_stages").insert({
+    const { error: insertError } = await supabase.from("pipeline_stages").insert({
       owner_id: ownerId,
       name: newName.trim(),
       sort_order: (sorted.at(-1)?.sort_order ?? 0) + 1,
       color: "#94a3b8",
     });
-    setNewName("");
     setSaving(false);
+    if (insertError) {
+      setError(insertError.message);
+      return;
+    }
+    setNewName("");
     router.refresh();
   }
 
@@ -100,6 +122,7 @@ export function StageManager({ stages, ownerId, stageCounts }: { stages: Pipelin
         archives them and removes them from metrics entirely. Flag one active stage as &quot;Under Contract&quot;
         to get a details prompt (address, price, etc.) the moment a deal goes pending, before it actually closes.
       </p>
+      {error && <p className="mt-2 text-[15px] font-medium text-red-600">Couldn&apos;t save: {error}</p>}
       <div className="mt-3 space-y-2.5">
         {sorted.map((stage, i) => (
           <div key={stage.id} className="flex flex-wrap items-center gap-2.5 border-b border-neutral-100 pb-2.5 last:border-b-0 last:pb-0">

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Calendar, Globe, Bookmark, ArrowUp, ArrowDown, Trash2 } from "lucide-react";
@@ -31,6 +32,7 @@ export function MyLists({
   segments: ContactSegment[];
 }) {
   const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
   const sorted = [...segments].sort((a, b) => a.sort_order - b.sort_order);
 
   function goto(param: string, value: string, label: string) {
@@ -47,15 +49,25 @@ export function MyLists({
   async function renameSegment(seg: ContactSegment) {
     const name = window.prompt("Rename this list", seg.name);
     if (!name || !name.trim() || name.trim() === seg.name) return;
+    setError(null);
     const supabase = createClient();
-    await supabase.from("contact_segments").update({ name: name.trim() }).eq("id", seg.id);
+    const { error: renameError } = await supabase.from("contact_segments").update({ name: name.trim() }).eq("id", seg.id);
+    if (renameError) {
+      setError(renameError.message);
+      return;
+    }
     router.refresh();
   }
 
   async function deleteSegment(seg: ContactSegment) {
     if (!confirm(`Delete "${seg.name}"?`)) return;
+    setError(null);
     const supabase = createClient();
-    await supabase.from("contact_segments").delete().eq("id", seg.id);
+    const { error: deleteError } = await supabase.from("contact_segments").delete().eq("id", seg.id);
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
     router.refresh();
   }
 
@@ -63,11 +75,17 @@ export function MyLists({
     const target = sorted[index + direction];
     const current = sorted[index];
     if (!target) return;
+    setError(null);
     const supabase = createClient();
-    await Promise.all([
+    const results = await Promise.all([
       supabase.from("contact_segments").update({ sort_order: target.sort_order }).eq("id", current.id),
       supabase.from("contact_segments").update({ sort_order: current.sort_order }).eq("id", target.id),
     ]);
+    const moveError = results.find((r) => r.error)?.error;
+    if (moveError) {
+      setError(moveError.message);
+      return;
+    }
     router.refresh();
   }
 
@@ -78,6 +96,7 @@ export function MyLists({
 
   return (
     <div className="space-y-4">
+      {error && <p className="px-1 text-[14px] font-medium text-red-600">Couldn&apos;t save: {error}</p>}
       {sorted.length > 0 && (
         <div>
           <p className="mb-1.5 px-1 text-[13px] font-semibold uppercase tracking-[.05em] text-neutral-400">Your lists</p>

@@ -15,18 +15,29 @@ export function TextTemplatesManager({ templates, ownerId }: { templates: TextTe
   const [newLabel, setNewLabel] = useState("");
   const [newBody, setNewBody] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const sorted = [...templates].sort((a, b) => a.sort_order - b.sort_order);
 
   async function updateTemplate(id: string, patch: Partial<TextTemplate>) {
+    setError(null);
     const supabase = createClient();
-    await supabase.from("text_templates").update(patch).eq("id", id);
+    const { error: updateError } = await supabase.from("text_templates").update(patch).eq("id", id);
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
     router.refresh();
   }
 
   async function deleteTemplate(id: string) {
     if (!confirm("Delete this template?")) return;
+    setError(null);
     const supabase = createClient();
-    await supabase.from("text_templates").delete().eq("id", id);
+    const { error: deleteError } = await supabase.from("text_templates").delete().eq("id", id);
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
     router.refresh();
   }
 
@@ -34,11 +45,17 @@ export function TextTemplatesManager({ templates, ownerId }: { templates: TextTe
     const target = sorted[index + direction];
     const current = sorted[index];
     if (!target) return;
+    setError(null);
     const supabase = createClient();
-    await Promise.all([
+    const results = await Promise.all([
       supabase.from("text_templates").update({ sort_order: target.sort_order }).eq("id", current.id),
       supabase.from("text_templates").update({ sort_order: current.sort_order }).eq("id", target.id),
     ]);
+    const moveError = results.find((r) => r.error)?.error;
+    if (moveError) {
+      setError(moveError.message);
+      return;
+    }
     router.refresh();
   }
 
@@ -46,12 +63,21 @@ export function TextTemplatesManager({ templates, ownerId }: { templates: TextTe
   // the DB's partial unique index is the real guarantee, this just
   // avoids a round-trip that briefly violates it.
   async function setDefault(id: string) {
+    setError(null);
     const supabase = createClient();
     const previous = sorted.find((t) => t.is_default_draft);
     if (previous && previous.id !== id) {
-      await supabase.from("text_templates").update({ is_default_draft: false }).eq("id", previous.id);
+      const { error: clearError } = await supabase.from("text_templates").update({ is_default_draft: false }).eq("id", previous.id);
+      if (clearError) {
+        setError(clearError.message);
+        return;
+      }
     }
-    await supabase.from("text_templates").update({ is_default_draft: true }).eq("id", id);
+    const { error: defaultError } = await supabase.from("text_templates").update({ is_default_draft: true }).eq("id", id);
+    if (defaultError) {
+      setError(defaultError.message);
+      return;
+    }
     router.refresh();
   }
 
@@ -59,16 +85,21 @@ export function TextTemplatesManager({ templates, ownerId }: { templates: TextTe
     e.preventDefault();
     if (!newLabel.trim() || !newBody.trim()) return;
     setSaving(true);
+    setError(null);
     const supabase = createClient();
-    await supabase.from("text_templates").insert({
+    const { error: insertError } = await supabase.from("text_templates").insert({
       owner_id: ownerId,
       label: newLabel.trim(),
       body: newBody.trim(),
       sort_order: (sorted.at(-1)?.sort_order ?? 0) + 1,
     });
+    setSaving(false);
+    if (insertError) {
+      setError(insertError.message);
+      return;
+    }
     setNewLabel("");
     setNewBody("");
-    setSaving(false);
     router.refresh();
   }
 
@@ -80,6 +111,7 @@ export function TextTemplatesManager({ templates, ownerId }: { templates: TextTe
         <code className="rounded bg-neutral-100 px-1 py-0.5 text-[13px]">{"{{first_name}}"}</code> to merge in their name. The starred one
         is what Today drafts for your top follow-up automatically.
       </p>
+      {error && <p className="mt-2 text-[15px] font-medium text-red-600">Couldn&apos;t save: {error}</p>}
       <div className="mt-3 space-y-2.5">
         {sorted.map((template, i) => (
           <div key={template.id} className="flex flex-wrap items-start gap-2.5 border-b border-neutral-100 pb-2.5 last:border-b-0 last:pb-0">

@@ -87,7 +87,8 @@ export async function logActivityWithOutcome(input: {
   if (error) return { ok: false as const, error: error.message };
 
   if (input.nextFollowUpAt !== undefined) {
-    await supabase.from("contacts").update({ next_follow_up_at: input.nextFollowUpAt }).eq("id", input.contactId);
+    const { error: followUpError } = await supabase.from("contacts").update({ next_follow_up_at: input.nextFollowUpAt }).eq("id", input.contactId);
+    if (followUpError) return { ok: false as const, error: followUpError.message };
   }
 
   return { ok: true as const };

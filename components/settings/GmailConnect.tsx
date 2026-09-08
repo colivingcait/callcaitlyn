@@ -23,15 +23,26 @@ export function GmailConnect({
 }) {
   const router = useRouter();
   const [disconnecting, setDisconnecting] = useState(false);
+  const [disconnectError, setDisconnectError] = useState<string | null>(null);
 
   async function handleDisconnect() {
     setDisconnecting(true);
+    setDisconnectError(null);
     const supabase = createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (user) await supabase.from("gmail_accounts").delete().eq("owner_id", user.id);
+    if (!user) {
+      setDisconnecting(false);
+      setDisconnectError("Not signed in");
+      return;
+    }
+    const { error } = await supabase.from("gmail_accounts").delete().eq("owner_id", user.id);
     setDisconnecting(false);
+    if (error) {
+      setDisconnectError(error.message);
+      return;
+    }
     router.refresh();
   }
 
@@ -54,6 +65,7 @@ export function GmailConnect({
         </a>
       )}
       {errorCode && <p className="text-xs text-red-600">{ERROR_MESSAGES[errorCode] ?? `Connection error: ${errorCode}`}</p>}
+      {disconnectError && <p className="text-xs text-red-600">Couldn&apos;t disconnect: {disconnectError}</p>}
     </div>
   );
 }
