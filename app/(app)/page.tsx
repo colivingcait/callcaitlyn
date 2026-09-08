@@ -17,7 +17,7 @@ import { DialerStrip } from "@/components/dashboard/DialerStrip";
 import { TextAllButton } from "@/components/dashboard/TextAllButton";
 import { WeeklyReviewCard } from "@/components/dashboard/WeeklyReviewCard";
 import { PrepSheetCard } from "@/components/dashboard/PrepSheetCard";
-import type { WeeklyReviewPayload } from "@/lib/data/weekly-review";
+import { filterResolvedWeeklyReviewItems, type WeeklyReviewPayload } from "@/lib/data/weekly-review";
 import type { PrepSheetPayload } from "@/lib/data/prep-sheet";
 
 export default async function TodayPage() {
@@ -51,13 +51,21 @@ export default async function TodayPage() {
   const openItems = today.calls.length + today.repliesOwed.length + today.myTasks.length + today.registeredNoFollowUp.length + today.bookingRequests.length;
   const lateCalls = today.calls.filter((c) => c.late).length;
 
+  // The stored payload is a snapshot from whenever the weekly-review cron
+  // last ran - it never gets rewritten just because a row was fixed, so
+  // re-check each actionable row's real current state on every load
+  // instead of trusting the stale snapshot (see filterResolvedWeeklyReviewItems).
+  const resolvedWeeklyReview = pinnedWeeklyReview
+    ? { id: pinnedWeeklyReview.id, payload: await filterResolvedWeeklyReviewItems(supabase, ownerId, pinnedWeeklyReview.payload as unknown as WeeklyReviewPayload) }
+    : null;
+
   return (
     <>
       <TodayMobile
         today={today}
         contacts={contacts}
         activePrepSheets={activePrepSheets}
-        pinnedWeeklyReview={pinnedWeeklyReview ?? null}
+        pinnedWeeklyReview={resolvedWeeklyReview}
         defaultDraftTemplate={defaultDraftTemplate}
       />
       <div className="mx-auto hidden max-w-3xl px-4 py-6 md:block">
@@ -72,9 +80,9 @@ export default async function TodayPage() {
         </div>
       )}
 
-      {pinnedWeeklyReview && (
+      {resolvedWeeklyReview && (
         <div className="mt-4">
-          <WeeklyReviewCard id={pinnedWeeklyReview.id} payload={pinnedWeeklyReview.payload as unknown as WeeklyReviewPayload} />
+          <WeeklyReviewCard id={resolvedWeeklyReview.id} payload={resolvedWeeklyReview.payload} />
         </div>
       )}
 

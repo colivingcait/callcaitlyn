@@ -205,3 +205,53 @@ export async function buildWeeklyReview(admin: SupabaseClient, ownerId: string):
     possiblyKnownPersonally,
   };
 }
+
+// The card's payload is a snapshot written once by the Sunday cron - it
+// never gets rewritten just because a row was acted on, so without this,
+// clicking "Fix to New"/"Merge"/"Leave it" only hid the row for the rest
+// of that page's lifetime (component state), and it came right back on
+// the next visit even though the underlying fix genuinely took. This
+// re-checks each actionable row's real current state on every load instead
+// of trusting the stale snapshot: a double-registration whose second
+// activity was deleted, a duplicate pair whose contact was merged away, or
+// a person since marked known-personally are all dropped; an explicit
+// "Leave it"/"Compare later" is tracked the same way every other card's
+// dismiss button is, via dismissed_insights.
+export async function filterResolvedWeeklyReviewItems(supabase: SupabaseClient, ownerId: string, payload: WeeklyReviewPayload): Promise<WeeklyReviewPayload> {
+  const secondActivityIds = payload.doubleRegistrations.map((d) => d.secondActivityId);
+  const dupContactIds = payload.duplicatePhonePairs.flatMap((p) => [p.aId, p.bId]);
+  const knownIds = payload.possiblyKnownPersonally.map((k) => k.contactId);
+
+  const [survivingActivities, survivingContacts, knownContacts, dismissals] = await Promise.all([
+    secondActivityIds.length > 0
+      ? supabase.from("activities").select("id").in("id", secondActivityIds)
+      : Promise.resolve({ data: [] as { id: string }[] }),
+    dupContactIds.length > 0
+      ? supabase.from("contacts").select("id").in("id", dupContactIds)
+      : Promise.resolve({ data: [] as { id: string }[] }),
+    knownIds.length > 0
+      ? supabase.from("contacts").select("id, known_personally").in("id", knownIds)
+      : Promise.resolve({ data: [] as { id: string; known_personally: boolean }[] }),
+    supabase
+      .from("dismissed_insights")
+      .select("insight_key, contact_id, dismissed_at")
+      .eq("owner_id", ownerId)
+      .in("insight_key", ["weekly_review_double", "weekly_review_dup"]),
+  ]);
+
+  const survivingActivityIds = new Set((survivingActivities.data ?? []).map((a) => a.id));
+  const survivingContactIds = new Set((survivingContacts.data ?? []).map((c) => c.id));
+  const stillNotKnown = new Set((knownContacts.data ?? []).filter((c) => !c.known_personally).map((c) => c.id));
+  const dismissedKeys = new Set((dismissals.data ?? []).map((d) => `${d.insight_key}:${d.contact_id}`));
+
+  return {
+    ...payload,
+    doubleRegistrations: payload.doubleRegistrations.filter(
+      (d) => survivingActivityIds.has(d.secondActivityId) && !dismissedKeys.has(`weekly_review_double:${d.contactId}`),
+    ),
+    duplicatePhonePairs: payload.duplicatePhonePairs.filter(
+      (p) => survivingContactIds.has(p.aId) && survivingContactIds.has(p.bId) && !dismissedKeys.has(`weekly_review_dup:${p.bId}`),
+    ),
+    possiblyKnownPersonally: payload.possiblyKnownPersonally.filter((k) => stillNotKnown.has(k.contactId)),
+  };
+}

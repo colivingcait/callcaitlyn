@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { clearPinnedItem, fixDoubleRegistration, markKnownPersonally } from "@/app/(app)/today-actions";
+import { clearPinnedItem, fixDoubleRegistration, markKnownPersonally, dismissWeeklyReviewItem } from "@/app/(app)/today-actions";
 import { mergeContacts } from "@/app/(app)/contacts/actions";
 import type { WeeklyReviewPayload } from "@/lib/data/weekly-review";
 
@@ -12,6 +12,7 @@ export function WeeklyReviewCard({ id, payload }: { id: string; payload: WeeklyR
   const [clearing, setClearing] = useState(false);
   const [hiddenRows, setHiddenRows] = useState<Set<string>>(new Set());
   const [busyRow, setBusyRow] = useState<string | null>(null);
+  const [rowErrors, setRowErrors] = useState<Map<string, string>>(new Map());
 
   async function handleClear() {
     setClearing(true);
@@ -21,28 +22,78 @@ export function WeeklyReviewCard({ id, payload }: { id: string; payload: WeeklyR
 
   function hide(rowKey: string) {
     setHiddenRows((prev) => new Set(prev).add(rowKey));
+    setRowErrors((prev) => {
+      const next = new Map(prev);
+      next.delete(rowKey);
+      return next;
+    });
   }
 
+  function showError(rowKey: string, error: string) {
+    setRowErrors((prev) => new Map(prev).set(rowKey, error));
+  }
+
+  // The card's payload is a stale snapshot (see filterResolvedWeeklyReviewItems),
+  // so hide() alone only removed a row for the rest of this page's
+  // lifetime - it came right back on the next visit even when the fix
+  // genuinely worked, because nothing here checked whether it actually
+  // did. Every handler below now checks the result and only hides on a
+  // real success; "Leave it"/"Compare later" persist an explicit
+  // dismissal instead of silently doing nothing, for the same reason.
   async function handleFix(rowKey: string, secondActivityId: string) {
     setBusyRow(rowKey);
-    await fixDoubleRegistration(secondActivityId);
+    const result = await fixDoubleRegistration(secondActivityId);
     setBusyRow(null);
+    if (!result.ok) {
+      showError(rowKey, result.error);
+      return;
+    }
     hide(rowKey);
     router.refresh();
+  }
+
+  async function handleLeaveDouble(rowKey: string, contactId: string) {
+    setBusyRow(rowKey);
+    const result = await dismissWeeklyReviewItem("weekly_review_double", contactId);
+    setBusyRow(null);
+    if (!result.ok) {
+      showError(rowKey, result.error);
+      return;
+    }
+    hide(rowKey);
   }
 
   async function handleMerge(rowKey: string, keepId: string, mergeId: string) {
     setBusyRow(rowKey);
-    await mergeContacts(keepId, mergeId);
+    const result = await mergeContacts(keepId, mergeId);
     setBusyRow(null);
+    if (!result.ok) {
+      showError(rowKey, result.error);
+      return;
+    }
     hide(rowKey);
     router.refresh();
   }
 
+  async function handleCompareLater(rowKey: string, contactId: string) {
+    setBusyRow(rowKey);
+    const result = await dismissWeeklyReviewItem("weekly_review_dup", contactId);
+    setBusyRow(null);
+    if (!result.ok) {
+      showError(rowKey, result.error);
+      return;
+    }
+    hide(rowKey);
+  }
+
   async function handleKnowThem(rowKey: string, contactId: string) {
     setBusyRow(rowKey);
-    await markKnownPersonally(contactId);
+    const result = await markKnownPersonally(contactId);
     setBusyRow(null);
+    if (!result.ok) {
+      showError(rowKey, result.error);
+      return;
+    }
     hide(rowKey);
     router.refresh();
   }
@@ -103,22 +154,31 @@ export function WeeklyReviewCard({ id, payload }: { id: string; payload: WeeklyR
               {payload.doubleRegistrations.map((d) => {
                 const rowKey = `double:${d.contactId}`;
                 if (hiddenRows.has(rowKey)) return null;
+                const error = rowErrors.get(rowKey);
                 return (
-                  <div key={rowKey} className="flex flex-wrap items-center gap-2 text-[15px] text-neutral-700">
-                    <span className="min-w-0 flex-1">
-                      Double registration within seconds for <span className="font-semibold">{d.name}</span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleFix(rowKey, d.secondActivityId)}
-                      disabled={busyRow === rowKey}
-                      className="rounded-[9px] border border-neutral-200 bg-white px-3 py-1.5 text-sm font-semibold text-neutral-800 disabled:opacity-50"
-                    >
-                      Fix to New
-                    </button>
-                    <button type="button" onClick={() => hide(rowKey)} className="rounded-[9px] border border-neutral-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-500">
-                      Leave it
-                    </button>
+                  <div key={rowKey} className="text-[15px] text-neutral-700">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="min-w-0 flex-1">
+                        Double registration within seconds for <span className="font-semibold">{d.name}</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleFix(rowKey, d.secondActivityId)}
+                        disabled={busyRow === rowKey}
+                        className="rounded-[9px] border border-neutral-200 bg-white px-3 py-1.5 text-sm font-semibold text-neutral-800 disabled:opacity-50"
+                      >
+                        Fix to New
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleLeaveDouble(rowKey, d.contactId)}
+                        disabled={busyRow === rowKey}
+                        className="rounded-[9px] border border-neutral-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-500 disabled:opacity-50"
+                      >
+                        Leave it
+                      </button>
+                    </div>
+                    {error && <p className="mt-1 text-sm text-red-600">Couldn&apos;t save: {error}</p>}
                   </div>
                 );
               })}
@@ -126,22 +186,31 @@ export function WeeklyReviewCard({ id, payload }: { id: string; payload: WeeklyR
               {payload.duplicatePhonePairs.map((p) => {
                 const rowKey = `dup:${p.aId}:${p.bId}`;
                 if (hiddenRows.has(rowKey)) return null;
+                const error = rowErrors.get(rowKey);
                 return (
-                  <div key={rowKey} className="flex flex-wrap items-center gap-2 text-[15px] text-neutral-700">
-                    <span className="min-w-0 flex-1">
-                      Duplicate records sharing a phone: <span className="font-semibold">{p.aName}</span> and <span className="font-semibold">{p.bName}</span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleMerge(rowKey, p.aId, p.bId)}
-                      disabled={busyRow === rowKey}
-                      className="rounded-[9px] border border-neutral-200 bg-white px-3 py-1.5 text-sm font-semibold text-neutral-800 disabled:opacity-50"
-                    >
-                      Merge into {p.aName}
-                    </button>
-                    <button type="button" onClick={() => hide(rowKey)} className="rounded-[9px] border border-neutral-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-500">
-                      Compare later
-                    </button>
+                  <div key={rowKey} className="text-[15px] text-neutral-700">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="min-w-0 flex-1">
+                        Duplicate records sharing a phone: <span className="font-semibold">{p.aName}</span> and <span className="font-semibold">{p.bName}</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleMerge(rowKey, p.aId, p.bId)}
+                        disabled={busyRow === rowKey}
+                        className="rounded-[9px] border border-neutral-200 bg-white px-3 py-1.5 text-sm font-semibold text-neutral-800 disabled:opacity-50"
+                      >
+                        Merge into {p.aName}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleCompareLater(rowKey, p.bId)}
+                        disabled={busyRow === rowKey}
+                        className="rounded-[9px] border border-neutral-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-500 disabled:opacity-50"
+                      >
+                        Compare later
+                      </button>
+                    </div>
+                    {error && <p className="mt-1 text-sm text-red-600">Couldn&apos;t save: {error}</p>}
                   </div>
                 );
               })}
@@ -158,20 +227,24 @@ export function WeeklyReviewCard({ id, payload }: { id: string; payload: WeeklyR
               {payload.possiblyKnownPersonally.map((k) => {
                 const rowKey = `known:${k.contactId}`;
                 if (hiddenRows.has(rowKey)) return null;
+                const error = rowErrors.get(rowKey);
                 return (
-                  <div key={rowKey} className="flex flex-wrap items-center gap-2 text-[15px] text-neutral-700">
-                    <span className="min-w-0 flex-1">
-                      <span className="font-semibold">{k.name}</span> shares a {k.matchedOn} with <span className="font-semibold">{k.matchedName}</span>, already in
-                      your sphere
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleKnowThem(rowKey, k.contactId)}
-                      disabled={busyRow === rowKey}
-                      className="rounded-[9px] border border-neutral-200 bg-white px-3 py-1.5 text-sm font-semibold text-neutral-800 disabled:opacity-50"
-                    >
-                      Review
-                    </button>
+                  <div key={rowKey} className="text-[15px] text-neutral-700">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="min-w-0 flex-1">
+                        <span className="font-semibold">{k.name}</span> shares a {k.matchedOn} with <span className="font-semibold">{k.matchedName}</span>, already in
+                        your sphere
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleKnowThem(rowKey, k.contactId)}
+                        disabled={busyRow === rowKey}
+                        className="rounded-[9px] border border-neutral-200 bg-white px-3 py-1.5 text-sm font-semibold text-neutral-800 disabled:opacity-50"
+                      >
+                        Review
+                      </button>
+                    </div>
+                    {error && <p className="mt-1 text-sm text-red-600">Couldn&apos;t save: {error}</p>}
                   </div>
                 );
               })}

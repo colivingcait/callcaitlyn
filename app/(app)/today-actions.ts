@@ -111,6 +111,26 @@ export async function dismissRegisteredNoFollowUp(contactId: string) {
   return { ok: true as const };
 }
 
+// "Leave it" / "Compare later" on the weekly review's double-registration
+// and duplicate-phone rows - unlike Fix/Merge, nothing about the
+// underlying data changes, so without a persisted dismissal the row came
+// right back on the next load (see filterResolvedWeeklyReviewItems, which
+// reads this same table). contactId is the second/duplicate contact in
+// the pair (d.contactId for a double-registration, p.bId for a phone
+// duplicate) so the key matches what that filter checks.
+export async function dismissWeeklyReviewItem(key: "weekly_review_double" | "weekly_review_dup", contactId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const result = await writeDismissal(supabase, user.id, key, contactId);
+  if (!result.ok) return result;
+  revalidatePath("/");
+  return { ok: true as const };
+}
+
 export async function markKnownPersonally(contactId: string) {
   const supabase = await createClient();
   const {
