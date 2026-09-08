@@ -16,6 +16,7 @@ import {
 } from "@/app/(app)/dialer/actions";
 import { newRegistrationTemplate, returningRegistrationTemplate } from "@/lib/crm/event-text-templates";
 import { applyMergeFields } from "@/lib/crm/merge-fields";
+import { RecentTextsPanel } from "@/components/dialer/RecentTextsPanel";
 import { fullName, formatPhone, cn } from "@/lib/utils";
 import type { DialerContact, DialerMode } from "@/lib/data/dialer";
 import type { TextTemplate } from "@/types/database";
@@ -50,6 +51,7 @@ export function PersonCard({
   const [draft, setDraft] = useState(templates[0]?.body ?? "");
   const [activeTemplate, setActiveTemplate] = useState(0);
   const [called, setCalled] = useState(false);
+  const [recentTextsOpen, setRecentTextsOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [marking, setMarking] = useState(false);
 
@@ -133,7 +135,16 @@ export function PersonCard({
         <Link href={`/contacts/${contact.id}`} target="_blank" className="flex items-center gap-1 font-medium text-brand-600">
           <History size={12} /> Full history
         </Link>
+        <button type="button" onClick={() => setRecentTextsOpen((v) => !v)} className="flex items-center gap-1 font-medium text-brand-600">
+          {recentTextsOpen ? "Hide recent texts" : "Recent texts"}
+        </button>
       </div>
+
+      {recentTextsOpen && (
+        <div className="mt-2.5 rounded-[14px] border border-neutral-100 bg-neutral-50 p-2.5">
+          <RecentTextsPanel contactId={contact.id} />
+        </div>
+      )}
 
       <div className="mt-3.5 flex flex-wrap gap-1.5">
         {templates.map((t, i) => (

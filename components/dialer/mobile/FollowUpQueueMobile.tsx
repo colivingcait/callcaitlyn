@@ -15,6 +15,7 @@ export function FollowUpQueueMobile({
   activeTab,
   newCount,
   followupCount,
+  confirmCount,
   defaultDraftTemplate,
 }: {
   contacts: DialerContact[];
@@ -22,6 +23,7 @@ export function FollowUpQueueMobile({
   activeTab: "new" | "followup";
   newCount: number;
   followupCount: number;
+  confirmCount: number;
   defaultDraftTemplate: TextTemplate | null;
 }) {
   const [queue, setQueue] = useState(contacts);
@@ -53,6 +55,9 @@ export function FollowUpQueueMobile({
           )}
         >
           Post-event {followupCount}
+        </Link>
+        <Link href="/dialer?tab=confirm" className="h-11 flex-1 rounded-[12px] border border-neutral-200 text-center text-[15px] font-semibold leading-[44px] text-neutral-700">
+          Confirm {confirmCount}
         </Link>
       </div>
 

@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendQuoText } from "@/lib/quo/send-message";
 import { applyMergeFields, PREVIEW_CONTACT, hasPlaceholderName } from "@/lib/crm/merge-fields";
 import { withProgress, tagBlastLabel, type TextBlastWithProgress } from "@/lib/crm/text-blasts";
+import { fetchRecentTextsByContact, type TextThreadMessage } from "@/lib/crm/recent-texts";
 
 type AudienceContact = { id: string; first_name: string; last_name: string; phone: string; email: string | null };
 type AudienceResolution = { eligible: AudienceContact[]; optedOutCount: number };
@@ -255,7 +256,7 @@ export async function getEventAccount(eventName: string): Promise<string | null>
   return typeof metadata?.eventbrite_account === "string" ? metadata.eventbrite_account : null;
 }
 
-export type LastTextSnippet = { body: string; direction: "inbound" | "outbound"; occurredAt: string };
+export type LastTextSnippet = TextThreadMessage;
 export type TextBlastRecipient = {
   id: string;
   name: string;
@@ -265,51 +266,9 @@ export type TextBlastRecipient = {
   noRealName: boolean;
   // Oldest first, like reading a thread top to bottom - see
   // fetchRecentTextsByContact for the window/cap.
-  recentTexts: LastTextSnippet[];
+  recentTexts: TextThreadMessage[];
 };
 export type TextBlastAudiencePreview = { count: number; recipients: TextBlastRecipient[]; optedOutCount: number; noNameCount: number };
-
-const RECENT_TEXTS_WINDOW_DAYS = 30;
-const RECENT_TEXTS_MAX_PER_CONTACT = 8;
-
-// A short recent thread (either direction) per contact, not just the
-// single latest message - lets her see the actual back-and-forth ("you
-// coming?" / "yes!") before sending a reminder that'd just be redundant,
-// without opening each person's full timeline one at a time. Windowed to
-// 30 days (comfortably covers "the last week or so" plus a straggler for
-// someone who replied a bit further back) and capped per contact so a
-// chatty thread doesn't blow up the review list. Real texts only (source:
-// quo, the only place a text's body/direction actually get logged) - a
-// manual note or other activity type wouldn't answer "did they already
-// reply."
-async function fetchRecentTextsByContact(admin: SupabaseClient, ownerId: string, contactIds: string[]): Promise<Map<string, LastTextSnippet[]>> {
-  if (contactIds.length === 0) return new Map();
-
-  const since = new Date(Date.now() - RECENT_TEXTS_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
-  const { data } = await admin
-    .from("activities")
-    .select("contact_id, body, direction, occurred_at")
-    .eq("owner_id", ownerId)
-    .eq("source", "quo")
-    .eq("type", "text")
-    .in("contact_id", contactIds)
-    .gte("occurred_at", since)
-    .order("occurred_at", { ascending: false });
-
-  const byContact = new Map<string, LastTextSnippet[]>();
-  for (const row of data ?? []) {
-    if (!row.body) continue;
-    const list = byContact.get(row.contact_id) ?? [];
-    if (list.length < RECENT_TEXTS_MAX_PER_CONTACT) {
-      list.push({ body: row.body, direction: row.direction as "inbound" | "outbound", occurredAt: row.occurred_at });
-      byContact.set(row.contact_id, list);
-    }
-  }
-  // Each list was built newest-first (to cap correctly) - reverse to
-  // chronological order for display.
-  for (const [contactId, list] of byContact) byContact.set(contactId, list.slice().reverse());
-  return byContact;
-}
 
 // Full recipient list rather than a truncated sample - a "sending to 41
 // people: Jamie, Alex +39 more" summary doesn't let her actually check who

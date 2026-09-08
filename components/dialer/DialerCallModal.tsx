@@ -11,17 +11,36 @@ import {
   markEventFollowupConnected,
   markEventFollowupSnoozed,
   markEventFollowupDismissed,
+  markConfirmationConnected,
+  markConfirmationSnoozed,
+  markConfirmationDismissed,
   saveDialerNotes,
 } from "@/app/(app)/dialer/actions";
 import { sendTextToContact } from "@/app/(app)/contacts/actions";
-import { newRegistrationTemplate, returningRegistrationTemplate } from "@/lib/crm/event-text-templates";
+import { newRegistrationTemplate, returningRegistrationTemplate, MESSAGE_TEMPLATE_CATEGORIES } from "@/lib/crm/event-text-templates";
 import { applyMergeFields } from "@/lib/crm/merge-fields";
+import { RecentTextsPanel } from "@/components/dialer/RecentTextsPanel";
 import { Button, Select, Textarea, Badge } from "@/components/ui";
 import { formatDistanceToNow } from "date-fns";
 import { X, PhoneCall, MessageSquareText, History, Clock } from "lucide-react";
 import { fullName, formatPhone } from "@/lib/utils";
 import type { PipelineStage, TextTemplate } from "@/types/database";
 import type { DialerContact, DialerMode } from "@/lib/data/dialer";
+
+const PRE_EVENT_TEMPLATES = MESSAGE_TEMPLATE_CATEGORIES.find((c) => c.key === "pre_event")!.options;
+
+// Which pre-event template reads naturally given how close the event
+// actually is - the confirmation queue only ever spans a ~2-day lookahead
+// (see listConfirmationQueue) plus a small past-side grace window, so this
+// realistically only ever picks "Day before" or "Day of," but stays
+// correct if that window ever changes.
+function defaultPreEventIndex(eventStart: string): number {
+  const daysUntil = (new Date(eventStart).getTime() - Date.now()) / (24 * 60 * 60 * 1000);
+  if (daysUntil <= 0.25) return 3; // Day of
+  if (daysUntil <= 1.5) return 2; // Day before
+  if (daysUntil <= 4) return 1; // Few days before
+  return 0; // Week before
+}
 
 export function DialerCallModal({
   contact,
@@ -37,14 +56,29 @@ export function DialerCallModal({
   onClose: () => void;
 }) {
   const router = useRouter();
+  const eventName = mode === "new-registration" || mode === "confirmation" ? contact.registrationLabel : contact.last_event_name;
+  const eventAccount = mode === "new-registration" || mode === "confirmation" ? contact.registrationAccount : null;
+  // confirmationEventId/confirmationEventStart/confirmationSource are only
+  // set (and only meaningful) in "confirmation" mode - see
+  // confirmationItemToDialerContact. The confirmation queue is keyed by
+  // (event, contact), not just contact, so mark-connected/snoozed/dismissed
+  // need to know which occurrence this card is for, and eventStart picks a
+  // sensible default pre-event template.
+  const eventId = contact.confirmationEventId;
+  const eventStart = contact.confirmationEventStart;
+  const source = contact.confirmationSource;
   const [stageId, setStageId] = useState(contact.stage_id ?? "");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [marking, setMarking] = useState(false);
   const [called, setCalled] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [recentTextsOpen, setRecentTextsOpen] = useState(false);
 
-  const [texting, setTexting] = useState(false);
-  const [textBody, setTextBody] = useState("");
+  const [texting, setTexting] = useState(mode === "confirmation");
+  const [textBody, setTextBody] = useState(() =>
+    mode === "confirmation" && eventStart ? PRE_EVENT_TEMPLATES[defaultPreEventIndex(eventStart)]?.build(eventAccount, eventName) ?? "" : "",
+  );
   const [textSending, setTextSending] = useState(false);
   const [textResult, setTextResult] = useState<{ ok: true } | { ok: false; error: string } | null>(null);
 
@@ -56,31 +90,55 @@ export function DialerCallModal({
 
   async function handleOutcome(outcome: "connected" | "no-answer") {
     setMarking(true);
-    if (mode === "event-followup") {
-      if (outcome === "connected") await markEventFollowupConnected(contact.id);
-      else await markEventFollowupSnoozed(contact.id);
-    } else {
-      if (outcome === "connected") await markDialerConnected(contact.id);
-      else await markDialerSnoozed(contact.id);
-    }
+    setActionError(null);
+    const result =
+      mode === "event-followup"
+        ? outcome === "connected"
+          ? await markEventFollowupConnected(contact.id)
+          : await markEventFollowupSnoozed(contact.id)
+        : mode === "confirmation"
+          ? outcome === "connected"
+            ? await markConfirmationConnected(contact.id, eventId!, eventName ?? "")
+            : await markConfirmationSnoozed(contact.id, eventId!, eventName ?? "")
+          : outcome === "connected"
+            ? await markDialerConnected(contact.id)
+            : await markDialerSnoozed(contact.id);
     setMarking(false);
+    if (!result.ok) {
+      setActionError(result.error);
+      return;
+    }
     router.refresh();
     onClose();
   }
 
   async function handleDismiss() {
     setMarking(true);
-    if (mode === "event-followup") await markEventFollowupDismissed(contact.id);
-    else await markDialerDismissed(contact.id);
+    setActionError(null);
+    const result =
+      mode === "event-followup"
+        ? await markEventFollowupDismissed(contact.id)
+        : mode === "confirmation"
+          ? await markConfirmationDismissed(contact.id, eventId!, eventName ?? "")
+          : await markDialerDismissed(contact.id);
     setMarking(false);
+    if (!result.ok) {
+      setActionError(result.error);
+      return;
+    }
     router.refresh();
     onClose();
   }
 
   async function handleSave() {
     setSaving(true);
-    await saveDialerNotes(contact.id, stageId || null, note);
+    setActionError(null);
+    const result = await saveDialerNotes(contact.id, stageId || null, note);
     setSaving(false);
+    if (!result.ok) {
+      setActionError(result.error);
+      return;
+    }
     router.refresh();
     onClose();
   }
@@ -105,13 +163,12 @@ export function DialerCallModal({
     }
   }
 
-  const eventName = mode === "new-registration" ? contact.registrationLabel : contact.last_event_name;
-  const eventAccount = mode === "new-registration" ? contact.registrationAccount : null;
-
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
-      <div className="flex max-h-[90vh] w-full max-w-sm flex-col rounded-t-2xl bg-white shadow-xl sm:rounded-2xl">
+      <div className="flex max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-t-2xl bg-white shadow-xl sm:rounded-2xl">
+      <div className="flex max-h-[90vh] w-full max-w-sm flex-col">
         <div className="flex-1 overflow-y-auto p-5">
+          {actionError && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700">Couldn&apos;t save: {actionError}</p>}
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
@@ -130,7 +187,15 @@ export function DialerCallModal({
           </div>
 
           <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-neutral-400">
-            <span>{[contact.lead_source, contact.last_event_name].filter(Boolean).join(" · ") || "No lead source on file"}</span>
+            {mode === "confirmation" ? (
+              <span>
+                {eventName}
+                {eventStart && ` · ${new Date(eventStart).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`}
+                {source === "manual" && " · added by you"}
+              </span>
+            ) : (
+              <span>{[contact.lead_source, contact.last_event_name].filter(Boolean).join(" · ") || "No lead source on file"}</span>
+            )}
             {contact.dialer_snoozed_at && (
               <span className="inline-flex items-center gap-0.5 text-amber-600">
                 <Clock size={10} /> Tried {formatDistanceToNow(new Date(contact.dialer_snoozed_at), { addSuffix: true })}
@@ -139,6 +204,20 @@ export function DialerCallModal({
             <Link href={`/contacts/${contact.id}`} target="_blank" className="inline-flex items-center gap-1 font-medium text-brand-600">
               <History size={11} /> View full history
             </Link>
+          </div>
+
+          {/* Same recent-texts thread as the sidebar below, just inline and
+              collapsed by default - the sidebar only shows on md+ screens,
+              so this is what covers phones. */}
+          <div className="mt-2 md:hidden">
+            <button type="button" onClick={() => setRecentTextsOpen((v) => !v)} className="text-xs font-semibold text-brand-600">
+              {recentTextsOpen ? "Hide recent texts" : "Show recent texts"}
+            </button>
+            {recentTextsOpen && (
+              <div className="mt-2 rounded-xl border border-neutral-100 bg-[#fcfbfa] p-2.5">
+                <RecentTextsPanel contactId={contact.id} />
+              </div>
+            )}
           </div>
 
           <button
@@ -184,6 +263,12 @@ export function DialerCallModal({
                     <MessageSquareText size={13} /> Welcome back
                   </Button>
                 )}
+                {mode === "confirmation" &&
+                  PRE_EVENT_TEMPLATES.map((t) => (
+                    <Button key={t.label} variant="secondary" size="sm" onClick={() => openTexting(t.build(eventAccount, eventName))}>
+                      <MessageSquareText size={13} /> {t.label}
+                    </Button>
+                  ))}
                 <Button
                   variant="secondary"
                   size="sm"
@@ -194,6 +279,20 @@ export function DialerCallModal({
               </div>
             ) : (
               <div className="space-y-2">
+                {mode === "confirmation" && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {PRE_EVENT_TEMPLATES.map((t) => (
+                      <button
+                        key={t.label}
+                        type="button"
+                        onClick={() => setTextBody(t.build(eventAccount, eventName))}
+                        className="rounded-full border border-neutral-200 px-2.5 py-1 text-[11px] font-medium text-neutral-500 hover:border-brand-300 hover:text-brand-700"
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <Textarea rows={4} value={textBody} onChange={(e) => setTextBody(e.target.value)} placeholder="Write a text..." />
                 {textResult && (
                   <p className={textResult.ok ? "text-xs text-brand-700" : "text-xs text-red-600"}>
@@ -243,10 +342,22 @@ export function DialerCallModal({
                 ? "Dismissing…"
                 : mode === "event-followup"
                   ? "Dismiss — no follow-up needed"
-                  : "Dismiss — no action needed this time"}
+                  : mode === "confirmation"
+                    ? "Dismiss — no need to confirm this one"
+                    : "Dismiss — no action needed this time"}
             </button>
           </div>
         </div>
+      </div>
+
+      <div className="hidden w-64 shrink-0 flex-col border-l border-neutral-100 bg-[#fcfbfa] md:flex">
+        <div className="border-b border-neutral-100 px-4 py-3.5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Recent texts</p>
+        </div>
+        <div className="flex-1 overflow-y-auto p-3">
+          <RecentTextsPanel contactId={contact.id} />
+        </div>
+      </div>
       </div>
     </div>
   );

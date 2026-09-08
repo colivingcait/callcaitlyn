@@ -534,6 +534,20 @@ export interface DailyRate {
   created_at: string;
 }
 
+export type EventConfirmationSource = "registered" | "manual";
+
+export interface EventConfirmation {
+  id: string;
+  owner_id: string;
+  event_id: string;
+  event_name: string;
+  contact_id: string;
+  source: EventConfirmationSource;
+  added_at: string;
+  confirmed_at: string | null;
+  snoozed_at: string | null;
+}
+
 export interface QuoteView {
   id: string;
   quote_id: string;
