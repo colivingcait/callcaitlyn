@@ -3,10 +3,21 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { sendTextToContact } from "@/app/(app)/contacts/actions";
+import { applyMergeFields } from "@/lib/crm/merge-fields";
 import { Button, Textarea, Card } from "@/components/ui";
 import { Send } from "lucide-react";
 
-export function SendTextForm({ contactId, phone }: { contactId: string; phone: string | null }) {
+export function SendTextForm({
+  contactId,
+  phone,
+  firstName,
+  lastName,
+}: {
+  contactId: string;
+  phone: string | null;
+  firstName?: string;
+  lastName?: string;
+}) {
   const router = useRouter();
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
@@ -20,7 +31,11 @@ export function SendTextForm({ contactId, phone }: { contactId: string; phone: s
     setSending(true);
     setError("");
 
-    const result = await sendTextToContact(contactId, phone as string, body.trim());
+    const result = await sendTextToContact(
+      contactId,
+      phone as string,
+      applyMergeFields(body, { first_name: firstName ?? "", last_name: lastName ?? "" }).trim(),
+    );
 
     if (!result.ok) {
       setError(result.error);

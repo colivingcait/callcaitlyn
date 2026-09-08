@@ -206,7 +206,7 @@ export function ContactRow({
 
       {quickTextOpen && hasPhone && (
         <div className="border-t border-neutral-100 bg-neutral-50 px-4 py-2.5">
-          <SendTextForm contactId={contact.id} phone={contact.phone} />
+          <SendTextForm contactId={contact.id} phone={contact.phone} firstName={contact.first_name} lastName={contact.last_name} />
         </div>
       )}
 

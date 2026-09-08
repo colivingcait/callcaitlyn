@@ -133,7 +133,13 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
         )}
 
         <Section sectionKey="contact-detail:message" title="Send a message" meta="text or email" defaultOpen={false}>
-          <SendMessageCard contactId={contact.id} phone={contact.phone} email={contact.email} />
+          <SendMessageCard
+            contactId={contact.id}
+            phone={contact.phone}
+            email={contact.email}
+            firstName={contact.first_name}
+            lastName={contact.last_name}
+          />
         </Section>
 
         {insights.length > 0 && (

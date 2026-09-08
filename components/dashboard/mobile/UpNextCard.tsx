@@ -52,7 +52,7 @@ export function UpNextCard({
     if (!item?.phone) return;
     setSending(true);
     setHandled(true);
-    const res = await sendTextToContact(item.id, item.phone, draft);
+    const res = await sendTextToContact(item.id, item.phone, applyMergeFields(draft, { first_name: firstName, last_name: lastName }).trim());
     setSending(false);
     if (!res.ok) {
       setHandled(false);

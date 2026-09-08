@@ -4,13 +4,26 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Send } from "lucide-react";
 import { sendTextToContact, sendEmailToContact } from "@/app/(app)/contacts/actions";
+import { applyMergeFields } from "@/lib/crm/merge-fields";
 
 // Merges SendTextForm/SendEmailForm behind one Text/Email toggle instead
 // of two always-open forms stacked on the page - lives inside the
 // "Send a message" Section on the contact detail page. Keeps each form's
 // own guard (hide the channel a contact has no address for; hide the
 // whole card if neither exists, handled by the caller).
-export function SendMessageCard({ contactId, phone, email }: { contactId: string; phone: string | null; email: string | null }) {
+export function SendMessageCard({
+  contactId,
+  phone,
+  email,
+  firstName,
+  lastName,
+}: {
+  contactId: string;
+  phone: string | null;
+  email: string | null;
+  firstName?: string;
+  lastName?: string;
+}) {
   const router = useRouter();
   const [channel, setChannel] = useState<"text" | "email">(phone ? "text" : "email");
   const [subject, setSubject] = useState("");
@@ -26,7 +39,11 @@ export function SendMessageCard({ contactId, phone, email }: { contactId: string
 
     const result =
       channel === "text"
-        ? await sendTextToContact(contactId, phone as string, body.trim())
+        ? await sendTextToContact(
+            contactId,
+            phone as string,
+            applyMergeFields(body, { first_name: firstName ?? "", last_name: lastName ?? "" }).trim(),
+          )
         : await sendEmailToContact(contactId, email as string, subject.trim(), body.trim());
 
     if (!result.ok) {
