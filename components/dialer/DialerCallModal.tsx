@@ -29,15 +29,23 @@ import type { DialerContact, DialerMode } from "@/lib/data/dialer";
 
 const PRE_EVENT_TEMPLATES = MESSAGE_TEMPLATE_CATEGORIES.find((c) => c.key === "pre_event")!.options;
 
+// Calendar-day difference, not a raw hour count - an event at 6:30pm
+// today is still "today" at 9am, even though that's only ~9 hours away
+// and far more than a naive "<=6 hours" cutoff would call "day of."
+function daysBetweenCalendarDates(from: Date, to: Date): number {
+  const startOf = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  return Math.round((startOf(to) - startOf(from)) / (24 * 60 * 60 * 1000));
+}
+
 // Which pre-event template reads naturally given how close the event
 // actually is - the confirmation queue only ever spans a ~2-day lookahead
 // (see listConfirmationQueue) plus a small past-side grace window, so this
 // realistically only ever picks "Day before" or "Day of," but stays
 // correct if that window ever changes.
 function defaultPreEventIndex(eventStart: string): number {
-  const daysUntil = (new Date(eventStart).getTime() - Date.now()) / (24 * 60 * 60 * 1000);
-  if (daysUntil <= 0.25) return 3; // Day of
-  if (daysUntil <= 1.5) return 2; // Day before
+  const daysUntil = daysBetweenCalendarDates(new Date(), new Date(eventStart));
+  if (daysUntil <= 0) return 3; // Day of - today, or already started
+  if (daysUntil === 1) return 2; // Day before
   if (daysUntil <= 4) return 1; // Few days before
   return 0; // Week before
 }
