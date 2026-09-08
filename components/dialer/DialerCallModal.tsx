@@ -85,7 +85,9 @@ export function DialerCallModal({
 
   const [texting, setTexting] = useState(mode === "confirmation");
   const [textBody, setTextBody] = useState(() =>
-    mode === "confirmation" && eventStart ? PRE_EVENT_TEMPLATES[defaultPreEventIndex(eventStart)]?.build(eventAccount, eventName) ?? "" : "",
+    mode === "confirmation" && eventStart
+      ? applyMergeFields(PRE_EVENT_TEMPLATES[defaultPreEventIndex(eventStart)]?.build(eventAccount, eventName) ?? "", contact)
+      : "",
   );
   const [textSending, setTextSending] = useState(false);
   const [textResult, setTextResult] = useState<{ ok: true } | { ok: false; error: string } | null>(null);
@@ -273,7 +275,7 @@ export function DialerCallModal({
                 )}
                 {mode === "confirmation" &&
                   PRE_EVENT_TEMPLATES.map((t) => (
-                    <Button key={t.label} variant="secondary" size="sm" onClick={() => openTexting(t.build(eventAccount, eventName))}>
+                    <Button key={t.label} variant="secondary" size="sm" onClick={() => openTexting(applyMergeFields(t.build(eventAccount, eventName), contact))}>
                       <MessageSquareText size={13} /> {t.label}
                     </Button>
                   ))}
@@ -293,7 +295,7 @@ export function DialerCallModal({
                       <button
                         key={t.label}
                         type="button"
-                        onClick={() => setTextBody(t.build(eventAccount, eventName))}
+                        onClick={() => setTextBody(applyMergeFields(t.build(eventAccount, eventName), contact))}
                         className="rounded-full border border-neutral-200 px-2.5 py-1 text-[11px] font-medium text-neutral-500 hover:border-brand-300 hover:text-brand-700"
                       >
                         {t.label}
