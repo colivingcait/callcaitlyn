@@ -24,7 +24,8 @@ async function dismiss(key: string, contactId: string) {
   } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in" };
 
-  await writeDismissal(supabase, user.id, key, contactId);
+  const result = await writeDismissal(supabase, user.id, key, contactId);
+  if (!result.ok) return result;
   revalidatePath("/sphere");
   return { ok: true as const };
 }

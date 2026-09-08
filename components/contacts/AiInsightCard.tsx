@@ -32,6 +32,7 @@ export function AiInsightCard({
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [dealModal, setDealModal] = useState<{ id: string; mode: DealModalMode } | null>(null);
   const [pendingCleanup, setPendingCleanup] = useState<PendingDealSummary[] | null>(null);
 
@@ -41,32 +42,49 @@ export function AiInsightCard({
 
   async function handleDismiss() {
     setBusy(true);
+    setError(null);
     const supabase = createClient();
-    await supabase.from("ai_insights").update({ dismissed: true }).eq("id", insight.id);
+    const { error: dismissError } = await supabase.from("ai_insights").update({ dismissed: true }).eq("id", insight.id);
+    setBusy(false);
+    if (dismissError) {
+      setError(dismissError.message);
+      return;
+    }
     router.refresh();
   }
 
+  // Every write below used to fire without checking its result, so a
+  // denied/failed write still marked the insight dismissed+applied with
+  // nothing actually changed on the contact - the same bug found in
+  // ApprovePanel's proposed-changes flow. Now the first failure stops
+  // before the insight is marked applied, and the card shows the real
+  // error instead of quietly disappearing.
   async function handleApply() {
     setBusy(true);
+    setError(null);
     const supabase = createClient();
 
     if (suggestedStage) {
-      const { dealId, dealMode, pendingAtRisk } = await applyStageChange(
-        supabase,
-        ownerId,
-        contactId,
-        currentStage,
-        suggestedStage,
-      );
+      const { error: stageError, dealId, dealMode, pendingAtRisk } = await applyStageChange(supabase, ownerId, contactId, currentStage, suggestedStage);
+      if (stageError) {
+        setBusy(false);
+        setError(stageError.message);
+        return;
+      }
       if (dealId && dealMode) setDealModal({ id: dealId, mode: dealMode });
       if (pendingAtRisk) setPendingCleanup(pendingAtRisk);
     }
     if (insight.suggested_timeline) {
-      await supabase.from("contacts").update({ timeline: insight.suggested_timeline }).eq("id", contactId);
+      const { error: timelineError } = await supabase.from("contacts").update({ timeline: insight.suggested_timeline }).eq("id", contactId);
+      if (timelineError) {
+        setBusy(false);
+        setError(timelineError.message);
+        return;
+      }
     }
 
     if (hasSuggestion) {
-      await supabase.from("activities").insert({
+      const { error: activityError } = await supabase.from("activities").insert({
         owner_id: ownerId,
         contact_id: contactId,
         type: "status_change",
@@ -74,9 +92,19 @@ export function AiInsightCard({
         source: "ai",
         body: `AI-suggested update applied: ${insight.summary}`,
       });
+      if (activityError) {
+        setBusy(false);
+        setError(activityError.message);
+        return;
+      }
     }
 
-    await supabase.from("ai_insights").update({ dismissed: true, applied: true }).eq("id", insight.id);
+    const { error: markError } = await supabase.from("ai_insights").update({ dismissed: true, applied: true }).eq("id", insight.id);
+    setBusy(false);
+    if (markError) {
+      setError(markError.message);
+      return;
+    }
     router.refresh();
   }
 
@@ -106,6 +134,8 @@ export function AiInsightCard({
           {insight.suggested_action}
         </p>
       )}
+
+      {error && <p className="text-sm text-red-600">Couldn&apos;t apply: {error}</p>}
 
       <div className="flex gap-2">
         {hasSuggestion && (

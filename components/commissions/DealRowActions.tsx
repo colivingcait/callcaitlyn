@@ -13,22 +13,35 @@ export function DealRowActions({ deal }: { deal: Deal & { contacts?: { first_nam
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   async function handleDelete() {
     setDeleting(true);
+    setDeleteError(null);
     const supabase = createClient();
-    await supabase.from("deals").delete().eq("id", deal.id);
+    const { error } = await supabase.from("deals").delete().eq("id", deal.id);
     setDeleting(false);
+    if (error) {
+      setDeleteError(error.message);
+      return;
+    }
     router.refresh();
   }
 
   if (confirming) {
     return (
       <span className="flex items-center gap-1.5 whitespace-nowrap">
+        {deleteError && <span className="text-red-600">Couldn&apos;t remove: {deleteError}</span>}
         <button onClick={handleDelete} disabled={deleting} className="font-medium text-red-600 hover:underline">
           {deleting ? "Removing…" : "Confirm"}
         </button>
-        <button onClick={() => setConfirming(false)} className="text-neutral-400 hover:underline">
+        <button
+          onClick={() => {
+            setConfirming(false);
+            setDeleteError(null);
+          }}
+          className="text-neutral-400 hover:underline"
+        >
           Cancel
         </button>
       </span>

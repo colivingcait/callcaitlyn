@@ -41,6 +41,7 @@ export function SuggestedRow({
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [dealModal, setDealModal] = useState<{ id: string; mode: DealModalMode } | null>(null);
   const [pendingCleanup, setPendingCleanup] = useState<PendingDealSummary[] | null>(null);
 
@@ -52,33 +53,59 @@ export function SuggestedRow({
 
   async function handleDismiss() {
     setBusy(true);
+    setError(null);
     const supabase = createClient();
-    await supabase.from("ai_insights").update({ dismissed: true }).eq("id", insight.id);
+    const { error: dismissError } = await supabase.from("ai_insights").update({ dismissed: true }).eq("id", insight.id);
+    setBusy(false);
+    if (dismissError) {
+      setError(dismissError.message);
+      return;
+    }
     router.refresh();
   }
 
+  // Same fix as ApprovePanel's writeProposal and AiInsightCard's
+  // handleApply - every write here used to fire without checking whether
+  // it actually succeeded, so "Apply" could mark the insight applied with
+  // nothing changed on the contact.
   async function handleApply() {
     setBusy(true);
+    setError(null);
     const supabase = createClient();
 
     if (suggestedStage) {
-      const { dealId, dealMode, pendingAtRisk } = await applyStageChange(supabase, ownerId, contactId, currentStage, suggestedStage);
+      const { error: stageError, dealId, dealMode, pendingAtRisk } = await applyStageChange(supabase, ownerId, contactId, currentStage, suggestedStage);
+      if (stageError) {
+        setBusy(false);
+        setError(stageError.message);
+        return;
+      }
       if (dealId && dealMode) setDealModal({ id: dealId, mode: dealMode });
       if (pendingAtRisk) setPendingCleanup(pendingAtRisk);
     }
     if (insight.suggested_timeline) {
-      await supabase.from("contacts").update({ timeline: insight.suggested_timeline }).eq("id", contactId);
+      const { error: timelineError } = await supabase.from("contacts").update({ timeline: insight.suggested_timeline }).eq("id", contactId);
+      if (timelineError) {
+        setBusy(false);
+        setError(timelineError.message);
+        return;
+      }
     }
     if (suggestedTags.length > 0) {
-      await supabase
+      const { error: tagError } = await supabase
         .from("contact_tags")
         .upsert(
           suggestedTags.map((t) => ({ contact_id: contactId, tag_id: t.id })),
           { onConflict: "contact_id,tag_id", ignoreDuplicates: true },
         );
+      if (tagError) {
+        setBusy(false);
+        setError(tagError.message);
+        return;
+      }
     }
 
-    await supabase.from("activities").insert({
+    const { error: activityError } = await supabase.from("activities").insert({
       owner_id: ownerId,
       contact_id: contactId,
       type: "status_change",
@@ -86,9 +113,18 @@ export function SuggestedRow({
       source: "ai",
       body: `AI-suggested update applied: ${insight.summary}`,
     });
+    if (activityError) {
+      setBusy(false);
+      setError(activityError.message);
+      return;
+    }
 
-    await supabase.from("ai_insights").update({ dismissed: true, applied: true }).eq("id", insight.id);
+    const { error: markError } = await supabase.from("ai_insights").update({ dismissed: true, applied: true }).eq("id", insight.id);
     setBusy(false);
+    if (markError) {
+      setError(markError.message);
+      return;
+    }
     router.refresh();
   }
 
@@ -97,15 +133,25 @@ export function SuggestedRow({
   // since there's nothing concrete to apply, just something worth doing.
   async function handleAddToList() {
     setBusy(true);
+    setError(null);
     const supabase = createClient();
-    await supabase.from("tasks").insert({
+    const { error: taskError } = await supabase.from("tasks").insert({
       owner_id: ownerId,
       contact_id: contactId,
       title: insight.suggested_action,
       due_at: new Date().toISOString(),
     });
-    await supabase.from("ai_insights").update({ dismissed: true }).eq("id", insight.id);
+    if (taskError) {
+      setBusy(false);
+      setError(taskError.message);
+      return;
+    }
+    const { error: markError } = await supabase.from("ai_insights").update({ dismissed: true }).eq("id", insight.id);
     setBusy(false);
+    if (markError) {
+      setError(markError.message);
+      return;
+    }
     router.refresh();
   }
 
@@ -125,6 +171,7 @@ export function SuggestedRow({
           {showContactName && <span className="font-medium text-neutral-600">{contactName} · </span>}
           {suggestionLine || insight.suggested_action}
         </p>
+        {error && <p className="mt-0.5 text-sm text-red-600">Couldn&apos;t apply: {error}</p>}
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {hasApplyTarget ? (

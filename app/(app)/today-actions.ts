@@ -11,7 +11,8 @@ export async function clearPinnedItem(id: string) {
   } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in" };
 
-  await supabase.from("pinned_today_items").update({ cleared_at: new Date().toISOString() }).eq("id", id).eq("owner_id", user.id);
+  const { error } = await supabase.from("pinned_today_items").update({ cleared_at: new Date().toISOString() }).eq("id", id).eq("owner_id", user.id);
+  if (error) return { ok: false as const, error: error.message };
   revalidatePath("/");
   return { ok: true as const };
 }
@@ -30,7 +31,8 @@ export async function fixDoubleRegistration(secondActivityId: string) {
   } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in" };
 
-  await supabase.from("activities").delete().eq("id", secondActivityId).eq("owner_id", user.id).eq("source", "eventbrite");
+  const { error } = await supabase.from("activities").delete().eq("id", secondActivityId).eq("owner_id", user.id).eq("source", "eventbrite");
+  if (error) return { ok: false as const, error: error.message };
   revalidatePath("/");
   return { ok: true as const };
 }
@@ -46,7 +48,8 @@ export async function dismissReplyOwed(activityId: string) {
   } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in" };
 
-  await supabase.from("activities").update({ reply_dismissed_at: new Date().toISOString() }).eq("id", activityId).eq("owner_id", user.id);
+  const { error } = await supabase.from("activities").update({ reply_dismissed_at: new Date().toISOString() }).eq("id", activityId).eq("owner_id", user.id);
+  if (error) return { ok: false as const, error: error.message };
   revalidatePath("/");
   revalidatePath("/messages");
   return { ok: true as const };
@@ -64,7 +67,8 @@ export async function snoozeFollowUp(contactId: string) {
   if (!user) return { ok: false as const, error: "Not signed in" };
 
   const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-  await supabase.from("contacts").update({ next_follow_up_at: tomorrow }).eq("id", contactId).eq("owner_id", user.id);
+  const { error } = await supabase.from("contacts").update({ next_follow_up_at: tomorrow }).eq("id", contactId).eq("owner_id", user.id);
+  if (error) return { ok: false as const, error: error.message };
   revalidatePath("/");
   return { ok: true as const };
 }
@@ -81,7 +85,8 @@ export async function clearFollowUp(contactId: string) {
   } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in" };
 
-  await supabase.from("contacts").update({ next_follow_up_at: null }).eq("id", contactId).eq("owner_id", user.id);
+  const { error } = await supabase.from("contacts").update({ next_follow_up_at: null }).eq("id", contactId).eq("owner_id", user.id);
+  if (error) return { ok: false as const, error: error.message };
   revalidatePath("/");
   return { ok: true as const };
 }
@@ -100,7 +105,8 @@ export async function dismissRegisteredNoFollowUp(contactId: string) {
   } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in" };
 
-  await writeDismissal(supabase, user.id, "registered_no_followup", contactId);
+  const result = await writeDismissal(supabase, user.id, "registered_no_followup", contactId);
+  if (!result.ok) return result;
   revalidatePath("/");
   return { ok: true as const };
 }
@@ -112,7 +118,8 @@ export async function markKnownPersonally(contactId: string) {
   } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in" };
 
-  await supabase.from("contacts").update({ known_personally: true }).eq("id", contactId).eq("owner_id", user.id);
+  const { error } = await supabase.from("contacts").update({ known_personally: true }).eq("id", contactId).eq("owner_id", user.id);
+  if (error) return { ok: false as const, error: error.message };
   revalidatePath("/");
   return { ok: true as const };
 }

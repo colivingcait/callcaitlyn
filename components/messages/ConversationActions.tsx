@@ -36,19 +36,26 @@ export function ConversationActions({
   const [open, setOpen] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function close() {
     setOpen(false);
     setConfirmingDelete(false);
+    setError(null);
   }
 
   async function toggleHidden(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
     setBusy(true);
+    setError(null);
     const supabase = createClient();
-    await supabase.from("contacts").update({ archived: !hidden }).eq("id", contactId);
+    const { error: updateError } = await supabase.from("contacts").update({ archived: !hidden }).eq("id", contactId);
     setBusy(false);
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
     close();
     router.refresh();
   }
@@ -58,8 +65,13 @@ export function ConversationActions({
     e.stopPropagation();
     if (!activityId) return;
     setBusy(true);
-    await dismissReplyOwed(activityId);
+    setError(null);
+    const result = await dismissReplyOwed(activityId);
     setBusy(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
     close();
     router.refresh();
   }
@@ -68,9 +80,14 @@ export function ConversationActions({
     e.preventDefault();
     e.stopPropagation();
     setBusy(true);
+    setError(null);
     const supabase = createClient();
-    await supabase.from("contacts").delete().eq("id", contactId);
+    const { error: deleteError } = await supabase.from("contacts").delete().eq("id", contactId);
     setBusy(false);
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
     close();
     if (afterDelete === "back-to-messages") router.push("/messages");
     router.refresh();
@@ -104,6 +121,7 @@ export function ConversationActions({
             className="fixed inset-0 z-30 cursor-default"
           />
           <div className="absolute right-0 top-full z-40 mt-1 w-52 overflow-hidden rounded-xl border border-neutral-200 bg-white py-1 shadow-lg">
+            {error && <p className="border-b border-neutral-100 px-3 py-2 text-xs text-red-600">Couldn&apos;t do that: {error}</p>}
             {confirmingDelete ? (
               <div className="px-3 py-2">
                 <p className="text-xs text-neutral-600">Delete this contact and all their activity? This can&apos;t be undone.</p>

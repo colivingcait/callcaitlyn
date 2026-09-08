@@ -42,6 +42,7 @@ export function ContactsList({
   const [modal, setModal] = useState<BulkModal>(null);
   const [confirmingArchive, setConfirmingArchive] = useState(false);
   const [archiving, setArchiving] = useState(false);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -56,6 +57,7 @@ export function ContactsList({
     setSelecting(false);
     setSelected(new Set());
     setConfirmingArchive(false);
+    setArchiveError(null);
   }
 
   function afterAction() {
@@ -66,9 +68,18 @@ export function ContactsList({
 
   async function handleArchive() {
     setArchiving(true);
+    setArchiveError(null);
     const supabase = createClient();
-    await supabase.from("contacts").update({ archived: true }).in("id", selectedIds);
+    const { data, error } = await supabase.from("contacts").update({ archived: true }).in("id", selectedIds).select("id");
     setArchiving(false);
+    if (error) {
+      setArchiveError(error.message);
+      return;
+    }
+    if ((data?.length ?? 0) < selectedIds.length) {
+      setArchiveError(`Only ${data?.length ?? 0} of ${selectedIds.length} archived - the rest may need review.`);
+      return;
+    }
     afterAction();
   }
 
@@ -77,9 +88,18 @@ export function ContactsList({
   // door. Non-destructive, so no confirm step needed.
   async function handleRestore() {
     setArchiving(true);
+    setArchiveError(null);
     const supabase = createClient();
-    await supabase.from("contacts").update({ archived: false }).in("id", selectedIds);
+    const { data, error } = await supabase.from("contacts").update({ archived: false }).in("id", selectedIds).select("id");
     setArchiving(false);
+    if (error) {
+      setArchiveError(error.message);
+      return;
+    }
+    if ((data?.length ?? 0) < selectedIds.length) {
+      setArchiveError(`Only ${data?.length ?? 0} of ${selectedIds.length} restored - the rest may need review.`);
+      return;
+    }
     afterAction();
   }
 
@@ -135,18 +155,27 @@ export function ContactsList({
           <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-2">
             {confirmingArchive ? (
               <>
-                <span className="text-[15px] font-semibold text-white">Archive {selected.size} contact{selected.size === 1 ? "" : "s"}?</span>
+                <span className="text-[15px] font-semibold text-white">
+                  {archiveError ?? `Archive ${selected.size} contact${selected.size === 1 ? "" : "s"}?`}
+                </span>
                 <button onClick={handleArchive} disabled={archiving} className="rounded-[10px] bg-red-600 px-3.5 py-2 text-sm font-semibold text-white disabled:opacity-60">
                   {archiving ? "Archiving…" : "Confirm"}
                 </button>
-                <button onClick={() => setConfirmingArchive(false)} disabled={archiving} className="rounded-[10px] border border-white/25 px-3.5 py-2 text-sm font-medium text-white">
+                <button
+                  onClick={() => {
+                    setConfirmingArchive(false);
+                    setArchiveError(null);
+                  }}
+                  disabled={archiving}
+                  className="rounded-[10px] border border-white/25 px-3.5 py-2 text-sm font-medium text-white"
+                >
                   Cancel
                 </button>
               </>
             ) : (
               <>
                 <span className="mr-1 text-[15px] font-semibold text-white">
-                  {selected.size} selected · {selectedWithPhone === selected.size ? `all ${selected.size}` : selectedWithPhone} can be texted
+                  {archiveError ?? `${selected.size} selected · ${selectedWithPhone === selected.size ? `all ${selected.size}` : selectedWithPhone} can be texted`}
                 </span>
                 <button onClick={() => setModal("text")} disabled={selectedWithPhone === 0} className="rounded-[10px] bg-white px-3.5 py-2 text-sm font-semibold text-neutral-900 disabled:opacity-50">
                   Text them

@@ -8,17 +8,26 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 // too, which the Supabase JS client's upsert() has no way to express.
 // Select-then-write instead - this table is written to rarely enough
 // (a person clicking Dismiss) that the extra round trip is a non-issue.
-export async function writeDismissal(supabase: SupabaseClient, ownerId: string, key: string, contactId: string | null) {
+export async function writeDismissal(
+  supabase: SupabaseClient,
+  ownerId: string,
+  key: string,
+  contactId: string | null,
+): Promise<{ ok: true } | { ok: false; error: string }> {
   const now = new Date().toISOString();
   let query = supabase.from("dismissed_insights").select("id").eq("owner_id", ownerId).eq("insight_key", key);
   query = contactId ? query.eq("contact_id", contactId) : query.is("contact_id", null);
-  const { data: existing } = await query.maybeSingle();
+  const { data: existing, error: readError } = await query.maybeSingle();
+  if (readError) return { ok: false, error: readError.message };
 
   if (existing) {
-    await supabase.from("dismissed_insights").update({ dismissed_at: now }).eq("id", existing.id);
+    const { error } = await supabase.from("dismissed_insights").update({ dismissed_at: now }).eq("id", existing.id);
+    if (error) return { ok: false, error: error.message };
   } else {
-    await supabase.from("dismissed_insights").insert({ owner_id: ownerId, insight_key: key, contact_id: contactId, dismissed_at: now });
+    const { error } = await supabase.from("dismissed_insights").insert({ owner_id: ownerId, insight_key: key, contact_id: contactId, dismissed_at: now });
+    if (error) return { ok: false, error: error.message };
   }
+  return { ok: true };
 }
 
 // A dismissal counts as still active if it's younger than windowDays -

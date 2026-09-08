@@ -32,15 +32,21 @@ export function DealsList({
   const router = useRouter();
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const [adding, setAdding] = useState(false);
 
   async function handleDelete(id: string) {
     setDeletingId(id);
+    setDeleteError(null);
     const supabase = createClient();
-    await supabase.from("deals").delete().eq("id", id);
-    setConfirmingId(null);
+    const { error } = await supabase.from("deals").delete().eq("id", id);
     setDeletingId(null);
+    if (error) {
+      setDeleteError(error.message);
+      return;
+    }
+    setConfirmingId(null);
     router.refresh();
   }
 
@@ -67,7 +73,7 @@ export function DealsList({
                 </span>
                 {confirmingId === deal.id ? (
                   <span className="flex items-center gap-1.5">
-                    <span className="text-neutral-400">Remove this deal?</span>
+                    <span className="text-neutral-400">{deleteError ? `Couldn't remove: ${deleteError}` : "Remove this deal?"}</span>
                     <button
                       onClick={() => handleDelete(deal.id)}
                       disabled={deletingId === deal.id}
@@ -75,7 +81,13 @@ export function DealsList({
                     >
                       {deletingId === deal.id ? "Removing…" : "Confirm"}
                     </button>
-                    <button onClick={() => setConfirmingId(null)} className="text-neutral-400 hover:underline">
+                    <button
+                      onClick={() => {
+                        setConfirmingId(null);
+                        setDeleteError(null);
+                      }}
+                      className="text-neutral-400 hover:underline"
+                    >
                       Cancel
                     </button>
                   </span>

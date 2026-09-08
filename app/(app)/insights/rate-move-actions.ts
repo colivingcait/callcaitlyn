@@ -18,6 +18,7 @@ export async function dismissRateMove(contactId: string) {
   } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in" };
 
-  await writeDismissal(supabase, user.id, "rate_move", contactId);
+  const result = await writeDismissal(supabase, user.id, "rate_move", contactId);
+  if (!result.ok) return result;
   return { ok: true as const };
 }
