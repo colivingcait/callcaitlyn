@@ -167,6 +167,19 @@ export function DialerCallModal({
     if (result.ok) {
       setTextResult({ ok: true });
       setTextBody("");
+      // A text counts as having reached this contact for this queue, same
+      // as PersonCard's mobile "Send & next" already treats it - without
+      // this, texting everyone on a list (rather than calling) never
+      // clears anyone off it, since only handleOutcome/handleDismiss did.
+      const markResult =
+        mode === "event-followup"
+          ? await markEventFollowupConnected(contact.id)
+          : mode === "confirmation"
+            ? await markConfirmationConnected(contact.id, eventId!, eventName ?? "")
+            : await markDialerConnected(contact.id);
+      if (!markResult.ok) {
+        setActionError(markResult.error);
+      }
       router.refresh();
     } else {
       setTextResult({ ok: false, error: result.error });
