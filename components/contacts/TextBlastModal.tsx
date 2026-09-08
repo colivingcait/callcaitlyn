@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, MessageSquareText, Send, Users, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
+import { X, MessageSquareText, Send, Users, AlertTriangle, ChevronDown, ChevronUp, Undo2 } from "lucide-react";
 import { Button, Textarea, Input } from "@/components/ui";
 import { applyMergeFields, PREVIEW_CONTACT, usesFirstNameMergeField } from "@/lib/crm/merge-fields";
 import { MESSAGE_TEMPLATE_CATEGORIES, type MessageTemplateCategory } from "@/lib/crm/event-text-templates";
 import { estimatedTextBlastMinutes } from "@/lib/crm/text-blast-timing";
 import { tagBlastLabel } from "@/lib/crm/text-blasts";
+import { relativeTime } from "@/lib/format-time";
 import {
   createTextBlast,
   createTagTextBlast,
@@ -86,7 +87,17 @@ export function TextBlastModal({ target, onClose }: { target: BlastTarget; onClo
   }
 
   const [audience, setAudience] = useState<TextBlastAudiencePreview | null>(null);
+  const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set());
   const [recipientsOpen, setRecipientsOpen] = useState(false);
+
+  function toggleExcluded(id: string) {
+    setExcludedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
   const [openTemplateCategory, setOpenTemplateCategory] = useState<MessageTemplateCategory["key"] | null>(null);
   const [excludeRecent, setExcludeRecent] = useState(false);
   const [excludeDays, setExcludeDays] = useState(1);
@@ -117,6 +128,7 @@ export function TextBlastModal({ target, onClose }: { target: BlastTarget; onClo
   }
 
   function loadAudience() {
+    setExcludedIds(new Set());
     if (target.kind === "tag") {
       getTagAudiencePreview(target.tagId).then(setAudience);
       return;
@@ -153,23 +165,26 @@ export function TextBlastModal({ target, onClose }: { target: BlastTarget; onClo
   }, [audienceMode, excludeRecent, excludeDays, selectedEventId, attendanceStatus]);
 
   async function send() {
-    if (!audience?.count) return;
+    const effectiveCount = (audience?.count ?? 0) - excludedIds.size;
+    if (effectiveCount <= 0) return;
     const confirmed = window.confirm(
-      `Send this text to ${audience.count} ${audience.count === 1 ? "person" : "people"}? This can't be undone.`,
+      `Send this text to ${effectiveCount} ${effectiveCount === 1 ? "person" : "people"}? This can't be undone.`,
     );
     if (!confirmed) return;
     setSending(true);
+    const excludeContactIds = [...excludedIds];
     let outcome;
     if (target.kind === "tag") {
-      outcome = await createTagTextBlast(target.tagId, target.tagName, message);
+      outcome = await createTagTextBlast(target.tagId, target.tagName, message, excludeContactIds);
     } else if (target.kind === "contacts") {
-      outcome = await createContactsTextBlast(target.contactIds, target.label, message);
+      outcome = await createContactsTextBlast(target.contactIds, target.label, message, excludeContactIds);
     } else {
       outcome = await createTextBlast(
         target.eventName,
         message,
         registeredBeforeCutoff(),
         audienceMode === "occurrence" && selectedEventId ? { eventId: selectedEventId, attendanceStatus } : undefined,
+        excludeContactIds,
       );
     }
     setSending(false);
@@ -198,6 +213,7 @@ export function TextBlastModal({ target, onClose }: { target: BlastTarget; onClo
 
   const preview = message.trim() ? applyMergeFields(message, PREVIEW_CONTACT) : "";
   const duplicateCount = audience?.recipients.filter((r) => r.duplicatePhone || r.duplicateName).length ?? 0;
+  const effectiveCount = (audience?.count ?? 0) - excludedIds.size;
   // Only a real problem if the message actually greets by name - a contact
   // whose first_name on file is just their phone number (never a real name)
   // would otherwise get sent "Hi 5739992048," so the send loop skips them
@@ -237,7 +253,12 @@ export function TextBlastModal({ target, onClose }: { target: BlastTarget; onClo
                 ) : (
                   <>
                     <span className="flex-1 text-left">
-                      Sending to <span className="font-semibold text-neutral-900">{audience.count}</span> {audience.count === 1 ? "person" : "people"}
+                      Sending to <span className="font-semibold text-neutral-900">{effectiveCount}</span> {effectiveCount === 1 ? "person" : "people"}
+                      {excludedIds.size > 0 && (
+                        <span className="ml-1.5 font-medium text-neutral-500">
+                          · {excludedIds.size} skipped
+                        </span>
+                      )}
                       {audience.optedOutCount > 0 && (
                         <span className="ml-1.5 font-medium text-neutral-500">
                           · {audience.optedOutCount} opted out
@@ -265,23 +286,47 @@ export function TextBlastModal({ target, onClose }: { target: BlastTarget; onClo
                 </p>
               )}
               {recipientsOpen && audience.count > 0 && (
-                <div className="max-h-40 space-y-0.5 overflow-y-auto rounded-lg border border-neutral-200 bg-white p-1.5">
-                  {audience.recipients.map((r) => (
-                    <div
-                      key={r.id}
-                      className={`flex items-center justify-between gap-2 rounded-md px-1.5 py-1 text-xs ${r.duplicatePhone || r.duplicateName || (greetsByName && r.noRealName) ? "bg-amber-50" : ""}`}
-                    >
-                      <span className="flex min-w-0 items-center gap-1 truncate font-medium text-neutral-700">
-                        {(r.duplicatePhone || r.duplicateName || (greetsByName && r.noRealName)) && <AlertTriangle size={11} className="shrink-0 text-amber-600" />}
-                        <span className="truncate">{r.name}</span>
-                        {greetsByName && r.noRealName && <span className="shrink-0 text-[10px] text-amber-700">will be skipped</span>}
-                      </span>
-                      <span className="shrink-0 text-neutral-400">{r.phone}</span>
-                    </div>
-                  ))}
+                <div className="max-h-72 space-y-1 overflow-y-auto rounded-lg border border-neutral-200 bg-white p-1.5">
+                  {audience.recipients.map((r) => {
+                    const excluded = excludedIds.has(r.id);
+                    return (
+                      <div
+                        key={r.id}
+                        className={`rounded-md px-1.5 py-1.5 text-xs ${excluded ? "opacity-50" : r.duplicatePhone || r.duplicateName || (greetsByName && r.noRealName) ? "bg-amber-50" : ""}`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="flex min-w-0 items-center gap-1 truncate font-medium text-neutral-700">
+                            {(r.duplicatePhone || r.duplicateName || (greetsByName && r.noRealName)) && <AlertTriangle size={11} className="shrink-0 text-amber-600" />}
+                            <span className={`truncate ${excluded ? "line-through" : ""}`}>{r.name}</span>
+                            {greetsByName && r.noRealName && <span className="shrink-0 text-[10px] text-amber-700">will be skipped</span>}
+                          </span>
+                          <span className="shrink-0 text-neutral-400">{r.phone}</span>
+                          <button
+                            type="button"
+                            onClick={() => toggleExcluded(r.id)}
+                            className={`shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${excluded ? "text-brand-600" : "text-neutral-400 hover:bg-neutral-100"}`}
+                          >
+                            {excluded ? (
+                              <span className="flex items-center gap-1">
+                                <Undo2 size={11} /> Include
+                              </span>
+                            ) : (
+                              "Skip"
+                            )}
+                          </button>
+                        </div>
+                        {r.lastText && (
+                          <p className="mt-0.5 truncate pl-0.5 text-[11px] text-neutral-500">
+                            {r.lastText.direction === "inbound" ? "Them" : "You"}: &ldquo;{r.lastText.body}&rdquo;
+                            <span className="text-neutral-400"> · {relativeTime(r.lastText.occurredAt)}</span>
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
-              <p className="text-[11px] text-neutral-400">Anyone already texted in the last hour is automatically left out.</p>
+              <p className="text-[11px] text-neutral-400">Anyone already texted in the last hour is automatically left out. Tap Skip to leave out someone who already answered.</p>
             </div>
           )}
 
@@ -421,8 +466,8 @@ export function TextBlastModal({ target, onClose }: { target: BlastTarget; onClo
             </p>
           )}
 
-          <Button onClick={send} disabled={sending || !message.trim() || !audience?.count} className="w-full">
-            <MessageSquareText size={15} /> {sending ? "Queuing…" : "Send staggered reminder"}
+          <Button onClick={send} disabled={sending || !message.trim() || effectiveCount <= 0} className="w-full">
+            <MessageSquareText size={15} /> {sending ? "Queuing…" : effectiveCount > 0 ? `Send staggered reminder to ${effectiveCount}` : "Send staggered reminder"}
           </Button>
 
           {history && history.length > 0 && (

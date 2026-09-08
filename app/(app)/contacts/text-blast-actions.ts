@@ -255,8 +255,43 @@ export async function getEventAccount(eventName: string): Promise<string | null>
   return typeof metadata?.eventbrite_account === "string" ? metadata.eventbrite_account : null;
 }
 
-export type TextBlastRecipient = { id: string; name: string; phone: string; duplicatePhone: boolean; duplicateName: boolean; noRealName: boolean };
+export type LastTextSnippet = { body: string; direction: "inbound" | "outbound"; occurredAt: string };
+export type TextBlastRecipient = {
+  id: string;
+  name: string;
+  phone: string;
+  duplicatePhone: boolean;
+  duplicateName: boolean;
+  noRealName: boolean;
+  lastText: LastTextSnippet | null;
+};
 export type TextBlastAudiencePreview = { count: number; recipients: TextBlastRecipient[]; optedOutCount: number; noNameCount: number };
+
+// The single most recent text (either direction) per contact - lets her
+// see "they already said they're coming yesterday" before sending a
+// reminder that'd just be redundant, without opening each person's full
+// timeline one at a time. Real texts only (source: quo, the only place a
+// text's body/direction actually get logged) - a manual note or other
+// activity type wouldn't answer "did they already reply."
+async function fetchLastTextByContact(admin: SupabaseClient, ownerId: string, contactIds: string[]): Promise<Map<string, LastTextSnippet>> {
+  if (contactIds.length === 0) return new Map();
+
+  const { data } = await admin
+    .from("activities")
+    .select("contact_id, body, direction, occurred_at")
+    .eq("owner_id", ownerId)
+    .eq("source", "quo")
+    .eq("type", "text")
+    .in("contact_id", contactIds)
+    .order("occurred_at", { ascending: false });
+
+  const map = new Map<string, LastTextSnippet>();
+  for (const row of data ?? []) {
+    if (map.has(row.contact_id) || !row.body) continue;
+    map.set(row.contact_id, { body: row.body, direction: row.direction as "inbound" | "outbound", occurredAt: row.occurred_at });
+  }
+  return map;
+}
 
 // Full recipient list rather than a truncated sample - a "sending to 41
 // people: Jamie, Alex +39 more" summary doesn't let her actually check who
@@ -270,7 +305,7 @@ export type TextBlastAudiencePreview = { count: number; recipients: TextBlastRec
 // their phone/email on file (never a real name) - if the message greets by
 // {{first_name}}, the actual send loop skips these rather than texting "Hi
 // 5739992048," but she should see who that affects before she even sends.
-function buildAudiencePreview(audience: AudienceContact[], optedOutCount = 0): TextBlastAudiencePreview {
+function buildAudiencePreview(audience: AudienceContact[], lastTextByContact: Map<string, LastTextSnippet>, optedOutCount = 0): TextBlastAudiencePreview {
   const phoneCounts = new Map<string, number>();
   const nameCounts = new Map<string, number>();
   for (const c of audience) {
@@ -292,6 +327,7 @@ function buildAudiencePreview(audience: AudienceContact[], optedOutCount = 0): T
         duplicatePhone: (phoneCounts.get(c.phone) ?? 0) > 1,
         duplicateName: (nameCounts.get(name.toLowerCase()) ?? 0) > 1,
         noRealName,
+        lastText: lastTextByContact.get(c.id) ?? null,
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -315,8 +351,9 @@ export async function getTextBlastAudiencePreview(
     ? await resolveOccurrenceAudience(admin, user.id, occurrence.eventId, occurrence.attendanceStatus)
     : await resolveEventAudience(admin, user.id, eventName, registeredBefore);
   const audience = await excludeRecentlyTexted(admin, user.id, eligible);
+  const lastTextByContact = await fetchLastTextByContact(admin, user.id, audience.map((c) => c.id));
 
-  return buildAudiencePreview(audience, optedOutCount);
+  return buildAudiencePreview(audience, lastTextByContact, optedOutCount);
 }
 
 // What the compose modal is sending to - an event's registrants, a tag's
@@ -338,10 +375,11 @@ export async function getTagAudiencePreview(tagId: string): Promise<TextBlastAud
   const admin = createAdminClient();
   const { eligible, optedOutCount } = await resolveTagAudience(admin, user.id, tagId);
   const audience = await excludeRecentlyTexted(admin, user.id, eligible);
-  return buildAudiencePreview(audience, optedOutCount);
+  const lastTextByContact = await fetchLastTextByContact(admin, user.id, audience.map((c) => c.id));
+  return buildAudiencePreview(audience, lastTextByContact, optedOutCount);
 }
 
-export async function createTagTextBlast(tagId: string, tagName: string, message: string) {
+export async function createTagTextBlast(tagId: string, tagName: string, message: string, excludeContactIds: string[] = []) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -351,8 +389,9 @@ export async function createTagTextBlast(tagId: string, tagName: string, message
 
   const admin = createAdminClient();
   const { eligible } = await resolveTagAudience(admin, user.id, tagId);
-  const audience = await excludeRecentlyTexted(admin, user.id, eligible);
-  if (!audience.length) return { ok: false as const, error: "Everyone with that tag either has no phone on file, opted out, or was already texted in the last hour" };
+  const excludeSet = new Set(excludeContactIds);
+  const audience = (await excludeRecentlyTexted(admin, user.id, eligible)).filter((c) => !excludeSet.has(c.id));
+  if (!audience.length) return { ok: false as const, error: "No one left to text in this audience - see who's opted out, already texted, or removed from this send" };
 
   const { data: blast, error: blastError } = await admin
     .from("text_blasts")
@@ -376,10 +415,11 @@ export async function getContactsAudiencePreview(contactIds: string[]): Promise<
   const admin = createAdminClient();
   const { eligible, optedOutCount } = await resolveContactsAudience(admin, user.id, contactIds);
   const audience = await excludeRecentlyTexted(admin, user.id, eligible);
-  return buildAudiencePreview(audience, optedOutCount);
+  const lastTextByContact = await fetchLastTextByContact(admin, user.id, audience.map((c) => c.id));
+  return buildAudiencePreview(audience, lastTextByContact, optedOutCount);
 }
 
-export async function createContactsTextBlast(contactIds: string[], label: string, message: string) {
+export async function createContactsTextBlast(contactIds: string[], label: string, message: string, excludeContactIds: string[] = []) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -389,8 +429,9 @@ export async function createContactsTextBlast(contactIds: string[], label: strin
 
   const admin = createAdminClient();
   const { eligible } = await resolveContactsAudience(admin, user.id, contactIds);
-  const audience = await excludeRecentlyTexted(admin, user.id, eligible);
-  if (!audience.length) return { ok: false as const, error: "Everyone selected either has no phone on file, opted out, or was already texted in the last hour" };
+  const excludeSet = new Set(excludeContactIds);
+  const audience = (await excludeRecentlyTexted(admin, user.id, eligible)).filter((c) => !excludeSet.has(c.id));
+  if (!audience.length) return { ok: false as const, error: "No one left to text in this audience - see who's opted out, already texted, or removed from this send" };
 
   const { data: blast, error: blastError } = await admin
     .from("text_blasts")
@@ -422,6 +463,7 @@ export async function createTextBlast(
   message: string,
   registeredBefore?: string,
   occurrence?: { eventId: string; attendanceStatus: AttendanceStatus },
+  excludeContactIds: string[] = [],
 ) {
   const supabase = await createClient();
   const {
@@ -435,8 +477,9 @@ export async function createTextBlast(
   const { eligible } = occurrence
     ? await resolveOccurrenceAudience(admin, user.id, occurrence.eventId, occurrence.attendanceStatus)
     : await resolveEventAudience(admin, user.id, eventName, registeredBefore);
-  const audience = await excludeRecentlyTexted(admin, user.id, eligible);
-  if (!audience.length) return { ok: false as const, error: "Everyone in that audience either has no phone on file, opted out, or was already texted in the last hour" };
+  const excludeSet = new Set(excludeContactIds);
+  const audience = (await excludeRecentlyTexted(admin, user.id, eligible)).filter((c) => !excludeSet.has(c.id));
+  if (!audience.length) return { ok: false as const, error: "No one left to text in this audience - see who's opted out, already texted, or removed from this send" };
 
   const { data: blast, error: blastError } = await admin
     .from("text_blasts")
