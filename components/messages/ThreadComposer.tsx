@@ -11,12 +11,14 @@ export function ThreadComposer({
   contactId,
   phone,
   firstName,
+  lastName,
   textTemplates,
   initialBody,
 }: {
   contactId: string;
   phone: string | null;
   firstName?: string;
+  lastName?: string;
   textTemplates?: TextTemplate[];
   // Prefills the composer - used by Today's "Never texted" flow to hand
   // off the Dialer's own welcome/welcome-back draft (via a ?draft= link)
@@ -42,7 +44,11 @@ export function ThreadComposer({
     setSending(true);
     setError("");
 
-    const result = await sendTextToContact(contactId, phone as string, body.trim());
+    const result = await sendTextToContact(
+      contactId,
+      phone as string,
+      applyMergeFields(body, { first_name: firstName ?? "", last_name: lastName ?? "" }).trim(),
+    );
 
     if (!result.ok) {
       setError(result.error);

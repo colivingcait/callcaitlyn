@@ -93,7 +93,14 @@ export default async function MessageThreadPage({
         <ScrollToBottomOnLoad />
       </div>
 
-      <ThreadComposer contactId={contact.id} phone={contact.phone} firstName={contact.first_name} textTemplates={textTemplates} initialBody={draft} />
+      <ThreadComposer
+        contactId={contact.id}
+        phone={contact.phone}
+        firstName={contact.first_name}
+        lastName={contact.last_name}
+        textTemplates={textTemplates}
+        initialBody={draft}
+      />
     </div>
   );
 }

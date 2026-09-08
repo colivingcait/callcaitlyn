@@ -63,7 +63,7 @@ export function PersonCard({
   async function sendAndNext() {
     if (!contact.phone || !draft.trim()) return;
     setSending(true);
-    const res = await sendTextToContact(contact.id, contact.phone, draft.trim());
+    const res = await sendTextToContact(contact.id, contact.phone, applyMergeFields(draft, contact).trim());
     setSending(false);
     if (res.ok) {
       if (mode === "event-followup") await markEventFollowupConnected(contact.id);

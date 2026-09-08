@@ -162,7 +162,7 @@ export function DialerCallModal({
   async function sendText() {
     if (!contact.phone || !textBody.trim()) return;
     setTextSending(true);
-    const result = await sendTextToContact(contact.id, contact.phone, textBody.trim());
+    const result = await sendTextToContact(contact.id, contact.phone, applyMergeFields(textBody, contact).trim());
     setTextSending(false);
     if (result.ok) {
       setTextResult({ ok: true });
