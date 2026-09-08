@@ -12,3 +12,13 @@ export function phonesMatch(a: string | null | undefined, b: string | null | und
   const nb = normalizePhone(b);
   return !!na && !!nb && na === nb;
 }
+
+// E.164 for Quo's send API, which rejects anything with formatting
+// punctuation (spaces, parens, dashes) - contacts are stored with whatever
+// formatting they arrived with (e.g. "(202) 378-4546"), so this always
+// needs to run right before a number goes out over the wire. US/Canada only,
+// same assumption normalizePhone above already makes.
+export function toE164(phone: string | null | undefined): string | null {
+  const normalized = normalizePhone(phone);
+  return normalized ? `+1${normalized}` : null;
+}

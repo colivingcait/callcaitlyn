@@ -5,17 +5,21 @@
 // message instead of guessing further.
 
 import { quoFetch, getQuoPhoneNumberId } from "@/lib/quo/client";
+import { toE164 } from "@/lib/phone";
 
 export async function sendQuoText(
   toNumber: string,
   content: string,
 ): Promise<{ ok: true; quoMessageId: string | null } | { ok: false; error: string }> {
   try {
+    const to = toE164(toNumber);
+    if (!to) return { ok: false, error: `Invalid phone number: ${toNumber}` };
+
     const phoneNumberId = await getQuoPhoneNumberId();
 
     const res = await quoFetch("/messages", {
       method: "POST",
-      body: JSON.stringify({ content, from: phoneNumberId, to: [toNumber] }),
+      body: JSON.stringify({ content, from: phoneNumberId, to: [to] }),
     });
 
     if (!res.ok) {
