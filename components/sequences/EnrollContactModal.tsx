@@ -19,6 +19,7 @@ export function EnrollContactModal({
 }) {
   const [query, setQuery] = useState("");
   const [saving, setSaving] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const filtered = candidates.filter((c) => {
     const q = query.trim().toLowerCase();
@@ -28,9 +29,14 @@ export function EnrollContactModal({
 
   async function enroll(contactId: string) {
     setSaving(contactId);
+    setError(null);
     const supabase = createClient();
-    await supabase.from("email_sequence_enrollments").insert({ sequence_id: sequenceId, contact_id: contactId });
+    const { error: enrollError } = await supabase.from("email_sequence_enrollments").insert({ sequence_id: sequenceId, contact_id: contactId });
     setSaving(null);
+    if (enrollError) {
+      setError(enrollError.message);
+      return;
+    }
     onClose();
   }
 
@@ -53,6 +59,7 @@ export function EnrollContactModal({
             className="pl-9"
           />
         </div>
+        {error && <p className="mt-2 text-sm font-medium text-red-600">Couldn&apos;t enroll: {error}</p>}
         <div className="mt-3 flex-1 space-y-1 overflow-y-auto">
           {filtered.length === 0 && <p className="py-4 text-center text-sm text-neutral-400">No matching contacts.</p>}
           {filtered.slice(0, 50).map((c) => (

@@ -33,32 +33,35 @@ export function BulkSequenceModal({
   const [mode, setMode] = useState<BulkSequenceMode>("add");
   const [sequenceId, setSequenceId] = useState(sequences[0]?.id ?? "");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function apply() {
     if (!sequenceId) return;
     setSaving(true);
+    setError(null);
     const supabase = createClient();
 
-    if (mode === "add") {
-      // ignoreDuplicates so an already-enrolled contact isn't reset back to
-      // step 1 - this is a backfill tool, not a re-enroll tool.
-      await supabase
-        .from("email_sequence_enrollments")
-        .upsert(
-          contactIds.map((contact_id) => ({ sequence_id: sequenceId, contact_id })),
-          { onConflict: "sequence_id,contact_id", ignoreDuplicates: true },
-        );
-    } else if (mode === "remove") {
-      await supabase.from("email_sequence_enrollments").delete().eq("sequence_id", sequenceId).in("contact_id", contactIds);
-    } else {
-      await supabase
-        .from("email_sequence_enrollments")
-        .update({ status: mode === "pause" ? "paused" : "active" })
-        .eq("sequence_id", sequenceId)
-        .in("contact_id", contactIds);
-    }
+    const { error: applyError } =
+      mode === "add"
+        ? // ignoreDuplicates so an already-enrolled contact isn't reset back
+          // to step 1 - this is a backfill tool, not a re-enroll tool.
+          await supabase.from("email_sequence_enrollments").upsert(
+            contactIds.map((contact_id) => ({ sequence_id: sequenceId, contact_id })),
+            { onConflict: "sequence_id,contact_id", ignoreDuplicates: true },
+          )
+        : mode === "remove"
+          ? await supabase.from("email_sequence_enrollments").delete().eq("sequence_id", sequenceId).in("contact_id", contactIds)
+          : await supabase
+              .from("email_sequence_enrollments")
+              .update({ status: mode === "pause" ? "paused" : "active" })
+              .eq("sequence_id", sequenceId)
+              .in("contact_id", contactIds);
 
     setSaving(false);
+    if (applyError) {
+      setError(applyError.message);
+      return;
+    }
     onDone();
   }
 
@@ -113,6 +116,7 @@ export function BulkSequenceModal({
                 ))}
               </Select>
             </div>
+            {error && <p className="mt-2 text-sm text-red-600">Couldn&apos;t save: {error}</p>}
             <div className="mt-5 flex gap-3">
               <Button onClick={apply} disabled={saving || !sequenceId} className="flex-1">
                 {saving ? VERBING[mode] : VERB[mode]}

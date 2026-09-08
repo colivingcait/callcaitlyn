@@ -24,15 +24,21 @@ export function EnrollmentManager({
   const router = useRouter();
   const [enrolling, setEnrolling] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function togglePause(enrollment: DripEnrollmentDetail) {
     setBusyId(enrollment.id);
+    setError(null);
     const supabase = createClient();
-    await supabase
+    const { error: toggleError } = await supabase
       .from("email_sequence_enrollments")
       .update({ status: enrollment.status === "paused" ? "active" : "paused" })
       .eq("id", enrollment.id);
     setBusyId(null);
+    if (toggleError) {
+      setError(toggleError.message);
+      return;
+    }
     router.refresh();
   }
 
@@ -44,9 +50,14 @@ export function EnrollmentManager({
     )
       return;
     setBusyId(enrollment.id);
+    setError(null);
     const supabase = createClient();
-    await supabase.from("email_sequence_enrollments").delete().eq("id", enrollment.id);
+    const { error: deleteError } = await supabase.from("email_sequence_enrollments").delete().eq("id", enrollment.id);
     setBusyId(null);
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
     router.refresh();
   }
 
@@ -55,6 +66,7 @@ export function EnrollmentManager({
 
   return (
     <div className="space-y-2">
+      {error && <p className="text-sm font-medium text-red-600">{error}</p>}
       {enrollments.length === 0 && (
         <Card className="text-sm text-neutral-500">
           No one&apos;s enrolled yet — they&apos;ll join automatically when tagged, or add someone manually below.

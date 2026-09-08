@@ -43,10 +43,17 @@ function StatusChip({ step, type, sentCount }: { step: EmailSequenceStep; type: 
 // timing. Moving everything to guaranteed-unused negative placeholders
 // first, then assigning final positions, avoids that regardless of how the
 // requests interleave.
-async function persistOrder(steps: EmailSequenceStep[]) {
+async function persistOrder(steps: EmailSequenceStep[]): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = createClient();
-  await Promise.all(steps.map((step, i) => supabase.from("email_sequence_steps").update({ step_order: -(i + 1) }).eq("id", step.id)));
-  await Promise.all(steps.map((step, i) => supabase.from("email_sequence_steps").update({ step_order: i }).eq("id", step.id)));
+  const placeholderResults = await Promise.all(steps.map((step, i) => supabase.from("email_sequence_steps").update({ step_order: -(i + 1) }).eq("id", step.id)));
+  const placeholderError = placeholderResults.find((r) => r.error)?.error;
+  if (placeholderError) return { ok: false, error: placeholderError.message };
+
+  const finalResults = await Promise.all(steps.map((step, i) => supabase.from("email_sequence_steps").update({ step_order: i }).eq("id", step.id)));
+  const finalError = finalResults.find((r) => r.error)?.error;
+  if (finalError) return { ok: false, error: finalError.message };
+
+  return { ok: true };
 }
 
 export function StepManager({
@@ -67,26 +74,38 @@ export function StepManager({
   const [adding, setAdding] = useState(false);
   const [testingId, setTestingId] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<{ id: string; ok: boolean; message: string } | null>(null);
+  const [orderError, setOrderError] = useState<string | null>(null);
 
-  async function updateStep(id: string, patch: Record<string, unknown>) {
+  async function updateStep(id: string, patch: Record<string, unknown>): Promise<{ ok: true } | { ok: false; error: string }> {
     const supabase = createClient();
-    await supabase.from("email_sequence_steps").update(patch).eq("id", id);
+    const { error } = await supabase.from("email_sequence_steps").update(patch).eq("id", id);
+    if (error) return { ok: false, error: error.message };
     router.refresh();
+    return { ok: true };
   }
 
   async function deleteStep(id: string) {
     if (!confirm("Delete this step? Its send history/tracking stays on record, but it'll never send again.")) return;
     const supabase = createClient();
-    await supabase.from("email_sequence_steps").delete().eq("id", id);
+    const { error } = await supabase.from("email_sequence_steps").delete().eq("id", id);
+    if (error) {
+      alert(`Couldn't delete this step: ${error.message}`);
+      return;
+    }
     router.refresh();
   }
 
   async function move(index: number, direction: -1 | 1) {
     const target = sorted[index + direction];
     if (!target) return;
+    setOrderError(null);
     const reordered = [...sorted];
     [reordered[index], reordered[index + direction]] = [reordered[index + direction], reordered[index]];
-    await persistOrder(reordered);
+    const result = await persistOrder(reordered);
+    if (!result.ok) {
+      setOrderError(result.error);
+      return;
+    }
     router.refresh();
   }
 
@@ -100,6 +119,7 @@ export function StepManager({
 
   return (
     <div className="space-y-3">
+      {orderError && <p className="text-sm font-medium text-red-600">Couldn&apos;t reorder: {orderError}</p>}
       {sorted.map((step, i) => (
         <StepCard
           key={step.id}
@@ -158,7 +178,7 @@ function StepCard({
   isLast: boolean;
   stats: StepStats | undefined;
   links: LinkClickBreakdown[];
-  updateStep: (id: string, patch: Record<string, unknown>) => Promise<void>;
+  updateStep: (id: string, patch: Record<string, unknown>) => Promise<{ ok: true } | { ok: false; error: string }>;
   deleteStep: (id: string) => Promise<void>;
   move: (index: number, direction: -1 | 1) => Promise<void>;
   sendTest: (id: string) => Promise<void>;
@@ -166,6 +186,12 @@ function StepCard({
   testResult: { ok: boolean; message: string } | null;
 }) {
   const [body, setBody] = useState(step.body);
+  const [fieldError, setFieldError] = useState<string | null>(null);
+
+  async function update(patch: Record<string, unknown>) {
+    const result = await updateStep(step.id, patch);
+    setFieldError(result.ok ? null : result.error);
+  }
 
   return (
     <Card className="space-y-2">
@@ -176,7 +202,7 @@ function StepCard({
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <button
-            onClick={() => updateStep(step.id, { active: !step.active })}
+            onClick={() => update({ active: !step.active })}
             className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100"
             aria-label={step.active ? "Pause this step" : "Resume this step"}
             title={step.active ? "Pause this step" : "Resume this step"}
@@ -208,16 +234,17 @@ function StepCard({
           </button>
         </div>
       </div>
+      {fieldError && <p className="text-xs font-medium text-red-600">Couldn&apos;t save: {fieldError}</p>}
       <Input
         defaultValue={step.subject}
         placeholder="Subject"
-        onBlur={(e) => e.target.value !== step.subject && updateStep(step.id, { subject: e.target.value })}
+        onBlur={(e) => e.target.value !== step.subject && update({ subject: e.target.value })}
       />
       <EmailBodyEditor
         value={body}
         onChange={setBody}
         placeholder="Email body — use {{first_name}} to personalize"
-        onBlur={() => body !== step.body && updateStep(step.id, { body })}
+        onBlur={() => body !== step.body && update({ body })}
       />
       {type !== "drip" ? (
         <div>
@@ -226,7 +253,7 @@ function StepCard({
             id={`step-send-at-${step.id}`}
             type="datetime-local"
             defaultValue={toDatetimeLocal(step.send_at)}
-            onBlur={(e) => e.target.value && updateStep(step.id, { send_at: new Date(e.target.value).toISOString() })}
+            onBlur={(e) => e.target.value && update({ send_at: new Date(e.target.value).toISOString() })}
           />
         </div>
       ) : (
@@ -238,7 +265,7 @@ function StepCard({
               type="number"
               min={0}
               defaultValue={step.delay_amount ?? 0}
-              onBlur={(e) => updateStep(step.id, { delay_amount: Number(e.target.value) })}
+              onBlur={(e) => update({ delay_amount: Number(e.target.value) })}
             />
           </div>
           <div>
@@ -246,7 +273,7 @@ function StepCard({
             <Select
               id={`step-delay-unit-${step.id}`}
               defaultValue={step.delay_unit ?? "days"}
-              onChange={(e) => updateStep(step.id, { delay_unit: e.target.value })}
+              onChange={(e) => update({ delay_unit: e.target.value })}
             >
               <option value="hours">Hours</option>
               <option value="days">Days</option>
@@ -316,6 +343,7 @@ function NewStepForm({
   const [delayAmount, setDelayAmount] = useState("1");
   const [delayUnit, setDelayUnit] = useState<"hours" | "days">("days");
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
 
@@ -332,8 +360,9 @@ function NewStepForm({
     if (!subject.trim() || !body.trim()) return;
     if (type !== "drip" && !sendAt) return;
     setSaving(true);
+    setSaveError(null);
     const supabase = createClient();
-    await supabase.from("email_sequence_steps").insert({
+    const { error } = await supabase.from("email_sequence_steps").insert({
       sequence_id: sequenceId,
       step_order: nextOrder,
       subject: subject.trim(),
@@ -343,6 +372,10 @@ function NewStepForm({
       delay_unit: type === "drip" ? delayUnit : null,
     });
     setSaving(false);
+    if (error) {
+      setSaveError(error.message);
+      return;
+    }
     onDone();
   }
 
@@ -387,6 +420,7 @@ function NewStepForm({
             </div>
           </div>
         )}
+        {saveError && <p className="text-xs font-medium text-red-600">Couldn&apos;t add this step: {saveError}</p>}
         <div className="flex gap-2">
           <Button type="submit" size="sm" disabled={saving || !subject.trim() || !body.trim()}>
             {saving ? "Adding…" : "Add step"}
