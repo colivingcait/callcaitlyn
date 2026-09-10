@@ -66,5 +66,6 @@ export async function markContactAttended(contactId: string, series: EventSeries
 
   revalidatePath("/reports");
   revalidatePath("/events");
+  revalidatePath("/dialer");
   return { ok: true as const };
 }

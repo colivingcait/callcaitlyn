@@ -14,14 +14,6 @@ export async function recordEventAttendance(
   const incoming = new Date(eventAt);
 
   if (!current || incoming >= current) {
-    // A newer event attendance re-arms the follow-up queue for this event,
-    // the same way a fresh registration re-arms New Registrations (see
-    // listNewRegistrationsQueue) - otherwise someone who attended before,
-    // already got followed up on, and now attended again would never
-    // reappear in Post-event follow-ups for the new one.
-    await admin
-      .from("contacts")
-      .update({ last_event_name: eventName, last_event_at: eventAt, event_followup_contacted_at: null, event_followup_snoozed_at: null })
-      .eq("id", contactId);
+    await admin.from("contacts").update({ last_event_name: eventName, last_event_at: eventAt }).eq("id", contactId);
   }
 }

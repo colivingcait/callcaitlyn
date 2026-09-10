@@ -183,19 +183,31 @@ export async function listEventFollowupQueue(): Promise<{ contacts: DialerContac
   const { data: candidates, error } = await supabase
     .from("contacts")
     .select(
-      "id, first_name, last_name, phone, lead_source, last_event_name, last_event_at, created_at, event_followup_snoozed_at, stage_id",
+      "id, first_name, last_name, phone, lead_source, last_event_name, last_event_at, created_at, event_followup_contacted_at, event_followup_snoozed_at, stage_id",
     )
     .eq("archived", false)
     .not("last_event_at", "is", null)
-    .is("event_followup_contacted_at", null)
     .not("phone", "is", null);
 
   if (error) return { contacts: [], error: error.message };
   if (!candidates || candidates.length === 0) return { contacts: [], error: null };
 
+  // "Followed up" only counts if it happened at or after their most recent
+  // event attendance - same idea listNewRegistrationsQueue already uses for
+  // dialer_contacted_at vs. the latest registration. Without this, someone
+  // who attended before, already got followed up on, then attended again
+  // (or was marked attended for a new event) would never reappear here -
+  // and doing the comparison at query time instead of clearing the column
+  // on write means anyone already stuck from before this check existed
+  // self-corrects immediately, no backfill needed.
+  const eligible = candidates.filter(
+    (c) => !c.event_followup_contacted_at || new Date(c.event_followup_contacted_at).getTime() < new Date(c.last_event_at as string).getTime(),
+  );
+  if (eligible.length === 0) return { contacts: [], error: null };
+
   // Reuse the same DialerContact/DialerCard shape (dialer_snoozed_at) so
   // the UI components stay agnostic of which queue they're rendering.
-  const mapped = candidates.map((c) => ({
+  const mapped = eligible.map((c) => ({
     ...c,
     dialer_snoozed_at: c.event_followup_snoozed_at,
   })) as DialerContact[];
