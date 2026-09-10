@@ -22,7 +22,19 @@ export function DialerQueue({
   emptyMessage?: string;
   defaultDraftTemplate?: TextTemplate | null;
 }) {
-  const [selected, setSelected] = useState<DialerContact | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selectedIndex = contacts.findIndex((c) => c.id === selectedId);
+  const selected = selectedIndex >= 0 ? contacts[selectedIndex] : null;
+
+  // "Send & next" for desktop, same idea as the mobile PersonCard queue -
+  // looked up by id (not held as an object) so this keeps working correctly
+  // once router.refresh() drops the just-texted contact from `contacts`:
+  // the id of whoever was next is still valid in the new list even though
+  // the array shifted under it.
+  function advance() {
+    const next = contacts[selectedIndex + 1] ?? null;
+    setSelectedId(next?.id ?? null);
+  }
 
   if (contacts.length === 0) {
     return <p className="px-4 py-10 text-center text-sm text-neutral-400">{emptyMessage}</p>;
@@ -33,7 +45,7 @@ export function DialerQueue({
       {contacts.map((contact) => (
         <button
           key={contact.id}
-          onClick={() => setSelected(contact)}
+          onClick={() => setSelectedId(contact.id)}
           className="flex w-full items-center gap-3 rounded-2xl border border-neutral-200 bg-white p-3.5 text-left shadow-card"
         >
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-50 text-sm font-semibold text-brand-700">
@@ -67,7 +79,15 @@ export function DialerQueue({
       ))}
 
       {selected && (
-        <DialerCallModal contact={selected} stages={stages} mode={mode} defaultDraftTemplate={defaultDraftTemplate} onClose={() => setSelected(null)} />
+        <DialerCallModal
+          key={selected.id}
+          contact={selected}
+          stages={stages}
+          mode={mode}
+          defaultDraftTemplate={defaultDraftTemplate}
+          onClose={() => setSelectedId(null)}
+          onAdvance={advance}
+        />
       )}
     </div>
   );

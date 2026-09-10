@@ -28,6 +28,7 @@ import type { PipelineStage, TextTemplate } from "@/types/database";
 import type { DialerContact, DialerMode } from "@/lib/data/dialer";
 
 const PRE_EVENT_TEMPLATES = MESSAGE_TEMPLATE_CATEGORIES.find((c) => c.key === "pre_event")!.options;
+const FOLLOW_UP_TEMPLATES = MESSAGE_TEMPLATE_CATEGORIES.find((c) => c.key === "follow_up")!.options;
 
 // Calendar-day difference, not a raw hour count - an event at 6:30pm
 // today is still "today" at 9am, even though that's only ~9 hours away
@@ -56,12 +57,19 @@ export function DialerCallModal({
   mode,
   defaultDraftTemplate,
   onClose,
+  onAdvance,
 }: {
   contact: DialerContact;
   stages: PipelineStage[];
   mode: DialerMode;
   defaultDraftTemplate?: TextTemplate | null;
   onClose: () => void;
+  // Optional "send & next" hook - the parent list advances to the next
+  // contact after a successful text instead of leaving this card up, same
+  // as the mobile PersonCard's Send & next already does. Left unset by
+  // ConfirmationQueue, whose modal is opened per-row rather than swapped
+  // through a queue, so that flow is unchanged.
+  onAdvance?: () => void;
 }) {
   const router = useRouter();
   const eventName = mode === "new-registration" || mode === "confirmation" ? contact.registrationLabel : contact.last_event_name;
@@ -83,12 +91,31 @@ export function DialerCallModal({
   const [actionError, setActionError] = useState<string | null>(null);
   const [recentTextsOpen, setRecentTextsOpen] = useState(false);
 
-  const [texting, setTexting] = useState(mode === "confirmation");
-  const [textBody, setTextBody] = useState(() =>
-    mode === "confirmation" && eventStart
-      ? applyMergeFields(PRE_EVENT_TEMPLATES[defaultPreEventIndex(eventStart)]?.build(eventAccount, eventName) ?? "", contact)
-      : "",
-  );
+  // Same "here's a ready-to-send draft, edit if needed" flow across all
+  // three queues now, not just confirmation - each mode below picks its
+  // own sensible starting draft.
+  const [texting, setTexting] = useState(true);
+  const [textBody, setTextBody] = useState(() => {
+    if (mode === "confirmation" && eventStart) {
+      return applyMergeFields(PRE_EVENT_TEMPLATES[defaultPreEventIndex(eventStart)]?.build(eventAccount, eventName) ?? "", contact);
+    }
+    if (mode === "new-registration") {
+      return contact.isNew === false
+        ? returningRegistrationTemplate(contact.first_name, eventAccount, eventName)
+        : newRegistrationTemplate(contact.first_name, eventAccount, eventName);
+    }
+    if (mode === "event-followup") {
+      return applyMergeFields(FOLLOW_UP_TEMPLATES[0].build(eventAccount, eventName), contact);
+    }
+    return "";
+  });
+  // The switchable quick-pick chips shown while texting, if this mode has
+  // more than one meaningfully different angle to choose from - confirmation
+  // (week/few days/day before/day of) and follow-up (takeaway/where they're
+  // at/topic ideas/offer to help). New-registration only ever has one
+  // correct default (welcome vs. welcome back, from isNew), so it has
+  // nothing to switch between.
+  const templateChips = mode === "confirmation" ? PRE_EVENT_TEMPLATES : mode === "event-followup" ? FOLLOW_UP_TEMPLATES : null;
   const [textSending, setTextSending] = useState(false);
   const [textResult, setTextResult] = useState<{ ok: true } | { ok: false; error: string } | null>(null);
 
@@ -179,8 +206,10 @@ export function DialerCallModal({
             : await markDialerConnected(contact.id);
       if (!markResult.ok) {
         setActionError(markResult.error);
+        return;
       }
       router.refresh();
+      onAdvance?.();
     } else {
       setTextResult({ ok: false, error: result.error });
     }
@@ -286,8 +315,8 @@ export function DialerCallModal({
                     <MessageSquareText size={13} /> Welcome back
                   </Button>
                 )}
-                {mode === "confirmation" &&
-                  PRE_EVENT_TEMPLATES.map((t) => (
+                {templateChips &&
+                  templateChips.map((t) => (
                     <Button key={t.label} variant="secondary" size="sm" onClick={() => openTexting(applyMergeFields(t.build(eventAccount, eventName), contact))}>
                       <MessageSquareText size={13} /> {t.label}
                     </Button>
@@ -302,9 +331,9 @@ export function DialerCallModal({
               </div>
             ) : (
               <div className="space-y-2">
-                {mode === "confirmation" && (
+                {templateChips && (
                   <div className="flex flex-wrap gap-1.5">
-                    {PRE_EVENT_TEMPLATES.map((t) => (
+                    {templateChips.map((t) => (
                       <button
                         key={t.label}
                         type="button"

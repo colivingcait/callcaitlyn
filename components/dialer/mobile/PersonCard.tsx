@@ -14,12 +14,14 @@ import {
   markEventFollowupConnected,
   markEventFollowupSnoozed,
 } from "@/app/(app)/dialer/actions";
-import { newRegistrationTemplate, returningRegistrationTemplate } from "@/lib/crm/event-text-templates";
+import { newRegistrationTemplate, returningRegistrationTemplate, MESSAGE_TEMPLATE_CATEGORIES } from "@/lib/crm/event-text-templates";
 import { applyMergeFields } from "@/lib/crm/merge-fields";
 import { RecentTextsPanel } from "@/components/dialer/RecentTextsPanel";
 import { fullName, formatPhone, cn } from "@/lib/utils";
 import type { DialerContact, DialerMode } from "@/lib/data/dialer";
 import type { TextTemplate } from "@/types/database";
+
+const FOLLOW_UP_TEMPLATES = MESSAGE_TEMPLATE_CATEGORIES.find((c) => c.key === "follow_up")!.options;
 
 export function PersonCard({
   contact,
@@ -42,6 +44,11 @@ export function PersonCard({
   }
   if (mode === "new-registration" && contact.isNew !== true) {
     templates.push({ label: "Welcome back", body: returningRegistrationTemplate(contact.first_name, eventAccount, eventName) });
+  }
+  if (mode === "event-followup") {
+    for (const t of FOLLOW_UP_TEMPLATES) {
+      templates.push({ label: t.label, body: applyMergeFields(t.build(eventAccount, eventName), contact) });
+    }
   }
   templates.push({
     label: defaultDraftTemplate?.label ?? "Quick text",
