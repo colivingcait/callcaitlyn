@@ -4,6 +4,15 @@ import { getDuplicateRiskPairs } from "@/lib/data/reports";
 import type { ContactQueue } from "@/lib/crm/contact-queues";
 import type { ContactWithRelations, PipelineStage } from "@/types/database";
 
+// A vendor or referral partner who registers for a meetup (as a sponsor,
+// or just personally) was never a sales lead to begin with - flagging
+// them as "gone cold" alongside actual buyers/sellers/investors is
+// noise, not signal. Scoped narrowly to the three event-driven queues
+// below (all three ask "did the funnel stall after this registration"),
+// not the cold-calling queues further down, where the question is
+// different.
+const NON_LEAD_CONTACT_TYPES = new Set(["vendor", "referral_partner"]);
+
 const QUIET_THRESHOLD_MS = 30 * 24 * 60 * 60 * 1000;
 // Registering for an event and the event itself aren't the same moment,
 // and we don't reliably know the event's date (only when they registered) -
@@ -86,6 +95,7 @@ export async function filterByQueue(
     const dismissedAt = new Map((dismissals ?? []).map((d) => [d.contact_id as string, new Date(d.dismissed_at as string).getTime()]));
 
     return contacts.filter((c) => {
+      if (NON_LEAD_CONTACT_TYPES.has(c.contact_type)) return false;
       const a = agg.get(c.id);
       if (!a?.lastEventbriteAt) return false;
       const dismissed = dismissedAt.get(c.id);
@@ -96,6 +106,7 @@ export async function filterByQueue(
 
   if (queue === "no_show") {
     return contacts.filter((c) => {
+      if (NON_LEAD_CONTACT_TYPES.has(c.contact_type)) return false;
       const a = agg.get(c.id);
       if (!a?.lastEventbriteAt || c.last_event_at) return false;
       return a.lastEventbriteAt < now - NO_SHOW_GRACE_MS;
@@ -104,6 +115,7 @@ export async function filterByQueue(
 
   if (queue === "attended_gone_quiet") {
     return contacts.filter((c) => {
+      if (NON_LEAD_CONTACT_TYPES.has(c.contact_type)) return false;
       if (!c.last_event_at) return false;
       const lastOutreachAt = agg.get(c.id)?.lastOutreachAt ?? null;
       const lastAttendedAt = new Date(c.last_event_at).getTime();
