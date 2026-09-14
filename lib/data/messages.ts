@@ -4,7 +4,7 @@ import type { Activity, ContactWithRelations } from "@/types/database";
 
 type ContactSummary = Pick<
   ContactWithRelations,
-  "id" | "first_name" | "last_name" | "phone" | "contact_type" | "timeline" | "representing" | "pipeline_stages" | "contact_tags" | "archived"
+  "id" | "first_name" | "last_name" | "phone" | "contact_type" | "timeline" | "representing" | "pipeline_stages" | "contact_tags" | "archived" | "spam"
 >;
 
 export type Conversation = {
@@ -22,21 +22,33 @@ export type Conversation = {
 // reusing the same `archived` flag the rest of the app already treats as
 // "soft trash." Pass hidden: true to see the hidden list instead.
 //
+// Spam-flagged contacts (contacts.spam - see migration 0066) are a second,
+// orthogonal exclusion: kept, not archived, so they stay recoverable and
+// visible in their own bucket, but they must never appear in the normal
+// inbox, its badge count, or Today's replies-owed group. Pass spam: true to
+// see the bucket instead. Hidden already covers "archived for any reason"
+// (including a spam call that was explicitly deleted from the bucket), so
+// the spam filter only applies when hidden is NOT requested.
+//
 // filter narrows which conversations come back: "owed" only the ones
 // isConversationOwed flags, "calls" only call-type threads (missed or
 // answered), "all"/undefined everything - all three still compute `owed`
 // per row so the caller can style rows consistently either way.
-export async function listConversations(opts?: { hidden?: boolean; filter?: "owed" | "all" | "calls" }): Promise<Conversation[]> {
+export async function listConversations(opts?: { hidden?: boolean; spam?: boolean; filter?: "owed" | "all" | "calls" }): Promise<Conversation[]> {
   const supabase = await createClient();
-  const { data } = await supabase
+  let query = supabase
     .from("activities")
     .select(
-      "*, contacts!inner(id, first_name, last_name, phone, contact_type, timeline, representing, archived, pipeline_stages(*), contact_tags(tags(*)))",
+      "*, contacts!inner(id, first_name, last_name, phone, contact_type, timeline, representing, archived, spam, pipeline_stages(*), contact_tags(tags(*)))",
     )
     .eq("contacts.archived", !!opts?.hidden)
     .in("type", ["call", "text"])
     .order("occurred_at", { ascending: false })
     .limit(300);
+
+  if (!opts?.hidden) query = query.eq("contacts.spam", !!opts?.spam);
+
+  const { data } = await query;
 
   const seen = new Set<string>();
   const conversations: Conversation[] = [];

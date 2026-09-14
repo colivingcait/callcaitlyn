@@ -190,6 +190,10 @@ export interface Contact {
   referred_by: string | null;
   lease_ends_at: string | null;
   known_personally: boolean;
+  // A spam-flagged call's auto-created contact - kept, not archived, so
+  // the bucket has something to show and "Not spam" is recoverable.
+  // Never mixed into archived's meaning; see migration 0066.
+  spam: boolean;
   decision_maker: string | null;
   objection: string | null;
   consent_source: string | null;

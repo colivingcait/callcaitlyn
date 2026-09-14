@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 // Companion to optimistic UI - shows when an optimistic action's real
 // server round-trip failed, since router.refresh() alone would just
 // silently restore the truth with no explanation.
-export function Toast({ toast }: { toast: ToastState }) {
+export function Toast({ toast, onDismiss }: { toast: ToastState; onDismiss?: () => void }) {
   if (!toast) return null;
   return (
     <div
@@ -15,11 +15,23 @@ export function Toast({ toast }: { toast: ToastState }) {
     >
       <div
         className={cn(
-          "rounded-full px-4 py-2.5 text-[14px] font-medium text-white shadow-lg",
+          "flex items-center gap-2.5 rounded-full px-4 py-2.5 text-[14px] font-medium text-white shadow-lg",
           toast.tone === "error" ? "bg-[#b91c1c]" : "bg-neutral-900",
         )}
       >
-        {toast.message}
+        <span>{toast.message}</span>
+        {toast.action && (
+          <button
+            type="button"
+            className="font-semibold underline underline-offset-2"
+            onClick={() => {
+              toast.action?.onClick();
+              onDismiss?.();
+            }}
+          >
+            {toast.action.label}
+          </button>
+        )}
       </div>
     </div>
   );

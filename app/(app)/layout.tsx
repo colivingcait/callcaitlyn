@@ -17,7 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   } = await supabase.auth.getUser();
 
   const [{ count: contactsCount }, conversations, { contacts: newLeads }, unmatchedNotes] = await Promise.all([
-    supabase.from("contacts").select("id", { count: "exact", head: true }).eq("archived", false),
+    supabase.from("contacts").select("id", { count: "exact", head: true }).eq("archived", false).eq("spam", false),
     listConversations(),
     listNewRegistrationsQueue(),
     getUnmatchedNotesCount(),

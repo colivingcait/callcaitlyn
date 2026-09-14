@@ -24,8 +24,10 @@ import { GranolaMatchingSettings } from "@/components/settings/GranolaMatchingSe
 import { RateManualEntry } from "@/components/settings/RateManualEntry";
 import { DataRepairCard } from "@/components/settings/DataRepairCard";
 import { OptOutList } from "@/components/settings/OptOutList";
+import { SpamFiltersCard } from "@/components/settings/SpamFiltersCard";
 import { SignOutButton } from "@/components/nav/SignOutButton";
 import { RATE_PRODUCT } from "@/lib/crm/rate-feed";
+import { getDisabledSpamReasons } from "@/lib/crm/spam-signals";
 import { Card, Button } from "@/components/ui";
 import { BarChart3, Download } from "lucide-react";
 
@@ -76,6 +78,12 @@ export default async function SettingsPage({
     name: `${c.first_name} ${c.last_name}`.trim(),
     optedOutAt: c.opted_out_at as string,
   }));
+
+  const [disabledSpamReasons, { data: allowlistRows }] = await Promise.all([
+    user ? getDisabledSpamReasons(supabase, user.id) : Promise.resolve(new Set<string>()),
+    supabase.from("spam_number_allowlist").select("id, phone, created_at").order("created_at", { ascending: false }),
+  ]);
+  const allowlist = (allowlistRows ?? []).map((r) => ({ id: r.id as string, phone: r.phone as string, createdAt: r.created_at as string }));
 
   const stageCounts: Record<string, number> = {};
   for (const row of stageCountRows ?? []) {
@@ -192,6 +200,8 @@ export default async function SettingsPage({
       </Card>
 
       <OptOutList contacts={optedOutContacts} />
+
+      <SpamFiltersCard disabledReasons={[...disabledSpamReasons]} allowlist={allowlist} />
 
       <DataRepairCard />
 

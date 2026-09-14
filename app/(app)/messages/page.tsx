@@ -4,23 +4,28 @@ import { listMergeCandidates } from "@/lib/data/contacts";
 import { getUnmatchedInstagramThreads } from "@/lib/data/instagram";
 import { createClient } from "@/lib/supabase/server";
 import { ConversationRow } from "@/components/messages/ConversationRow";
+import { NotOwedList } from "@/components/messages/NotOwedList";
 import { NewMessageButton } from "@/components/messages/NewMessageButton";
 import { InstagramStrangerRow } from "@/components/messages/InstagramStrangerRow";
 import { MessageFilters } from "@/components/messages/MessageFilters";
+import { SpamBucket } from "@/components/messages/SpamBucket";
 import { InboxMobile } from "@/components/messages/mobile/InboxMobile";
 import { Section } from "@/components/ui/Section";
+import { ShieldAlert, ChevronRight } from "lucide-react";
 
-export default async function MessagesPage({ searchParams }: { searchParams: Promise<{ hidden?: string; filter?: string }> }) {
-  const { hidden: hiddenParam, filter: filterParam } = await searchParams;
+export default async function MessagesPage({ searchParams }: { searchParams: Promise<{ hidden?: string; filter?: string; spam?: string }> }) {
+  const { hidden: hiddenParam, filter: filterParam, spam: spamParam } = await searchParams;
   const hidden = hiddenParam === "1";
+  const spam = !hidden && spamParam === "1";
   const filter: "owed" | "all" | "calls" = filterParam === "owed" || filterParam === "calls" ? filterParam : "all";
 
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const [conversations, contacts, instagramThreads, mergeCandidates] = await Promise.all([
+  const [conversations, spamConversations, contacts, instagramThreads, mergeCandidates] = await Promise.all([
     listConversations({ hidden }),
+    hidden ? Promise.resolve([]) : listConversations({ spam: true }),
     listTextableContacts(),
     hidden ? Promise.resolve([]) : getUnmatchedInstagramThreads(),
     hidden ? Promise.resolve([]) : listMergeCandidates(),
@@ -36,11 +41,20 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
   const owedVisible = visible.filter((c) => c.owed);
   const notOwedVisible = visible.filter((c) => !c.owed);
 
+  if (spam) {
+    return (
+      <div className="mx-auto max-w-2xl overflow-x-hidden">
+        <SpamBucket conversations={spamConversations} />
+      </div>
+    );
+  }
+
   return (
     <>
       {!hidden && (
         <InboxMobile
           conversations={conversations}
+          spamConversations={spamConversations}
           contacts={contacts}
           instagramThreads={instagramThreads}
           mergeCandidates={mergeCandidates}
@@ -69,7 +83,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
           </Link>
         </div>
       ) : (
-        <MessageFilters activeFilter={filter} owedCount={owedCount} />
+        <MessageFilters activeFilter={filter} owedCount={owedCount} spamCount={spamConversations.length} />
       )}
 
       {instagramThreads.length > 0 && (
@@ -97,12 +111,27 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
               <ConversationRow key={c.contact.id} conversation={c} />
             ))}
             {notOwedVisible.length > 0 && <p className="px-0.5 pb-1 pt-2 text-base font-semibold text-neutral-900">Nothing owed</p>}
-            {notOwedVisible.map((c) => (
-              <ConversationRow key={c.contact.id} conversation={c} />
-            ))}
+            <NotOwedList conversations={notOwedVisible} />
           </>
         )}
       </div>
+
+      {!hidden && filter === "all" && spamConversations.length > 0 && (
+        <div className="px-4 pb-4">
+          <Link
+            href="/messages?spam=1"
+            className="flex items-center gap-3 rounded-2xl border border-dashed border-neutral-300 bg-[#fcfbfa] px-4 py-3.5"
+          >
+            <ShieldAlert size={18} className="shrink-0 text-neutral-400" />
+            <p className="min-w-0 flex-1 text-sm text-neutral-600">
+              <span className="font-bold text-neutral-900">{spamConversations.length}</span> calls filed as spam today — kept out of the list
+              above and out of the badge
+            </p>
+            <span className="shrink-0 text-sm font-semibold text-neutral-800">Review</span>
+            <ChevronRight size={17} className="shrink-0 text-neutral-400" />
+          </Link>
+        </div>
+      )}
       </div>
     </>
   );

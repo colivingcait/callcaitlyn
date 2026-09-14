@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const FILTERS: { key: "owed" | "all" | "calls"; label: string }[] = [
@@ -7,7 +8,15 @@ const FILTERS: { key: "owed" | "all" | "calls"; label: string }[] = [
   { key: "calls", label: "Calls only" },
 ];
 
-export function MessageFilters({ activeFilter, owedCount }: { activeFilter: "owed" | "all" | "calls"; owedCount: number }) {
+export function MessageFilters({
+  activeFilter,
+  owedCount,
+  spamCount,
+}: {
+  activeFilter: "owed" | "all" | "calls";
+  owedCount: number;
+  spamCount: number;
+}) {
   return (
     <div className="flex items-center gap-2 overflow-x-auto border-b border-neutral-100 px-4 pb-4">
       {FILTERS.map((f) => (
@@ -24,8 +33,14 @@ export function MessageFilters({ activeFilter, owedCount }: { activeFilter: "owe
         </Link>
       ))}
       <Link
+        href="/messages?spam=1"
+        className="ml-auto flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[10px] border border-neutral-200 bg-white px-3.5 py-2 text-sm font-medium text-neutral-600"
+      >
+        <ShieldAlert size={14} className="text-neutral-400" /> Spam <span className="text-neutral-400">{spamCount}</span>
+      </Link>
+      <Link
         href="/messages?hidden=1"
-        className="ml-auto shrink-0 whitespace-nowrap rounded-[10px] border border-neutral-200 bg-white px-3.5 py-2 text-sm font-medium text-neutral-600"
+        className="shrink-0 whitespace-nowrap rounded-[10px] border border-neutral-200 bg-white px-3.5 py-2 text-sm font-medium text-neutral-600"
       >
         Hidden
       </Link>

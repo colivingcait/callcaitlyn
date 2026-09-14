@@ -115,7 +115,10 @@ export type ContactListFilters = {
 
 export async function listContacts(filters: ContactListFilters) {
   const supabase = await createClient();
-  let query = supabase.from("contacts").select("*, pipeline_stages(*), contact_tags(tags(*))");
+  // Spam-flagged auto-created contacts never belong in the People list under
+  // any archived filter - they're a separate bucket (see migration 0066),
+  // not a kind of lead to browse to, archived or otherwise.
+  let query = supabase.from("contacts").select("*, pipeline_stages(*), contact_tags(tags(*))").eq("spam", false);
 
   if (filters.archived === "archived") query = query.eq("archived", true);
   else if (filters.archived === "all") {

@@ -10,6 +10,7 @@ import { createOrGetTranscript, runExtraction } from "@/lib/data/meeting-transcr
 import { updateEngagementTag } from "@/lib/crm/engagement";
 import { recordOptOut, isOptOutMessage } from "@/lib/crm/consent";
 import { isIncludedQuoNumber } from "@/lib/quo/phone-filter";
+import { detectSpam, isNumberAllowlisted, hasRepeatedMissedCalls, getDisabledSpamReasons, type SpamCheckResult } from "@/lib/crm/spam-signals";
 
 // Extraction (a Claude call over the full transcript) runs after the
 // response via after() below, but the function invocation itself still
@@ -62,6 +63,8 @@ export async function POST(request: NextRequest) {
         leadSource: "Quo (auto-created from call)",
       });
       if (contact) {
+        const spamCheck = await checkCallForSpam(admin, OWNER_ID, contact.id, call);
+
         await upsertActivity(admin, OWNER_ID, contact.id, "quo", "quo_call_id", call.quoCallId, {
           type: "call",
           direction: call.direction,
@@ -76,9 +79,19 @@ export async function POST(request: NextRequest) {
             summary: call.summary,
             transcript: call.transcript,
             raw: body,
+            ...(spamCheck.isSpam ? { spam_reason: spamCheck.reason, spam_detected_at: new Date().toISOString() } : {}),
           },
         });
-        await updateEngagementTag(admin, OWNER_ID, contact.id);
+
+        // A spam call skips the whole engagement pipeline entirely - no
+        // engagement tag, and (below, at the transcript stage) no AI
+        // extraction - rather than just hiding it from the inbox after the
+        // fact.
+        if (spamCheck.isSpam) {
+          await admin.from("contacts").update({ spam: true }).eq("id", contact.id);
+        } else {
+          await updateEngagementTag(admin, OWNER_ID, contact.id);
+        }
       }
     } else if (
       eventType === "call.recording.completed" ||
@@ -107,7 +120,26 @@ export async function POST(request: NextRequest) {
         [rawKey]: body,
       };
 
-      const result = await patchActivityMetadata(admin, OWNER_ID, "quo", "quo_call_id", call.quoCallId, patch);
+      let result = await patchActivityMetadata(admin, OWNER_ID, "quo", "quo_call_id", call.quoCallId, patch);
+
+      // A 12-second robocall has no summary/transcript at call.completed
+      // time - re-check now that this event actually delivered text. Only
+      // re-checks a contact not already flagged spam (no rule un-flags one
+      // here; that's what "Not spam" in the bucket is for).
+      if (result) {
+        const contactId = result.contactId;
+        const { data: contactRow } = await admin.from("contacts").select("spam").eq("id", contactId).maybeSingle();
+        if (contactRow && !contactRow.spam) {
+          const spamCheck = await checkCallForSpam(admin, OWNER_ID, contactId, call);
+          if (spamCheck.isSpam) {
+            result = await patchActivityMetadata(admin, OWNER_ID, "quo", "quo_call_id", call.quoCallId, {
+              spam_reason: spamCheck.reason,
+              spam_detected_at: new Date().toISOString(),
+            });
+            await admin.from("contacts").update({ spam: true }).eq("id", contactId);
+          }
+        }
+      }
 
       // The wide extraction (Phase 3) only runs once a transcript actually
       // exists, and replaces the old single stage-nudge analysis for calls -
@@ -116,7 +148,7 @@ export async function POST(request: NextRequest) {
       if (eventType === "call.transcript.completed" && call.transcript && call.quoCallId && result) {
         const transcriptText = call.transcript;
         const quoCallId = call.quoCallId;
-        const { data: contact } = await admin.from("contacts").select("known_personally").eq("id", result.contactId).maybeSingle();
+        const { data: contact } = await admin.from("contacts").select("known_personally, spam").eq("id", result.contactId).maybeSingle();
 
         const { id: transcriptId, wasCreated } = await createOrGetTranscript(admin, {
           ownerId: OWNER_ID,
@@ -132,7 +164,7 @@ export async function POST(request: NextRequest) {
         // extraction a second time for the same call - the exact class of
         // bug this phase exists to stop repeating.
         if (wasCreated) {
-          if (contact?.known_personally) {
+          if (contact?.known_personally || contact?.spam) {
             // Per the design brief: the transcript is still stored (it's
             // already saved via patchActivityMetadata above and the
             // meeting_transcripts row just created), but no suggestions are
@@ -187,6 +219,37 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ received: true });
+}
+
+// Shared by both spam-check points (call.completed, and the later
+// transcript/summary re-check once text actually exists): an allowlisted
+// number ("Not spam" was tapped for it before) never matches any rule
+// again, and the repeat-missed-calls signal only makes sense for an
+// inbound call that wasn't answered.
+async function checkCallForSpam(
+  admin: ReturnType<typeof createAdminClient>,
+  ownerId: string,
+  contactId: string,
+  call: ReturnType<typeof parseQuoCall>,
+): Promise<SpamCheckResult> {
+  if (await isNumberAllowlisted(admin, ownerId, call.counterpartNumber)) {
+    return { isSpam: false, reason: null };
+  }
+
+  const [repeatedInboundNoVoicemail, disabledReasons] = await Promise.all([
+    call.direction === "inbound" && !call.recordingUrl ? hasRepeatedMissedCalls(admin, ownerId, contactId) : Promise.resolve(false),
+    getDisabledSpamReasons(admin, ownerId),
+  ]);
+
+  return detectSpam({
+    summary: call.summary,
+    transcript: call.transcript,
+    durationSeconds: call.durationSeconds,
+    status: call.status,
+    hasVoicemail: !!call.recordingUrl,
+    repeatedInboundNoVoicemail,
+    disabledReasons,
+  });
 }
 
 function describeCall(call: ReturnType<typeof parseQuoCall>) {
