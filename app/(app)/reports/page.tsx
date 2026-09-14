@@ -42,12 +42,6 @@ import { CommissionTrendReport } from "@/components/reports/CommissionTrendRepor
 import { CommissionRateTrendReport } from "@/components/reports/CommissionRateTrendReport";
 import { DealForecastReport } from "@/components/reports/DealForecastReport";
 import { CapYearComparisonReport } from "@/components/reports/CapYearComparisonReport";
-import { MeetupShowRateReport } from "@/components/reports/MeetupShowRateReport";
-import { EventAttendanceTrendReport } from "@/components/reports/EventAttendanceTrendReport";
-import { EventCommunityReport } from "@/components/reports/EventCommunityReport";
-import { EventAudienceReport } from "@/components/reports/EventAudienceReport";
-import { EventRoiReport } from "@/components/reports/EventRoiReport";
-import { EventTopicsReport } from "@/components/reports/EventTopicsReport";
 import type { Period } from "@/lib/data/metrics";
 
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ period?: string }> }) {
@@ -146,6 +140,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
                 { key: "tagSegments", label: "Tag segments", content: <TagSegmentsReport data={tagSegments} /> },
                 { key: "contactMix", label: "Contact mix", content: <ContactMixReport rows={contactMix} /> },
                 { key: "journeyStage", label: "Journey stage", content: <JourneyStageReport rows={journeyStage} /> },
+                { key: "newLeads", label: "New leads by source", content: <NewLeadsReport data={newLeads} period={period} /> },
               ]}
             />
           </div>
@@ -167,6 +162,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
                 { key: "taskTrend", label: "Task completion trend", content: <TaskCompletionTrendReport months={taskTrend} /> },
                 { key: "staleLeads", label: "Stale leads", content: <StaleLeadsReport buckets={staleLeads} /> },
                 { key: "duplicateRisk", label: "Duplicate risk", content: <DuplicateRiskReport pairs={duplicatePairs} /> },
+                { key: "sequences", label: "Sequence engagement", content: <SequenceEngagementReport rows={sequenceEngagement} /> },
               ]}
             />
           </div>
@@ -185,41 +181,18 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
           </div>
         </Section>
 
-        <Section
-          sectionKey="reports:meetups"
-          title="Are the meetups working?"
-          meta={showRatePct != null ? `${showRatePct}% show rate` : undefined}
-          defaultOpen={false}
+        <Link
+          href="/events"
+          className="flex items-center justify-between rounded-2xl border border-[#ebe9e7] bg-white px-[18px] py-4"
         >
-          <div className="p-[18px]">
-            <MeetupShowRateReport series={events.showRate} />
-            <QuestionExtras
-              items={[
-                { key: "attendanceTrend", label: "Attendance trend", content: <EventAttendanceTrendReport series={events.attendanceTrend} /> },
-                {
-                  key: "community",
-                  label: "Community",
-                  content: (
-                    <EventCommunityReport
-                      communitySize={events.communitySize}
-                      newVsReturning={events.newVsReturning}
-                      repeatAttendance={events.repeatAttendance}
-                    />
-                  ),
-                },
-                {
-                  key: "audience",
-                  label: "Audience quality",
-                  content: <EventAudienceReport contactType={events.audienceContactType} journeyStage={events.audienceJourneyStage} />,
-                },
-                { key: "roi", label: "ROI", content: <EventRoiReport rows={events.roi} /> },
-                { key: "topics", label: "Top topics", content: <EventTopicsReport rows={events.topTopics} /> },
-                { key: "sequences", label: "Sequence engagement", content: <SequenceEngagementReport rows={sequenceEngagement} /> },
-                { key: "newLeads", label: "New leads by source", content: <NewLeadsReport data={newLeads} period={period} /> },
-              ]}
-            />
+          <div>
+            <p className="text-base font-semibold text-neutral-900">Are the meetups working?</p>
+            <p className="mt-0.5 text-sm text-neutral-500">Show rate, community growth, ROI and topics — now under Events → Insights.</p>
           </div>
-        </Section>
+          <span className="shrink-0 text-sm font-semibold text-brand-700">
+            {showRatePct != null ? `${showRatePct}% show rate →` : "Open →"}
+          </span>
+        </Link>
       </div>
 
       <p className="mt-5 text-sm text-neutral-400">

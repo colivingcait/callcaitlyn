@@ -7,7 +7,8 @@ import { SequencesDashboard } from "@/components/sequences/SequencesDashboard";
 import { CampaignsList } from "@/components/sequences/CampaignsList";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function CampaignsPage() {
+export default async function CampaignsPage({ searchParams }: { searchParams: Promise<{ event?: string }> }) {
+  const { event } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -29,7 +30,7 @@ export default async function CampaignsPage() {
           <p className="mt-0.5 text-sm text-neutral-500">Scheduled sequences, drips, one-off emails and texts to your meetup community.</p>
         </div>
         <div className="flex shrink-0 gap-2">
-          <NewTextButton eventNames={eventNames} tags={tags} />
+          <NewTextButton eventNames={eventNames} tags={tags} autoOpenEvent={event} />
         </div>
       </div>
 

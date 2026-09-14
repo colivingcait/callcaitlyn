@@ -8,7 +8,126 @@ import { classifySeries, eventKey, type EventSeries, type RawActivity } from "@/
 import { parseCrossEventOrdersCsv } from "@/lib/eventbrite/parse-orders-csv";
 import { findOrCreateContact, addTagByName } from "@/lib/crm/find-or-create-contact";
 import { upsertActivity } from "@/lib/crm/activities";
+import { recordEventAttendance } from "@/lib/crm/events";
+import { sendCheckinRecapEmail } from "@/lib/checkin/send-recap-email";
+import { SERIES_TAG, SERIES_LABEL } from "@/lib/checkin/process-checkin";
 import { APP_TIMEZONE } from "@/lib/format-time";
+import type { EventSeriesKey } from "@/lib/crm/nearest-event";
+
+// A real events-table row (see migration 0068) - what the Next up prep
+// card, the New event button, and an honest post-event "Didn't come" all
+// need. eventbriteEventId is left unset at creation (nothing to link to
+// yet) and picked up automatically once getEventsData sees a matching
+// registration - see lib/data/events.ts's eventRecordByEventbriteId.
+export async function createEvent(input: {
+  series: EventSeriesKey;
+  name: string;
+  startsAt: string;
+  endsAt: string;
+}): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+  if (!input.name.trim()) return { ok: false as const, error: "Name this event" };
+  if (new Date(input.endsAt) <= new Date(input.startsAt)) return { ok: false as const, error: "End time has to be after the start time" };
+
+  const { data, error } = await supabase
+    .from("events")
+    .insert({ owner_id: user.id, series: input.series, name: input.name.trim(), starts_at: input.startsAt, ends_at: input.endsAt })
+    .select("id")
+    .single();
+  if (error || !data) return { ok: false as const, error: error?.message ?? "Couldn't create the event" };
+
+  revalidatePath("/events");
+  return { ok: true as const, id: data.id as string };
+}
+
+// Manual override for the roster: someone she saw in person but who never
+// actually completed a check-in (missed the QR code, walked past the
+// table) - also what "Add a walk-in" on the live mobile check-in uses for
+// a person who isn't even on the registration list. Treated identically
+// to a real check-in in every way that matters - same "checkin" activity
+// type (flagged manual: true), same recap email, same attendance
+// recording - so nothing downstream (reports, the follow-up dialer) can
+// tell the two apart.
+export async function markContactAttended(contactId: string, series: EventSeriesKey, eventId: string | null) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const admin = createAdminClient();
+  const now = new Date().toISOString();
+
+  const { data: contact } = await admin.from("contacts").select("email, phone, first_name").eq("id", contactId).maybeSingle();
+  if (!contact) return { ok: false as const, error: "Contact not found" };
+
+  let eventName: string | null = null;
+  if (eventId) {
+    const { data } = await admin
+      .from("activities")
+      .select("metadata")
+      .eq("owner_id", user.id)
+      .eq("metadata->>event_id", eventId)
+      .limit(1)
+      .maybeSingle();
+    const metadata = data?.metadata as Record<string, unknown> | undefined;
+    eventName = typeof metadata?.event_name === "string" ? metadata.event_name : null;
+  }
+  eventName = eventName ?? SERIES_LABEL[series];
+
+  await addTagByName(admin, user.id, contactId, "Meetup");
+  await addTagByName(admin, user.id, contactId, SERIES_TAG[series]);
+
+  const dedupeKey = `${contactId}:${eventId ?? now.slice(0, 10)}`;
+  const activity = await upsertActivity(admin, user.id, contactId, "checkin", "checkin_dedup_key", dedupeKey, {
+    type: "meeting",
+    direction: "none",
+    occurred_at: now,
+    body: `Marked attended at ${eventName}`,
+    metadata: { checkin_dedup_key: dedupeKey, series, event_id: eventId, event_name: eventName, manual: true },
+  });
+
+  await recordEventAttendance(admin, contactId, eventName, now);
+
+  // Only on a genuine first mark, same gate the real check-in flow uses -
+  // re-clicking Mark attended on someone already on the roster shouldn't
+  // re-send the recap.
+  if (activity.wasCreated) {
+    await sendCheckinRecapEmail(admin, user.id, { id: contactId, email: contact.email, phone: contact.phone, first_name: contact.first_name }, series, eventName);
+  }
+
+  revalidatePath("/reports");
+  revalidatePath("/events");
+  revalidatePath("/dialer");
+  return { ok: true as const };
+}
+
+// "Hold to undo" on the live mobile check-in - a mis-tap shouldn't need a
+// trip to the roster to fix. Removes whatever check-in(s) this contact has
+// for this event, real or manual; a genuine Eventbrite registration is
+// untouched, so undoing a check-in just puts them back to "not checked in
+// yet" rather than removing them from the event entirely.
+export async function unmarkAttended(contactId: string, eventId: string | null): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const admin = createAdminClient();
+  let query = admin.from("activities").delete().eq("owner_id", user.id).eq("contact_id", contactId).in("source", ["checkin", "jotform"]);
+  if (eventId) query = query.eq("metadata->>event_id", eventId);
+  const { error } = await query;
+  if (error) return { ok: false as const, error: error.message };
+
+  revalidatePath("/events");
+  revalidatePath("/dialer");
+  return { ok: true as const };
+}
 
 // For cleaning up a genuinely duplicate Eventbrite listing (two listings
 // accidentally created for the same real meetup) - deletes every

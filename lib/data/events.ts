@@ -64,10 +64,19 @@ export type EventEntry = {
   date: string;
   counts: EventCounts;
   people: RosterPerson[];
+  // From the events table (see migration 0068) once this bucket is linked
+  // to one - null for anything created before that table existed, or any
+  // series with no matching row yet. Only events with a real endsAt know
+  // for certain whether "Didn't come" should show yet; everything else is
+  // historical (its own activity already happened) so hasEnded is true.
+  startsAt: string | null;
+  endsAt: string | null;
+  hasEnded: boolean;
 };
 
 export type EventsData = {
   events: EventEntry[];
+  nextUp: EventEntry | null;
   totalUniqueAttendees: number;
   eventsInLastYear: number;
 };
@@ -90,11 +99,13 @@ function eventLabel(series: EventSeries, metadata: Record<string, unknown> | nul
 export async function getEventsData(): Promise<EventsData> {
   const supabase = await createClient();
 
-  const [{ data: activities }, { data: contacts }] = await Promise.all([
+  const [{ data: activities }, { data: contacts }, { data: eventRecords }] = await Promise.all([
     supabase.from("activities").select("contact_id, source, occurred_at, metadata").in("source", ["eventbrite", "checkin", "jotform"]),
     supabase.from("contacts").select("id, first_name, last_name, email, phone").eq("archived", false),
+    supabase.from("events").select("*").order("starts_at", { ascending: true }),
   ]);
 
+  const eventRecordByEventbriteId = new Map((eventRecords ?? []).filter((e) => e.eventbrite_event_id).map((e) => [e.eventbrite_event_id as string, e]));
   const contactById = new Map((contacts ?? []).map((c) => [c.id, c]));
   const rows = (activities ?? []) as RawActivity[];
   const registrations = rows.filter((a) => a.source === "eventbrite" && contactById.has(a.contact_id));
@@ -181,11 +192,18 @@ export async function getEventsData(): Promise<EventsData> {
 
   // sortKey (used both for the displayed date and for numbering each
   // contact's Nth attendance in chronological order) picks the best
-  // available signal per the priority in the Bucket type's comment above.
-  const buckets = [...byKey.values()].map((b) => ({
-    ...b,
-    sortKey: b.eventStart ?? b.earliestCheckin ?? b.earliestManualCheckin ?? b.earliestRegistration ?? "",
-  }));
+  // available signal per the priority in the Bucket type's comment above -
+  // a real events-table row (see migration 0068) beats every proxy, since
+  // it's an actual start time instead of an inference.
+  const buckets = [...byKey.values()].map((b) => {
+    const linkedEvent = b.eventId ? eventRecordByEventbriteId.get(b.eventId) : undefined;
+    return {
+      ...b,
+      sortKey: linkedEvent?.starts_at ?? b.eventStart ?? b.earliestCheckin ?? b.earliestManualCheckin ?? b.earliestRegistration ?? "",
+      startsAt: linkedEvent?.starts_at ?? null,
+      endsAt: linkedEvent?.ends_at ?? null,
+    };
+  });
 
   // Walk each series' buckets oldest-first to number each contact's
   // attendances, then re-sort newest-first for display.
@@ -238,12 +256,50 @@ export async function getEventsData(): Promise<EventsData> {
         date: bucket.sortKey,
         counts: { registered: bucket.registered.size, attended: bucket.attended.size, noShow, walkIn },
         people,
+        startsAt: bucket.startsAt,
+        endsAt: bucket.endsAt,
+        // No real endsAt means this bucket predates the events table (or
+        // has no linked row) - it's necessarily historical, so treat it as
+        // already over rather than leaving "Didn't come" in permanent limbo.
+        hasEnded: bucket.endsAt ? new Date(bucket.endsAt).getTime() <= Date.now() : true,
       };
     });
 
+  // A brand-new event (the New event button, before anyone's registered)
+  // has no activity yet at all, so it never got a bucket above - it still
+  // needs to show as Next up. Any events-table row not already linked to
+  // a bucket becomes an empty-roster entry instead of being invisible
+  // until its first registration arrives.
+  const linkedEventbriteIds = new Set(buckets.map((b) => b.eventId).filter((id): id is string => !!id));
+  const phantomEntries: EventEntry[] = (eventRecords ?? [])
+    .filter((e) => !e.eventbrite_event_id || !linkedEventbriteIds.has(e.eventbrite_event_id))
+    .map((e) => {
+      const series: EventSeries = e.series === "womens_rei" ? "womens_rei" : "house_hacking";
+      return {
+        key: `record:${e.id}`,
+        eventId: e.eventbrite_event_id,
+        series,
+        seriesLabel: SERIES_LABELS[series],
+        label: e.name,
+        date: e.starts_at,
+        counts: { registered: 0, attended: 0, noShow: 0, walkIn: 0 },
+        people: [],
+        startsAt: e.starts_at,
+        endsAt: e.ends_at,
+        hasEnded: new Date(e.ends_at).getTime() <= Date.now(),
+      };
+    });
+
+  const allEvents = [...events, ...phantomEntries].sort((a, b) => b.date.localeCompare(a.date));
+
+  const nextUp =
+    allEvents
+      .filter((e) => e.startsAt && new Date(e.startsAt).getTime() > Date.now())
+      .sort((a, b) => new Date(a.startsAt as string).getTime() - new Date(b.startsAt as string).getTime())[0] ?? null;
+
   const totalUniqueAttendees = new Set(checkIns.map((a) => a.contact_id)).size;
   const oneYearAgo = Date.now() - 365 * 24 * 60 * 60 * 1000;
-  const eventsInLastYear = events.filter((e) => new Date(e.date).getTime() >= oneYearAgo).length;
+  const eventsInLastYear = allEvents.filter((e) => new Date(e.date).getTime() >= oneYearAgo && (!e.startsAt || new Date(e.startsAt).getTime() <= Date.now())).length;
 
-  return { events, totalUniqueAttendees, eventsInLastYear };
+  return { events: allEvents, nextUp, totalUniqueAttendees, eventsInLastYear };
 }

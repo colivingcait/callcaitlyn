@@ -9,12 +9,22 @@ import type { Tag } from "@/types/database";
 // The picker step TextTabClient used to own on its own route - folded
 // onto the unified Campaigns list instead, since a text send now shows up
 // in the same place as an email one.
-export function NewTextButton({ eventNames, tags }: { eventNames: string[]; tags: Tag[] }) {
+export function NewTextButton({
+  eventNames,
+  tags,
+  autoOpenEvent,
+}: {
+  eventNames: string[];
+  tags: Tag[];
+  // From the Events portal's prep card ("Send the day-before text") -
+  // opens straight to that event's composer instead of the picker.
+  autoOpenEvent?: string | null;
+}) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"event" | "tag">(eventNames.length > 0 ? "event" : "tag");
   const [selectedEvent, setSelectedEvent] = useState(eventNames[0] ?? "");
   const [selectedTagId, setSelectedTagId] = useState(tags[0]?.id ?? "");
-  const [composeTarget, setComposeTarget] = useState<BlastTarget | null>(null);
+  const [composeTarget, setComposeTarget] = useState<BlastTarget | null>(autoOpenEvent ? { kind: "event", eventName: autoOpenEvent } : null);
   const tagById = new Map(tags.map((t) => [t.id, t]));
 
   function compose() {

@@ -629,3 +629,14 @@ export interface BookingRequest {
   propose_token: string | null;
 }
 
+export interface EventRecord {
+  id: string;
+  owner_id: string;
+  series: string;
+  name: string;
+  starts_at: string;
+  ends_at: string;
+  eventbrite_event_id: string | null;
+  created_at: string;
+}
+
