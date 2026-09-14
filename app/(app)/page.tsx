@@ -1,21 +1,23 @@
 import { getTodayData } from "@/lib/data/today";
-import { dismissReplyOwed, clearFollowUp, dismissRegisteredNoFollowUp } from "@/app/(app)/today-actions";
+import { getSuggestionQueue } from "@/lib/data/insights";
 import { listMergeCandidates } from "@/lib/data/contacts";
 import { getDefaultDraftTemplate } from "@/lib/data/text-templates";
 import { createClient } from "@/lib/supabase/server";
 import { TodayMobile } from "@/components/dashboard/mobile/TodayMobile";
+import { UpNextCard } from "@/components/dashboard/mobile/UpNextCard";
 import { formatLocal } from "@/lib/format-time";
 import { Section } from "@/components/ui/Section";
-import { BookingRequestRow } from "@/components/scheduling/BookingRequestRow";
-import { WorklistGroup } from "@/components/dashboard/WorklistGroup";
+import { TodayWorklistDesktop } from "@/components/dashboard/TodayWorklistDesktop";
 import { TodayTasksGroup } from "@/components/dashboard/TodayTasksGroup";
 import { TodayStatStrip } from "@/components/dashboard/TodayStatStrip";
 import { PipelineMiniCard } from "@/components/dashboard/PipelineMiniCard";
 import { CommissionMiniCard } from "@/components/dashboard/CommissionMiniCard";
 import { DialerStrip } from "@/components/dashboard/DialerStrip";
-import { TextAllButton } from "@/components/dashboard/TextAllButton";
 import { WeeklyReviewCard } from "@/components/dashboard/WeeklyReviewCard";
 import { PrepSheetCard } from "@/components/dashboard/PrepSheetCard";
+import { Sparkles, ChevronRight } from "lucide-react";
+import Link from "next/link";
+import { pickUpNext, buildNeverTextedGroup, buildNeverTextedDrafts, countDistinctPeople } from "@/lib/crm/today-priority";
 import { filterResolvedWeeklyReviewItems, type WeeklyReviewPayload } from "@/lib/data/weekly-review";
 import type { PrepSheetPayload } from "@/lib/data/prep-sheet";
 
@@ -30,6 +32,7 @@ export default async function TodayPage() {
     { data: pinnedWeeklyReview },
     { data: pinnedPrepSheets },
     defaultDraftTemplate,
+    suggestionQueue,
   ] = await Promise.all([
     supabase.auth.getUser(),
     getTodayData(),
@@ -37,6 +40,7 @@ export default async function TodayPage() {
     supabase.from("pinned_today_items").select("id, payload").eq("kind", "weekly_review").is("cleared_at", null).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("pinned_today_items").select("id, payload").eq("kind", "prep_sheet").is("cleared_at", null).order("created_at", { ascending: false }).limit(5),
     getDefaultDraftTemplate(),
+    getSuggestionQueue(),
   ]);
 
   // A prep sheet clears itself once its meeting's start time passes, even
@@ -45,8 +49,34 @@ export default async function TodayPage() {
   const activePrepSheets = (pinnedPrepSheets ?? []).filter((p) => new Date((p.payload as unknown as PrepSheetPayload).startAt).getTime() > Date.now());
 
   const ownerId = user?.id ?? "";
-  const openItems = today.calls.length + today.repliesOwed.length + today.myTasks.length + today.registeredNoFollowUp.length + today.bookingRequests.length;
-  const lateCalls = today.calls.filter((c) => c.late).length;
+
+  const desktopGroups = {
+    late: today.calls.filter((c) => c.late),
+    dueToday: today.calls.filter((c) => !c.late),
+    owed: today.repliesOwed,
+    neverTexted: buildNeverTextedGroup(today.newLeadsNeverCalledContacts),
+    registered: today.registeredNoFollowUp,
+  };
+  const neverTextedDrafts = buildNeverTextedDrafts(today.newLeadsNeverCalledContacts);
+  const { item: upNext, reason: upNextReason } = pickUpNext(desktopGroups);
+  const upNextOverrideDraft = upNext?.source === "call" ? neverTextedDrafts[upNext.id] : undefined;
+  const upNextMoreCount = Math.max(
+    countDistinctPeople(
+      desktopGroups.late.map((c) => c.id),
+      desktopGroups.dueToday.map((c) => c.id),
+      desktopGroups.owed.map((c) => c.id),
+      desktopGroups.neverTexted.map((c) => c.id),
+    ) - (upNext ? 1 : 0),
+    0,
+  );
+
+  const openItems = countDistinctPeople(
+    today.calls.map((c) => c.id),
+    today.repliesOwed.map((c) => c.id),
+    desktopGroups.neverTexted.map((c) => c.id),
+    today.registeredNoFollowUp.map((c) => c.id),
+    today.bookingRequests.map((r) => r.contact_id),
+  );
 
   // The stored payload is a snapshot from whenever the weekly-review cron
   // last ran - it never gets rewritten just because a row was fixed, so
@@ -61,13 +91,14 @@ export default async function TodayPage() {
       <TodayMobile
         today={today}
         contacts={contacts}
+        ownerId={ownerId}
         activePrepSheets={activePrepSheets}
         pinnedWeeklyReview={resolvedWeeklyReview}
         defaultDraftTemplate={defaultDraftTemplate}
       />
       <div className="mx-auto hidden max-w-3xl px-4 py-6 md:block">
       <h1 className="font-serif text-2xl font-semibold text-neutral-900 sm:text-[28px]">{formatLocal(new Date(), "EEEE, MMMM d")}</h1>
-      <p className="mt-1 text-[15px] text-neutral-500">{openItems} open item{openItems === 1 ? "" : "s"} today</p>
+      <p className="mt-1 text-[15px] text-neutral-500">{openItems} people to work today</p>
 
       {activePrepSheets.length > 0 && (
         <div className="mt-4 space-y-3">
@@ -94,44 +125,31 @@ export default async function TodayPage() {
       </div>
 
       <div className="mt-5">
+        <UpNextCard item={upNext} reason={upNextReason} draftTemplate={defaultDraftTemplate} overrideDraft={upNextOverrideDraft} moreCount={upNextMoreCount} />
+      </div>
+
+      <div className="mt-5">
+        <TodayWorklistDesktop groups={desktopGroups} bookingRequests={today.bookingRequests} />
+      </div>
+
+      {suggestionQueue.count > 0 && (
+        <Link href="/insights" className="mt-3 flex items-center gap-3 rounded-2xl border border-[#ebe9e7] bg-white px-[18px] py-3.5">
+          <Sparkles size={18} className="shrink-0 text-neutral-400" />
+          <p className="min-w-0 flex-1 text-[15px] text-neutral-700">
+            <span className="font-semibold text-neutral-900">{suggestionQueue.count}</span> {suggestionQueue.count === 1 ? "person" : "people"} said something
+            worth acting on — read them together in Insights
+          </p>
+          <ChevronRight size={17} className="shrink-0 text-neutral-400" />
+        </Link>
+      )}
+
+      <div className="mt-3">
         <DialerStrip count={today.newLeadsNeverCalled} />
       </div>
 
-      <div className="mt-3 space-y-3">
-        {today.bookingRequests.length > 0 && (
-          <Section sectionKey="today:booking-requests" title="Meeting requests" meta={`${today.bookingRequests.length}`} defaultOpen>
-            {today.bookingRequests.map((r) => (
-              <BookingRequestRow key={r.id} request={r} />
-            ))}
-          </Section>
-        )}
-
-        {today.justFinished.length > 0 && (
-          <Section sectionKey="today:just-finished" title="Just finished" meta={`${today.justFinished.length}`}>
-            <WorklistGroup people={today.justFinished} />
-          </Section>
-        )}
-
-        <Section sectionKey="today:calls" title="Calls" meta={lateCalls > 0 ? `${today.calls.length} · ${lateCalls} late` : `${today.calls.length}`}>
-          <WorklistGroup people={today.calls} onDismissContact={clearFollowUp} dismissContactLabel="Clear this follow-up" />
-        </Section>
-
-        <Section sectionKey="today:replies" title="Replies owed" meta={`${today.repliesOwed.length}`}>
-          <WorklistGroup people={today.repliesOwed} onDismiss={dismissReplyOwed} />
-        </Section>
-
+      <div className="mt-3">
         <Section sectionKey="today:tasks" title="My tasks" meta={`${today.myTasks.length}`}>
           <TodayTasksGroup tasks={today.myTasks} ownerId={ownerId} contacts={contacts} />
-        </Section>
-
-        <Section
-          sectionKey="today:registered"
-          title="Registered, no follow-up"
-          meta={`${today.registeredNoFollowUp.length}`}
-          defaultOpen={false}
-          action={<TextAllButton contactIds={today.registeredNoFollowUp.map((p) => p.id)} label="Registered, no follow-up" />}
-        >
-          <WorklistGroup people={today.registeredNoFollowUp} onDismissContact={dismissRegisteredNoFollowUp} dismissContactLabel="No action needed for this one" />
         </Section>
       </div>
 

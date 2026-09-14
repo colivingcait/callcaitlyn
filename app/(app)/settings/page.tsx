@@ -25,6 +25,7 @@ import { RateManualEntry } from "@/components/settings/RateManualEntry";
 import { DataRepairCard } from "@/components/settings/DataRepairCard";
 import { OptOutList } from "@/components/settings/OptOutList";
 import { SpamFiltersCard } from "@/components/settings/SpamFiltersCard";
+import { KnownPersonallyList } from "@/components/settings/KnownPersonallyList";
 import { SignOutButton } from "@/components/nav/SignOutButton";
 import { RATE_PRODUCT } from "@/lib/crm/rate-feed";
 import { getDisabledSpamReasons } from "@/lib/crm/spam-signals";
@@ -79,11 +80,13 @@ export default async function SettingsPage({
     optedOutAt: c.opted_out_at as string,
   }));
 
-  const [disabledSpamReasons, { data: allowlistRows }] = await Promise.all([
+  const [disabledSpamReasons, { data: allowlistRows }, { data: knownPersonallyRows }] = await Promise.all([
     user ? getDisabledSpamReasons(supabase, user.id) : Promise.resolve(new Set<string>()),
     supabase.from("spam_number_allowlist").select("id, phone, created_at").order("created_at", { ascending: false }),
+    supabase.from("contacts").select("id, first_name, last_name").eq("known_personally", true).order("first_name", { ascending: true }),
   ]);
   const allowlist = (allowlistRows ?? []).map((r) => ({ id: r.id as string, phone: r.phone as string, createdAt: r.created_at as string }));
+  const knownPersonallyContacts = (knownPersonallyRows ?? []).map((c) => ({ id: c.id, name: `${c.first_name} ${c.last_name}`.trim() }));
 
   const stageCounts: Record<string, number> = {};
   for (const row of stageCountRows ?? []) {
@@ -202,6 +205,8 @@ export default async function SettingsPage({
       <OptOutList contacts={optedOutContacts} />
 
       <SpamFiltersCard disabledReasons={[...disabledSpamReasons]} allowlist={allowlist} />
+
+      <KnownPersonallyList contacts={knownPersonallyContacts} />
 
       <DataRepairCard />
 

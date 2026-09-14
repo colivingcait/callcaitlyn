@@ -21,6 +21,7 @@ async function getCallsGroup(): Promise<WorklistPerson[]> {
     .from("contacts")
     .select("id, first_name, last_name, phone, next_follow_up_at")
     .eq("archived", false)
+    .eq("known_personally", false)
     .not("next_follow_up_at", "is", null)
     .order("next_follow_up_at", { ascending: true })
     .limit(30);
@@ -49,9 +50,10 @@ async function getRepliesOwedGroup(): Promise<WorklistPerson[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("activities")
-    .select("id, contact_id, direction, occurred_at, body, needs_reply, reply_dismissed_at, contacts!inner(id, first_name, last_name, phone, archived)")
+    .select("id, contact_id, direction, occurred_at, body, needs_reply, reply_dismissed_at, contacts!inner(id, first_name, last_name, phone, archived, known_personally)")
     .eq("type", "text")
     .eq("contacts.archived", false)
+    .eq("contacts.known_personally", false)
     .order("occurred_at", { ascending: false })
     .limit(1000);
 
@@ -103,7 +105,7 @@ async function getMyTasksGroup(): Promise<WorklistTask[]> {
 }
 
 async function getRegisteredNoFollowUpGroup(stages: PipelineStage[]): Promise<WorklistPerson[]> {
-  const contacts = await listContacts({});
+  const contacts = (await listContacts({})).filter((c) => !c.known_personally);
   const matched = await filterByQueue(contacts, "no_followup_after_registration", stages);
   return matched.slice(0, 20).map((c) => ({
     id: c.id,
@@ -112,58 +114,6 @@ async function getRegisteredNoFollowUpGroup(stages: PipelineStage[]): Promise<Wo
     meta: c.last_event_name ? `Registered · ${c.last_event_name}` : "Registered, no follow-up yet",
     late: false,
   }));
-}
-
-// "Just finished" - ready transcripts from the last 48 hours that still
-// have pending proposals to review. Today only lists these (name, source,
-// how many proposals) and links to the contact page, which is where the
-// actual ApprovePanel renders - keeps this query light (no need to also
-// pull every contact's stage/representing/etc just to list who has
-// something to review).
-async function getJustFinishedGroup(): Promise<WorklistPerson[]> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("meeting_transcripts")
-    .select("id, source, occurred_at, contacts!inner(id, first_name, last_name, phone, archived)")
-    .eq("status", "ready")
-    .eq("contacts.archived", false)
-    .gte("occurred_at", daysAgo(2))
-    .order("occurred_at", { ascending: false })
-    .limit(20);
-
-  if (!data || data.length === 0) return [];
-
-  const { data: pendingCounts } = await supabase
-    .from("proposed_changes")
-    .select("transcript_id")
-    .eq("status", "pending")
-    .in(
-      "transcript_id",
-      data.map((t) => t.id),
-    );
-  const countByTranscript = new Map<string, number>();
-  for (const row of pendingCounts ?? []) {
-    countByTranscript.set(row.transcript_id, (countByTranscript.get(row.transcript_id) ?? 0) + 1);
-  }
-
-  const SOURCE_LABEL: Record<string, string> = { quo: "Call", tactiq: "Meeting", granola: "Granola note", memo: "Voice memo" };
-  const seen = new Set<string>();
-  const justFinished: WorklistPerson[] = [];
-  for (const row of data) {
-    const contact = row.contacts as unknown as { id: string; first_name: string; last_name: string; phone: string | null } | null;
-    if (!contact || seen.has(contact.id)) continue;
-    const count = countByTranscript.get(row.id) ?? 0;
-    if (count === 0) continue;
-    seen.add(contact.id);
-    justFinished.push({
-      id: contact.id,
-      name: `${contact.first_name} ${contact.last_name}`.trim(),
-      phone: contact.phone,
-      meta: `${SOURCE_LABEL[row.source] ?? row.source} ${relativeTime(row.occurred_at)} · ${count} thing${count === 1 ? "" : "s"} to review`,
-      late: false,
-    });
-  }
-  return justFinished;
 }
 
 function daysAgo(n: number) {
@@ -223,13 +173,12 @@ export async function getTodayData() {
   const { data: stagesData } = await supabase.from("pipeline_stages").select("*").order("sort_order", { ascending: true });
   const stages = (stagesData ?? []) as PipelineStage[];
 
-  const [calls, repliesOwed, myTasks, registeredNoFollowUp, justFinished, statStrip, commissionYear, newLeads, bookingRequests] =
+  const [calls, repliesOwed, myTasks, registeredNoFollowUp, statStrip, commissionYear, newLeads, bookingRequests] =
     await Promise.all([
       getCallsGroup(),
       getRepliesOwedGroup(),
       getMyTasksGroup(),
       getRegisteredNoFollowUpGroup(stages),
-      getJustFinishedGroup(),
       getStatStrip(stages),
       getCommissionYearSummary(),
       listNewRegistrationsQueue(),
@@ -246,7 +195,6 @@ export async function getTodayData() {
     repliesOwed,
     myTasks,
     registeredNoFollowUp,
-    justFinished,
     statStrip,
     commissionYear,
     newLeadsNeverCalled: newLeads.contacts.length,

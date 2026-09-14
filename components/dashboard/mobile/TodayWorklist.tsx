@@ -2,24 +2,36 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MessageSquareText, Phone, ChevronRight, X } from "lucide-react";
+import { MessageSquareText, Phone, ChevronRight, X, RotateCcw, UserMinus } from "lucide-react";
 import Link from "next/link";
 import { ListRow } from "@/components/mobile/ListRow";
 import { SwipeActions } from "@/components/mobile/SwipeActions";
 import { Toast } from "@/components/mobile/Toast";
+import { BookingRequestRow } from "@/components/scheduling/BookingRequestRow";
+import { TodayTasksGroup } from "@/components/dashboard/TodayTasksGroup";
 import { useToast } from "@/lib/hooks/useToast";
 import { openQuoCall } from "@/lib/quo/call-link";
-import { clearFollowUp } from "@/app/(app)/today-actions";
+import { clearFollowUp, dismissRegisteredNoFollowUp, markKnownPersonally } from "@/app/(app)/today-actions";
 import { cn } from "@/lib/utils";
-import type { WorklistPerson } from "@/lib/data/today";
+import type { WorklistPerson, WorklistTask } from "@/lib/data/today";
+import type { BookingRequestWithContact } from "@/lib/data/scheduling";
+import type { MergeCandidate } from "@/lib/data/contacts";
 
-export type TodayChipKey = "late" | "dueToday" | "owed" | "neverTexted";
+export type TodayChipKey = "late" | "dueToday" | "owed" | "tasks" | "neverTexted" | "registered" | "meetings";
 
 export function TodayWorklist({
   groups,
+  tasks,
+  ownerId,
+  contacts,
+  bookingRequests,
   drafts,
 }: {
-  groups: Record<TodayChipKey, WorklistPerson[]>;
+  groups: Record<"late" | "dueToday" | "owed" | "neverTexted" | "registered", WorklistPerson[]>;
+  tasks: WorklistTask[];
+  ownerId: string;
+  contacts: MergeCandidate[];
+  bookingRequests: BookingRequestWithContact[];
   // Never-texted only: contact id -> the Dialer's own welcome/welcome-back
   // template text, prefilled into the message thread on tap instead of a
   // blank compose box - same template a new registration would get from
@@ -34,15 +46,21 @@ export function TodayWorklist({
     { key: "late", label: `Late ${groups.late.length}` },
     { key: "dueToday", label: `Due today ${groups.dueToday.length}` },
     { key: "owed", label: `Owed a reply ${groups.owed.length}` },
+    { key: "tasks", label: `Tasks ${tasks.length}` },
     { key: "neverTexted", label: `Never texted ${groups.neverTexted.length}` },
+    { key: "registered", label: `Registered ${groups.registered.length}` },
+    { key: "meetings", label: `Meetings ${bookingRequests.length}` },
   ];
-  const firstNonEmpty = chips.find((c) => groups[c.key].length > 0)?.key ?? "late";
+  const isNonEmpty = (key: TodayChipKey) =>
+    key === "tasks" ? tasks.length > 0 : key === "meetings" ? bookingRequests.length > 0 : groups[key].length > 0;
+  const firstNonEmpty = chips.find((c) => isNonEmpty(c.key))?.key ?? "late";
   const [active, setActive] = useState<TodayChipKey>(firstNonEmpty);
 
   // Late/due-today both come from today.calls - the only groups where "I
   // don't need to call this person" (clearing next_follow_up_at) applies.
   const isCallGroup = active === "late" || active === "dueToday";
-  const people = groups[active].filter((p) => !cleared.has(p.id));
+  const isPersonGroup = active === "late" || active === "dueToday" || active === "owed" || active === "neverTexted" || active === "registered";
+  const people = isPersonGroup ? groups[active].filter((p) => !cleared.has(p.id)) : [];
 
   async function handleClear(contactId: string) {
     const res = await clearFollowUp(contactId);
@@ -53,9 +71,29 @@ export function TodayWorklist({
     setCleared((prev) => new Set(prev).add(contactId));
   }
 
+  async function handleNotThisTime(contactId: string) {
+    const res = await dismissRegisteredNoFollowUp(contactId);
+    if (!res.ok) {
+      showToast("Couldn't dismiss that", "error");
+      return;
+    }
+    setCleared((prev) => new Set(prev).add(contactId));
+    router.refresh();
+  }
+
+  async function handleNeverQueue(contactId: string) {
+    const res = await markKnownPersonally(contactId);
+    if (!res.ok) {
+      showToast("Couldn't update that", "error");
+      return;
+    }
+    setCleared((prev) => new Set(prev).add(contactId));
+    router.refresh();
+  }
+
   return (
     <div>
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {chips.map((chip) => (
           <button
             key={chip.key}
@@ -71,48 +109,83 @@ export function TodayWorklist({
         ))}
       </div>
 
-      <div className="mt-3 divide-y divide-neutral-100 rounded-[16px] border border-[#ebe9e7] bg-white">
-        {people.length === 0 ? (
+      <div className="mt-3 overflow-hidden rounded-[16px] border border-[#ebe9e7] bg-white">
+        {active === "tasks" ? (
+          <TodayTasksGroup tasks={tasks} ownerId={ownerId} contacts={contacts} />
+        ) : active === "meetings" ? (
+          bookingRequests.length === 0 ? (
+            <p className="px-4 py-6 text-center text-[15px] text-neutral-400">Nothing here.</p>
+          ) : (
+            <div className="divide-y divide-neutral-100">
+              {bookingRequests.map((r) => (
+                <BookingRequestRow key={r.id} request={r} />
+              ))}
+            </div>
+          )
+        ) : people.length === 0 ? (
           <p className="px-4 py-6 text-center text-[15px] text-neutral-400">Nothing here.</p>
         ) : (
-          people.map((person) => {
-            const row = (
-              <ListRow
-                href={`/contacts/${person.id}`}
-                avatar={{ firstName: person.name.split(" ")[0] || "?", lastName: person.name.split(" ").slice(1).join(" ") }}
-                name={person.name}
-                secondaryText={person.meta}
-                secondaryTone={person.late ? "danger" : "default"}
-                trailingAction={
-                  person.phone
-                    ? active === "late"
-                      ? { icon: Phone, variant: "secondary", "aria-label": "Call", onClick: () => openQuoCall(person.phone!) }
-                      : {
-                          icon: MessageSquareText,
-                          variant: "primary",
-                          "aria-label": "Text",
-                          onClick: () => {
-                            const draft = drafts?.[person.id];
-                            router.push(draft ? `/messages/${person.id}?draft=${encodeURIComponent(draft)}` : `/messages/${person.id}`);
-                          },
-                        }
-                    : undefined
-                }
-              />
-            );
-            if (!isCallGroup) return <div key={person.id}>{row}</div>;
-            return (
-              <SwipeActions
-                key={person.id}
-                rowId={person.id}
-                openRowId={openRowId}
-                onOpenChange={setOpenRowId}
-                actions={[{ icon: X, label: "Clear", bg: "#78716c", onClick: () => handleClear(person.id) }]}
-              >
-                {row}
-              </SwipeActions>
-            );
-          })
+          <div className="divide-y divide-neutral-100">
+            {people.map((person) => {
+              const row = (
+                <ListRow
+                  href={`/contacts/${person.id}`}
+                  avatar={{ firstName: person.name.split(" ")[0] || "?", lastName: person.name.split(" ").slice(1).join(" ") }}
+                  name={person.name}
+                  secondaryText={person.meta}
+                  secondaryTone={person.late ? "danger" : "default"}
+                  trailingAction={
+                    person.phone
+                      ? active === "late"
+                        ? { icon: Phone, variant: "secondary", "aria-label": "Call", onClick: () => openQuoCall(person.phone!) }
+                        : {
+                            icon: MessageSquareText,
+                            variant: "primary",
+                            "aria-label": "Text",
+                            onClick: () => {
+                              const draft = drafts?.[person.id];
+                              router.push(draft ? `/messages/${person.id}?draft=${encodeURIComponent(draft)}` : `/messages/${person.id}`);
+                            },
+                          }
+                      : undefined
+                  }
+                />
+              );
+              if (isCallGroup) {
+                return (
+                  <SwipeActions
+                    key={person.id}
+                    rowId={person.id}
+                    openRowId={openRowId}
+                    onOpenChange={setOpenRowId}
+                    actions={[{ icon: X, label: "Clear", bg: "#78716c", onClick: () => handleClear(person.id) }]}
+                  >
+                    {row}
+                  </SwipeActions>
+                );
+              }
+              if (active === "registered") {
+                return (
+                  <SwipeActions
+                    key={person.id}
+                    rowId={person.id}
+                    openRowId={openRowId}
+                    onOpenChange={setOpenRowId}
+                    actions={[
+                      { icon: RotateCcw, label: "Not this time", bg: "#78716c", onClick: () => handleNotThisTime(person.id) },
+                      { icon: UserMinus, label: "Never queue", bg: "#1c1917", onClick: () => handleNeverQueue(person.id) },
+                    ]}
+                  >
+                    {row}
+                  </SwipeActions>
+                );
+              }
+              return <div key={person.id}>{row}</div>;
+            })}
+          </div>
+        )}
+        {isCallGroup && people.length > 0 && (
+          <p className="border-t border-neutral-100 px-4 py-2.5 text-[13px] text-neutral-400">Swipe a row left to clear the follow-up</p>
         )}
       </div>
 
@@ -120,6 +193,11 @@ export function TodayWorklist({
         <Link href="/dialer" className="mt-2 flex items-center justify-center gap-1 py-1 text-[14px] font-medium text-brand-600">
           Work through these one at a time in the Dialer <ChevronRight size={14} />
         </Link>
+      )}
+      {active === "registered" && people.length > 0 && (
+        <p className="mt-2 px-1 text-[13px] text-neutral-400">
+          People marked &quot;never queue&quot; are listed in Settings → People you know.
+        </p>
       )}
       <Toast toast={toast} />
     </div>

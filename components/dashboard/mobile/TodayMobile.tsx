@@ -2,10 +2,10 @@ import { formatLocal } from "@/lib/format-time";
 import { PrepSheetCard } from "@/components/dashboard/PrepSheetCard";
 import { WeeklyReviewCard } from "@/components/dashboard/WeeklyReviewCard";
 import { UpNextCard } from "@/components/dashboard/mobile/UpNextCard";
-import { TodayWorklist, type TodayChipKey } from "@/components/dashboard/mobile/TodayWorklist";
+import { TodayWorklist } from "@/components/dashboard/mobile/TodayWorklist";
 import { TodayFooterLine } from "@/components/dashboard/mobile/TodayFooterLine";
 import { TodaySearch } from "@/components/dashboard/mobile/TodaySearch";
-import { newRegistrationTemplate, returningRegistrationTemplate } from "@/lib/crm/event-text-templates";
+import { pickUpNext, buildNeverTextedGroup, buildNeverTextedDrafts, countDistinctPeople } from "@/lib/crm/today-priority";
 import type { getTodayData, WorklistPerson } from "@/lib/data/today";
 import type { WeeklyReviewPayload } from "@/lib/data/weekly-review";
 import type { PrepSheetPayload } from "@/lib/data/prep-sheet";
@@ -17,62 +17,45 @@ type MergeCandidate = { id: string; first_name: string; last_name: string; phone
 export function TodayMobile({
   today,
   contacts,
+  ownerId,
   activePrepSheets,
   pinnedWeeklyReview,
   defaultDraftTemplate,
 }: {
   today: Today;
   contacts: MergeCandidate[];
+  ownerId: string;
   activePrepSheets: { id: string; payload: unknown }[];
   pinnedWeeklyReview: { id: string; payload: unknown } | null;
   defaultDraftTemplate: TextTemplate | null;
 }) {
-  const openItems = today.calls.length + today.repliesOwed.length + today.myTasks.length + today.registeredNoFollowUp.length + today.bookingRequests.length;
-
-  const groups: Record<TodayChipKey, WorklistPerson[]> = {
+  const groups: Record<"late" | "dueToday" | "owed" | "neverTexted" | "registered", WorklistPerson[]> = {
     late: today.calls.filter((c) => c.late),
     dueToday: today.calls.filter((c) => !c.late),
     owed: today.repliesOwed,
-    neverTexted: today.newLeadsNeverCalledContacts.map((c) => ({
-      id: c.id,
-      name: `${c.first_name} ${c.last_name}`.trim(),
-      phone: c.phone,
-      meta: c.last_event_name ? `Registered · ${c.last_event_name}` : c.lead_source ?? "New lead",
-      late: false,
-    })),
+    neverTexted: buildNeverTextedGroup(today.newLeadsNeverCalledContacts),
+    registered: today.registeredNoFollowUp,
   };
+
+  const openItems = countDistinctPeople(
+    today.calls.map((c) => c.id),
+    today.repliesOwed.map((c) => c.id),
+    today.myTasks.map((t) => t.contactId),
+    groups.neverTexted.map((c) => c.id),
+    today.registeredNoFollowUp.map((c) => c.id),
+    today.bookingRequests.map((r) => r.contact_id),
+  );
 
   // Same welcome/welcome-back template the Dialer drafts for these exact
   // contacts (today.newLeadsNeverCalledContacts is the Dialer's own new-
   // registrations queue) - keyed by contact id so both the worklist row's
   // Text tap and the Up next card can prefill it instead of a blank box.
-  const neverTextedDrafts: Record<string, string> = {};
-  for (const c of today.newLeadsNeverCalledContacts) {
-    neverTextedDrafts[c.id] =
-      c.isNew === false
-        ? returningRegistrationTemplate(c.first_name, c.registrationAccount, c.registrationLabel)
-        : newRegistrationTemplate(c.first_name, c.registrationAccount, c.registrationLabel);
-  }
+  const neverTextedDrafts = buildNeverTextedDrafts(today.newLeadsNeverCalledContacts);
 
   // Priority: overdue > due today > owed reply > never texted - the
   // highest-priority non-empty group's first person becomes Up next.
-  let upNext: (WorklistPerson & { source: "call" | "reply" }) | null = null;
-  let upNextReason = "";
-  let upNextOverrideDraft: string | undefined;
-  if (groups.late[0]) {
-    upNext = { ...groups.late[0], source: "call" };
-    upNextReason = groups.late[0].meta;
-  } else if (groups.dueToday[0]) {
-    upNext = { ...groups.dueToday[0], source: "call" };
-    upNextReason = "Due today";
-  } else if (groups.owed[0]) {
-    upNext = { ...groups.owed[0], source: "reply" };
-    upNextReason = "Owed a reply";
-  } else if (groups.neverTexted[0]) {
-    upNext = { ...groups.neverTexted[0], source: "call" };
-    upNextReason = "Never texted";
-    upNextOverrideDraft = neverTextedDrafts[groups.neverTexted[0].id];
-  }
+  const { item: upNext, reason: upNextReason } = pickUpNext(groups);
+  const upNextOverrideDraft = upNext?.source === "call" ? neverTextedDrafts[upNext.id] : undefined;
 
   return (
     <div className="px-4 py-5 md:hidden">
@@ -101,7 +84,7 @@ export function TodayMobile({
       <UpNextCard item={upNext} reason={upNextReason} draftTemplate={defaultDraftTemplate} overrideDraft={upNextOverrideDraft} />
 
       <div className="mt-4">
-        <TodayWorklist groups={groups} drafts={neverTextedDrafts} />
+        <TodayWorklist groups={groups} tasks={today.myTasks} ownerId={ownerId} contacts={contacts} bookingRequests={today.bookingRequests} drafts={neverTextedDrafts} />
       </div>
 
       <TodayFooterLine

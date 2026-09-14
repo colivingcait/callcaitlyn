@@ -73,6 +73,7 @@ export async function listNewRegistrationsQueue(): Promise<{ contacts: DialerCon
     .from("contacts")
     .select("id, first_name, last_name, phone, lead_source, last_event_name, last_event_at, created_at, dialer_contacted_at, dialer_snoozed_at, stage_id")
     .eq("archived", false)
+    .eq("known_personally", false)
     .not("phone", "is", null);
 
   // A query error here (e.g. a column the dialer depends on doesn't exist
@@ -186,6 +187,7 @@ export async function listEventFollowupQueue(): Promise<{ contacts: DialerContac
       "id, first_name, last_name, phone, lead_source, last_event_name, last_event_at, created_at, event_followup_contacted_at, event_followup_snoozed_at, stage_id",
     )
     .eq("archived", false)
+    .eq("known_personally", false)
     .not("last_event_at", "is", null)
     .not("phone", "is", null);
 
@@ -323,6 +325,7 @@ export async function listConfirmationQueue(): Promise<{ items: ConfirmationQueu
     .select("id, first_name, last_name, phone, stage_id")
     .in("id", [...allContactIds])
     .eq("archived", false)
+    .eq("known_personally", false)
     .is("opted_out_at", null)
     .not("phone", "is", null);
   if (contactsError) return { items: [], events, error: contactsError.message };

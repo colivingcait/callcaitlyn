@@ -143,3 +143,20 @@ export async function markKnownPersonally(contactId: string) {
   revalidatePath("/");
   return { ok: true as const };
 }
+
+// Settings -> People you know's Remove button - the review/undo half of
+// "Never queue this person," so a permanent dismissal is reversible
+// without having to find the contact's own profile.
+export async function unmarkKnownPersonally(contactId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const { error } = await supabase.from("contacts").update({ known_personally: false }).eq("id", contactId).eq("owner_id", user.id);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath("/");
+  revalidatePath("/settings");
+  return { ok: true as const };
+}

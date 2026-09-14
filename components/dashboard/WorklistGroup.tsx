@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Phone, MessageSquareText, X } from "lucide-react";
+import { Phone, MessageSquareText } from "lucide-react";
 import { openQuoCall, openQuoText } from "@/lib/quo/call-link";
 import { initials } from "@/lib/utils";
+import { RegisteredRowMenu } from "@/components/dashboard/RegisteredRowMenu";
 import type { WorklistPerson } from "@/lib/data/today";
 
 const CAP = 10;
@@ -22,13 +23,20 @@ const CAP = 10;
 export function WorklistGroup({
   people,
   onDismiss,
+  dismissLabel = "Dismiss",
   onDismissContact,
   dismissContactLabel = "Dismiss",
+  onNeverQueue,
 }: {
   people: WorklistPerson[];
   onDismiss?: (activityId: string) => Promise<{ ok: boolean }>;
+  dismissLabel?: string;
   onDismissContact?: (contactId: string) => Promise<{ ok: boolean }>;
   dismissContactLabel?: string;
+  // Registered-no-follow-up only: a second, permanent dismissal
+  // (markKnownPersonally) alongside onDismissContact's "not this time" -
+  // renders as a two-option menu instead of a single button when present.
+  onNeverQueue?: (contactId: string) => Promise<{ ok: boolean }>;
 }) {
   const [showAll, setShowAll] = useState(false);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
@@ -49,6 +57,14 @@ export function WorklistGroup({
     if (!onDismissContact) return;
     setDismissing(contactId);
     await onDismissContact(contactId);
+    setDismissing(null);
+    setDismissed((prev) => new Set(prev).add(contactId));
+  }
+
+  async function handleNeverQueue(contactId: string) {
+    if (!onNeverQueue) return;
+    setDismissing(contactId);
+    await onNeverQueue(contactId);
     setDismissing(null);
     setDismissed((prev) => new Set(prev).add(contactId));
   }
@@ -91,22 +107,29 @@ export function WorklistGroup({
               type="button"
               onClick={() => handleDismiss(person.activityId!)}
               disabled={dismissing === person.activityId}
-              title="I don't need to reply to this"
-              className="shrink-0 rounded-[10px] border border-neutral-200 bg-white p-2 text-neutral-400 disabled:opacity-50"
+              className="shrink-0 whitespace-nowrap rounded-[10px] border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-500 disabled:opacity-50"
             >
-              <X size={15} />
+              {dismissLabel}
             </button>
           )}
-          {onDismissContact && (
-            <button
-              type="button"
-              onClick={() => handleDismissContact(person.id)}
-              disabled={dismissing === person.id}
-              title={dismissContactLabel}
-              className="shrink-0 rounded-[10px] border border-neutral-200 bg-white p-2 text-neutral-400 disabled:opacity-50"
-            >
-              <X size={15} />
-            </button>
+          {onDismissContact && onNeverQueue ? (
+            <RegisteredRowMenu
+              label={dismissContactLabel}
+              busy={dismissing === person.id}
+              onNotThisTime={() => handleDismissContact(person.id)}
+              onNeverQueue={() => handleNeverQueue(person.id)}
+            />
+          ) : (
+            onDismissContact && (
+              <button
+                type="button"
+                onClick={() => handleDismissContact(person.id)}
+                disabled={dismissing === person.id}
+                className="shrink-0 whitespace-nowrap rounded-[10px] border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-500 disabled:opacity-50"
+              >
+                {dismissContactLabel}
+              </button>
+            )
           )}
         </div>
       ))}

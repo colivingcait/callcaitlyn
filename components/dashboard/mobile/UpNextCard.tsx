@@ -17,6 +17,7 @@ export function UpNextCard({
   reason,
   draftTemplate,
   overrideDraft,
+  moreCount,
 }: {
   item: (WorklistPerson & { source: "call" | "reply" }) | null;
   reason: string;
@@ -25,6 +26,10 @@ export function UpNextCard({
   // template here instead of the generic quick-text default - same intro
   // she'd get from the Dialer, just reachable straight from Up next too.
   overrideDraft?: string;
+  // Desktop only: how many more people are behind this one in the
+  // worklist below - when set, renders desktop's inline labelled button
+  // row ("N more after this") instead of mobile's flex-1/square layout.
+  moreCount?: number;
 }) {
   const router = useRouter();
   const { toast, showToast } = useToast();
@@ -114,31 +119,64 @@ export function UpNextCard({
         </div>
       )}
 
-      <div className="mt-3.5 flex gap-2">
-        {item.phone && hasDraft && (
+      {moreCount !== undefined ? (
+        <div className="mt-3.5 flex items-center gap-2">
+          {item.phone && hasDraft && (
+            <button
+              type="button"
+              onClick={send}
+              disabled={sending}
+              className="flex h-[52px] items-center justify-center gap-2 rounded-xl bg-white px-[22px] text-[15px] font-semibold text-neutral-900 disabled:opacity-50"
+            >
+              <Send size={17} /> {sending ? "Sending…" : "Send text"}
+            </button>
+          )}
+          {item.phone && (
+            <button
+              type="button"
+              onClick={call}
+              className="flex h-[52px] items-center justify-center gap-2 rounded-xl border border-white/28 px-[18px] text-[15px] font-semibold text-white"
+            >
+              <Phone size={17} /> Call
+            </button>
+          )}
           <button
             type="button"
-            onClick={send}
-            disabled={sending}
-            className="flex h-[54px] flex-1 items-center justify-center gap-2 rounded-xl bg-white text-[15px] font-semibold text-neutral-900 disabled:opacity-50"
+            onClick={snooze}
+            disabled={busy}
+            className="flex h-[52px] items-center justify-center gap-2 rounded-xl border border-white/28 px-[18px] text-[15px] font-semibold text-white disabled:opacity-50"
           >
-            <Send size={17} /> {sending ? "Sending…" : "Send text"}
+            {busy ? <Check size={17} /> : <Clock size={17} />} Snooze a day
           </button>
-        )}
-        {item.phone && (
-          <button type="button" onClick={call} className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-xl border border-white/28 text-white">
-            <Phone size={18} />
+          {moreCount > 0 && <span className="ml-auto shrink-0 text-sm text-white/50">{moreCount} more after this</span>}
+        </div>
+      ) : (
+        <div className="mt-3.5 flex gap-2">
+          {item.phone && hasDraft && (
+            <button
+              type="button"
+              onClick={send}
+              disabled={sending}
+              className="flex h-[54px] flex-1 items-center justify-center gap-2 rounded-xl bg-white text-[15px] font-semibold text-neutral-900 disabled:opacity-50"
+            >
+              <Send size={17} /> {sending ? "Sending…" : "Send text"}
+            </button>
+          )}
+          {item.phone && (
+            <button type="button" onClick={call} className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-xl border border-white/28 text-white">
+              <Phone size={18} />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={snooze}
+            disabled={busy}
+            className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-xl border border-white/28 text-white disabled:opacity-50"
+          >
+            {busy ? <Check size={18} /> : <Clock size={18} />}
           </button>
-        )}
-        <button
-          type="button"
-          onClick={snooze}
-          disabled={busy}
-          className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-xl border border-white/28 text-white disabled:opacity-50"
-        >
-          {busy ? <Check size={18} /> : <Clock size={18} />}
-        </button>
-      </div>
+        </div>
+      )}
       <Toast toast={toast} />
     </div>
   );
