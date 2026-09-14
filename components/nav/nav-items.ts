@@ -16,12 +16,13 @@ import {
   NotebookText,
   UserPlus,
   Menu,
+  Building2,
   type LucideIcon,
 } from "lucide-react";
 
 export type NavItem = { href: string; label: string; icon: LucideIcon };
 export type NavGroup = { label: string; items: NavItem[] };
-export type NavCounts = { contacts?: number; dialer?: number; messages?: number; notes?: number; insights?: number };
+export type NavCounts = { contacts?: number; dialer?: number; messages?: number; notes?: number; insights?: number; listings?: number };
 
 // Thirteen items in three groups - about the ceiling before a sidebar
 // becomes a list you scan instead of a map you know. Insights, Sphere,
@@ -47,6 +48,7 @@ export const PEOPLE_ITEMS: NavItem[] = [
 
 export const BUSINESS_ITEMS: NavItem[] = [
   { href: "/sequences", label: "Campaigns", icon: Mail },
+  { href: "/listings", label: "Listings", icon: Building2 },
   { href: "/numbers", label: "Numbers", icon: Calculator },
   { href: "/scheduling", label: "Scheduling", icon: CalendarClock },
   { href: "/commissions", label: "Commissions", icon: DollarSign },

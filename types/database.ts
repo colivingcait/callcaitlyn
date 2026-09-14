@@ -208,8 +208,125 @@ export interface Contact {
   recruit_joined_at: string | null;
   recruit_fee_received_at: string | null;
   tag_suggestions_backfilled_at: string | null;
+  // Brokerage for a promoted agent ("Add to contacts as Referral
+  // Partner") - see migration 0069. Nothing else on the contact writes
+  // this; the Blinq integration still logs company/title as a timeline
+  // note instead, since it predates this column.
+  company: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export type ListingStatus = "coming_soon" | "active" | "under_contract" | "closed";
+
+export interface Listing {
+  id: string;
+  owner_id: string;
+  address: string;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  list_price: number | null;
+  beds: number | null;
+  baths: number | null;
+  sqft: number | null;
+  property_type: string | null;
+  mls_number: string | null;
+  status: ListingStatus;
+  story: string | null;
+  photo_paths: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ListingPriceChange {
+  id: string;
+  listing_id: string;
+  owner_id: string;
+  old_price: number | null;
+  new_price: number;
+  occurred_at: string;
+}
+
+export type AgentSource = "fmls" | "gamls" | "manual";
+
+// The cross-listing directory - every agent ever imported, deduped, plus
+// ones added by hand. See migration 0069.
+export interface Agent {
+  id: string;
+  owner_id: string;
+  name: string;
+  brokerage: string | null;
+  email: string | null;
+  phone: string | null;
+  source: AgentSource;
+  first_seen: string;
+  last_emailed_at: string | null;
+  opted_out_at: string | null;
+  created_at: string;
+}
+
+export type ListingAgentState = "not_contacted" | "emailed" | "texted" | "replied" | "opted_out";
+
+// One listing's reverse-prospecting row - never a contact, never in the
+// pipeline, never in a metric. Keyed on (listing_id, ref_no).
+export interface ListingAgent {
+  id: string;
+  listing_id: string;
+  owner_id: string;
+  agent_id: string | null;
+  name: string;
+  ref_no: string;
+  brokerage: string | null;
+  email: string | null;
+  phone: string | null;
+  count_sent: number | null;
+  date_sent: string | null;
+  state: ListingAgentState;
+  replied_at: string | null;
+  raw: Record<string, string> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ListingAgentMessage {
+  id: string;
+  listing_id: string | null;
+  listing_agent_id: string | null;
+  agent_id: string | null;
+  owner_id: string;
+  direction: "inbound" | "outbound";
+  channel: "text" | "email" | "call";
+  body: string | null;
+  occurred_at: string;
+  quo_message_id: string | null;
+  quo_call_id: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export type ListingSendStatus = "sending" | "completed" | "canceled";
+
+export interface ListingSend {
+  id: string;
+  owner_id: string;
+  listing_id: string;
+  channel: "email" | "text";
+  subject: string | null;
+  message: string;
+  status: ListingSendStatus;
+  send_immediately: boolean;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface ListingSendRecipient {
+  id: string;
+  send_id: string;
+  listing_agent_id: string;
+  status: "pending" | "sent" | "failed" | "skipped";
+  sent_at: string | null;
+  error: string | null;
 }
 
 export interface DismissedInsight {

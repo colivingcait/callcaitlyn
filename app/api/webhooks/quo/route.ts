@@ -11,6 +11,7 @@ import { updateEngagementTag } from "@/lib/crm/engagement";
 import { recordOptOut, isOptOutMessage } from "@/lib/crm/consent";
 import { isIncludedQuoNumber } from "@/lib/quo/phone-filter";
 import { detectSpam, isNumberAllowlisted, hasRepeatedMissedCalls, getDisabledSpamReasons, type SpamCheckResult } from "@/lib/crm/spam-signals";
+import { findAgentByPhone, contactExistsForPhone, recordAgentOptOut } from "@/lib/listings/agent-lookup";
 
 // Extraction (a Claude call over the full transcript) runs after the
 // response via after() below, but the function invocation itself still
@@ -58,6 +59,30 @@ export async function POST(request: NextRequest) {
       if (!isIncludedQuoNumber(call.ownNumber)) {
         return NextResponse.json({ received: true, skipped: "excluded phone number" });
       }
+
+      // An agent recognized here never creates a contact, never gets an
+      // engagement tag, and never gets an AI read (README part 2 §3) -
+      // "an existing relationship wins" means this only applies when no
+      // contact already covers this number.
+      if (call.counterpartNumber && !(await contactExistsForPhone(admin, OWNER_ID, call.counterpartNumber))) {
+        const agent = await findAgentByPhone(admin, OWNER_ID, call.counterpartNumber);
+        if (agent) {
+          await admin.from("listing_agent_messages").insert({
+            listing_id: agent.listingId,
+            listing_agent_id: agent.listingAgentId,
+            agent_id: agent.agentId,
+            owner_id: OWNER_ID,
+            direction: call.direction === "outbound" ? "outbound" : "inbound",
+            channel: "call",
+            body: describeCall(call),
+            occurred_at: call.occurredAt,
+            quo_call_id: call.quoCallId,
+            metadata: { name: agent.name, brokerage: agent.brokerage, raw: body },
+          });
+          return NextResponse.json({ received: true, agent: true });
+        }
+      }
+
       const contact = await findOrCreateContact(admin, OWNER_ID, {
         phone: call.counterpartNumber,
         leadSource: "Quo (auto-created from call)",
@@ -180,6 +205,35 @@ export async function POST(request: NextRequest) {
       if (!isIncludedQuoNumber(msg.ownNumber)) {
         return NextResponse.json({ received: true, skipped: "excluded phone number" });
       }
+
+      if (msg.counterpartNumber && !(await contactExistsForPhone(admin, OWNER_ID, msg.counterpartNumber))) {
+        const agent = await findAgentByPhone(admin, OWNER_ID, msg.counterpartNumber);
+        if (agent) {
+          await admin.from("listing_agent_messages").insert({
+            listing_id: agent.listingId,
+            listing_agent_id: agent.listingAgentId,
+            agent_id: agent.agentId,
+            owner_id: OWNER_ID,
+            direction: msg.direction === "outbound" ? "outbound" : "inbound",
+            channel: "text",
+            body: msg.text,
+            occurred_at: msg.occurredAt,
+            quo_message_id: msg.quoMessageId,
+            metadata: { name: agent.name, brokerage: agent.brokerage, raw: body },
+          });
+
+          const isOptOut = eventType === "message.received" && !!msg.text && isOptOutMessage(msg.text);
+          if (isOptOut) {
+            await recordAgentOptOut(admin, OWNER_ID, { phone: msg.counterpartNumber });
+            if (agent.listingAgentId) await admin.from("listing_agents").update({ state: "opted_out" }).eq("id", agent.listingAgentId);
+          } else if (eventType === "message.received" && agent.listingAgentId) {
+            await admin.from("listing_agents").update({ replied_at: msg.occurredAt, state: "replied" }).eq("id", agent.listingAgentId);
+          }
+
+          return NextResponse.json({ received: true, agent: true });
+        }
+      }
+
       const contact = await findOrCreateContact(admin, OWNER_ID, {
         phone: msg.counterpartNumber,
         leadSource: "Quo (auto-created from text)",
