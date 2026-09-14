@@ -135,11 +135,26 @@ async function processBroadcastSequence(admin: SupabaseClient, ownerId: string, 
   const dueSteps = (steps ?? []).filter((s) => s.active && s.send_at && new Date(s.send_at) <= new Date());
   if (dueSteps.length === 0) return;
 
+  let memberIds: string[] | undefined;
+  if (sequence.type === "batch") {
+    if (sequence.snapshot_contact_ids) {
+      memberIds = sequence.snapshot_contact_ids;
+    } else {
+      // A batch created before audience snapshots existed - freeze it now,
+      // off whatever's currently tagged, instead of leaving it re-querying
+      // live membership forever (which is exactly the bug this fixes).
+      const { data: memberRows } = await admin.from("contact_tags").select("contact_id").in("tag_id", sequence.target_tag_ids);
+      memberIds = [...new Set((memberRows ?? []).map((r) => r.contact_id as string))];
+      await admin.from("email_sequences").update({ snapshot_contact_ids: memberIds }).eq("id", sequence.id);
+    }
+  }
+
   const { eligible: contacts } = await resolveEmailAudience(admin, ownerId, {
     targetTagIds: sequence.target_tag_ids,
     excludeTagIds: sequence.exclude_tag_ids,
     excludeStageIds: sequence.exclude_stage_ids,
     excludeTimelines: sequence.exclude_timelines,
+    memberIds,
   });
 
   for (const step of dueSteps) {

@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { sendTestEmailDraft } from "@/app/(app)/sequences/actions";
+import { sendTestEmailDraft, createSequence } from "@/app/(app)/sequences/actions";
 import { applyMergeFields, PREVIEW_CONTACT } from "@/lib/crm/merge-fields";
 import { Button, Input, Textarea, Select, Card, Label } from "@/components/ui";
 import { EmailBodyEditor } from "@/components/sequences/EmailBodyEditor";
@@ -89,46 +88,24 @@ export function CreateSequenceForm({ tags, stages, ownerId }: { tags: Tag[]; sta
     }
     setSaving(true);
     setError("");
-    const supabase = createClient();
 
-    const { data, error: insertError } = await supabase
-      .from("email_sequences")
-      .insert({
-        owner_id: ownerId,
-        name: name.trim(),
-        description: description.trim() || null,
-        type,
-        target_tag_ids: criteria.targetTagIds,
-        exclude_tag_ids: criteria.excludeTagIds,
-        exclude_stage_ids: criteria.excludeStageIds,
-        exclude_timelines: criteria.excludeTimelines,
-      })
-      .select("id")
-      .single();
-
-    if (insertError || !data) {
-      setSaving(false);
-      setError(insertError?.message ?? "Couldn't create the email.");
-      return;
-    }
-
-    if (type === "batch") {
-      const { error: stepError } = await supabase.from("email_sequence_steps").insert({
-        sequence_id: data.id,
-        step_order: 0,
-        subject: subject.trim(),
-        body: body.trim(),
-        send_at: sendTiming === "now" ? new Date().toISOString() : new Date(sendAt).toISOString(),
-      });
-      if (stepError) {
-        setSaving(false);
-        setError(stepError.message);
-        return;
-      }
-    }
+    const result = await createSequence({
+      name: name.trim(),
+      description: description.trim() || null,
+      type,
+      criteria,
+      batchStep:
+        type === "batch"
+          ? { subject: subject.trim(), body: body.trim(), sendAt: sendTiming === "now" ? new Date().toISOString() : new Date(sendAt).toISOString() }
+          : undefined,
+    });
 
     setSaving(false);
-    router.push(`/sequences/${data.id}`);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    router.push(`/sequences/${result.id}`);
   }
 
   return (

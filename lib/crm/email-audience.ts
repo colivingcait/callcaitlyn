@@ -5,6 +5,13 @@ export type EmailAudienceCriteria = {
   excludeTagIds: string[];
   excludeStageIds: string[];
   excludeTimelines: string[];
+  // Batch sequences only: the frozen membership captured at creation time
+  // (email_sequences.snapshot_contact_ids) - when set, this replaces the
+  // live contact_tags lookup for targetTagIds entirely, so a one-off batch
+  // send can never pick up someone tagged after it went out. The
+  // exclude/opt-out/archived checks below still run live off this list,
+  // since those should always reflect a contact's current state.
+  memberIds?: string[];
 };
 
 export type SequenceContact = {
@@ -42,10 +49,14 @@ export async function resolveEmailAudience(
   ownerId: string,
   criteria: EmailAudienceCriteria,
 ): Promise<EmailAudienceResult> {
-  if (criteria.targetTagIds.length === 0) return EMPTY;
-
-  const { data: memberRows } = await admin.from("contact_tags").select("contact_id").in("tag_id", criteria.targetTagIds);
-  const includedIds = [...new Set((memberRows ?? []).map((r) => r.contact_id as string))];
+  let includedIds: string[];
+  if (criteria.memberIds) {
+    includedIds = criteria.memberIds;
+  } else {
+    if (criteria.targetTagIds.length === 0) return EMPTY;
+    const { data: memberRows } = await admin.from("contact_tags").select("contact_id").in("tag_id", criteria.targetTagIds);
+    includedIds = [...new Set((memberRows ?? []).map((r) => r.contact_id as string))];
+  }
   if (includedIds.length === 0) return EMPTY;
 
   const excludedByTag = new Set<string>();

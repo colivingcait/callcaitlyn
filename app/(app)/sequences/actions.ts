@@ -55,6 +55,65 @@ export async function sendTestEmailDraft(subject: string, body: string) {
   return { ok: true as const };
 }
 
+// Creates the sequence row (and, for a batch, its single step) server-side
+// instead of the old client-side direct insert - a batch needs its target
+// tags' current membership resolved and frozen into snapshot_contact_ids
+// at exactly this moment, which the client has no business doing itself
+// (it would just be reading contact_tags straight from the browser).
+// Broadcast/drip leave snapshot_contact_ids null and keep resolving their
+// audience live off target_tag_ids, same as before.
+export async function createSequence(input: {
+  name: string;
+  description: string | null;
+  type: "broadcast" | "drip" | "batch";
+  criteria: EmailAudienceCriteria;
+  batchStep?: { subject: string; body: string; sendAt: string };
+}): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const admin = createAdminClient();
+
+  let snapshotContactIds: string[] | null = null;
+  if (input.type === "batch") {
+    const { data: memberRows } = await admin.from("contact_tags").select("contact_id").in("tag_id", input.criteria.targetTagIds);
+    snapshotContactIds = [...new Set((memberRows ?? []).map((r) => r.contact_id as string))];
+  }
+
+  const { data: seq, error: insertError } = await admin
+    .from("email_sequences")
+    .insert({
+      owner_id: user.id,
+      name: input.name,
+      description: input.description,
+      type: input.type,
+      target_tag_ids: input.criteria.targetTagIds,
+      exclude_tag_ids: input.criteria.excludeTagIds,
+      exclude_stage_ids: input.criteria.excludeStageIds,
+      exclude_timelines: input.criteria.excludeTimelines,
+      snapshot_contact_ids: snapshotContactIds,
+    })
+    .select("id")
+    .single();
+  if (insertError || !seq) return { ok: false as const, error: insertError?.message ?? "Couldn't create the email." };
+
+  if (input.type === "batch" && input.batchStep) {
+    const { error: stepError } = await admin.from("email_sequence_steps").insert({
+      sequence_id: seq.id,
+      step_order: 0,
+      subject: input.batchStep.subject,
+      body: input.batchStep.body,
+      send_at: input.batchStep.sendAt,
+    });
+    if (stepError) return { ok: false as const, error: stepError.message };
+  }
+
+  return { ok: true as const, id: seq.id as string };
+}
+
 export type AudiencePreview = {
   count: number;
   names: string[]; // capped - see below

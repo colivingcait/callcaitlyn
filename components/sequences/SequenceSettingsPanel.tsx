@@ -12,6 +12,7 @@ import type { Tag, PipelineStage } from "@/types/database";
 export function SequenceSettingsPanel({
   sequenceId,
   ownerId,
+  type,
   name,
   description,
   targetTagIds,
@@ -23,6 +24,7 @@ export function SequenceSettingsPanel({
 }: {
   sequenceId: string;
   ownerId: string;
+  type: "broadcast" | "drip" | "batch";
   name: string;
   description: string | null;
   targetTagIds: string[];
@@ -50,6 +52,10 @@ export function SequenceSettingsPanel({
       exclude_tag_ids: next.excludeTagIds,
       exclude_stage_ids: next.excludeStageIds,
       exclude_timelines: next.excludeTimelines,
+      // A batch's frozen audience was captured under the OLD tags - clear
+      // it so the next send re-freezes off the tags she just picked,
+      // instead of quietly still going out to the original snapshot.
+      ...(type === "batch" ? { snapshot_contact_ids: null } : {}),
     });
   }
 

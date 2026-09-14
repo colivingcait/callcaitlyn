@@ -428,6 +428,11 @@ export interface EmailSequence {
   description: string | null;
   active: boolean;
   created_at: string;
+  // Batch only: the exact contacts who matched target_tag_ids at creation
+  // time, frozen so a one-off batch email never keeps picking up new
+  // people tagged after the fact. Null for broadcast/drip, which stay
+  // live off target_tag_ids.
+  snapshot_contact_ids: string[] | null;
 }
 
 export interface EmailSequenceStep {
