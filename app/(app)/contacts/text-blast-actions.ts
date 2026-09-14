@@ -356,7 +356,7 @@ export async function getTagAudiencePreview(tagId: string): Promise<TextBlastAud
   return buildAudiencePreview(audience, recentTextsByContact, optedOutCount);
 }
 
-export async function createTagTextBlast(tagId: string, tagName: string, message: string, excludeContactIds: string[] = []) {
+export async function createTagTextBlast(tagId: string, tagName: string, message: string, excludeContactIds: string[] = [], sendImmediately = false) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -372,7 +372,7 @@ export async function createTagTextBlast(tagId: string, tagName: string, message
 
   const { data: blast, error: blastError } = await admin
     .from("text_blasts")
-    .insert({ owner_id: user.id, event_name: tagBlastLabel(tagName), message: message.trim(), tag_id: tagId })
+    .insert({ owner_id: user.id, event_name: tagBlastLabel(tagName), message: message.trim(), tag_id: tagId, send_immediately: sendImmediately })
     .select("id")
     .single();
   if (blastError || !blast) return { ok: false as const, error: blastError?.message ?? "Failed to create blast" };
@@ -396,7 +396,7 @@ export async function getContactsAudiencePreview(contactIds: string[]): Promise<
   return buildAudiencePreview(audience, recentTextsByContact, optedOutCount);
 }
 
-export async function createContactsTextBlast(contactIds: string[], label: string, message: string, excludeContactIds: string[] = []) {
+export async function createContactsTextBlast(contactIds: string[], label: string, message: string, excludeContactIds: string[] = [], sendImmediately = false) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -412,7 +412,7 @@ export async function createContactsTextBlast(contactIds: string[], label: strin
 
   const { data: blast, error: blastError } = await admin
     .from("text_blasts")
-    .insert({ owner_id: user.id, event_name: label, message: message.trim() })
+    .insert({ owner_id: user.id, event_name: label, message: message.trim(), send_immediately: sendImmediately })
     .select("id")
     .single();
   if (blastError || !blast) return { ok: false as const, error: blastError?.message ?? "Failed to create blast" };
@@ -441,6 +441,7 @@ export async function createTextBlast(
   registeredBefore?: string,
   occurrence?: { eventId: string; attendanceStatus: AttendanceStatus },
   excludeContactIds: string[] = [],
+  sendImmediately = false,
 ) {
   const supabase = await createClient();
   const {
@@ -466,6 +467,7 @@ export async function createTextBlast(
       message: message.trim(),
       event_id: occurrence?.eventId ?? null,
       attendance_status: occurrence?.attendanceStatus ?? null,
+      send_immediately: sendImmediately,
     })
     .select("id")
     .single();

@@ -5,7 +5,18 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendGmailMessage, textToHtml } from "@/lib/google/send-email";
 import { applyMergeFields } from "@/lib/crm/sequences";
 import { resolveEmailAudience, type EmailAudienceCriteria } from "@/lib/crm/email-audience";
+import {
+  getSequence,
+  getSequenceRollup,
+  getUpcomingBroadcastSteps,
+  getRecentSequenceActivity,
+  getSequenceExclusions,
+  type SequenceRollup,
+  type UpcomingBroadcastStep,
+  type SequenceActivityItem,
+} from "@/lib/data/sequences";
 import { fullName } from "@/lib/utils";
+import type { EmailSequence, EmailSequenceStep } from "@/types/database";
 
 // Clearly-fake sample data, not her real contacts - a test send previews
 // merge-field placement and tone, not a real personalization.
@@ -68,6 +79,10 @@ export async function createSequence(input: {
   type: "broadcast" | "drip" | "batch";
   criteria: EmailAudienceCriteria;
   batchStep?: { subject: string; body: string; sendAt: string };
+  // Batch only: contact ids to leave out of the frozen snapshot - the
+  // union of "recently emailed" and "also on an overlapping send"
+  // exclusions the composer computed before this call.
+  excludeContactIds?: string[];
 }): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   const supabase = await createClient();
   const {
@@ -80,7 +95,8 @@ export async function createSequence(input: {
   let snapshotContactIds: string[] | null = null;
   if (input.type === "batch") {
     const { data: memberRows } = await admin.from("contact_tags").select("contact_id").in("tag_id", input.criteria.targetTagIds);
-    snapshotContactIds = [...new Set((memberRows ?? []).map((r) => r.contact_id as string))];
+    const excludeSet = new Set(input.excludeContactIds ?? []);
+    snapshotContactIds = [...new Set((memberRows ?? []).map((r) => r.contact_id as string))].filter((id) => !excludeSet.has(id));
   }
 
   const { data: seq, error: insertError } = await admin
@@ -117,6 +133,7 @@ export async function createSequence(input: {
 export type AudiencePreview = {
   count: number;
   names: string[]; // capped - see below
+  eligibleContactIds: string[]; // full list, not capped - for overlap checking
   excludedCount: number;
   optedOutCount: number;
   noEmailCount: number;
@@ -129,22 +146,167 @@ const AUDIENCE_PREVIEW_NAME_CAP = 30;
 // (lib/crm/sequences.ts's processBroadcastSequence), so what she sees
 // here is exactly who gets it, not a separate approximation that could
 // drift. Names are capped for a reasonable payload size; count is exact.
-export async function previewEmailAudience(criteria: EmailAudienceCriteria): Promise<AudiencePreview> {
+export async function previewEmailAudience(criteria: EmailAudienceCriteria, excludeContactIds: string[] = []): Promise<AudiencePreview> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { count: 0, names: [], excludedCount: 0, optedOutCount: 0, noEmailCount: 0 };
+  if (!user) return { count: 0, names: [], eligibleContactIds: [], excludedCount: 0, optedOutCount: 0, noEmailCount: 0 };
 
   const admin = createAdminClient();
   const result = await resolveEmailAudience(admin, user.id, criteria);
+  const excludeSet = new Set(excludeContactIds);
+  const eligible = result.eligible.filter((c) => !excludeSet.has(c.id));
   return {
-    count: result.eligible.length,
-    names: result.eligible.slice(0, AUDIENCE_PREVIEW_NAME_CAP).map((c) => fullName(c)),
+    count: eligible.length,
+    names: eligible.slice(0, AUDIENCE_PREVIEW_NAME_CAP).map((c) => fullName(c)),
+    eligibleContactIds: eligible.map((c) => c.id),
     excludedCount: result.excludedCount,
     optedOutCount: result.optedOutCount,
     noEmailCount: result.noEmailCount,
   };
+}
+
+// "Skip anyone I emailed in the last N days" - mirrors the text blast
+// modal's automatic last-hour skip, but visible and configurable since a
+// few days of overlap is a real, common case for email (a drip step and a
+// one-off batch landing the same morning) rather than the rapid double-
+// send texting guards against.
+export async function getRecentlyEmailedContactIds(days: number): Promise<string[]> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user || days <= 0) return [];
+
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  const { data } = await supabase
+    .from("activities")
+    .select("contact_id")
+    .eq("owner_id", user.id)
+    .eq("source", "gmail")
+    .eq("type", "email")
+    .eq("direction", "outbound")
+    .gte("occurred_at", cutoff);
+  return [...new Set((data ?? []).map((r) => r.contact_id as string))];
+}
+
+export type AudienceOverlapWarning = { sequenceName: string; sendAt: string; overlapContactIds: string[] };
+
+// "18 of these 212 also receive House Hacking Content tomorrow" - checks
+// the soonest upcoming send (next 48h) on any OTHER active broadcast/batch
+// sequence and intersects its audience with the one being composed now.
+// Only ever flags one campaign (the soonest), matching the single-callout
+// design - a lower-priority concern than actually seeing it.
+export async function checkAudienceOverlap(candidateContactIds: string[], excludeSequenceId?: string): Promise<AudienceOverlapWarning | null> {
+  if (candidateContactIds.length === 0) return null;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const admin = createAdminClient();
+  const windowEnd = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+  const { data: sequences } = await admin
+    .from("email_sequences")
+    .select("*")
+    .eq("owner_id", user.id)
+    .eq("active", true)
+    .in("type", ["broadcast", "batch"]);
+
+  const others = ((sequences ?? []) as EmailSequence[]).filter((s) => s.id !== excludeSequenceId);
+  if (others.length === 0) return null;
+
+  const { data: allSteps } = await admin
+    .from("email_sequence_steps")
+    .select("*")
+    .in("sequence_id", others.map((s) => s.id))
+    .eq("active", true)
+    .not("send_at", "is", null)
+    .gt("send_at", new Date().toISOString())
+    .lte("send_at", windowEnd)
+    .order("send_at", { ascending: true })
+    .limit(1);
+
+  const soonest = (allSteps ?? [])[0] as EmailSequenceStep | undefined;
+  if (!soonest) return null;
+  const sequence = others.find((s) => s.id === soonest.sequence_id);
+  if (!sequence) return null;
+
+  const { eligible } = await resolveEmailAudience(admin, user.id, {
+    targetTagIds: sequence.target_tag_ids,
+    excludeTagIds: sequence.exclude_tag_ids,
+    excludeStageIds: sequence.exclude_stage_ids,
+    excludeTimelines: sequence.exclude_timelines,
+    memberIds: sequence.type === "batch" ? (sequence.snapshot_contact_ids ?? undefined) : undefined,
+  });
+  const otherIds = new Set(eligible.map((c) => c.id));
+  const overlapContactIds = candidateContactIds.filter((id) => otherIds.has(id));
+  if (overlapContactIds.length === 0) return null;
+
+  return { sequenceName: sequence.name, sendAt: soonest.send_at as string, overlapContactIds };
+}
+
+// Cancel a scheduled (not-yet-sent) step - same underlying write as Pause
+// (processBroadcastSequence's dueSteps query already only ever picks up
+// active steps), just a clearer label than reusing "Pause" for a send
+// that hasn't gone out at all yet.
+export async function cancelScheduledStep(stepId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("email_sequence_steps").update({ active: false }).eq("id", stepId);
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const };
+}
+
+// "Follow up the ones who didn't open" - one tap on a finished send. Reads
+// who was sent this sequence's steps but never opened any of them, and
+// freezes that into a brand-new batch email's snapshot, exactly like any
+// other batch. Created paused (its step's active:false) with a blank
+// draft so nothing sends until she's actually written and reviewed it -
+// this only sets up the audience, not the message.
+export async function createNonOpenerFollowup(sequenceId: string): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const { data: original } = await supabase.from("email_sequences").select("name").eq("id", sequenceId).maybeSingle();
+  if (!original) return { ok: false as const, error: "Sequence not found" };
+
+  const { data: sends } = await supabase.from("email_sequence_sends").select("contact_id, opened_at").eq("sequence_id", sequenceId);
+  const nonOpenerIds = [...new Set((sends ?? []).filter((s) => !s.opened_at).map((s) => s.contact_id as string))];
+  if (nonOpenerIds.length === 0) return { ok: false as const, error: "Everyone who received this has opened it" };
+
+  const admin = createAdminClient();
+  const { data: seq, error: insertError } = await admin
+    .from("email_sequences")
+    .insert({
+      owner_id: user.id,
+      name: `Follow up: ${original.name}`,
+      type: "batch",
+      target_tag_ids: [],
+      exclude_tag_ids: [],
+      exclude_stage_ids: [],
+      exclude_timelines: [],
+      snapshot_contact_ids: nonOpenerIds,
+    })
+    .select("id")
+    .single();
+  if (insertError || !seq) return { ok: false as const, error: insertError?.message ?? "Couldn't create the follow-up" };
+
+  const { error: stepError } = await admin.from("email_sequence_steps").insert({
+    sequence_id: seq.id,
+    step_order: 0,
+    subject: "",
+    body: "",
+    send_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    active: false,
+  });
+  if (stepError) return { ok: false as const, error: stepError.message };
+
+  return { ok: true as const, id: seq.id as string };
 }
 
 export async function duplicateSequence(sequenceId: string) {
@@ -200,4 +362,47 @@ export async function duplicateSequence(sequenceId: string) {
   }
 
   return { ok: true as const, id: copy.id as string };
+}
+
+export type CampaignReportData = {
+  rollup: SequenceRollup;
+  upcomingSteps: UpcomingBroadcastStep[];
+  activity: SequenceActivityItem[];
+  optedOutCount: number;
+  nonOpenerCount: number;
+};
+
+// Backs the chevron-expanded row on the Campaigns list - the exact same
+// three components the old per-sequence page composed (SequenceOverviewStats,
+// UpcomingBroadcastPanel, RecentActivityFeed), fetched on demand instead of
+// a full page load just to check how a send is doing.
+export async function getCampaignReportData(sequenceId: string): Promise<CampaignReportData | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const sequence = await getSequence(sequenceId);
+  if (!sequence) return null;
+
+  const [rollup, upcomingSteps, activity, exclusions, sends] = await Promise.all([
+    getSequenceRollup(sequenceId),
+    sequence.type !== "drip"
+      ? getUpcomingBroadcastSteps(sequenceId, user.id, {
+          targetTagIds: sequence.target_tag_ids,
+          excludeTagIds: sequence.exclude_tag_ids,
+          excludeStageIds: sequence.exclude_stage_ids,
+          excludeTimelines: sequence.exclude_timelines,
+          memberIds: sequence.type === "batch" ? (sequence.snapshot_contact_ids ?? undefined) : undefined,
+        })
+      : Promise.resolve([]),
+    getRecentSequenceActivity(sequenceId, 10),
+    getSequenceExclusions(sequenceId),
+    supabase.from("email_sequence_sends").select("opened_at").eq("sequence_id", sequenceId),
+  ]);
+
+  const nonOpenerCount = (sends.data ?? []).filter((s) => !s.opened_at).length;
+
+  return { rollup, upcomingSteps, activity, optedOutCount: exclusions.length, nonOpenerCount };
 }

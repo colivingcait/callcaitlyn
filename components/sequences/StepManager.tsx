@@ -3,13 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { sendTestStepEmail, sendTestEmailDraft } from "@/app/(app)/sequences/actions";
+import { sendTestEmailDraft } from "@/app/(app)/sequences/actions";
 import { Button, Input, Select, Card, Label, Badge } from "@/components/ui";
 import { EmailBodyEditor } from "@/components/sequences/EmailBodyEditor";
+import { EmailTemplateButtons, EmailPreviewTest } from "@/components/sequences/EmailComposerHelpers";
 import { RateBar } from "@/components/sequences/RateBar";
 import { formatLocal } from "@/lib/format-time";
 import { fullName, shortenUrl } from "@/lib/utils";
-import { ArrowUp, ArrowDown, Trash2, Plus, Pause, Play, Send } from "lucide-react";
+import { ArrowUp, ArrowDown, Trash2, Plus, Pause, Play } from "lucide-react";
 import type { EmailSequenceStep, SequenceType } from "@/types/database";
 import type { StepStats, LinkClickBreakdown } from "@/lib/data/sequences";
 
@@ -72,8 +73,6 @@ export function StepManager({
   const router = useRouter();
   const sorted = [...steps].sort((a, b) => a.step_order - b.step_order);
   const [adding, setAdding] = useState(false);
-  const [testingId, setTestingId] = useState<string | null>(null);
-  const [testResult, setTestResult] = useState<{ id: string; ok: boolean; message: string } | null>(null);
   const [orderError, setOrderError] = useState<string | null>(null);
 
   async function updateStep(id: string, patch: Record<string, unknown>): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -109,14 +108,6 @@ export function StepManager({
     router.refresh();
   }
 
-  async function sendTest(id: string) {
-    setTestingId(id);
-    setTestResult(null);
-    const result = await sendTestStepEmail(id);
-    setTestingId(null);
-    setTestResult({ id, ok: result.ok, message: result.ok ? "Sent to your inbox" : result.error });
-  }
-
   return (
     <div className="space-y-3">
       {orderError && <p className="text-sm font-medium text-red-600">Couldn&apos;t reorder: {orderError}</p>}
@@ -132,9 +123,6 @@ export function StepManager({
           updateStep={updateStep}
           deleteStep={deleteStep}
           move={move}
-          sendTest={sendTest}
-          testing={testingId === step.id}
-          testResult={testResult?.id === step.id ? testResult : null}
         />
       ))}
 
@@ -168,9 +156,6 @@ function StepCard({
   updateStep,
   deleteStep,
   move,
-  sendTest,
-  testing,
-  testResult,
 }: {
   step: EmailSequenceStep;
   type: SequenceType;
@@ -181,10 +166,8 @@ function StepCard({
   updateStep: (id: string, patch: Record<string, unknown>) => Promise<{ ok: true } | { ok: false; error: string }>;
   deleteStep: (id: string) => Promise<void>;
   move: (index: number, direction: -1 | 1) => Promise<void>;
-  sendTest: (id: string) => Promise<void>;
-  testing: boolean;
-  testResult: { ok: boolean; message: string } | null;
 }) {
+  const [subject, setSubject] = useState(step.subject);
   const [body, setBody] = useState(step.body);
   const [fieldError, setFieldError] = useState<string | null>(null);
 
@@ -235,8 +218,10 @@ function StepCard({
         </div>
       </div>
       {fieldError && <p className="text-xs font-medium text-red-600">Couldn&apos;t save: {fieldError}</p>}
+      <EmailTemplateButtons onPick={setBody} />
       <Input
-        defaultValue={step.subject}
+        value={subject}
+        onChange={(e) => setSubject(e.target.value)}
         placeholder="Subject"
         onBlur={(e) => e.target.value !== step.subject && update({ subject: e.target.value })}
       />
@@ -282,15 +267,8 @@ function StepCard({
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-2 border-t border-neutral-100 pt-2">
-        <button
-          onClick={() => sendTest(step.id)}
-          disabled={testing}
-          className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-brand-600 disabled:opacity-50"
-        >
-          <Send size={13} /> {testing ? "Sending…" : "Send test to myself"}
-        </button>
-        {testResult && <span className={`text-xs ${testResult.ok ? "text-emerald-600" : "text-red-600"}`}>{testResult.message}</span>}
+      <div className="border-t border-neutral-100 pt-2">
+        <EmailPreviewTest subject={subject} body={body} onSendTest={() => sendTestEmailDraft(subject, body)} />
       </div>
 
       {stats && stats.sent > 0 && (
@@ -344,16 +322,6 @@ function NewStepForm({
   const [delayUnit, setDelayUnit] = useState<"hours" | "days">("days");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
-
-  async function sendTest() {
-    setTesting(true);
-    setTestResult(null);
-    const result = await sendTestEmailDraft(subject, body);
-    setTesting(false);
-    setTestResult({ ok: result.ok, message: result.ok ? "Sent to your inbox" : result.error });
-  }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -382,24 +350,10 @@ function NewStepForm({
   return (
     <Card className="space-y-2">
       <form onSubmit={handleAdd} className="space-y-2">
+        <EmailTemplateButtons onPick={setBody} />
         <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject" />
         <EmailBodyEditor value={body} onChange={setBody} placeholder="Email body — use {{first_name}} to personalize" />
-        {body && (
-          <p className="rounded-lg bg-neutral-50 px-3 py-2 text-xs text-neutral-500">
-            Preview: {body.replace(/\{\{\s*first_name\s*\}\}/gi, "Jamie").replace(/\{\{\s*last_name\s*\}\}/gi, "Example")}
-          </p>
-        )}
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={sendTest}
-            disabled={testing || !subject.trim() || !body.trim()}
-            className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-brand-600 disabled:opacity-50"
-          >
-            <Send size={13} /> {testing ? "Sending…" : "Send test to myself"}
-          </button>
-          {testResult && <span className={`text-xs ${testResult.ok ? "text-emerald-600" : "text-red-600"}`}>{testResult.message}</span>}
-        </div>
+        <EmailPreviewTest subject={subject} body={body} onSendTest={() => sendTestEmailDraft(subject, body)} />
         {type !== "drip" ? (
           <div>
             <Label htmlFor="new-step-send-at">Send at (Eastern time)</Label>

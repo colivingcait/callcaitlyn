@@ -92,7 +92,7 @@ export async function getQaReport(): Promise<QaSection[]> {
         stuckBlastsResult.data && stuckBlastsResult.data.length > 0
           ? `"${stuckBlastsResult.data[0].event_name}" (and ${stuckBlastsResult.data.length - 1 > 0 ? `${stuckBlastsResult.data.length - 1} more` : "no others"}) still shows sending after 3+ hours - the cron may be stalled`
           : "None stuck for more than 3 hours",
-      link: (stuckBlastsResult.data?.length ?? 0) > 0 ? "/sequences/text" : undefined,
+      link: (stuckBlastsResult.data?.length ?? 0) > 0 ? "/sequences" : undefined,
     },
   ];
 

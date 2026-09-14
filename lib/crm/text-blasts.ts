@@ -3,7 +3,7 @@ import { sendQuoText } from "@/lib/quo/send-message";
 import { applyMergeFields, hasPlaceholderName, usesFirstNameMergeField } from "@/lib/crm/merge-fields";
 import { upsertActivity } from "@/lib/crm/activities";
 import { updateEngagementTag } from "@/lib/crm/engagement";
-import { TEXT_BLAST_SENDS_PER_RUN } from "@/lib/crm/text-blast-timing";
+import { TEXT_BLAST_SENDS_PER_RUN, isWithinQuietHours } from "@/lib/crm/text-blast-timing";
 import type { TextBlast } from "@/types/database";
 
 export type TextBlastWithProgress = TextBlast & { total: number; sent: number; failed: number; skipped: number; pending: number };
@@ -61,15 +61,17 @@ type PendingRecipient = {
 export async function processPendingTextBlasts(admin: SupabaseClient, ownerId: string) {
   const { data: blasts } = await admin
     .from("text_blasts")
-    .select("id, message")
+    .select("id, message, send_immediately")
     .eq("owner_id", ownerId)
     .eq("status", "sending")
     .order("created_at", { ascending: true });
 
+  const quietHours = isWithinQuietHours();
   let remaining = MAX_SENDS_PER_RUN;
 
   for (const blast of blasts ?? []) {
     if (remaining <= 0) break;
+    if (quietHours && !blast.send_immediately) continue;
 
     const { data: pending } = await admin
       .from("text_blast_recipients")

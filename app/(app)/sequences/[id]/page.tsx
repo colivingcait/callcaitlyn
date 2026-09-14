@@ -67,7 +67,7 @@ export default async function SequenceDetailPage({ params }: { params: Promise<{
   return (
     <div className="mx-auto max-w-3xl space-y-5 px-4 py-6">
       <Link href="/sequences" className="flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-700">
-        <ChevronLeft size={16} /> Bulk Communication
+        <ChevronLeft size={16} /> Campaigns
       </Link>
 
       <div className="flex items-start justify-between gap-3">
@@ -143,7 +143,7 @@ export default async function SequenceDetailPage({ params }: { params: Promise<{
       </div>
 
       {exclusions.length > 0 && (
-        <div>
+        <div id="opt-outs">
           <h2 className="mb-3 text-sm font-semibold text-neutral-700">Unsubscribed from this sequence</h2>
           <Card className="divide-y divide-neutral-100 p-0">
             {exclusions.map((ex, i) => (

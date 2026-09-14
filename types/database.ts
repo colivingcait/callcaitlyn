@@ -138,6 +138,9 @@ export interface TextBlast {
   // Set instead of event_id/attendance_status when this blast targeted a
   // tag's members directly rather than an event's registrants.
   tag_id: string | null;
+  // "Send now anyway" at compose time - bypasses the 9:00 AM Eastern
+  // quiet-hours hold the cron otherwise applies (see lib/crm/text-blasts.ts).
+  send_immediately: boolean;
 }
 
 export interface TextBlastRecipient {

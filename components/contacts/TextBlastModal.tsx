@@ -5,7 +5,7 @@ import { X, MessageSquareText, Send, Users, AlertTriangle, ChevronDown, ChevronU
 import { Button, Textarea, Input } from "@/components/ui";
 import { applyMergeFields, PREVIEW_CONTACT, usesFirstNameMergeField } from "@/lib/crm/merge-fields";
 import { MESSAGE_TEMPLATE_CATEGORIES, type MessageTemplateCategory } from "@/lib/crm/event-text-templates";
-import { estimatedTextBlastMinutes } from "@/lib/crm/text-blast-timing";
+import { estimatedTextBlastMinutes, isWithinQuietHours, quietHoursEndLabel } from "@/lib/crm/text-blast-timing";
 import { tagBlastLabel } from "@/lib/crm/text-blasts";
 import { relativeTime } from "@/lib/format-time";
 import {
@@ -116,6 +116,9 @@ export function TextBlastModal({ target, onClose }: { target: BlastTarget; onClo
   const [testPhone, setTestPhone] = useState(() => (typeof window !== "undefined" ? (localStorage.getItem("textBlastTestPhone") ?? "") : ""));
   const [testSending, setTestSending] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: true } | { ok: false; error: string } | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [sendNowOverride, setSendNowOverride] = useState(false);
+  const inQuietHours = isWithinQuietHours();
 
   function registeredBeforeCutoff(): string | undefined {
     if (!excludeRecent || !excludeDays || excludeDays <= 0) return undefined;
@@ -167,17 +170,13 @@ export function TextBlastModal({ target, onClose }: { target: BlastTarget; onClo
   async function send() {
     const effectiveCount = (audience?.count ?? 0) - excludedIds.size;
     if (effectiveCount <= 0) return;
-    const confirmed = window.confirm(
-      `Send this text to ${effectiveCount} ${effectiveCount === 1 ? "person" : "people"}? This can't be undone.`,
-    );
-    if (!confirmed) return;
     setSending(true);
     const excludeContactIds = [...excludedIds];
     let outcome;
     if (target.kind === "tag") {
-      outcome = await createTagTextBlast(target.tagId, target.tagName, message, excludeContactIds);
+      outcome = await createTagTextBlast(target.tagId, target.tagName, message, excludeContactIds, sendNowOverride);
     } else if (target.kind === "contacts") {
-      outcome = await createContactsTextBlast(target.contactIds, target.label, message, excludeContactIds);
+      outcome = await createContactsTextBlast(target.contactIds, target.label, message, excludeContactIds, sendNowOverride);
     } else {
       outcome = await createTextBlast(
         target.eventName,
@@ -185,9 +184,11 @@ export function TextBlastModal({ target, onClose }: { target: BlastTarget; onClo
         registeredBeforeCutoff(),
         audienceMode === "occurrence" && selectedEventId ? { eventId: selectedEventId, attendanceStatus } : undefined,
         excludeContactIds,
+        sendNowOverride,
       );
     }
     setSending(false);
+    setConfirming(false);
     if (outcome.ok) {
       setResult({ ok: true, recipientCount: outcome.recipientCount });
       setMessage("");
@@ -481,9 +482,37 @@ export function TextBlastModal({ target, onClose }: { target: BlastTarget; onClo
             </p>
           )}
 
-          <Button onClick={send} disabled={sending || !message.trim() || effectiveCount <= 0} className="w-full">
-            <MessageSquareText size={15} /> {sending ? "Queuing…" : effectiveCount > 0 ? `Send staggered reminder to ${effectiveCount}` : "Send staggered reminder"}
-          </Button>
+          {confirming ? (
+            <div className="space-y-3 rounded-2xl border border-[#fde68a] bg-[#fffbeb] p-4">
+              <p className="text-[15px] font-semibold text-neutral-900">Send to {effectiveCount} people?</p>
+              <p className="text-sm leading-5 text-neutral-600">
+                Sends from your Quo business number, staggered over about {estimatedTextBlastMinutes(effectiveCount)} minutes. You can cancel mid-send.
+              </p>
+              {inQuietHours && !sendNowOverride && (
+                <p className="flex items-start gap-2 text-sm leading-5 text-amber-700">
+                  <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+                  <span>
+                    It&apos;s quiet hours right now - this will hold and start at <span className="font-semibold">{quietHoursEndLabel()}</span>.{" "}
+                    <button type="button" onClick={() => setSendNowOverride(true)} className="font-semibold underline">
+                      Send now anyway
+                    </button>
+                  </span>
+                </p>
+              )}
+              <div className="flex gap-2">
+                <Button onClick={send} disabled={sending} className="flex-1">
+                  <Send size={15} /> {sending ? "Queuing…" : `Send to ${effectiveCount}`}
+                </Button>
+                <Button variant="secondary" onClick={() => setConfirming(false)}>
+                  Back
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button onClick={() => setConfirming(true)} disabled={sending || !message.trim() || effectiveCount <= 0} className="w-full">
+              <MessageSquareText size={15} /> {effectiveCount > 0 ? `Send staggered reminder to ${effectiveCount}` : "Send staggered reminder"}
+            </Button>
+          )}
 
           {history && history.length > 0 && (
             <div className="space-y-2 border-t border-neutral-100 pt-3">

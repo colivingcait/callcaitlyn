@@ -31,3 +31,15 @@ export function usesFirstNameMergeField(text: string): boolean {
 // Clearly-fake sample data, not a real contact - a test send/preview shows
 // merge-field placement and tone, not real personalization.
 export const PREVIEW_CONTACT = { first_name: "Jamie", last_name: "Example" };
+
+// Mirrors lib/google/send-email.ts's textToHtml exactly - duplicated
+// rather than imported, since that module also pulls in googleapis
+// (server-only) which can't ship in a client bundle. Shared here so every
+// email composer's preview (batch, and per-step) renders identically to
+// what actually sends.
+export function draftToHtml(text: string) {
+  return text
+    .split(/\n{2,}/)
+    .map((para) => `<p>${para.replace(/\n/g, "<br>")}</p>`)
+    .join("\n");
+}

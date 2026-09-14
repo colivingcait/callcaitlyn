@@ -37,6 +37,7 @@ export function AudiencePicker({
   ownerId,
   onTagCreated,
   onAudienceChange,
+  excludeContactIds = [],
 }: {
   criteria: AudienceCriteria;
   onChange: (next: AudienceCriteria) => void;
@@ -52,6 +53,10 @@ export function AudiencePicker({
   // the count, so a tag selection resolving to nobody could still be
   // submitted.
   onAudienceChange?: (audience: AudiencePreview | null) => void;
+  // Batch composer only: contact ids already ruled out (recent-email skip,
+  // overlap with another send) - folded into the live count so what she
+  // sees here matches what actually gets created.
+  excludeContactIds?: string[];
 }) {
   const [showExcludes, setShowExcludes] = useState(
     criteria.excludeTagIds.length > 0 || criteria.excludeStageIds.length > 0 || criteria.excludeTimelines.length > 0,
@@ -66,6 +71,7 @@ export function AudiencePicker({
   const excludeTagKey = criteria.excludeTagIds.join(",");
   const excludeStageKey = criteria.excludeStageIds.join(",");
   const excludeTimelineKey = criteria.excludeTimelines.join(",");
+  const excludeContactKey = excludeContactIds.join(",");
 
   useEffect(() => {
     if (criteria.targetTagIds.length === 0) {
@@ -75,14 +81,14 @@ export function AudiencePicker({
     }
     setLoading(true);
     const t = setTimeout(async () => {
-      const result = await previewEmailAudience(criteria);
+      const result = await previewEmailAudience(criteria, excludeContactIds);
       setAudience(result);
       onAudienceChange?.(result);
       setLoading(false);
     }, 400);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- the four *Key strings below are the real, flattened dependency
-  }, [targetKey, excludeTagKey, excludeStageKey, excludeTimelineKey]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the *Key strings below are the real, flattened dependency
+  }, [targetKey, excludeTagKey, excludeStageKey, excludeTimelineKey, excludeContactKey]);
 
   async function createTag() {
     if (!newTagName.trim()) return;
