@@ -6,10 +6,94 @@ import { computeDeals } from "@/lib/crm/commission";
 import { getWarmRanking, type WarmContact } from "@/lib/data/warm";
 import { isDismissedWithin } from "@/lib/crm/dismissed-insights";
 import { fullName } from "@/lib/utils";
-import type { Deal } from "@/types/database";
+import { relativeTime } from "@/lib/format-time";
+import type { AiInsight, Deal, Representing } from "@/types/database";
 
 const DISMISS_WINDOW_DAYS = 30;
 const TWO_YEARS_MS = 2 * 365 * 24 * 60 * 60 * 1000;
+
+export type SuggestionRow = {
+  contactId: string;
+  contactName: string;
+  contactStageId: string | null;
+  contactCreatedAt: string;
+  representing: Representing | null;
+  insight: AiInsight;
+  // Older undismissed insights for this same contact, folded into this one
+  // row - applying or dismissing the row resolves these too, so a contact
+  // who texted three times in an hour shows one row, not three.
+  extraInsightIds: string[];
+  meta: string | null;
+};
+
+export type SuggestionQueue = {
+  count: number;
+  names: string[];
+  sinceLabel: string;
+  rows: SuggestionRow[];
+  // Contacts whose only suggestion is a stage change - what "Apply all N
+  // stage moves" applies in bulk.
+  stageMoveOnlyContactIds: string[];
+};
+
+// One row per contact instead of one row per insight - the owner's
+// explicit ask: an inbound text should add to a count, not produce a
+// second card to dismiss. Excludes known_personally the same way the rest
+// of this file's queues do.
+export async function getSuggestionQueue(): Promise<SuggestionQueue> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("ai_insights")
+    .select("*, contacts!inner(id, first_name, last_name, stage_id, created_at, representing, archived, known_personally)")
+    .eq("dismissed", false)
+    .eq("contacts.archived", false)
+    .eq("contacts.known_personally", false)
+    .order("created_at", { ascending: false });
+
+  type JoinedRow = AiInsight & {
+    contacts: { id: string; first_name: string; last_name: string; stage_id: string | null; created_at: string; representing: Representing | null };
+  };
+
+  const byContact = new Map<string, JoinedRow[]>();
+  for (const raw of (data ?? []) as unknown as JoinedRow[]) {
+    const list = byContact.get(raw.contact_id) ?? [];
+    list.push(raw);
+    byContact.set(raw.contact_id, list);
+  }
+
+  let oldest: string | null = null;
+  const rows: SuggestionRow[] = [];
+  for (const list of byContact.values()) {
+    const [newest, ...rest] = list;
+    const { contacts, ...insight } = newest;
+    for (const r of list) {
+      if (!oldest || r.created_at < oldest) oldest = r.created_at;
+    }
+    rows.push({
+      contactId: contacts.id,
+      contactName: fullName(contacts),
+      contactStageId: contacts.stage_id,
+      contactCreatedAt: contacts.created_at,
+      representing: contacts.representing,
+      insight: insight as AiInsight,
+      extraInsightIds: rest.map((r) => r.id),
+      meta: rest.length > 0 ? `from ${list.length} messages` : null,
+    });
+  }
+  rows.sort((a, b) => b.insight.created_at.localeCompare(a.insight.created_at));
+
+  const stageMoveOnlyContactIds = rows
+    .filter((r) => r.insight.suggested_stage_id && !r.insight.suggested_timeline && !(r.insight.suggested_tag_ids && r.insight.suggested_tag_ids.length > 0))
+    .map((r) => r.contactId);
+
+  return {
+    count: rows.length,
+    names: rows.map((r) => r.contactName),
+    sinceLabel: oldest ? relativeTime(oldest) : "",
+    rows,
+    stageMoveOnlyContactIds,
+  };
+}
 
 export type LeaseRow = { contactId: string; name: string; phone: string | null; month: string; leaseEndsAt: string; dismissKey: string };
 export type SimplePerson = { contactId: string; name: string; phone: string | null };

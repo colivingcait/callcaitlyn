@@ -8,6 +8,7 @@ import { TIMELINE_LABELS } from "@/lib/utils";
 import { applyStageChange, type DealModalMode, type PendingDealSummary } from "@/lib/crm/stage-transition";
 import { DealCelebrationModal } from "@/components/contacts/DealCelebrationModal";
 import { PendingDealCleanupModal } from "@/components/contacts/PendingDealCleanupModal";
+import { cn } from "@/lib/utils";
 import type { AiInsight, DealSide, PipelineStage, Representing, Tag } from "@/types/database";
 
 // Row-shaped AI-insight display, replacing AiInsightCard's standalone
@@ -27,6 +28,9 @@ export function SuggestedRow({
   stages,
   tags,
   showContactName = false,
+  meta = null,
+  extraInsightIds = [],
+  stacked = false,
 }: {
   insight: AiInsight;
   contactId: string;
@@ -38,6 +42,14 @@ export function SuggestedRow({
   stages: PipelineStage[];
   tags: Tag[];
   showContactName?: boolean;
+  // Insights' grouped queue folds a contact's older undismissed insights
+  // into this one row - appended to the suggestion line, and resolved
+  // (dismissed, never applied) alongside whichever action this row takes.
+  meta?: string | null;
+  extraInsightIds?: string[];
+  // Mobile's stacked button layout (44px-tall primary + 44x44 dismiss,
+  // under the text) instead of desktop's inline right-aligned pair.
+  stacked?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -51,16 +63,23 @@ export function SuggestedRow({
   const hasStageOrTimeline = !!suggestedStage || !!insight.suggested_timeline;
   const hasApplyTarget = hasStageOrTimeline || suggestedTags.length > 0;
 
+  async function resolveExtras(supabase: ReturnType<typeof createClient>) {
+    if (extraInsightIds.length === 0) return;
+    await supabase.from("ai_insights").update({ dismissed: true }).in("id", extraInsightIds);
+  }
+
   async function handleDismiss() {
     setBusy(true);
     setError(null);
     const supabase = createClient();
     const { error: dismissError } = await supabase.from("ai_insights").update({ dismissed: true }).eq("id", insight.id);
-    setBusy(false);
     if (dismissError) {
+      setBusy(false);
       setError(dismissError.message);
       return;
     }
+    await resolveExtras(supabase);
+    setBusy(false);
     router.refresh();
   }
 
@@ -120,11 +139,13 @@ export function SuggestedRow({
     }
 
     const { error: markError } = await supabase.from("ai_insights").update({ dismissed: true, applied: true }).eq("id", insight.id);
-    setBusy(false);
     if (markError) {
+      setBusy(false);
       setError(markError.message);
       return;
     }
+    await resolveExtras(supabase);
+    setBusy(false);
     router.refresh();
   }
 
@@ -147,11 +168,13 @@ export function SuggestedRow({
       return;
     }
     const { error: markError } = await supabase.from("ai_insights").update({ dismissed: true }).eq("id", insight.id);
-    setBusy(false);
     if (markError) {
+      setBusy(false);
       setError(markError.message);
       return;
     }
+    await resolveExtras(supabase);
+    setBusy(false);
     router.refresh();
   }
 
@@ -163,38 +186,61 @@ export function SuggestedRow({
     .filter(Boolean)
     .join(" · ");
 
+  const actions = (
+    <>
+      {hasApplyTarget ? (
+        <button
+          onClick={handleApply}
+          disabled={busy}
+          className={cn(
+            "whitespace-nowrap rounded-[10px] border border-neutral-200 bg-white text-sm font-semibold text-neutral-800 disabled:opacity-50",
+            stacked ? "flex h-11 flex-1 items-center justify-center rounded-xl text-[15px]" : "px-3.5 py-2",
+          )}
+        >
+          Apply
+        </button>
+      ) : insight.suggested_action ? (
+        <button
+          onClick={handleAddToList}
+          disabled={busy}
+          className={cn(
+            "whitespace-nowrap rounded-[10px] border border-neutral-200 bg-white text-sm font-semibold text-neutral-800 disabled:opacity-50",
+            stacked ? "flex h-11 flex-1 items-center justify-center rounded-xl text-[15px]" : "px-3.5 py-2",
+          )}
+        >
+          Add to list
+        </button>
+      ) : null}
+      <button
+        onClick={handleDismiss}
+        disabled={busy}
+        aria-label="Dismiss"
+        className={cn(
+          "rounded-[10px] border border-neutral-200 bg-white text-neutral-500 disabled:opacity-50",
+          stacked ? "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl" : "p-2",
+        )}
+      >
+        <X size={stacked ? 16 : 14} />
+      </button>
+    </>
+  );
+
   return (
-    <div className="flex items-center gap-3.5 border-b border-neutral-100 px-4 py-3.5 last:border-b-0">
+    <div className={cn("border-b border-neutral-100 px-4 py-3.5 last:border-b-0", stacked ? "" : "flex items-center gap-3.5")}>
       <div className="min-w-0 flex-1">
         <p className="text-base font-semibold leading-6 text-neutral-900">{insight.summary}</p>
         <p className="mt-0.5 text-sm text-neutral-500">
           {showContactName && <span className="font-medium text-neutral-600">{contactName} · </span>}
           {suggestionLine || insight.suggested_action}
+          {meta && <span> · {meta}</span>}
         </p>
         {error && <p className="mt-0.5 text-sm text-red-600">Couldn&apos;t apply: {error}</p>}
       </div>
-      <div className="flex shrink-0 items-center gap-2">
-        {hasApplyTarget ? (
-          <button
-            onClick={handleApply}
-            disabled={busy}
-            className="whitespace-nowrap rounded-[10px] border border-neutral-200 bg-white px-3.5 py-2 text-sm font-semibold text-neutral-800 disabled:opacity-50"
-          >
-            Apply
-          </button>
-        ) : insight.suggested_action ? (
-          <button
-            onClick={handleAddToList}
-            disabled={busy}
-            className="whitespace-nowrap rounded-[10px] border border-neutral-200 bg-white px-3.5 py-2 text-sm font-semibold text-neutral-800 disabled:opacity-50"
-          >
-            Add to list
-          </button>
-        ) : null}
-        <button onClick={handleDismiss} disabled={busy} className="rounded-[10px] border border-neutral-200 bg-white p-2 text-neutral-500 disabled:opacity-50">
-          <X size={14} />
-        </button>
-      </div>
+      {stacked ? (
+        <div className="mt-2.5 flex items-center gap-2">{actions}</div>
+      ) : (
+        <div className="flex shrink-0 items-center gap-2">{actions}</div>
+      )}
 
       {dealModal && (
         <DealCelebrationModal

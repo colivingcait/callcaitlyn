@@ -7,6 +7,7 @@ export function InsightCard({
   icon,
   title,
   subtitle,
+  expandedSubtitle,
   expandable = true,
   defaultOpen = false,
   onDismiss,
@@ -17,6 +18,11 @@ export function InsightCard({
   icon: React.ReactNode;
   title: string;
   subtitle?: string;
+  // Shown instead of `subtitle` while the card is open - the suggestion
+  // queue swaps "names joined with a comma" for "From calls and texts
+  // since {date}" once expanded, since the row list below already shows
+  // the names.
+  expandedSubtitle?: string;
   expandable?: boolean;
   defaultOpen?: boolean;
   onDismiss?: () => Promise<{ ok: boolean }>;
@@ -49,7 +55,9 @@ export function InsightCard({
           className="min-w-0 flex-1 text-left"
         >
           <p className="text-[17px] font-semibold text-neutral-900">{title}</p>
-          {subtitle && <p className="mt-0.5 text-[15px] text-neutral-600">{subtitle}</p>}
+          {(open && expandedSubtitle) || subtitle ? (
+            <p className="mt-0.5 text-[15px] text-neutral-600">{open && expandedSubtitle ? expandedSubtitle : subtitle}</p>
+          ) : null}
         </button>
         {action}
         {onDismiss && (

@@ -9,6 +9,7 @@ import { SignOutButton } from "@/components/nav/SignOutButton";
 import { listConversations } from "@/lib/data/messages";
 import { listNewRegistrationsQueue } from "@/lib/data/dialer";
 import { getUnmatchedNotesCount } from "@/lib/data/notes-inbox";
+import { getSuggestionQueue } from "@/lib/data/insights";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -16,14 +17,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ count: contactsCount }, conversations, { contacts: newLeads }, unmatchedNotes] = await Promise.all([
+  const [{ count: contactsCount }, conversations, { contacts: newLeads }, unmatchedNotes, suggestionQueue] = await Promise.all([
     supabase.from("contacts").select("id", { count: "exact", head: true }).eq("archived", false).eq("spam", false),
     listConversations(),
     listNewRegistrationsQueue(),
     getUnmatchedNotesCount(),
+    getSuggestionQueue(),
   ]);
   const waitingOnReply = conversations.filter((c) => c.owed).length;
-  const navCounts = { contacts: contactsCount ?? 0, dialer: newLeads.length, messages: waitingOnReply, notes: unmatchedNotes };
+  const navCounts = { contacts: contactsCount ?? 0, dialer: newLeads.length, messages: waitingOnReply, notes: unmatchedNotes, insights: suggestionQueue.count };
 
   return (
     <div className="flex min-h-dvh">

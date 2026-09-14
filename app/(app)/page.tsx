@@ -1,13 +1,12 @@
 import { getTodayData } from "@/lib/data/today";
 import { dismissReplyOwed, clearFollowUp, dismissRegisteredNoFollowUp } from "@/app/(app)/today-actions";
-import { listMergeCandidates, listTags } from "@/lib/data/contacts";
+import { listMergeCandidates } from "@/lib/data/contacts";
 import { getDefaultDraftTemplate } from "@/lib/data/text-templates";
 import { createClient } from "@/lib/supabase/server";
 import { TodayMobile } from "@/components/dashboard/mobile/TodayMobile";
 import { formatLocal } from "@/lib/format-time";
 import { Section } from "@/components/ui/Section";
 import { BookingRequestRow } from "@/components/scheduling/BookingRequestRow";
-import { SuggestedRow } from "@/components/contacts/SuggestedRow";
 import { WorklistGroup } from "@/components/dashboard/WorklistGroup";
 import { TodayTasksGroup } from "@/components/dashboard/TodayTasksGroup";
 import { TodayStatStrip } from "@/components/dashboard/TodayStatStrip";
@@ -28,7 +27,6 @@ export default async function TodayPage() {
     },
     today,
     contacts,
-    tags,
     { data: pinnedWeeklyReview },
     { data: pinnedPrepSheets },
     defaultDraftTemplate,
@@ -36,7 +34,6 @@ export default async function TodayPage() {
     supabase.auth.getUser(),
     getTodayData(),
     listMergeCandidates(),
-    listTags(),
     supabase.from("pinned_today_items").select("id, payload").eq("kind", "weekly_review").is("cleared_at", null).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("pinned_today_items").select("id, payload").eq("kind", "prep_sheet").is("cleared_at", null).order("created_at", { ascending: false }).limit(5),
     getDefaultDraftTemplate(),
@@ -112,26 +109,6 @@ export default async function TodayPage() {
         {today.justFinished.length > 0 && (
           <Section sectionKey="today:just-finished" title="Just finished" meta={`${today.justFinished.length}`}>
             <WorklistGroup people={today.justFinished} />
-          </Section>
-        )}
-
-        {today.suggested.length > 0 && (
-          <Section sectionKey="today:suggested" title="Suggested" meta={`${today.suggested.length}`}>
-            {today.suggested.map((s) => (
-              <SuggestedRow
-                key={s.insight.id}
-                insight={s.insight}
-                contactId={s.contactId}
-                ownerId={ownerId}
-                contactStageId={s.contactStageId}
-                contactName={s.contactName}
-                contactCreatedAt={s.contactCreatedAt}
-                representing={s.representing}
-                stages={today.stages}
-                tags={tags}
-                showContactName
-              />
-            ))}
           </Section>
         )}
 

@@ -7,7 +7,7 @@ import { listNewRegistrationsQueue } from "@/lib/data/dialer";
 import { listWonDeals, listPendingDeals } from "@/lib/data/commissions";
 import { listPendingBookingRequests } from "@/lib/data/scheduling";
 import { computeDeals, summarizeDeals, capYearKey, capYearStart, KW_CAP } from "@/lib/crm/commission";
-import type { AiInsight, PipelineStage, Representing } from "@/types/database";
+import type { PipelineStage } from "@/types/database";
 
 export type WorklistPerson = { id: string; name: string; phone: string | null; meta: string; late: boolean; activityId?: string };
 
@@ -166,40 +166,6 @@ async function getJustFinishedGroup(): Promise<WorklistPerson[]> {
   return justFinished;
 }
 
-export type SuggestedInsight = {
-  insight: AiInsight;
-  contactId: string;
-  contactName: string;
-  contactStageId: string | null;
-  contactCreatedAt: string;
-  representing: Representing | null;
-};
-
-async function getSuggestedInsights(): Promise<SuggestedInsight[]> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("ai_insights")
-    .select("*, contacts!inner(id, first_name, last_name, stage_id, created_at, representing, archived)")
-    .eq("dismissed", false)
-    .eq("contacts.archived", false)
-    .order("created_at", { ascending: false })
-    .limit(10);
-
-  return (data ?? []).map((row) => {
-    const { contacts, ...insight } = row as unknown as AiInsight & {
-      contacts: { id: string; first_name: string; last_name: string; stage_id: string | null; created_at: string; representing: Representing | null };
-    };
-    return {
-      insight: insight as AiInsight,
-      contactId: contacts.id,
-      contactName: `${contacts.first_name} ${contacts.last_name}`.trim(),
-      contactStageId: contacts.stage_id,
-      contactCreatedAt: contacts.created_at,
-      representing: contacts.representing,
-    };
-  });
-}
-
 function daysAgo(n: number) {
   return new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString();
 }
@@ -257,13 +223,12 @@ export async function getTodayData() {
   const { data: stagesData } = await supabase.from("pipeline_stages").select("*").order("sort_order", { ascending: true });
   const stages = (stagesData ?? []) as PipelineStage[];
 
-  const [calls, repliesOwed, myTasks, registeredNoFollowUp, suggested, justFinished, statStrip, commissionYear, newLeads, bookingRequests] =
+  const [calls, repliesOwed, myTasks, registeredNoFollowUp, justFinished, statStrip, commissionYear, newLeads, bookingRequests] =
     await Promise.all([
       getCallsGroup(),
       getRepliesOwedGroup(),
       getMyTasksGroup(),
       getRegisteredNoFollowUpGroup(stages),
-      getSuggestedInsights(),
       getJustFinishedGroup(),
       getStatStrip(stages),
       getCommissionYearSummary(),
@@ -281,7 +246,6 @@ export async function getTodayData() {
     repliesOwed,
     myTasks,
     registeredNoFollowUp,
-    suggested,
     justFinished,
     statStrip,
     commissionYear,

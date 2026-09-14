@@ -9,5 +9,6 @@ export function countFor(counts: NavCounts): Record<string, { value: number; wai
     "/dialer": counts.dialer !== undefined ? { value: counts.dialer } : undefined,
     "/messages": counts.messages !== undefined ? { value: counts.messages, waiting: counts.messages > 0 } : undefined,
     "/notes": counts.notes !== undefined && counts.notes > 0 ? { value: counts.notes, waiting: true } : undefined,
+    "/insights": counts.insights !== undefined && counts.insights > 0 ? { value: counts.insights, waiting: true } : undefined,
   };
 }

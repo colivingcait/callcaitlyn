@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { Calendar, TrendingDown, Eye, Flame, Users, Clock, AlertTriangle, UserPlus, ChevronRight } from "lucide-react";
-import { getInsightsData } from "@/lib/data/insights";
+import { getInsightsData, getSuggestionQueue } from "@/lib/data/insights";
 import { getRateMoves } from "@/lib/data/rate-moves";
+import { listStages, listTags } from "@/lib/data/contacts";
+import { createClient } from "@/lib/supabase/server";
 import { InsightCard } from "@/components/insights/InsightCard";
+import { SuggestionQueueCard } from "@/components/insights/SuggestionQueueCard";
 import { LeaseRows } from "@/components/insights/LeaseRows";
 import { RateMoveRow } from "@/components/insights/RateMoveRow";
 import { WarmPreviewRow } from "@/components/insights/WarmPreviewRow";
@@ -12,9 +15,21 @@ import { formatPercent } from "@/lib/utils";
 import { relativeTime } from "@/lib/format-time";
 
 export default async function InsightsPage() {
-  const [data, rateMoves] = await Promise.all([getInsightsData(), getRateMoves()]);
+  const supabase = await createClient();
+  const [
+    {
+      data: { user },
+    },
+    data,
+    rateMoves,
+    suggestionQueue,
+    stages,
+    tags,
+  ] = await Promise.all([supabase.auth.getUser(), getInsightsData(), getRateMoves(), getSuggestionQueue(), listStages(), listTags()]);
+  const ownerId = user?.id ?? "";
 
   const nothingToFlag =
+    suggestionQueue.count === 0 &&
     data.leases.length === 0 &&
     data.warmCount === 0 &&
     data.coldHot.length === 0 &&
@@ -30,6 +45,13 @@ export default async function InsightsPage() {
       <p className="mt-1 text-[15px] text-neutral-500">What changed on its own - Today is what you decided to do.</p>
 
       <div className="mt-5 space-y-3">
+        <div className="md:hidden">
+          <SuggestionQueueCard queue={suggestionQueue} ownerId={ownerId} stages={stages} tags={tags} mobile />
+        </div>
+        <div className="hidden md:block">
+          <SuggestionQueueCard queue={suggestionQueue} ownerId={ownerId} stages={stages} tags={tags} />
+        </div>
+
         {data.leases.length > 0 && (
           <InsightCard
             icon={<Calendar size={18} />}

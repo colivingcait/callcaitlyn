@@ -21,7 +21,7 @@ import {
 
 export type NavItem = { href: string; label: string; icon: LucideIcon };
 export type NavGroup = { label: string; items: NavItem[] };
-export type NavCounts = { contacts?: number; dialer?: number; messages?: number; notes?: number };
+export type NavCounts = { contacts?: number; dialer?: number; messages?: number; notes?: number; insights?: number };
 
 // Thirteen items in three groups - about the ceiling before a sidebar
 // becomes a list you scan instead of a map you know. Insights, Sphere,

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Mail } from "lucide-react";
 import { CallButton } from "@/components/CallButton";
-import { getContact, getContactInsights, listStages } from "@/lib/data/contacts";
+import { getContact, getContactInsights, listStages, listTags } from "@/lib/data/contacts";
 import { getContactThread } from "@/lib/data/messages";
 import { fullName, formatPhone } from "@/lib/utils";
 import { Avatar } from "@/components/ui";
@@ -12,7 +12,7 @@ import { ThreadComposer } from "@/components/messages/ThreadComposer";
 import { ScrollToBottomOnLoad } from "@/components/messages/ScrollToBottomOnLoad";
 import { ContactContextBar } from "@/components/messages/ContactContextBar";
 import { ConversationActions } from "@/components/messages/ConversationActions";
-import { AiInsightCard } from "@/components/contacts/AiInsightCard";
+import { SuggestedRow } from "@/components/contacts/SuggestedRow";
 import { createClient } from "@/lib/supabase/server";
 import { listTextTemplates } from "@/lib/data/text-templates";
 
@@ -29,12 +29,13 @@ export default async function MessageThreadPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const [contact, thread, stages, insights, textTemplates] = await Promise.all([
+  const [contact, thread, stages, insights, textTemplates, tags] = await Promise.all([
     getContact(id),
     getContactThread(id),
     listStages(),
     getContactInsights(id),
     listTextTemplates(),
+    listTags(),
   ]);
 
   if (!contact) notFound();
@@ -65,19 +66,24 @@ export default async function MessageThreadPage({
       </div>
 
       <div className="flex-1 space-y-3 px-3 py-4">
-        {insights.map((insight) => (
-          <AiInsightCard
-            key={insight.id}
-            insight={insight}
-            contactId={contact.id}
-            ownerId={user?.id ?? contact.owner_id}
-            contactStageId={contact.stage_id}
-            contactName={fullName(contact)}
-            contactCreatedAt={contact.created_at}
-            representing={contact.representing}
-            stages={stages}
-          />
-        ))}
+        {insights.length > 0 && (
+          <div className="overflow-hidden rounded-2xl border border-[#ebe9e7] bg-white">
+            {insights.map((insight) => (
+              <SuggestedRow
+                key={insight.id}
+                insight={insight}
+                contactId={contact.id}
+                ownerId={user?.id ?? contact.owner_id}
+                contactStageId={contact.stage_id}
+                contactName={fullName(contact)}
+                contactCreatedAt={contact.created_at}
+                representing={contact.representing}
+                stages={stages}
+                tags={tags}
+              />
+            ))}
+          </div>
+        )}
 
         {thread.length === 0 ? (
           <p className="py-10 text-center text-sm text-neutral-400">No calls or texts with {contact.first_name} yet.</p>
