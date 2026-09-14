@@ -1,11 +1,7 @@
-import Link from "next/link";
 import { listNewRegistrationsQueue, listEventFollowupQueue, listConfirmationQueue } from "@/lib/data/dialer";
-import { listStages } from "@/lib/data/contacts";
 import { getDefaultDraftTemplate } from "@/lib/data/text-templates";
-import { DialerQueue } from "@/components/dialer/DialerQueue";
-import { ConfirmationQueue } from "@/components/dialer/ConfirmationQueue";
-import { FollowUpQueueMobile } from "@/components/dialer/mobile/FollowUpQueueMobile";
-import { cn } from "@/lib/utils";
+import { confirmationItemToDialerContact } from "@/lib/crm/dialer-mapping";
+import { DialerWorkspace } from "@/components/dialer/DialerWorkspace";
 
 export default async function DialerPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const { tab } = await searchParams;
@@ -15,110 +11,41 @@ export default async function DialerPage({ searchParams }: { searchParams: Promi
     { contacts: registrations, error: registrationsError },
     { contacts: followups, error: followupError },
     { items: confirmations, events: confirmationEvents, error: confirmationError },
-    stages,
     defaultDraftTemplate,
-  ] = await Promise.all([listNewRegistrationsQueue(), listEventFollowupQueue(), listConfirmationQueue(), listStages(), getDefaultDraftTemplate()]);
+  ] = await Promise.all([listNewRegistrationsQueue(), listEventFollowupQueue(), listConfirmationQueue(), getDefaultDraftTemplate()]);
 
-  const contacts = activeTab === "followup" ? followups : registrations;
+  const contacts =
+    activeTab === "followup" ? followups : activeTab === "confirm" ? confirmations.map(confirmationItemToDialerContact) : registrations;
   const error = activeTab === "followup" ? followupError : activeTab === "confirm" ? confirmationError : registrationsError;
+  const mode = activeTab === "followup" ? "event-followup" : activeTab === "confirm" ? "confirmation" : "new-registration";
+
+  const emptyMessage =
+    activeTab === "followup"
+      ? "No one's waiting on a follow-up call."
+      : activeTab === "confirm"
+        ? confirmationEvents.length === 0
+          ? "Nothing happening in the next couple days to confirm."
+          : "Everyone's confirmed."
+        : "Nobody left to call — you're caught up.";
 
   return (
     <>
-      {activeTab === "confirm" ? (
-        <div className="px-4 pb-8 pt-5 md:hidden">
-          <p className="font-serif text-2xl font-semibold text-neutral-900">Confirm attendance</p>
-          <p className="mt-0.5 text-[15px] text-neutral-500">
-            {confirmationEvents.length === 1 ? confirmationEvents[0].eventName : "Events in the next couple days"} · {confirmations.length} left
-          </p>
-          <div className="mt-3 flex gap-1.5">
-            <Link href="/dialer" className="h-11 flex-1 rounded-[12px] border border-neutral-200 text-center text-[15px] font-semibold leading-[44px] text-neutral-700">
-              New {registrations.length}
-            </Link>
-            <Link href="/dialer?tab=followup" className="h-11 flex-1 rounded-[12px] border border-neutral-200 text-center text-[15px] font-semibold leading-[44px] text-neutral-700">
-              Post-event {followups.length}
-            </Link>
-            <Link href="/dialer?tab=confirm" className="h-11 flex-1 rounded-[12px] bg-neutral-900 text-center text-[15px] font-semibold leading-[44px] text-white">
-              Confirm {confirmations.length}
-            </Link>
-          </div>
-          <div className="mt-4">
-            <ConfirmationQueue items={confirmations} events={confirmationEvents} stages={stages} defaultDraftTemplate={defaultDraftTemplate} />
-          </div>
-        </div>
-      ) : (
-        <FollowUpQueueMobile
-          contacts={contacts}
-          mode={activeTab === "followup" ? "event-followup" : "new-registration"}
-          activeTab={activeTab}
-          newCount={registrations.length}
-          followupCount={followups.length}
-          confirmCount={confirmations.length}
-          defaultDraftTemplate={defaultDraftTemplate}
-        />
-      )}
-      <div className="mx-auto hidden max-w-2xl overflow-x-hidden md:block">
-      <div className="px-4 pt-6 pb-2">
-        <h1 className="font-serif text-2xl font-semibold text-neutral-900">Dialer</h1>
-        <p className="mt-0.5 text-sm text-neutral-500">
-          {activeTab === "followup"
-            ? "People who attended - call to follow up while it's fresh."
-            : activeTab === "confirm"
-              ? "Registered (or added by hand) for something happening in the next couple days."
-              : "Everyone with an untouched registration - new and returning both."}
-        </p>
-      </div>
-
-      <div className="flex gap-1 border-b border-neutral-100 px-4">
-        <Link
-          href="/dialer"
-          className={cn(
-            "border-b-2 px-3 py-2 text-sm font-medium",
-            activeTab === "new" ? "border-brand-600 text-brand-700" : "border-transparent text-neutral-500",
-          )}
-        >
-          New registrations ({registrations.length})
-        </Link>
-        <Link
-          href="/dialer?tab=followup"
-          className={cn(
-            "border-b-2 px-3 py-2 text-sm font-medium",
-            activeTab === "followup" ? "border-brand-600 text-brand-700" : "border-transparent text-neutral-500",
-          )}
-        >
-          Post-event follow-ups ({followups.length})
-        </Link>
-        <Link
-          href="/dialer?tab=confirm"
-          className={cn(
-            "border-b-2 px-3 py-2 text-sm font-medium",
-            activeTab === "confirm" ? "border-brand-600 text-brand-700" : "border-transparent text-neutral-500",
-          )}
-        >
-          Confirm attendance ({confirmations.length})
-        </Link>
-      </div>
-
       {error && (
-        <p className="mx-4 mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-700">
-          Couldn&apos;t load this queue: {error}. This usually means a database migration hasn&apos;t been run yet — check
-          with your developer.
+        <p className="mx-4 mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+          Couldn&apos;t load this queue: {error}. This usually means a database migration hasn&apos;t been run yet — check with your developer.
         </p>
       )}
-
-      {activeTab === "confirm" ? (
-        <ConfirmationQueue items={confirmations} events={confirmationEvents} stages={stages} defaultDraftTemplate={defaultDraftTemplate} />
-      ) : (
-        <DialerQueue
-          contacts={contacts}
-          stages={stages}
-          mode={activeTab === "followup" ? "event-followup" : "new-registration"}
-          emptyMessage={
-            activeTab === "followup" ? "No one's waiting on a follow-up call." : "Nobody left to call — you're caught up."
-          }
-          defaultDraftTemplate={defaultDraftTemplate}
-        />
-      )}
-      </div>
+      <DialerWorkspace
+        contacts={contacts}
+        mode={mode}
+        activeTab={activeTab}
+        newCount={registrations.length}
+        followupCount={followups.length}
+        confirmCount={confirmations.length}
+        confirmationEvents={confirmationEvents}
+        defaultDraftTemplate={defaultDraftTemplate}
+        emptyMessage={emptyMessage}
+      />
     </>
   );
 }

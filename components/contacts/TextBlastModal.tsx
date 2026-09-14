@@ -317,14 +317,20 @@ export function TextBlastModal({ target, onClose }: { target: BlastTarget; onClo
                         </div>
                         {r.recentTexts.length > 0 && (
                           <div className="mt-1 space-y-0.5 border-l-2 border-neutral-100 pl-2">
-                            {r.recentTexts.map((t, i) => (
-                              <p key={i} className="text-[11px] leading-4 text-neutral-500">
-                                <span className={t.direction === "inbound" ? "font-medium text-neutral-700" : "text-neutral-500"}>
-                                  {t.direction === "inbound" ? "Them" : "You"}:
-                                </span>{" "}
-                                &ldquo;{t.body}&rdquo; <span className="text-neutral-400">· {relativeTime(t.occurredAt)}</span>
-                              </p>
-                            ))}
+                            {r.recentTexts.map((t, i) =>
+                              t.kind === "text" ? (
+                                <p key={i} className="text-[11px] leading-4 text-neutral-500">
+                                  <span className={t.direction === "inbound" ? "font-medium text-neutral-700" : "text-neutral-500"}>
+                                    {t.direction === "inbound" ? "Them" : "You"}:
+                                  </span>{" "}
+                                  &ldquo;{t.body}&rdquo; <span className="text-neutral-400">· {relativeTime(t.occurredAt)}</span>
+                                </p>
+                              ) : (
+                                <p key={i} className="text-[11px] leading-4 text-neutral-500">
+                                  {t.label ?? "Call"} <span className="text-neutral-400">· {relativeTime(t.occurredAt)}</span>
+                                </p>
+                              ),
+                            )}
                           </div>
                         )}
                       </div>

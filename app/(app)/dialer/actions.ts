@@ -24,7 +24,7 @@ export async function searchContactsToConfirm(query: string): Promise<Confirmati
     .map((c) => ({ id: c.id, name: fullName(c) || "Unnamed", phone: c.phone }));
 }
 
-// Backs the recent-texts panel on all three Dialer queues - same shared
+// Backs the Dialer's conversation panel on all three queues - same shared
 // fetch the bulk text blast's audience preview uses (see
 // lib/crm/recent-texts.ts), just for one contact instead of a whole
 // audience.
@@ -67,21 +67,6 @@ export async function markDialerConnected(contactId: string): Promise<ActionResu
   return { ok: true };
 }
 
-// "Dismiss" - same underlying effect as Connected (clears this specific
-// registration off the queue), but means "no action needed" rather than
-// "I called them" - for repeat registrants she doesn't want to reach out
-// to every time (vendors, etc.). Separate name so the intent is clear in
-// the code even though the data change is identical.
-export async function markDialerDismissed(contactId: string): Promise<ActionResult> {
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("contacts")
-    .update({ dialer_contacted_at: new Date().toISOString(), dialer_snoozed_at: null })
-    .eq("id", contactId);
-  if (error) return { ok: false, error: error.message };
-  return { ok: true };
-}
-
 // Same idea as markDialerSnoozed/markDialerConnected above, but for the
 // separate post-event follow-up queue - independent tracking columns so
 // calling someone at registration doesn't also mark their (not-yet-
@@ -94,20 +79,6 @@ export async function markEventFollowupSnoozed(contactId: string): Promise<Actio
 }
 
 export async function markEventFollowupConnected(contactId: string): Promise<ActionResult> {
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("contacts")
-    .update({ event_followup_contacted_at: new Date().toISOString(), event_followup_snoozed_at: null })
-    .eq("id", contactId);
-  if (error) return { ok: false, error: error.message };
-  return { ok: true };
-}
-
-// "Dismiss" for the event-followup queue - same idea as markDialerDismissed
-// above: means "no follow-up needed" (already handled elsewhere, not worth
-// a call) rather than "I called them," but clears this contact off the
-// queue the same way a completed follow-up would.
-export async function markEventFollowupDismissed(contactId: string): Promise<ActionResult> {
   const supabase = await createClient();
   const { error } = await supabase
     .from("contacts")
@@ -155,13 +126,6 @@ export async function markConfirmationSnoozed(contactId: string, eventId: string
   return { ok: true };
 }
 
-// "No action needed" - same data change as Connected (see
-// markDialerDismissed's rationale for why these stay separate functions
-// even though they do the same thing).
-export async function markConfirmationDismissed(contactId: string, eventId: string, eventName: string): Promise<ActionResult> {
-  return markConfirmationConnected(contactId, eventId, eventName);
-}
-
 // "+ Add someone" on the confirmation list - a person she knows is
 // interested but who never registered. ignoreDuplicates so re-adding
 // someone already on the list (registered or previously added) is a
@@ -180,38 +144,5 @@ export async function addToConfirmationList(contactId: string, eventId: string, 
       { onConflict: "event_id,contact_id", ignoreDuplicates: true },
     );
   if (error) return { ok: false, error: error.message };
-  return { ok: true };
-}
-
-// Optional reclassify + notes after a Connected call. The real call data
-// (duration, recording, transcript) arrives separately and asynchronously
-// via Quo's webhook straight onto the contact's activity timeline - this
-// doesn't need to wait for it.
-export async function saveDialerNotes(contactId: string, stageId: string | null, note: string): Promise<ActionResult> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Not signed in" };
-
-  if (stageId) {
-    const { error } = await supabase.from("contacts").update({ stage_id: stageId }).eq("id", contactId);
-    if (error) return { ok: false, error: error.message };
-  }
-
-  if (note.trim()) {
-    const { error } = await supabase.from("activities").insert({
-      owner_id: user.id,
-      contact_id: contactId,
-      type: "note",
-      direction: "none",
-      source: "manual",
-      occurred_at: new Date().toISOString(),
-      body: note.trim(),
-      metadata: { via: "dialer" },
-    });
-    if (error) return { ok: false, error: error.message };
-  }
-
   return { ok: true };
 }
