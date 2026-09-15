@@ -108,7 +108,13 @@ export default async function ListingDetailPage({ params, searchParams }: { para
           return (
             <div className="space-y-4">
               {/* Actions first - what to do right now, not who's on the list. */}
-              <AgentComposer listingId={listing.id} address={listing.address} listPrice={listing.list_price ? formatCurrency(listing.list_price) : null} agents={agents} />
+              <AgentComposer
+                listingId={listing.id}
+                address={listing.address}
+                listPrice={listing.list_price ? formatCurrency(listing.list_price) : null}
+                zillowUrl={listing.zillow_url}
+                agents={agents}
+              />
 
               {/* Reporting - status at a glance, then the send-by-send log. */}
               <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
@@ -157,7 +163,7 @@ export default async function ListingDetailPage({ params, searchParams }: { para
             </div>
             <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
               <h2 className="mb-3 text-base font-semibold text-neutral-900">Copy</h2>
-              <CopyBlocks address={listing.address} listPrice={listing.list_price} specs={specs} story={listing.story} />
+              <CopyBlocks address={listing.address} listPrice={listing.list_price} specs={specs} story={listing.story} zillowUrl={listing.zillow_url} />
             </div>
             <div className="rounded-2xl border border-dashed border-neutral-300 bg-[#fcfbfa] p-4">
               <p className="font-semibold text-neutral-900">Other things this data can do</p>

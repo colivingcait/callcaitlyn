@@ -2,17 +2,33 @@
 
 import { useState } from "react";
 import { formatCurrency } from "@/lib/utils";
+import { buildAgentTemplates } from "@/lib/listings/agent-templates";
 
-export function CopyBlocks({ address, listPrice, specs, story }: { address: string; listPrice: number | null; specs: string; story: string | null }) {
+export function CopyBlocks({
+  address,
+  listPrice,
+  specs,
+  story,
+  zillowUrl,
+}: {
+  address: string;
+  listPrice: number | null;
+  specs: string;
+  story: string | null;
+  zillowUrl: string | null;
+}) {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const price = formatCurrency(listPrice);
   const teaser = story ? story.split(/\.\s/)[0] : `${specs}.`;
+  // Same wording the composer's "Just listed" template sends, so pasting
+  // this somewhere and sending the actual text read the same way.
+  const agentText = buildAgentTemplates(address, price, zillowUrl).find((t) => t.label === "Just listed")!.body;
 
   const blocks = [
     { key: "fb", label: "Facebook post", body: `Just listed — ${address}, ${price}. ${teaser}. DM me for the numbers.` },
     { key: "ig", label: "Instagram caption", body: `New listing 🏠 ${address} — ${price} — ${specs}. ${teaser}.` },
     { key: "agentEmail", label: "Email to matched agents", body: `Your buyer came up on reverse prospecting for my new listing at ${address} — ${price}, ${specs}. Full photos and showing instructions are in FMLS; happy to open it up this weekend if that helps.` },
-    { key: "agentText", label: "Text to matched agents", body: `Hi {{agent_first_name}} — new listing at ${address}, ${price} ${specs}. Your buyer matched on reverse prospecting. Want to get them in this weekend?` },
+    { key: "agentText", label: "Text to matched agents", body: agentText },
   ];
 
   async function copy(key: string, body: string) {

@@ -70,6 +70,7 @@ export async function updateListingBasics(
     propertyType?: string | null;
     mlsNumber?: string | null;
     story?: string | null;
+    zillowUrl?: string | null;
   },
 ): Promise<ActionResult> {
   const supabase = await createClient();
@@ -87,6 +88,7 @@ export async function updateListingBasics(
   if (input.propertyType !== undefined) patch.property_type = input.propertyType;
   if (input.mlsNumber !== undefined) patch.mls_number = input.mlsNumber;
   if (input.story !== undefined) patch.story = input.story;
+  if (input.zillowUrl !== undefined) patch.zillow_url = input.zillowUrl;
   patch.updated_at = new Date().toISOString();
 
   // A price edit here is also what should feed the price-drop send and

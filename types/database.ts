@@ -234,6 +234,7 @@ export interface Listing {
   mls_number: string | null;
   status: ListingStatus;
   story: string | null;
+  zillow_url: string | null;
   photo_paths: string[];
   created_at: string;
   updated_at: string;

@@ -5,33 +5,25 @@ import { useRouter } from "next/navigation";
 import { Send, Eye } from "lucide-react";
 import { createListingSend, sendTestListingText, sendTestListingEmail } from "@/app/(app)/listings/actions";
 import { isWithinQuietHours, quietHoursEndLabel } from "@/lib/crm/text-blast-timing";
+import { buildAgentTemplates } from "@/lib/listings/agent-templates";
 import type { ListingAgent } from "@/types/database";
 
 type Channel = "email" | "text";
 type Audience = "not_contacted" | "non_repliers" | "all";
 
-function templates(address: string, price: string | null) {
-  const priceLine = price ? `${price}, ` : "";
-  return [
-    {
-      label: "Just listed",
-      subject: `New listing: ${address}`,
-      body: `Hi {{agent_first_name}} — your buyer showed up on reverse prospecting for my new listing at ${address} (${priceLine}now on the market). Happy to open it up if your buyer wants a look.`,
-    },
-    {
-      label: "Price improvement",
-      subject: `Price improvement: ${address}`,
-      body: `Hi {{agent_first_name}} — wanted to flag a price improvement on ${address}${priceLine ? `, now ${priceLine}` : ""}. Let me know if your buyer wants another look.`,
-    },
-    {
-      label: "Open house",
-      subject: `Open house: ${address}`,
-      body: `Hi {{agent_first_name}} — I'm holding an open house at ${address} this weekend. Let me know if your buyer would like a personal showing instead.`,
-    },
-  ];
-}
-
-export function AgentComposer({ listingId, address, listPrice, agents }: { listingId: string; address: string; listPrice: string | null; agents: ListingAgent[] }) {
+export function AgentComposer({
+  listingId,
+  address,
+  listPrice,
+  zillowUrl,
+  agents,
+}: {
+  listingId: string;
+  address: string;
+  listPrice: string | null;
+  zillowUrl: string | null;
+  agents: ListingAgent[];
+}) {
   const router = useRouter();
   const [channel, setChannel] = useState<Channel>("email");
   const [audience, setAudience] = useState<Audience>("not_contacted");
@@ -120,7 +112,7 @@ export function AgentComposer({ listingId, address, listPrice, agents }: { listi
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
-        {templates(address, listPrice).map((t) => (
+        {buildAgentTemplates(address, listPrice, zillowUrl).map((t) => (
           <button key={t.label} type="button" onClick={() => applyTemplate(t)} className="rounded-xl border border-neutral-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-800">
             {t.label}
           </button>

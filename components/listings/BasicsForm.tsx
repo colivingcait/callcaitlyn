@@ -14,6 +14,7 @@ export function BasicsForm({ listing }: { listing: Listing }) {
   const [sqft, setSqft] = useState(listing.sqft?.toString() ?? "");
   const [propertyType, setPropertyType] = useState(listing.property_type ?? "");
   const [mlsNumber, setMlsNumber] = useState(listing.mls_number ?? "");
+  const [zillowUrl, setZillowUrl] = useState(listing.zillow_url ?? "");
   const [story, setStory] = useState(listing.story ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -29,6 +30,7 @@ export function BasicsForm({ listing }: { listing: Listing }) {
       sqft: sqft ? Number(sqft) : null,
       propertyType: propertyType || null,
       mlsNumber: mlsNumber || null,
+      zillowUrl: zillowUrl || null,
       story: story || null,
     });
     setSaving(false);
@@ -69,6 +71,17 @@ export function BasicsForm({ listing }: { listing: Listing }) {
         <div>
           <label className="mb-1 block text-sm font-medium text-neutral-700">MLS number</label>
           <input value={mlsNumber} onChange={(e) => setMlsNumber(e.target.value)} className={inputClass} placeholder="FMLS 7412398" />
+        </div>
+        <div className="sm:col-span-3">
+          <label className="mb-1 block text-sm font-medium text-neutral-700">Zillow link</label>
+          <input
+            type="url"
+            value={zillowUrl}
+            onChange={(e) => setZillowUrl(e.target.value)}
+            className={inputClass}
+            placeholder="https://www.zillow.com/homedetails/..."
+          />
+          <p className="mt-1 text-xs text-neutral-400">Dropped into agent texts so they can tap through and see the photos.</p>
         </div>
       </div>
       <div className="mt-3">
