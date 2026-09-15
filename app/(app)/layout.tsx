@@ -37,9 +37,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   };
 
   return (
-    <div className="flex min-h-dvh">
+    // md:h-dvh + md:overflow-hidden on this row and the inner column cap
+    // the desktop app shell to exactly the viewport, so the sidebar is no
+    // longer a normal flex child that scrolls away with a tall page -
+    // <main>'s own md:overflow-y-auto becomes the only thing that
+    // scrolls. Confirmed on Contacts first (which layers its own sticky
+    // sub-header inside main's scroll) before rolling out here. Mobile
+    // keeps its plain min-h-dvh document scroll (BottomNav is already
+    // fixed, independent of this either way).
+    <div className="flex min-h-dvh md:h-dvh md:overflow-hidden">
       <Sidebar userEmail={user?.email} counts={navCounts} />
-      <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
+      <div className="flex min-h-dvh min-w-0 flex-1 flex-col md:h-dvh md:overflow-hidden">
         <header className="flex items-center justify-between border-b border-neutral-200 bg-white px-4 py-3 md:hidden">
           <h1 className="font-serif text-lg font-semibold text-neutral-900">CallCaitlyn</h1>
           <div className="flex items-center gap-4">
@@ -52,7 +60,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <SignOutButton />
           </div>
         </header>
-        <main className="flex-1 bg-neutral-50/60 pb-28 md:pb-8">{children}</main>
+        <main className="flex-1 bg-neutral-50/60 pb-28 md:min-h-0 md:overflow-y-auto md:pb-8">{children}</main>
       </div>
       {/* Mobile's FAB slot is Today-only-Log now (LogPill below); New
           contact/New task move to People's header button (Phase 3) and
