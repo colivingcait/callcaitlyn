@@ -15,6 +15,7 @@ import { PhotoUploader } from "@/components/listings/PhotoUploader";
 import { MarketingGraphics } from "@/components/listings/MarketingGraphics";
 import { CopyBlocks } from "@/components/listings/CopyBlocks";
 import { ActivityTab } from "@/components/listings/ActivityTab";
+import { Section } from "@/components/ui/Section";
 import type { ListingAgentMessage } from "@/types/database";
 
 type Tab = "rp" | "marketing" | "activity";
@@ -97,17 +98,44 @@ export default async function ListingDetailPage({ params, searchParams }: { para
       </div>
 
       <div className="mt-4">
-        {activeTab === "rp" && (
-          <div className="space-y-4">
-            <ImportAgentsPanel listingId={listing.id} listingAddress={listing.address} />
-            <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
-              <h2 className="mb-3 text-base font-semibold text-neutral-900">Imported · {agents.length} agents</h2>
-              <AgentsList agents={agents} />
+        {activeTab === "rp" && (() => {
+          const notContacted = agents.filter((a) => a.state === "not_contacted").length;
+          const contacted = agents.filter((a) => a.state === "emailed" || a.state === "texted" || a.state === "replied").length;
+          const replied = agents.filter((a) => a.state === "replied").length;
+          const optedOut = agents.filter((a) => a.state === "opted_out").length;
+          const noEmail = agents.filter((a) => !a.email).length;
+
+          return (
+            <div className="space-y-4">
+              {/* Actions first - what to do right now, not who's on the list. */}
+              <AgentComposer listingId={listing.id} address={listing.address} listPrice={listing.list_price ? formatCurrency(listing.list_price) : null} agents={agents} />
+
+              {/* Reporting - status at a glance, then the send-by-send log. */}
+              <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
+                <h2 className="mb-2 text-base font-semibold text-neutral-900">Where things stand</h2>
+                <p className="text-[15px] text-neutral-600">
+                  {agents.length} agent{agents.length === 1 ? "" : "s"} · {notContacted} not contacted · {contacted} contacted · {replied} replied
+                  {noEmail > 0 ? ` · ${noEmail} no email` : ""}
+                  {optedOut > 0 ? ` · ${optedOut} opted out` : ""}
+                </p>
+              </div>
+              <SendsList listingId={listing.id} sends={sends} progress={sendProgress} />
+
+              {/* Actual agents, last and collapsed - the raw list, for when you need it. */}
+              <Section
+                sectionKey={`listing:${listing.id}:agents`}
+                title="Reverse prospecting list"
+                meta={`${agents.length} agents`}
+                defaultOpen={false}
+              >
+                <div className="space-y-4 p-[18px]">
+                  <ImportAgentsPanel listingId={listing.id} listingAddress={listing.address} />
+                  <AgentsList agents={agents} />
+                </div>
+              </Section>
             </div>
-            <AgentComposer listingId={listing.id} address={listing.address} listPrice={listing.list_price ? formatCurrency(listing.list_price) : null} agents={agents} />
-            <SendsList listingId={listing.id} sends={sends} progress={sendProgress} />
-          </div>
-        )}
+          );
+        })()}
         {activeTab === "marketing" && (
           <div className="space-y-4">
             <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
