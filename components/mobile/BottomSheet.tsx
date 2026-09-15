@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { X } from "lucide-react";
 import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
+import { useVisualViewportBox } from "@/lib/hooks/useVisualViewportBox";
 
 // Extends the existing modal convention used across ~19 files
 // (ScheduleMeetingModal, TextBlastModal, ContactFiltersSheet,
@@ -24,6 +25,7 @@ export function BottomSheet({
   footer?: React.ReactNode;
 }) {
   const reducedMotion = usePrefersReducedMotion();
+  const { height, top } = useVisualViewportBox();
   const startY = useRef(0);
   const dragY = useRef(0);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -55,7 +57,11 @@ export function BottomSheet({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 sm:items-center sm:p-4" onClick={onClose}>
+    <div
+      className="fixed inset-x-0 z-50 flex items-end justify-center bg-black/45 sm:items-center sm:p-4"
+      style={{ top, height }}
+      onClick={onClose}
+    >
       <div
         ref={panelRef}
         onClick={(e) => e.stopPropagation()}

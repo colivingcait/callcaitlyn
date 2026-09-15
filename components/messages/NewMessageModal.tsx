@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui";
 import { X, Search } from "lucide-react";
 import { fullName, formatPhone, initials } from "@/lib/utils";
+import { useVisualViewportBox } from "@/lib/hooks/useVisualViewportBox";
 import type { TextableContact } from "@/lib/data/messages";
 
 export function NewMessageModal({ contacts, onClose }: { contacts: TextableContact[]; onClose: () => void }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const { height, top } = useVisualViewportBox();
 
   const filtered = contacts.filter((c) => {
     const q = query.trim().toLowerCase();
@@ -23,7 +25,7 @@ export function NewMessageModal({ contacts, onClose }: { contacts: TextableConta
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
+    <div className="fixed inset-x-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" style={{ top, height }}>
       <div className="flex max-h-[80vh] w-full max-w-md flex-col rounded-t-2xl bg-white p-5 shadow-xl sm:rounded-2xl">
         <div className="flex items-start justify-between gap-3">
           <p className="font-serif text-xl font-semibold text-neutral-900">New message</p>
