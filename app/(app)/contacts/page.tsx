@@ -65,8 +65,13 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
         ownerId={user?.id ?? ""}
         lastActivityLabels={lastActivityLabels}
       />
-      <div className="mx-auto hidden max-w-3xl md:block">
-      <div className="flex items-start justify-between gap-3 px-4 pt-6 pb-2 sm:px-0">
+      {/* Trying independent scrolling here first, before touching every
+          page's layout: this wrapper is capped to the viewport height and
+          only the contact list itself scrolls inside it, so the sidebar,
+          header, filters and segment bar all stay put instead of
+          scrolling away with a long list. */}
+      <div className="mx-auto hidden max-w-3xl md:flex md:h-dvh md:flex-col md:overflow-hidden">
+      <div className="shrink-0 flex items-start justify-between gap-3 px-4 pt-6 pb-2 sm:px-0">
         <div>
           <h1 className="font-serif text-2xl font-semibold leading-9 text-neutral-900 sm:text-[28px]">Contacts</h1>
           <p className="mt-1.5 text-[15px] leading-[22px] text-neutral-600">
@@ -88,7 +93,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
         </div>
       </div>
       {filters.leadDateWithinDays && (
-        <div className="mx-4 mb-2 flex items-center justify-between gap-2 rounded-xl bg-amber-50 px-3.5 py-2.5 text-sm text-amber-800">
+        <div className="mx-4 mb-2 shrink-0 flex items-center justify-between gap-2 rounded-xl bg-amber-50 px-3.5 py-2.5 text-sm text-amber-800">
           <span>
             Showing new leads from the last {filters.leadDateWithinDays} day{filters.leadDateWithinDays === 1 ? "" : "s"}
           </span>
@@ -97,15 +102,17 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
           </Link>
         </div>
       )}
-      <ContactFilters
-        stages={stages}
-        tags={tags}
-        leadSources={leadSources}
-        eventNames={eventNames}
-        registeredEventNames={registeredEventNames}
-      />
-      {user && <SegmentBar segments={segments} ownerId={user.id} />}
-      <div className="bg-white sm:bg-transparent">
+      <div className="shrink-0">
+        <ContactFilters
+          stages={stages}
+          tags={tags}
+          leadSources={leadSources}
+          eventNames={eventNames}
+          registeredEventNames={registeredEventNames}
+        />
+        {user && <SegmentBar segments={segments} ownerId={user.id} />}
+      </div>
+      <div className="bg-white sm:bg-transparent md:flex-1 md:overflow-y-auto">
         <ContactsList
           contacts={contacts}
           tags={tags}
