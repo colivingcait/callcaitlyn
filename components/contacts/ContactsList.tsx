@@ -128,7 +128,7 @@ export function ContactsList({
       {contacts.length === 0 ? (
         <p className="px-4 py-10 text-center text-[15px] text-neutral-400">No contacts match. Try clearing filters or add a new contact.</p>
       ) : (
-        <div className="space-y-1 px-4 pb-6 sm:px-0">
+        <div className="space-y-3 px-4 pb-6 sm:px-0">
           {groups.map((group) => (
             <ContactGroup
               key={group.key}
@@ -279,9 +279,10 @@ function ContactGroup({
   const withPhone = contacts.filter((c) => c.phone);
 
   if (!label) {
-    // Ungrouped ("none") - just render the rows, no collapsible header.
+    // Ungrouped ("none") - just the rows, one shared card with dividers
+    // between them (DESIGN_SPEC.md §2/§6), no collapsible header.
     return (
-      <div className="space-y-2">
+      <div className="divide-y divide-neutral-100 overflow-hidden rounded-2xl border border-[#ebe9e7] bg-white">
         {contacts.map((c) => (
           <ContactRow
             key={c.id}
@@ -299,11 +300,11 @@ function ContactGroup({
   }
 
   return (
-    <div>
+    <div className="overflow-hidden rounded-2xl border border-[#ebe9e7] bg-white">
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-2.5 px-2 py-2.5 text-left"
+        className="flex w-full items-center gap-2.5 px-[18px] py-4 text-left"
       >
         {open ? <ChevronDown size={17} className="text-neutral-400" /> : <ChevronRight size={17} className="text-neutral-400" />}
         <span className="text-base font-semibold text-neutral-900">{label}</span>
@@ -321,8 +322,7 @@ function ContactGroup({
           </button>
         )}
       </button>
-      {open && (
-        <div className="space-y-2">
+      {open && <div className="divide-y divide-neutral-100 border-t border-neutral-100">
           {contacts.map((c) => (
             <ContactRow
               key={c.id}
@@ -335,8 +335,7 @@ function ContactGroup({
               lastActivityLabel={lastActivityLabels.get(c.id)}
             />
           ))}
-        </div>
-      )}
+        </div>}
     </div>
   );
 }

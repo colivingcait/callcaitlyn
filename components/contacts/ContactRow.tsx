@@ -118,7 +118,7 @@ export function ContactRow({
   }
 
   return (
-    <div className={`rounded-[14px] border ${hasPhone ? "border-[#ebe9e7] bg-white" : "border-[#ebe9e7] bg-[#fcfbfa]"}`}>
+    <div className={hasPhone ? "bg-white" : "bg-[#fcfbfa]"}>
       <div className="flex items-center gap-3.5 px-4 py-3.5">
         <button type="button" onClick={() => setExpanded((v) => !v)} className="shrink-0 text-neutral-400">
           {expanded ? <ChevronDown size={17} /> : <ChevronRight size={17} />}

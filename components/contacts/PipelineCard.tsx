@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { GripVertical } from "lucide-react";
 import { fullName, initials } from "@/lib/utils";
 import { MoveToMenu } from "@/components/contacts/MoveToMenu";
 import { getPipelineCardContext } from "@/lib/crm/pipeline-card-context";
@@ -23,7 +22,6 @@ export function PipelineCard({
 
   return (
     <div className="flex items-center gap-3.5 rounded-xl border border-[#ebe9e7] bg-white p-3.5">
-      <GripVertical size={17} className="shrink-0 text-neutral-300" />
       <Link href={`/contacts/${contact.id}`} className="flex min-w-0 flex-1 items-center gap-3.5">
         <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-neutral-100 text-sm font-semibold text-neutral-600">
           {initials(contact.first_name, contact.last_name)}

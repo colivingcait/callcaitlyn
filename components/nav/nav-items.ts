@@ -16,7 +16,7 @@ import {
   NotebookText,
   UserPlus,
   Menu,
-  Building2,
+  Home,
   type LucideIcon,
 } from "lucide-react";
 
@@ -48,9 +48,9 @@ export const PEOPLE_ITEMS: NavItem[] = [
 
 export const BUSINESS_ITEMS: NavItem[] = [
   { href: "/sequences", label: "Campaigns", icon: Mail },
-  { href: "/listings", label: "Listings", icon: Building2 },
   { href: "/numbers", label: "Numbers", icon: Calculator },
   { href: "/scheduling", label: "Scheduling", icon: CalendarClock },
+  { href: "/listings", label: "Listings", icon: Home },
   { href: "/commissions", label: "Commissions", icon: DollarSign },
   { href: "/recruiting", label: "Agent recruiting", icon: UserPlus },
   { href: "/reports", label: "Reports", icon: BarChart3 },

@@ -103,7 +103,7 @@ export async function PipelineBoard({
       />
       <StageJumpChips stages={ordered.map((s) => ({ ...s, count: rowsForStage(s, byStage.get(s.id) ?? [], extras).length }))} />
 
-      <div className="space-y-2.5 px-4 pb-8 md:px-6">
+      <div className="space-y-3 px-4 pb-8 md:px-6">
         {ordered.map((stage) => {
           const items = byStage.get(stage.id) ?? [];
           const rows = rowsForStage(stage, items, extras);
