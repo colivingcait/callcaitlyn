@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Phone, MessageSquareText } from "lucide-react";
+import { Phone, MessageSquareText, Mail } from "lucide-react";
 import { openQuoCall, openQuoText } from "@/lib/quo/call-link";
 import { initials } from "@/lib/utils";
 import { RegisteredRowMenu } from "@/components/dashboard/RegisteredRowMenu";
+import { SendEmailForm } from "@/components/contacts/SendEmailForm";
 import type { WorklistPerson } from "@/lib/data/today";
 
 const CAP = 10;
@@ -41,6 +42,7 @@ export function WorklistGroup({
   const [showAll, setShowAll] = useState(false);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [dismissing, setDismissing] = useState<string | null>(null);
+  const [emailOpenId, setEmailOpenId] = useState<string | null>(null);
 
   const remaining = people.filter((p) => !dismissed.has(p.activityId ?? p.id));
   const visible = showAll ? remaining : remaining.slice(0, CAP);
@@ -76,7 +78,8 @@ export function WorklistGroup({
   return (
     <div>
       {visible.map((person) => (
-        <div key={person.id} className="flex items-center gap-3.5 border-b border-neutral-100 px-4 py-3.5 last:border-b-0">
+        <div key={person.id} className="border-b border-neutral-100 last:border-b-0">
+        <div className="flex items-center gap-3.5 px-4 py-3.5">
           <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full bg-neutral-100 text-[15px] font-semibold text-neutral-600">
             {initials(person.name.split(" ")[0] ?? "", person.name.split(" ").slice(1).join(" "))}
           </div>
@@ -84,7 +87,7 @@ export function WorklistGroup({
             <p className="truncate text-[17px] font-semibold leading-6 text-neutral-900">{person.name}</p>
             <p className={`truncate text-[15px] leading-[22px] ${person.late ? "font-medium text-[#b91c1c]" : "text-neutral-600"}`}>{person.meta}</p>
           </Link>
-          {person.phone && (
+          {person.phone ? (
             <div className="flex shrink-0 items-center gap-2">
               <button
                 type="button"
@@ -101,6 +104,22 @@ export function WorklistGroup({
                 <MessageSquareText size={15} className="text-neutral-500" /> Text
               </button>
             </div>
+          ) : (
+            // No phone on file - Call/Text have nothing to open, and
+            // without this, a phone-less person had zero way to log
+            // outreach at all short of leaving the worklist entirely for
+            // their contact page. Sends via Gmail and logs an activity
+            // the same as Call/Text do, so the "no follow-up" flag they
+            // triggered actually clears once this fires.
+            person.email && (
+              <button
+                type="button"
+                onClick={() => setEmailOpenId((v) => (v === person.id ? null : person.id))}
+                className={`flex shrink-0 items-center gap-1.5 rounded-[10px] border px-3 py-2 text-sm font-semibold ${emailOpenId === person.id ? "border-brand-300 bg-brand-50 text-brand-700" : "border-neutral-200 bg-white text-neutral-800"}`}
+              >
+                <Mail size={15} className={emailOpenId === person.id ? "text-brand-600" : "text-neutral-500"} /> Email
+              </button>
+            )
           )}
           {onDismiss && person.activityId && (
             <button
@@ -131,6 +150,12 @@ export function WorklistGroup({
               </button>
             )
           )}
+        </div>
+        {emailOpenId === person.id && person.email && (
+          <div className="border-t border-neutral-100 bg-neutral-50 px-4 py-2.5">
+            <SendEmailForm contactId={person.id} email={person.email} />
+          </div>
+        )}
         </div>
       ))}
       {!showAll && remaining.length > CAP && (

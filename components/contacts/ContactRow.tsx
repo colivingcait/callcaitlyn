@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import { openQuoCall } from "@/lib/quo/call-link";
 import { StageSelector } from "@/components/contacts/StageSelector";
 import { SendTextForm } from "@/components/contacts/SendTextForm";
+import { SendEmailForm } from "@/components/contacts/SendEmailForm";
 import { Select } from "@/components/ui";
 import type { ContactWithRelations, PipelineStage } from "@/types/database";
 
@@ -32,6 +33,7 @@ export function ContactRow({
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [quickTextOpen, setQuickTextOpen] = useState(false);
+  const [quickEmailOpen, setQuickEmailOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [confirmingArchive, setConfirmingArchive] = useState(false);
   const [followUpAt, setFollowUpAt] = useState(contact.next_follow_up_at ? contact.next_follow_up_at.slice(0, 10) : "");
@@ -146,12 +148,15 @@ export function ContactRow({
             </>
           ) : (
             <>
-              <a
-                href={`mailto:${contact.email ?? ""}`}
-                className="flex items-center gap-1.5 rounded-[10px] border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-800"
-              >
-                Email
-              </a>
+              {contact.email && (
+                <button
+                  type="button"
+                  onClick={() => setQuickEmailOpen((v) => !v)}
+                  className={`flex items-center gap-1.5 rounded-[10px] border px-3 py-2 text-sm font-semibold ${quickEmailOpen ? "border-brand-300 bg-brand-50 text-brand-700" : "border-neutral-200 bg-white text-neutral-800"}`}
+                >
+                  Email
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setExpanded(true)}
@@ -207,6 +212,12 @@ export function ContactRow({
       {quickTextOpen && hasPhone && (
         <div className="border-t border-neutral-100 bg-neutral-50 px-4 py-2.5">
           <SendTextForm contactId={contact.id} phone={contact.phone} firstName={contact.first_name} lastName={contact.last_name} />
+        </div>
+      )}
+
+      {quickEmailOpen && !hasPhone && contact.email && (
+        <div className="border-t border-neutral-100 bg-neutral-50 px-4 py-2.5">
+          <SendEmailForm contactId={contact.id} email={contact.email} />
         </div>
       )}
 

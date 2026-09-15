@@ -9,7 +9,7 @@ import { listPendingBookingRequests } from "@/lib/data/scheduling";
 import { computeDeals, summarizeDeals, capYearKey, capYearStart, KW_CAP } from "@/lib/crm/commission";
 import type { PipelineStage } from "@/types/database";
 
-export type WorklistPerson = { id: string; name: string; phone: string | null; meta: string; late: boolean; activityId?: string };
+export type WorklistPerson = { id: string; name: string; phone: string | null; email?: string | null; meta: string; late: boolean; activityId?: string };
 
 // "Calls" - contacts.next_follow_up_at due or overdue, or a missed call
 // logged. The overdue/today math previously lived inside FollowUpList
@@ -111,6 +111,7 @@ async function getRegisteredNoFollowUpGroup(stages: PipelineStage[]): Promise<Wo
     id: c.id,
     name: `${c.first_name} ${c.last_name}`.trim(),
     phone: c.phone,
+    email: c.email,
     meta: c.last_event_name ? `Registered · ${c.last_event_name}` : "Registered, no follow-up yet",
     late: false,
   }));
