@@ -2,6 +2,7 @@ import { Section } from "@/components/ui/Section";
 import { EventbriteSyncBackfill } from "@/components/settings/EventbriteSyncBackfill";
 import { JotformSyncBackfill } from "@/components/settings/JotformSyncBackfill";
 import { QuoSyncBackfill } from "@/components/settings/QuoSyncBackfill";
+import { MissedVoicemailBackfill } from "@/components/settings/MissedVoicemailBackfill";
 import { GranolaSyncBackfill } from "@/components/settings/GranolaSyncBackfill";
 import { BlinqShareBackfill } from "@/components/settings/BlinqShareBackfill";
 import { AutoStageRunNow } from "@/components/settings/AutoStageRunNow";
@@ -20,6 +21,7 @@ export function DataRepairCard() {
         <EventbriteSyncBackfill />
         <JotformSyncBackfill />
         <QuoSyncBackfill />
+        <MissedVoicemailBackfill />
         <GranolaSyncBackfill />
         <BlinqShareBackfill />
         <AutoStageRunNow />

@@ -18,7 +18,7 @@ const RULES: { reason: string; patterns: RegExp[] }[] = [
   { reason: "Staffing / recruiting pitches", patterns: [/\bstaffing\b/i, /recruiting services/i, /hire offshore/i, /virtual assistant agency/i] },
 ];
 
-const MISSED_STATUSES = new Set(["missed", "no-answer", "no_answer", "busy", "voicemail"]);
+export const MISSED_STATUSES = new Set(["missed", "no-answer", "no_answer", "busy", "voicemail"]);
 
 const ROBOCALL_REASON = "Robocall, no voicemail";
 
