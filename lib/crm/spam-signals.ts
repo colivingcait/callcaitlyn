@@ -7,7 +7,27 @@ import { normalizePhone } from "@/lib/phone";
 // call.summary.completed actually deliver text. Reasons are fixed strings
 // shown verbatim in the Spam bucket UI, so keep them stable once shipped.
 const RULES: { reason: string; patterns: RegExp[] }[] = [
-  { reason: "Google listing / verification", patterns: [/google listing/i, /google business/i, /business listing/i, /unverified/i, /verify your business/i] },
+  {
+    reason: "Google listing / verification",
+    patterns: [
+      /google listing/i,
+      /google business/i,
+      /google voice/i,
+      /business listing/i,
+      /unverified/i,
+      /verify your business/i,
+      /(listing|business) (information|information's|details) (is|are) incorrect/i,
+      /incorrect (business )?information/i,
+    ],
+  },
+  {
+    // Generic IVR script - "press 9/1/0 to speak to a[n] agent/representative"
+    // - regardless of what the pitch behind it turns out to be. Real leads
+    // don't leave voicemails narrating a phone menu at themselves; a
+    // recorded prompt reading itself into a voicemail is spam on its own.
+    reason: "Robocall IVR (\"press # for an agent\")",
+    patterns: [/press \d.{0,60}(agent|representative|specialist|someone|live person|customer service)/i, /press \d.{0,15}(now|to continue|to speak|to be connected)/i],
+  },
   { reason: "Business loans / funding", patterns: [/business loan/i, /working capital/i, /\bfunding\b/i, /merchant advance/i, /line of credit/i] },
   { reason: "Taxes / IRS", patterns: [/\birs\b/i, /tax relief/i, /back taxes/i, /tax settlement/i] },
   { reason: "Solar", patterns: [/\bsolar\b/i] },

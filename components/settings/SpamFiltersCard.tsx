@@ -7,6 +7,7 @@ import { toggleSpamRule, removeSpamAllowlistEntry } from "@/app/(app)/settings/s
 import { ALL_SPAM_RULE_REASONS } from "@/lib/crm/spam-signals";
 import { formatPhone } from "@/lib/utils";
 import { relativeTime } from "@/lib/format-time";
+import { RecheckSpamRules } from "@/components/settings/RecheckSpamRules";
 
 export type AllowlistedNumber = { id: string; phone: string; createdAt: string };
 
@@ -62,6 +63,10 @@ export function SpamFiltersCard({
             );
           })}
         </div>
+      </div>
+
+      <div className="border-t border-neutral-100 px-[18px] py-4">
+        <RecheckSpamRules />
       </div>
 
       <div className="border-t border-neutral-100 px-[18px] py-2">

@@ -133,3 +133,68 @@ export async function backfillMissedVoicemails(): Promise<BackfillResult> {
   revalidatePath("/messages");
   return { ok: true, checked: missed.length, recovered, flaggedSpam, stillMissing };
 }
+
+type RecheckResult = { ok: true; checked: number; flaggedSpam: number } | { ok: false; error: string };
+
+// Whenever a spam rule gets a new pattern (or a new rule entirely), calls
+// that already have a transcript/summary saved - the voicemail backfill
+// above already pulled it in, or a normal call.transcript.completed
+// delivered it - never get re-matched against the update on their own.
+// Runs every non-spam Quo call with any transcript/summary text back
+// through detectSpam so a rule change catches what it was meant to catch
+// without needing another round-trip to Quo.
+export async function recheckSpamRules(): Promise<RecheckResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  const admin = createAdminClient();
+  const { data: rows } = await admin
+    .from("activities")
+    .select("dedupe_value, contact_id, metadata")
+    .eq("owner_id", user.id)
+    .eq("source", "quo")
+    .eq("type", "call")
+    .eq("direction", "inbound");
+
+  const candidates = (rows ?? []).filter((a) => {
+    const metadata = a.metadata as Record<string, unknown> | null;
+    return typeof metadata?.transcript === "string" || typeof metadata?.summary === "string";
+  });
+
+  const disabledReasons = await getDisabledSpamReasons(admin, user.id);
+  let checked = 0;
+  let flaggedSpam = 0;
+
+  for (const activity of candidates) {
+    const { data: contact } = await admin.from("contacts").select("spam, phone").eq("id", activity.contact_id).maybeSingle();
+    if (!contact || contact.spam) continue;
+    if (await isNumberAllowlisted(admin, user.id, contact.phone)) continue;
+
+    checked++;
+    const metadata = activity.metadata as Record<string, unknown> | null;
+    const spamCheck = detectSpam({
+      summary: typeof metadata?.summary === "string" ? metadata.summary : null,
+      transcript: typeof metadata?.transcript === "string" ? metadata.transcript : null,
+      durationSeconds: typeof metadata?.duration_seconds === "number" ? metadata.duration_seconds : null,
+      status: typeof metadata?.status === "string" ? metadata.status : null,
+      hasVoicemail: typeof metadata?.recording_url === "string" && !!metadata.recording_url,
+      disabledReasons,
+    });
+
+    if (spamCheck.isSpam) {
+      await patchActivityMetadata(admin, user.id, "quo", "quo_call_id", activity.dedupe_value as string, {
+        spam_reason: spamCheck.reason,
+        spam_detected_at: new Date().toISOString(),
+      });
+      await admin.from("contacts").update({ spam: true }).eq("id", activity.contact_id);
+      flaggedSpam++;
+    }
+  }
+
+  revalidatePath("/settings");
+  revalidatePath("/messages");
+  return { ok: true, checked, flaggedSpam };
+}
