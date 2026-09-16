@@ -4,9 +4,11 @@
  * PadSplit blocks plain server-side requests (including from cloud/hosting
  * IP ranges like Vercel's serverless functions) with a bot-challenge page,
  * not the real listing - a real headless browser is required. Reads the
- * structured per-room data PadSplit's own Next.js app embeds in
- * `__NEXT_DATA__` rather than scraping rendered text, since that field
- * shape is far more reliable than guessing at DOM/CSS.
+ * structured property data PadSplit's own Next.js app embeds in
+ * `__NEXT_DATA__` (totalRoomsCount, isFullyBooked, rooms, roomMinPrice,
+ * pictures - confirmed against a real fully-booked property's payload)
+ * rather than scraping rendered text, since that field shape is far more
+ * reliable than guessing at DOM/CSS.
  *
  * Runs on a GitHub Actions schedule (.github/workflows/refresh-padsplit-listings.yml),
  * which is required rather than a nicety - PadSplit is very likely to
@@ -63,23 +65,17 @@ async function getNextData(page) {
 }
 
 // Pattern-match on shape rather than a fixed path - PadSplit's internal
-// data shape shifts, but an array where every element has both roomNumber
-// and amenities is reliably the room list wherever it sits in the tree.
-function findRooms(node, depth = 0, seen = new Set()) {
+// data shape shifts, but the property record is reliably the one object
+// anywhere in the tree carrying both totalRoomsCount and isFullyBooked
+// (confirmed against a real payload - see the "rooms" field's comment
+// below for why this replaced an earlier, wrong guess).
+function findProperty(node, depth = 0, seen = new Set()) {
   if (!node || typeof node !== "object" || depth > 16 || seen.has(node)) return null;
   seen.add(node);
-  if (Array.isArray(node)) {
-    if (node.length && node.every((x) => x && typeof x === "object") && node[0].roomNumber !== undefined && node[0].amenities) {
-      return node;
-    }
-    for (const x of node) {
-      const found = findRooms(x, depth + 1, seen);
-      if (found) return found;
-    }
-    return null;
-  }
-  for (const value of Object.values(node)) {
-    const found = findRooms(value, depth + 1, seen);
+  if (!Array.isArray(node) && "totalRoomsCount" in node && "isFullyBooked" in node) return node;
+  const children = Array.isArray(node) ? node : Object.values(node);
+  for (const child of children) {
+    const found = findProperty(child, depth + 1, seen);
     if (found) return found;
   }
   return null;
@@ -119,7 +115,7 @@ async function scrapeListing(context, listing) {
         .waitForFunction(
           () => {
             const d = window.__NEXT_DATA__;
-            return !!d && JSON.stringify(d).includes("roomNumber");
+            return !!d && JSON.stringify(d).includes("totalRoomsCount");
           },
           { timeout: 15000 },
         )
@@ -144,19 +140,31 @@ async function scrapeListing(context, listing) {
     }
 
     const data = await getNextData(page);
-    const rooms = findRooms(data) ?? [];
-    if (rooms.length === 0) throw new Error("Page hydrated but no room data was found in it");
+    const property = findProperty(data);
+    if (!property) throw new Error("Page hydrated but no property data was found in it");
 
     const photoUrls = findPhotos(data).slice(0, 12);
 
-    const rates = rooms
-      .map((r) => r.totalPromoAmount ?? r.totalWeeklyRate ?? r.basePrice ?? null)
-      .filter((n) => typeof n === "number" && Number.isFinite(n));
+    const totalRooms = typeof property.totalRoomsCount === "number" ? property.totalRoomsCount : null;
+    // `rooms` only lists CURRENTLY AVAILABLE rooms - confirmed empty on a
+    // real fully-booked property (isFullyBooked: true, rooms: []), not a
+    // parsing failure. Occupied = total minus whatever's currently open.
+    const availableRooms = Array.isArray(property.rooms) ? property.rooms : [];
+    const occupiedRooms =
+      totalRooms == null ? null : property.isFullyBooked ? totalRooms : Math.max(totalRooms - availableRooms.length, 0);
 
-    const totalRooms = rooms.length;
-    const occupiedRooms = rooms.filter((r) => r.status !== 1).length;
-    const priceLow = rates.length ? Math.min(...rates) : null;
-    const priceHigh = rates.length ? Math.max(...rates) : null;
+    // roomMinPrice is the property-level floor across whatever's currently
+    // available (0 is PadSplit's sentinel for "nothing available," not a
+    // real price). Individual room-level pricing inside `rooms` hasn't been
+    // confirmed against a real populated payload (this property's array was
+    // empty) - a few plausible field names are tried, falling back to the
+    // property-level floor for both ends when none of them match.
+    const roomRates = availableRooms
+      .map((r) => r.totalWeeklyRate ?? r.weeklyRate ?? r.basePrice ?? r.price ?? r.rate ?? null)
+      .filter((n) => typeof n === "number" && Number.isFinite(n));
+    const floorPrice = typeof property.roomMinPrice === "number" && property.roomMinPrice > 0 ? property.roomMinPrice : null;
+    const priceLow = roomRates.length ? Math.min(...roomRates) : floorPrice;
+    const priceHigh = roomRates.length ? Math.max(...roomRates) : floorPrice;
 
     return { ok: true, totalRooms, occupiedRooms, priceLow, priceHigh, photoUrls };
   } catch (err) {
