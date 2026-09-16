@@ -147,6 +147,17 @@ export async function POST(request: NextRequest) {
 
       let result = await patchActivityMetadata(admin, OWNER_ID, "quo", "quo_call_id", call.quoCallId, patch);
 
+      // Silent no-op otherwise: either call.quoCallId didn't parse out of
+      // this event at all (the recording/summary field-name guesses above
+      // are still unconfirmed against a real payload), or no activity
+      // exists yet for it. Either way the recording/transcript/summary is
+      // lost with no trace - log the full raw event so a real payload is
+      // sitting in Vercel's logs to fix the parsing from, next time this
+      // happens.
+      if (!result) {
+        console.error(`Quo ${eventType}: couldn't attach to any activity (quoCallId=${call.quoCallId ?? "null"})`, JSON.stringify(body));
+      }
+
       // A 12-second robocall has no summary/transcript at call.completed
       // time - re-check now that this event actually delivered text. Only
       // re-checks a contact not already flagged spam (no rule un-flags one

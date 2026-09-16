@@ -57,6 +57,15 @@ export function parseQuoCall(body: AnyRecord): ParsedQuoCall {
   const to = asString(obj.to) ?? firstOf(obj.to) ?? firstOf((obj.participants as AnyRecord | undefined)?.to);
   const media = obj.media as AnyRecord[] | undefined;
   const recording = obj.recording as AnyRecord | undefined;
+  // For a call that goes to voicemail, Quo delivers the recording +
+  // transcript inline on call.completed itself as this nested object -
+  // confirmed against Quo's own voicemail API shape - rather than only via
+  // the separate call.recording.completed/call.transcript.completed events.
+  // Missing this meant every voicemail-only call (the common case for a
+  // missed/rejected call) came through with no recordingUrl and no
+  // transcript at all, which in turn meant the spam keyword rules below had
+  // no text to match against.
+  const voicemail = obj.voicemail as AnyRecord | undefined;
 
   // call.transcript.completed's data.object IS the transcript itself, not
   // a call with a nested .transcript field - confirmed against a real
@@ -81,9 +90,9 @@ export function parseQuoCall(body: AnyRecord): ParsedQuoCall {
     durationSeconds: typeof obj.duration === "number" ? obj.duration : null,
     status: asString(obj.status),
     occurredAt: asString(obj.completedAt) ?? asString(obj.createdAt) ?? new Date().toISOString(),
-    recordingUrl: asString(media?.[0]?.url) ?? asString(recording?.url) ?? asString(obj.recordingUrl),
+    recordingUrl: asString(voicemail?.recordingUrl) ?? asString(media?.[0]?.url) ?? asString(recording?.url) ?? asString(obj.recordingUrl),
     summary: asString(obj.summary) ?? asString(obj.aiSummary) ?? (isSummaryObject ? asString(obj.content) ?? asString(obj.text) : null),
-    transcript: parseTranscript(transcriptSource),
+    transcript: asString(voicemail?.transcript) ?? parseTranscript(transcriptSource),
   };
 }
 
