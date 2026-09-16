@@ -11,7 +11,6 @@ import { sendGmailMessage } from "@/lib/google/send-email";
 import { draftToHtml } from "@/lib/crm/merge-fields";
 import { baseUrl } from "@/lib/crm/sequences";
 import { generateUniqueListingSlug } from "@/lib/listings/public-slug";
-import { scrapeAndSaveListing } from "@/lib/listings/padsplit-scrape";
 import type { ListingStatus, ListingDocumentType } from "@/types/database";
 
 const PREVIEW_AGENT = { name: "Jamie Agent" };
@@ -481,27 +480,6 @@ export async function setListingPublicPage(listingId: string, enabled: boolean):
 
   revalidatePath(`/listings/${listingId}`);
   return { ok: true, url };
-}
-
-// Manual trigger for the same scrape the daily cron runs - lets a newly
-// configured listing's occupancy/pricing/photos populate right away
-// instead of waiting for the next scheduled run.
-export async function scrapeListingNow(listingId: string): Promise<ActionResult<{ scrapeError: string | null }>> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Not signed in" };
-
-  const { data: listing } = await supabase.from("listings").select("id, padsplit_url").eq("id", listingId).maybeSingle();
-  if (!listing) return { ok: false, error: "Listing not found" };
-  if (!listing.padsplit_url) return { ok: false, error: "Add a PadSplit URL first" };
-
-  const admin = createAdminClient();
-  const result = await scrapeAndSaveListing(admin, listing);
-  revalidatePath(`/listings/${listingId}`);
-  if (!result.ok) return { ok: true, scrapeError: result.error ?? "Scrape failed" };
-  return { ok: true, scrapeError: null };
 }
 
 // Storage upload happens client-side (see DocumentUploader) against the

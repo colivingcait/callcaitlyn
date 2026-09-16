@@ -1,0 +1,49 @@
+name: Refresh PadSplit listing data
+
+on:
+  schedule:
+    - cron: "0 11 * * *"
+    - cron: "0 23 * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/custom-crm-real-estate-81k3fp
+    paths:
+      - "scripts/scrape-padsplit.mjs"
+      - ".github/workflows/refresh-padsplit-listings.yml"
+
+concurrency:
+  group: refresh-padsplit-listings
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install dependencies
+        run: |
+          npm install @supabase/supabase-js --no-save
+          npm install playwright@1.49.1 --no-save
+          npx playwright install --with-deps chromium
+      - name: Scrape PadSplit listings
+        id: scrape
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          CRM_OWNER_USER_ID: ${{ secrets.CRM_OWNER_USER_ID }}
+        run: node scripts/scrape-padsplit.mjs
+        continue-on-error: true
+      - name: Upload debug artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: padsplit-scrape-debug
+          path: artifacts/
+          retention-days: 7
+      - name: Fail the run if every listing was blocked
+        if: steps.scrape.outcome == 'failure'
+        run: exit 1

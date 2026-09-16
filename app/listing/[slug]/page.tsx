@@ -86,6 +86,7 @@ export default async function PublicListingPage({ params }: { params: Promise<{ 
                 <p className="text-xs text-neutral-500">Room rates</p>
                 <p className="mt-0.5 font-serif text-lg font-semibold text-neutral-900">
                   {formatCurrency(listing.price_low)} – {formatCurrency(listing.price_high)}
+                  <span className="text-sm font-normal text-neutral-500">/week</span>
                 </p>
               </div>
             )}
