@@ -1,10 +1,16 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { getPublicListings } from "@/lib/listings/public-data";
 import { formatCurrency } from "@/lib/utils";
 
 // Occupancy/pricing refresh daily and listings get published/unpublished
 // on demand - this must never be served from a stale build-time cache.
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Available Listings",
+  description: "Caitlyn Verdugo with KW Metro Atl",
+};
 
 export default async function PublicListingsOverviewPage() {
   const listings = await getPublicListings();

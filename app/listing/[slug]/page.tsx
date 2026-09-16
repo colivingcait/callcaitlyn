@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getPublicListing } from "@/lib/listings/public-data";
 import { PublicListingLeadForm } from "@/components/listings/PublicListingLeadForm";
 import { formatCurrency } from "@/lib/utils";
@@ -5,6 +6,29 @@ import { formatCurrency } from "@/lib/utils";
 // Occupancy/pricing refresh daily and a listing can be unpublished at any
 // time - this must never be served from a stale build-time cache.
 export const dynamic = "force-dynamic";
+
+// Async, not a static `export const metadata`, since the title/description
+// are per-listing - mirrors app/book/[slug]/page.tsx's pattern but with a
+// real data fetch instead of static copy. A missing/removed slug still
+// resolves to something reasonable rather than breaking the share preview.
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const listing = await getPublicListing(slug);
+  if (!listing) return { title: "Listing", description: "Caitlyn Verdugo with KW Metro Atl" };
+
+  const specs = [
+    listing.beds != null && listing.baths != null ? `${listing.beds} bd / ${listing.baths} ba` : null,
+    listing.property_type,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const occupancy = listing.occupied_rooms != null && listing.total_rooms != null ? `${listing.occupied_rooms}/${listing.total_rooms} rooms occupied` : null;
+
+  return {
+    title: listing.address,
+    description: [formatCurrency(listing.list_price), specs, occupancy].filter(Boolean).join(" · ") || "Caitlyn Verdugo with KW Metro Atl",
+  };
+}
 
 export default async function PublicListingPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
