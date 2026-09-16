@@ -10,7 +10,7 @@ import { createOrGetTranscript, runExtraction } from "@/lib/data/meeting-transcr
 import { updateEngagementTag } from "@/lib/crm/engagement";
 import { recordOptOut, isOptOutMessage } from "@/lib/crm/consent";
 import { isIncludedQuoNumber } from "@/lib/quo/phone-filter";
-import { detectSpam, isNumberAllowlisted, hasRepeatedMissedCalls, getDisabledSpamReasons, type SpamCheckResult } from "@/lib/crm/spam-signals";
+import { detectSpam, isNumberAllowlisted, hasRecentMissedCallBurst, getDisabledSpamReasons, type SpamCheckResult } from "@/lib/crm/spam-signals";
 import { findAgentByPhone, contactExistsForPhone, recordAgentOptOut } from "@/lib/listings/agent-lookup";
 
 // Extraction (a Claude call over the full transcript) runs after the
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
         leadSource: "Quo (auto-created from call)",
       });
       if (contact) {
-        const spamCheck = await checkCallForSpam(admin, OWNER_ID, contact.id, call);
+        const spamCheck = await checkCallForSpam(admin, OWNER_ID, call);
 
         await upsertActivity(admin, OWNER_ID, contact.id, "quo", "quo_call_id", call.quoCallId, {
           type: "call",
@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
         const contactId = result.contactId;
         const { data: contactRow } = await admin.from("contacts").select("spam").eq("id", contactId).maybeSingle();
         if (contactRow && !contactRow.spam) {
-          const spamCheck = await checkCallForSpam(admin, OWNER_ID, contactId, call);
+          const spamCheck = await checkCallForSpam(admin, OWNER_ID, call);
           if (spamCheck.isSpam) {
             result = await patchActivityMetadata(admin, OWNER_ID, "quo", "quo_call_id", call.quoCallId, {
               spam_reason: spamCheck.reason,
@@ -283,7 +283,6 @@ export async function POST(request: NextRequest) {
 async function checkCallForSpam(
   admin: ReturnType<typeof createAdminClient>,
   ownerId: string,
-  contactId: string,
   call: ReturnType<typeof parseQuoCall>,
 ): Promise<SpamCheckResult> {
   if (await isNumberAllowlisted(admin, ownerId, call.counterpartNumber)) {
@@ -291,7 +290,7 @@ async function checkCallForSpam(
   }
 
   const [repeatedInboundNoVoicemail, disabledReasons] = await Promise.all([
-    call.direction === "inbound" && !call.recordingUrl ? hasRepeatedMissedCalls(admin, ownerId, contactId) : Promise.resolve(false),
+    call.direction === "inbound" && !call.recordingUrl ? hasRecentMissedCallBurst(admin, ownerId) : Promise.resolve(false),
     getDisabledSpamReasons(admin, ownerId),
   ]);
 

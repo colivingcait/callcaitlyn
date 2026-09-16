@@ -17,9 +17,14 @@ export function ConversationRow({ conversation }: { conversation: Conversation }
   const stage = contact.pipeline_stages;
   const missedCall = isMissedCall(lastActivity);
 
+  // Whether Quo actually attached a recording, not just "was this call
+  // missed" - a missed call whose status happens to be "voicemail" means
+  // one was left, and saying "no voicemail" on it was flatly wrong.
+  const hasVoicemail = typeof lastActivity.metadata?.recording_url === "string" && !!lastActivity.metadata.recording_url;
+
   let preview = lastActivity.body ?? (lastActivity.type === "call" ? "Call" : "");
   if (missedCall) {
-    preview = "Missed call · no voicemail";
+    preview = hasVoicemail ? "Missed call · left a voicemail" : "Missed call · no voicemail";
   } else if (lastActivity.type === "call" && lastActivity.body) {
     preview = `Call · ${lastActivity.body.split(" · ")[0] ?? lastActivity.body}`;
   } else if (lastActivity.type === "text" && lastActivity.direction === "outbound") {

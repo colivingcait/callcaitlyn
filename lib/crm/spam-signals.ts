@@ -92,25 +92,35 @@ export async function addToSpamAllowlist(admin: SupabaseClient, ownerId: string,
   await admin.from("spam_number_allowlist").upsert({ owner_id: ownerId, phone: normalized }, { onConflict: "owner_id,phone" });
 }
 
-const REPEAT_WINDOW_HOURS = 24;
-const REPEAT_THRESHOLD = 3;
+const BURST_WINDOW_HOURS = 3;
+const BURST_THRESHOLD = 2;
 
 // The "robocall, no voicemail" rule's repeat-attempts signal - detectSpam
 // itself has no DB access, so this runs as a separate query the caller
-// folds into repeatedInboundNoVoicemail. Counts this contact's own missed
-// inbound calls (not a cross-contact number search - the counterpart number
-// on a bare auto-created contact is already unique to it) in the last 24h;
-// 3+ with nothing answered or left as voicemail reads as a dialer, not a
-// person trying to reach her.
-export async function hasRepeatedMissedCalls(admin: SupabaseClient, ownerId: string, contactId: string): Promise<boolean> {
-  const since = new Date(Date.now() - REPEAT_WINDOW_HOURS * 60 * 60 * 1000).toISOString();
-  const { count } = await admin
+// folds into repeatedInboundNoVoicemail.
+//
+// This used to be scoped to one contact's own call history, on the
+// assumption a robodialer keeps re-calling from the same number. Real
+// robocall campaigns commonly rotate through a fresh, similar-looking
+// local number on every attempt instead (caller-ID spoofing) - each one
+// creates its own bare contact with exactly one call ever, so a
+// per-contact count could never reach the threshold no matter how many
+// calls actually came in. This counts missed inbound calls account-wide
+// instead: 2+ *other* unrelated missed calls in a tight 3-hour window is
+// a burst hitting the line, not several different people happening to
+// miss connecting with her at once.
+export async function hasRecentMissedCallBurst(admin: SupabaseClient, ownerId: string): Promise<boolean> {
+  const since = new Date(Date.now() - BURST_WINDOW_HOURS * 60 * 60 * 1000).toISOString();
+  const { data } = await admin
     .from("activities")
-    .select("id", { count: "exact", head: true })
+    .select("id, metadata")
     .eq("owner_id", ownerId)
-    .eq("contact_id", contactId)
     .eq("type", "call")
     .eq("direction", "inbound")
     .gte("occurred_at", since);
-  return (count ?? 0) >= REPEAT_THRESHOLD;
+  const missedCount = (data ?? []).filter((a) => {
+    const status = typeof a.metadata?.status === "string" ? a.metadata.status.toLowerCase() : null;
+    return status != null && MISSED_STATUSES.has(status);
+  }).length;
+  return missedCount >= BURST_THRESHOLD;
 }
