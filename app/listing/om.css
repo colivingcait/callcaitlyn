@@ -1,0 +1,58 @@
+/* Hover treatments for the offering-memorandum page. Inline styles (used
+   everywhere else on this page to match the design spec's exact per-element
+   values) can't express :hover, so the handful of distinct hover behaviors
+   live here instead. */
+.om-hover-fill:hover {
+  background: #f4f1ec !important;
+  color: #211c19 !important;
+}
+.om-hover-fill-border:hover {
+  background: #f4f1ec !important;
+  border-color: #f4f1ec !important;
+  color: #211c19 !important;
+}
+.om-invert-btn:hover {
+  background: #f4f1ec !important;
+  color: #211c19 !important;
+}
+.om-hover-dark:hover {
+  background: #211c19 !important;
+  color: #f4f1ec !important;
+}
+.om-hover-light:hover {
+  color: #f4f1ec !important;
+}
+.om-hover-accent:hover {
+  color: #cc4a37 !important;
+}
+.om-hover-dim:hover {
+  opacity: 0.72;
+}
+.om-input:focus {
+  outline: none;
+  border-bottom-color: #cc4a37 !important;
+}
+.om-input-boxed:focus {
+  outline: none;
+  border-color: #cc4a37 !important;
+}
+
+@media print {
+  @page {
+    size: letter;
+    margin: 0.5in;
+  }
+  [data-om-noprint] {
+    display: none !important;
+  }
+  [data-om-printonly] {
+    display: block !important;
+  }
+  section {
+    break-inside: avoid;
+  }
+  h2,
+  h3 {
+    break-after: avoid;
+  }
+}

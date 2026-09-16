@@ -11,6 +11,9 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   const { slug } = await params;
   const listing = await getPublicListing(slug);
 
+  // Nickname only - the address is never shown anywhere on this listing's
+  // public surface, including its own link preview.
+  const nickname = listing ? listing.nickname || "PadSplit Listing" : "Listing";
   const photo = listing ? (listing.padsplit_photo_urls?.[0] ?? listing.photoUrls[0] ?? null) : null;
   const specs = listing
     ? [listing.beds != null && listing.baths != null ? `${listing.beds} bd / ${listing.baths} ba` : null, listing.property_type].filter(Boolean).join(" · ")
@@ -39,7 +42,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
               background: "linear-gradient(0deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.1) 55%, rgba(0,0,0,0) 100%)",
             }}
           >
-            <div style={{ fontSize: 54, fontWeight: 700, color: "#ffffff" }}>{listing!.address}</div>
+            <div style={{ fontSize: 54, fontWeight: 700, color: "#ffffff" }}>{nickname}</div>
             {priceLine && <div style={{ fontSize: 28, color: "#f5f5f4", marginTop: 10 }}>{priceLine}</div>}
           </div>
         </div>
@@ -77,7 +80,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
         >
           🏠
         </div>
-        <div style={{ fontSize: 54, fontWeight: 700, color: "#1c1917" }}>{listing?.address ?? "Listing"}</div>
+        <div style={{ fontSize: 54, fontWeight: 700, color: "#1c1917" }}>{nickname}</div>
         {priceLine && <div style={{ fontSize: 28, color: "#78716c", marginTop: 18 }}>{priceLine}</div>}
       </div>
     ),

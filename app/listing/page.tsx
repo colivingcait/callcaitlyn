@@ -16,47 +16,39 @@ export default async function PublicListingsOverviewPage() {
   const listings = await getPublicListings();
 
   return (
-    <main className="min-h-dvh bg-neutral-50 px-4 py-8">
-      <div className="mx-auto max-w-2xl">
-        <h1 className="font-serif text-3xl font-semibold text-neutral-900">Available listings</h1>
-        <p className="mt-1 text-[15px] text-neutral-500">Caitlyn Verdugo with KW Metro Atl</p>
+    <main style={{ minHeight: "100dvh", background: "#f4f1ec", padding: "56px 28px", fontFamily: "var(--font-om-sans), Archivo, ui-sans-serif, system-ui, sans-serif" }}>
+      <div style={{ margin: "0 auto", maxWidth: 720 }}>
+        <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.2em", color: "#a33a29" }}>CALLCAITLYN LISTINGS</p>
+        <h1 style={{ margin: "16px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 40, color: "#211c19" }}>Available listings</h1>
+        <p style={{ margin: "10px 0 0", fontSize: 15, color: "#574f47" }}>Caitlyn Verdugo · Keller Williams Metro Atlanta</p>
 
         {listings.length === 0 ? (
-          <p className="mt-8 text-center text-sm text-neutral-400">No listings available right now.</p>
+          <p style={{ marginTop: 48, textAlign: "center", fontSize: 14, color: "#a39a8e" }}>No listings available right now.</p>
         ) : (
-          <div className="mt-6 space-y-3">
+          <div style={{ marginTop: 32, display: "flex", flexDirection: "column", gap: 12 }}>
             {listings.map((listing) => {
               const cover = listing.padsplit_photo_urls?.[0] ?? listing.photoUrls[0] ?? null;
-              const specs = [
-                listing.beds != null && listing.baths != null ? `${listing.beds} bd / ${listing.baths} ba` : null,
-                listing.property_type,
-              ]
-                .filter(Boolean)
-                .join(" · ");
+              const occ = listing.occupied_rooms != null && listing.total_rooms != null ? `${listing.occupied_rooms}/${listing.total_rooms} occupied` : "Coming soon";
 
               return (
                 <Link
                   key={listing.id}
                   href={`/listing/${listing.public_slug}`}
-                  className="flex items-center gap-3.5 rounded-2xl border border-neutral-200 bg-white p-3"
+                  style={{ display: "flex", alignItems: "center", gap: 16, border: "1px solid #ddd6cc", background: "#fffdfa", padding: 16, color: "inherit" }}
                 >
-                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-neutral-100">
+                  <div style={{ height: 84, width: 84, flexShrink: 0, overflow: "hidden", background: "#ece6dd" }}>
                     {cover && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={cover} alt="" className="h-full w-full object-cover" />
+                      <img src={cover} alt="" style={{ height: "100%", width: "100%", objectFit: "cover" }} />
                     )}
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-neutral-900">{listing.address}</p>
-                    <p className="mt-0.5 text-sm text-neutral-500">
-                      {formatCurrency(listing.list_price)}
-                      {specs ? ` · ${specs}` : ""}
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <p style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 20, color: "#211c19", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {listing.nickname || listing.property_type || "Listing"}
                     </p>
-                    {listing.occupied_rooms != null && listing.total_rooms != null && (
-                      <p className="mt-0.5 text-sm text-neutral-500">
-                        {listing.occupied_rooms}/{listing.total_rooms} rooms occupied
-                      </p>
-                    )}
+                    <p style={{ margin: "6px 0 0", fontSize: 14, color: "#574f47" }}>
+                      {formatCurrency(listing.list_price)} · {listing.total_rooms ?? "?"} rooms · {occ}
+                    </p>
                   </div>
                 </Link>
               );

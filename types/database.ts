@@ -246,8 +246,58 @@ export interface Listing {
   padsplit_photo_urls: string[] | null;
   last_scraped_at: string | null;
   last_scrape_error: string | null;
+  // Offering-memorandum page fields - the address is never shown there, so
+  // the page needs its own identity plus the fields the OM design surfaces.
+  nickname: string | null;
+  om_number: string | null;
+  submarket: string | null;
+  year_built: number | null;
+  year_renovated: number | null;
+  private_bathrooms: number | null;
+  padsplit_since: string | null;
+  parking: string | null;
+  laundry: string | null;
+  furnishings: string | null;
+  public_description: string | null;
+  band_gross_rent: string | null;
+  band_expense_load: string | null;
+  band_cash_on_cash: string | null;
+  band_cap_rate: string | null;
+  financials: ListingFinancials | null;
+  improvements: ListingImprovement[] | null;
+  co_agent_name: string | null;
+  co_agent_brokerage: string | null;
+  co_agent_phone: string | null;
+  co_agent_email: string | null;
+  dd_days: number;
+  seller_support_days: number;
+  show_seller_section: boolean;
+  padsplit_photos: PadsplitPhoto[] | null;
+  excluded_photo_urls: string[];
   created_at: string;
   updated_at: string;
+}
+
+export type ListingFinancials = {
+  t12: { label: string; value: string; subtotal?: boolean }[];
+  noi: string;
+  cap_rate: string;
+  vacancy_pct?: string;
+  scenarios: { label: string; coc: string; cash_in: string; debt_service: string; cash_flow: string }[];
+  occupancy_summary?: string;
+};
+
+export type ListingImprovement = { item: string; year: string; cost: string };
+
+export type PadsplitPhoto = { url: string; category: string | null };
+
+export interface ListingOccupancySnapshot {
+  id: string;
+  listing_id: string;
+  owner_id: string;
+  occupied_rooms: number | null;
+  total_rooms: number | null;
+  captured_at: string;
 }
 
 export type ListingDocumentType = "earnings_statement" | "t12";

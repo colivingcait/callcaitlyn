@@ -15,6 +15,10 @@ import { PhotoUploader } from "@/components/listings/PhotoUploader";
 import { PublicPageToggle } from "@/components/listings/PublicPageToggle";
 import { PadsplitScrapeStatus } from "@/components/listings/PadsplitScrapeStatus";
 import { DocumentUploader } from "@/components/listings/DocumentUploader";
+import { OmDetailsForm } from "@/components/listings/OmDetailsForm";
+import { FinancialsEditor } from "@/components/listings/FinancialsEditor";
+import { ImprovementsEditor } from "@/components/listings/ImprovementsEditor";
+import { PhotoExcludeManager } from "@/components/listings/PhotoExcludeManager";
 import { baseUrl } from "@/lib/crm/sequences";
 import { MarketingGraphics } from "@/components/listings/MarketingGraphics";
 import { CopyBlocks } from "@/components/listings/CopyBlocks";
@@ -165,6 +169,21 @@ export default async function ListingDetailPage({ params, searchParams }: { para
                 lastScrapeError={listing.last_scrape_error}
               />
               <DocumentUploader listingId={listing.id} documents={documents} />
+            </div>
+            <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
+              <h2 className="mb-3 text-base font-semibold text-neutral-900">Offering memorandum details</h2>
+              <OmDetailsForm listing={listing} />
+            </div>
+            <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
+              <h2 className="mb-3 text-base font-semibold text-neutral-900">Gated underwriting detail</h2>
+              <FinancialsEditor listingId={listing.id} financials={listing.financials} />
+            </div>
+            <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
+              <ImprovementsEditor listingId={listing.id} improvements={listing.improvements} />
+            </div>
+            <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
+              <h2 className="mb-3 text-base font-semibold text-neutral-900">PadSplit photos</h2>
+              <PhotoExcludeManager listingId={listing.id} photos={listing.padsplit_photos ?? []} excludedUrls={listing.excluded_photo_urls} />
             </div>
             <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
               <div className="mb-3 flex items-center justify-between">

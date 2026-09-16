@@ -11,7 +11,7 @@ import { sendGmailMessage } from "@/lib/google/send-email";
 import { draftToHtml } from "@/lib/crm/merge-fields";
 import { baseUrl } from "@/lib/crm/sequences";
 import { generateUniqueListingSlug } from "@/lib/listings/public-slug";
-import type { ListingStatus, ListingDocumentType } from "@/types/database";
+import type { ListingStatus, ListingDocumentType, ListingFinancials, ListingImprovement } from "@/types/database";
 
 const PREVIEW_AGENT = { name: "Jamie Agent" };
 
@@ -537,6 +537,124 @@ export async function removeListingDocument(listingId: string, docType: ListingD
   if (error) return { ok: false, error: error.message };
 
   await supabase.storage.from("listing-documents").remove([existing.storage_path]);
+  revalidatePath(`/listings/${listingId}`);
+  return { ok: true };
+}
+
+// Every field the public offering-memorandum page shows beyond what
+// BasicsForm already covers - identity (since the address is never shown
+// there), property detail, the public description, the four "band" display
+// strings, co-listing agent, and process terms.
+export async function updateListingOmFields(
+  listingId: string,
+  input: {
+    nickname?: string | null;
+    omNumber?: string | null;
+    submarket?: string | null;
+    yearBuilt?: number | null;
+    yearRenovated?: number | null;
+    privateBathrooms?: number | null;
+    padsplitSince?: string | null;
+    parking?: string | null;
+    laundry?: string | null;
+    furnishings?: string | null;
+    publicDescription?: string | null;
+    bandGrossRent?: string | null;
+    bandExpenseLoad?: string | null;
+    bandCashOnCash?: string | null;
+    bandCapRate?: string | null;
+    coAgentName?: string | null;
+    coAgentBrokerage?: string | null;
+    coAgentPhone?: string | null;
+    coAgentEmail?: string | null;
+    ddDays?: number | null;
+    sellerSupportDays?: number | null;
+    showSellerSection?: boolean;
+  },
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  const patch: Record<string, unknown> = {};
+  if (input.nickname !== undefined) patch.nickname = input.nickname;
+  if (input.omNumber !== undefined) patch.om_number = input.omNumber;
+  if (input.submarket !== undefined) patch.submarket = input.submarket;
+  if (input.yearBuilt !== undefined) patch.year_built = input.yearBuilt;
+  if (input.yearRenovated !== undefined) patch.year_renovated = input.yearRenovated;
+  if (input.privateBathrooms !== undefined) patch.private_bathrooms = input.privateBathrooms;
+  if (input.padsplitSince !== undefined) patch.padsplit_since = input.padsplitSince;
+  if (input.parking !== undefined) patch.parking = input.parking;
+  if (input.laundry !== undefined) patch.laundry = input.laundry;
+  if (input.furnishings !== undefined) patch.furnishings = input.furnishings;
+  if (input.publicDescription !== undefined) patch.public_description = input.publicDescription;
+  if (input.bandGrossRent !== undefined) patch.band_gross_rent = input.bandGrossRent;
+  if (input.bandExpenseLoad !== undefined) patch.band_expense_load = input.bandExpenseLoad;
+  if (input.bandCashOnCash !== undefined) patch.band_cash_on_cash = input.bandCashOnCash;
+  if (input.bandCapRate !== undefined) patch.band_cap_rate = input.bandCapRate;
+  if (input.coAgentName !== undefined) patch.co_agent_name = input.coAgentName;
+  if (input.coAgentBrokerage !== undefined) patch.co_agent_brokerage = input.coAgentBrokerage;
+  if (input.coAgentPhone !== undefined) patch.co_agent_phone = input.coAgentPhone;
+  if (input.coAgentEmail !== undefined) patch.co_agent_email = input.coAgentEmail;
+  if (input.ddDays !== undefined) patch.dd_days = input.ddDays;
+  if (input.sellerSupportDays !== undefined) patch.seller_support_days = input.sellerSupportDays;
+  if (input.showSellerSection !== undefined) patch.show_seller_section = input.showSellerSection;
+
+  const { error } = await supabase.from("listings").update(patch).eq("id", listingId);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/listings/${listingId}`);
+  return { ok: true };
+}
+
+// Gated underwriting detail - one jsonb column (see migration 0073's
+// comment on why) rather than a fixed set of expense columns, since the
+// T12 line count and scenario count both vary per listing.
+export async function updateListingFinancials(listingId: string, financials: ListingFinancials | null): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  const { error } = await supabase.from("listings").update({ financials }).eq("id", listingId);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/listings/${listingId}`);
+  return { ok: true };
+}
+
+// Capital improvements are optional - an empty/null array hides the
+// section on the public page entirely rather than showing a blank block.
+export async function updateListingImprovements(listingId: string, improvements: ListingImprovement[] | null): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  const { error } = await supabase.from("listings").update({ improvements }).eq("id", listingId);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/listings/${listingId}`);
+  return { ok: true };
+}
+
+// Auto-filter (exterior category regex) plus this manual override, per the
+// client's explicit requirement - the regex will miss things, and she needs
+// to be able to kill a specific interior photo too.
+export async function updateExcludedPhotos(listingId: string, excludedUrls: string[]): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  const { error } = await supabase.from("listings").update({ excluded_photo_urls: excludedUrls }).eq("id", listingId);
+  if (error) return { ok: false, error: error.message };
+
   revalidatePath(`/listings/${listingId}`);
   return { ok: true };
 }

@@ -82,7 +82,9 @@ function findProperty(node, depth = 0, seen = new Set()) {
 }
 
 // Any object with a string `location` URL alongside a `category` key is a
-// photo record (room and common-area photos both use this shape).
+// photo record (room and common-area photos both use this shape). Category
+// is kept (not just the URL) so the OM page can filter exteriors out
+// automatically - the seller withholds those from the public listing.
 function findPhotos(node, depth = 0, seen = new Set(), out = [], urlsSeen = new Set()) {
   if (!node || typeof node !== "object" || depth > 18 || seen.has(node)) return out;
   seen.add(node);
@@ -93,7 +95,7 @@ function findPhotos(node, depth = 0, seen = new Set(), out = [], urlsSeen = new 
   if (typeof node.location === "string" && /^https?:\/\//.test(node.location) && "category" in node) {
     if (!urlsSeen.has(node.location)) {
       urlsSeen.add(node.location);
-      out.push(node.location);
+      out.push({ url: node.location, category: typeof node.category === "string" ? node.category : null });
     }
   }
   for (const value of Object.values(node)) findPhotos(value, depth + 1, seen, out, urlsSeen);
@@ -143,7 +145,7 @@ async function scrapeListing(context, listing) {
     const property = findProperty(data);
     if (!property) throw new Error("Page hydrated but no property data was found in it");
 
-    const photoUrls = findPhotos(data).slice(0, 12);
+    const photos = findPhotos(data).slice(0, 24);
 
     const totalRooms = typeof property.totalRoomsCount === "number" ? property.totalRoomsCount : null;
     // `rooms` only lists CURRENTLY AVAILABLE rooms - confirmed empty on a
@@ -166,7 +168,7 @@ async function scrapeListing(context, listing) {
     const priceLow = roomRates.length ? Math.min(...roomRates) : floorPrice;
     const priceHigh = roomRates.length ? Math.max(...roomRates) : floorPrice;
 
-    return { ok: true, totalRooms, occupiedRooms, priceLow, priceHigh, photoUrls };
+    return { ok: true, totalRooms, occupiedRooms, priceLow, priceHigh, photos };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
   } finally {
@@ -206,11 +208,21 @@ for (const listing of listings) {
         total_rooms: result.totalRooms,
         price_low: result.priceLow,
         price_high: result.priceHigh,
-        padsplit_photo_urls: result.photoUrls,
+        padsplit_photo_urls: result.photos.map((p) => p.url),
+        padsplit_photos: result.photos,
         last_scraped_at: now,
         last_scrape_error: null,
       })
       .eq("id", listing.id);
+    // Never inserted on failure - the carry-forward behavior above exists
+    // so a transient block never makes a listing look empty, and a snapshot
+    // row here would defeat that by recording a bad/absent read as history.
+    await supabase.from("listing_occupancy_snapshots").insert({
+      listing_id: listing.id,
+      owner_id: OWNER_ID,
+      occupied_rooms: result.occupiedRooms,
+      total_rooms: result.totalRooms,
+    });
     okCount++;
     console.log(`✓ ${listing.address}: ${result.occupiedRooms}/${result.totalRooms} occupied, $${result.priceLow}-$${result.priceHigh}/wk`);
   } else {
