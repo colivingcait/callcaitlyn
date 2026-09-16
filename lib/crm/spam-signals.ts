@@ -28,6 +28,15 @@ const RULES: { reason: string; patterns: RegExp[] }[] = [
     reason: "Robocall IVR (\"press # for an agent\")",
     patterns: [/press \d.{0,60}(agent|representative|specialist|someone|live person|customer service)/i, /press \d.{0,15}(now|to continue|to speak|to be connected)/i],
   },
+  {
+    // The TCPA-mandated opt-out line at the end of a robocall script - "press
+    // 9 to opt out" or just "to opt out or call ..." - shows up even when the
+    // recording got cut off before the actual pitch, so the transcript has
+    // nothing else to match on. A real caller never says this to a real
+    // estate agent's voicemail; hearing it at all means it's a recording.
+    reason: "Robocall opt-out script",
+    patterns: [/\bopt out\b/i, /press \d.{0,20}opt.?out/i],
+  },
   { reason: "Business loans / funding", patterns: [/business loan/i, /working capital/i, /\bfunding\b/i, /merchant advance/i, /line of credit/i] },
   { reason: "Taxes / IRS", patterns: [/\birs\b/i, /tax relief/i, /back taxes/i, /tax settlement/i] },
   { reason: "Solar", patterns: [/\bsolar\b/i] },
