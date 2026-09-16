@@ -51,6 +51,7 @@ export type ActivitySource =
   | "checkin"
   | "house_hacking_site"
   | "site_form"
+  | "listing_page"
   | "instagram"
   | "blinq"
   | "scheduling"
@@ -236,8 +237,28 @@ export interface Listing {
   story: string | null;
   zillow_url: string | null;
   photo_paths: string[];
+  public_slug: string | null;
+  padsplit_url: string | null;
+  occupied_rooms: number | null;
+  total_rooms: number | null;
+  price_low: number | null;
+  price_high: number | null;
+  padsplit_photo_urls: string[] | null;
+  last_scraped_at: string | null;
+  last_scrape_error: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export type ListingDocumentType = "earnings_statement" | "t12";
+
+export interface ListingDocument {
+  id: string;
+  listing_id: string;
+  owner_id: string;
+  doc_type: ListingDocumentType;
+  storage_path: string;
+  uploaded_at: string;
 }
 
 export interface ListingPriceChange {

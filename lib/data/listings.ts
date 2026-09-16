@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Listing, ListingAgent, ListingPriceChange, ListingSend, Agent, ListingStatus } from "@/types/database";
+import type { Listing, ListingAgent, ListingPriceChange, ListingSend, ListingDocument, Agent, ListingStatus } from "@/types/database";
 
 export type ListingWithSummary = Listing & {
   agentCount: number;
@@ -49,20 +49,22 @@ export type ListingDetail = {
   sends: ListingSend[];
   priceChanges: ListingPriceChange[];
   messages: import("@/types/database").ListingAgentMessage[];
+  documents: ListingDocument[];
 };
 
 export async function getListingDetail(id: string): Promise<ListingDetail | null> {
   const supabase = await createClient();
-  const [{ data: listing }, { data: agents }, { data: sends }, { data: priceChanges }, { data: messages }] = await Promise.all([
+  const [{ data: listing }, { data: agents }, { data: sends }, { data: priceChanges }, { data: messages }, { data: documents }] = await Promise.all([
     supabase.from("listings").select("*").eq("id", id).maybeSingle(),
     supabase.from("listing_agents").select("*").eq("listing_id", id).order("created_at", { ascending: false }),
     supabase.from("listing_sends").select("*").eq("listing_id", id).order("created_at", { ascending: false }),
     supabase.from("listing_price_changes").select("*").eq("listing_id", id).order("occurred_at", { ascending: false }),
     supabase.from("listing_agent_messages").select("*").eq("listing_id", id).order("occurred_at", { ascending: false }).limit(30),
+    supabase.from("listing_documents").select("*").eq("listing_id", id),
   ]);
 
   if (!listing) return null;
-  return { listing, agents: agents ?? [], sends: sends ?? [], priceChanges: priceChanges ?? [], messages: messages ?? [] };
+  return { listing, agents: agents ?? [], sends: sends ?? [], priceChanges: priceChanges ?? [], messages: messages ?? [], documents: documents ?? [] };
 }
 
 export type SendWithProgress = ListingSend & { total: number; sent: number; failed: number; skipped: number; pending: number };

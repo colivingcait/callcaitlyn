@@ -15,6 +15,7 @@ export function BasicsForm({ listing }: { listing: Listing }) {
   const [propertyType, setPropertyType] = useState(listing.property_type ?? "");
   const [mlsNumber, setMlsNumber] = useState(listing.mls_number ?? "");
   const [zillowUrl, setZillowUrl] = useState(listing.zillow_url ?? "");
+  const [padsplitUrl, setPadsplitUrl] = useState(listing.padsplit_url ?? "");
   const [story, setStory] = useState(listing.story ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -31,6 +32,7 @@ export function BasicsForm({ listing }: { listing: Listing }) {
       propertyType: propertyType || null,
       mlsNumber: mlsNumber || null,
       zillowUrl: zillowUrl || null,
+      padsplitUrl: padsplitUrl || null,
       story: story || null,
     });
     setSaving(false);
@@ -82,6 +84,17 @@ export function BasicsForm({ listing }: { listing: Listing }) {
             placeholder="https://www.zillow.com/homedetails/..."
           />
           <p className="mt-1 text-xs text-neutral-400">Dropped into agent texts so they can tap through and see the photos.</p>
+        </div>
+        <div className="sm:col-span-3">
+          <label className="mb-1 block text-sm font-medium text-neutral-700">PadSplit listing URL</label>
+          <input
+            type="url"
+            value={padsplitUrl}
+            onChange={(e) => setPadsplitUrl(e.target.value)}
+            className={inputClass}
+            placeholder="https://www.padsplit.com/rooms-for-rent/listing/..."
+          />
+          <p className="mt-1 text-xs text-neutral-400">Occupancy, pricing, and photos are pulled from here automatically once a day.</p>
         </div>
       </div>
       <div className="mt-3">

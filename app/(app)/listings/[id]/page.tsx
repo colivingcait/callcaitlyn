@@ -12,6 +12,10 @@ import { AgentComposer } from "@/components/listings/AgentComposer";
 import { SendsList } from "@/components/listings/SendsList";
 import { BasicsForm } from "@/components/listings/BasicsForm";
 import { PhotoUploader } from "@/components/listings/PhotoUploader";
+import { PublicPageToggle } from "@/components/listings/PublicPageToggle";
+import { ScrapeNowButton } from "@/components/listings/ScrapeNowButton";
+import { DocumentUploader } from "@/components/listings/DocumentUploader";
+import { baseUrl } from "@/lib/crm/sequences";
 import { MarketingGraphics } from "@/components/listings/MarketingGraphics";
 import { CopyBlocks } from "@/components/listings/CopyBlocks";
 import { ActivityTab } from "@/components/listings/ActivityTab";
@@ -28,7 +32,7 @@ export default async function ListingDetailPage({ params, searchParams }: { para
 
   const detail = await getListingDetail(id);
   if (!detail) notFound();
-  const { listing, agents, sends, priceChanges, messages } = detail;
+  const { listing, agents, sends, priceChanges, messages, documents } = detail;
 
   const sendProgressMap = activeTab === "rp" ? await getSendProgress(sends.map((s) => s.id)) : new Map();
   const sendProgress = Object.fromEntries(sendProgressMap);
@@ -149,6 +153,19 @@ export default async function ListingDetailPage({ params, searchParams }: { para
               <div className="mt-4">
                 <PhotoUploader listingId={listing.id} photoUrls={photoUrls} photoPaths={listing.photo_paths} />
               </div>
+            </div>
+            <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px] space-y-4">
+              <h2 className="text-base font-semibold text-neutral-900">Public listing page</h2>
+              <PublicPageToggle listingId={listing.id} publicSlug={listing.public_slug} appOrigin={baseUrl()} />
+              <ScrapeNowButton
+                listingId={listing.id}
+                padsplitUrl={listing.padsplit_url}
+                occupiedRooms={listing.occupied_rooms}
+                totalRooms={listing.total_rooms}
+                lastScrapedAt={listing.last_scraped_at}
+                lastScrapeError={listing.last_scrape_error}
+              />
+              <DocumentUploader listingId={listing.id} documents={documents} />
             </div>
             <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
               <div className="mb-3 flex items-center justify-between">

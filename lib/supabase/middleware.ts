@@ -47,6 +47,11 @@ export async function updateSession(request: NextRequest) {
   // The "confirm this time?" page for a proposed-new-time text - opened by
   // the visitor from that text, not the logged-in agent.
   const isPublicConfirm = request.nextUrl.pathname.startsWith("/confirm/");
+  // Her own "Zillow-type" public marketing page for an off-MLS listing
+  // (/listing overview + /listing/[slug]) - opened by an agent or investor
+  // she shared the link with, not the logged-in agent. Distinct from the
+  // authenticated /listings (plural) reverse-prospecting section.
+  const isPublicListing = request.nextUrl.pathname === "/listing" || request.nextUrl.pathname.startsWith("/listing/");
   // Webhooks (Quo, and any future integration) authenticate via their own
   // signature, not a Supabase session - they must bypass the login guard.
   // Same for cron jobs (authenticate via CRON_SECRET, no browser session),
@@ -70,7 +75,7 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/favicon") ||
     request.nextUrl.pathname.startsWith("/sw.js");
 
-  if (isAuthCallback || isWebhook || isCheckIn || isPublicQuote || isPublicBooking || isPublicConfirm) {
+  if (isAuthCallback || isWebhook || isCheckIn || isPublicQuote || isPublicBooking || isPublicConfirm || isPublicListing) {
     return response;
   }
 

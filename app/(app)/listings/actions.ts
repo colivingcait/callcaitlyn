@@ -9,7 +9,10 @@ import { applyAgentMergeFields } from "@/lib/crm/listing-sends";
 import { sendQuoText } from "@/lib/quo/send-message";
 import { sendGmailMessage } from "@/lib/google/send-email";
 import { draftToHtml } from "@/lib/crm/merge-fields";
-import type { ListingStatus } from "@/types/database";
+import { baseUrl } from "@/lib/crm/sequences";
+import { generateUniqueListingSlug } from "@/lib/listings/public-slug";
+import { scrapeAndSaveListing } from "@/lib/listings/padsplit-scrape";
+import type { ListingStatus, ListingDocumentType } from "@/types/database";
 
 const PREVIEW_AGENT = { name: "Jamie Agent" };
 
@@ -71,6 +74,7 @@ export async function updateListingBasics(
     mlsNumber?: string | null;
     story?: string | null;
     zillowUrl?: string | null;
+    padsplitUrl?: string | null;
   },
 ): Promise<ActionResult> {
   const supabase = await createClient();
@@ -89,6 +93,7 @@ export async function updateListingBasics(
   if (input.mlsNumber !== undefined) patch.mls_number = input.mlsNumber;
   if (input.story !== undefined) patch.story = input.story;
   if (input.zillowUrl !== undefined) patch.zillow_url = input.zillowUrl;
+  if (input.padsplitUrl !== undefined) patch.padsplit_url = input.padsplitUrl;
   patch.updated_at = new Date().toISOString();
 
   // A price edit here is also what should feed the price-drop send and
@@ -438,5 +443,122 @@ export async function sendTestListingEmail(subject: string, message: string, toE
   const body = applyAgentMergeFields(message, PREVIEW_AGENT);
   const result = await sendGmailMessage(admin, user.id, toEmail.trim(), subject.trim() || "New listing", draftToHtml(body));
   if (!result.ok) return { ok: false, error: result.error };
+  return { ok: true };
+}
+
+// The "own Zillow" public page toggle: on generates a human-readable slug
+// (idempotent - a listing that already has one keeps it, so a previously
+// shared link never breaks) and, only if the Zillow field is still empty,
+// fills it with the new public page link so every existing outreach
+// template picks it up on the next send with no other changes. Off clears
+// the slug, so the old link stops resolving - re-enabling later generates
+// a fresh one rather than restoring the exact same URL.
+export async function setListingPublicPage(listingId: string, enabled: boolean): Promise<ActionResult<{ url: string | null }>> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  const admin = createAdminClient();
+  const { data: listing } = await supabase.from("listings").select("address, public_slug, zillow_url").eq("id", listingId).maybeSingle();
+  if (!listing) return { ok: false, error: "Listing not found" };
+
+  if (!enabled) {
+    const { error } = await supabase.from("listings").update({ public_slug: null }).eq("id", listingId);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath(`/listings/${listingId}`);
+    return { ok: true, url: null };
+  }
+
+  const slug = listing.public_slug ?? (await generateUniqueListingSlug(admin, listing.address));
+  const url = `${baseUrl()}/listing/${slug}`;
+  const patch: Record<string, unknown> = { public_slug: slug };
+  if (!listing.zillow_url) patch.zillow_url = url;
+
+  const { error } = await supabase.from("listings").update(patch).eq("id", listingId);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/listings/${listingId}`);
+  return { ok: true, url };
+}
+
+// Manual trigger for the same scrape the daily cron runs - lets a newly
+// configured listing's occupancy/pricing/photos populate right away
+// instead of waiting for the next scheduled run.
+export async function scrapeListingNow(listingId: string): Promise<ActionResult<{ scrapeError: string | null }>> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  const { data: listing } = await supabase.from("listings").select("id, padsplit_url").eq("id", listingId).maybeSingle();
+  if (!listing) return { ok: false, error: "Listing not found" };
+  if (!listing.padsplit_url) return { ok: false, error: "Add a PadSplit URL first" };
+
+  const admin = createAdminClient();
+  const result = await scrapeAndSaveListing(admin, listing);
+  revalidatePath(`/listings/${listingId}`);
+  if (!result.ok) return { ok: true, scrapeError: result.error ?? "Scrape failed" };
+  return { ok: true, scrapeError: null };
+}
+
+// Storage upload happens client-side (see DocumentUploader) against the
+// private "listing-documents" bucket - this just records the resulting
+// path. Requires that bucket to already exist (Supabase dashboard ->
+// Storage -> New bucket -> PRIVATE - see migration 0072's header comment);
+// nothing here creates it. Re-uploading a doc type replaces the existing
+// row (and its old file) rather than accumulating stale versions.
+export async function addListingDocument(listingId: string, docType: ListingDocumentType, path: string): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  const { data: existing } = await supabase
+    .from("listing_documents")
+    .select("storage_path")
+    .eq("listing_id", listingId)
+    .eq("doc_type", docType)
+    .maybeSingle();
+
+  const { error } = await supabase
+    .from("listing_documents")
+    .upsert(
+      { listing_id: listingId, owner_id: user.id, doc_type: docType, storage_path: path, uploaded_at: new Date().toISOString() },
+      { onConflict: "listing_id,doc_type" },
+    );
+  if (error) return { ok: false, error: error.message };
+
+  if (existing && existing.storage_path !== path) {
+    await supabase.storage.from("listing-documents").remove([existing.storage_path]);
+  }
+
+  revalidatePath(`/listings/${listingId}`);
+  return { ok: true };
+}
+
+export async function removeListingDocument(listingId: string, docType: ListingDocumentType): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  const { data: existing } = await supabase
+    .from("listing_documents")
+    .select("id, storage_path")
+    .eq("listing_id", listingId)
+    .eq("doc_type", docType)
+    .maybeSingle();
+  if (!existing) return { ok: true };
+
+  const { error } = await supabase.from("listing_documents").delete().eq("id", existing.id);
+  if (error) return { ok: false, error: error.message };
+
+  await supabase.storage.from("listing-documents").remove([existing.storage_path]);
+  revalidatePath(`/listings/${listingId}`);
   return { ok: true };
 }
