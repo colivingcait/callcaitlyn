@@ -156,9 +156,14 @@ export async function recheckSpamRules(): Promise<RecheckResult> {
     .select("dedupe_value, contact_id, metadata")
     .eq("owner_id", user.id)
     .eq("source", "quo")
-    .eq("type", "call")
-    .eq("direction", "inbound");
+    .eq("type", "call");
 
+  // No direction filter: a robocall's own transcript is what we're
+  // matching on, not which way the call went - a stray "none" instead of
+  // "inbound" (parseQuoCall falls back to "none" for anything it doesn't
+  // recognize - see its comment) would silently drop every real spam call
+  // from this list with no error at all, so there's nothing to gain from
+  // filtering on it here.
   const candidates = (rows ?? []).filter((a) => {
     const metadata = a.metadata as Record<string, unknown> | null;
     return typeof metadata?.transcript === "string" || typeof metadata?.summary === "string";
