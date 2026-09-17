@@ -51,7 +51,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // keeps its plain min-h-dvh document scroll (BottomNav is already
     // fixed, independent of this either way).
     <div className="flex min-h-dvh md:h-dvh md:overflow-hidden">
-      <Suspense fallback={<aside className="hidden w-[220px] shrink-0 border-r border-neutral-100 bg-[#fcfbfa] md:flex" />}>
+      <Suspense fallback={<aside className="hidden w-[220px] shrink-0 border-r border-[#eadfd6] bg-[#f7f1ea] md:flex" />}>
         <Sidebar userEmail={user?.email} counts={navCounts} />
       </Suspense>
       <div className="flex min-h-dvh min-w-0 flex-1 flex-col md:h-dvh md:overflow-hidden">

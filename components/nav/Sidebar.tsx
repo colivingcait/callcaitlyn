@@ -9,6 +9,7 @@ import { SignOutButton } from "./SignOutButton";
 import { QuickAddMenu } from "./QuickAddMenu";
 import { countFor as countForCounts } from "@/lib/nav/countFor";
 import { cn } from "@/lib/utils";
+import { BrandWordmark } from "@/components/brand/BrandWordmark";
 
 export type { NavCounts };
 
@@ -23,9 +24,9 @@ export function Sidebar({ userEmail, counts = {} }: { userEmail?: string | null;
   const countFor = countForCounts(counts);
 
   return (
-    <aside className="hidden w-[220px] shrink-0 flex-col border-r border-neutral-100 bg-[#fcfbfa] px-3 py-[22px] md:flex">
+    <aside className="hidden w-[220px] shrink-0 flex-col border-r border-[#eadfd6] bg-[#f7f1ea] px-3 py-[22px] md:flex">
       <div className="px-2.5 pb-[22px]">
-        <p className="font-serif text-lg font-semibold text-neutral-900">CallCaitlyn</p>
+        <BrandWordmark />
         {userEmail && <p className="mt-0.5 truncate text-sm text-neutral-400">{userEmail}</p>}
       </div>
 
@@ -49,10 +50,10 @@ export function Sidebar({ userEmail, counts = {} }: { userEmail?: string | null;
                 href={href}
                 className={cn(
                   "flex items-center gap-3 rounded-[11px] px-3 py-3 text-base font-medium",
-                  active ? "bg-neutral-100 font-semibold text-neutral-900" : "text-neutral-700 hover:bg-neutral-100/60",
+                  active ? "bg-[#f3e4dc] font-semibold text-brand-800" : "text-neutral-700 hover:bg-[#efe6dc]/70",
                 )}
               >
-                <Icon size={19} className={active ? "text-neutral-900" : "text-neutral-500"} />
+                <Icon size={19} className={active ? "text-brand-700" : "text-neutral-500"} />
                 {label}
                 {count && (
                   <span className={cn("ml-auto text-sm", count.waiting ? "font-semibold text-brand-600" : "text-neutral-400")}>
@@ -90,10 +91,10 @@ export function Sidebar({ userEmail, counts = {} }: { userEmail?: string | null;
                           title={hint}
                           className={cn(
                             "flex items-center gap-3 rounded-[11px] px-3 py-2.5 text-[15px] font-medium",
-                            active ? "bg-neutral-100 font-semibold text-neutral-900" : "text-neutral-700 hover:bg-neutral-100/60",
+                            active ? "bg-[#f3e4dc] font-semibold text-brand-800" : "text-neutral-700 hover:bg-[#efe6dc]/70",
                           )}
                         >
-                          <Icon size={18} className={active ? "text-neutral-900" : "text-neutral-500"} />
+                          <Icon size={18} className={active ? "text-brand-700" : "text-neutral-500"} />
                           {label}
                           {count && (
                             <span className={cn("ml-auto text-sm", count.waiting ? "font-semibold text-brand-600" : "text-neutral-400")}>

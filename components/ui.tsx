@@ -80,7 +80,7 @@ export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLab
 }
 
 export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("rounded-2xl border border-neutral-200/70 bg-white p-4 shadow-card", className)} {...props} />;
+  return <div className={cn("rounded-2xl border border-[#eadfd6] bg-[#fffbf8] p-4 shadow-card", className)} {...props} />;
 }
 
 // No colour as decoration (Phase 1 rule) - plain stone, same treatment

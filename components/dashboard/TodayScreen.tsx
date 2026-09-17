@@ -32,15 +32,25 @@ export function TodayScreen({
   const groups = buildTodayPersonGroups(today);
   const parsedFocus = parseTodayFocus(focus);
   const greeting = timeOfDayGreeting();
-  const headline = ownerFirstName ? `${greeting}, ${ownerFirstName}` : greeting;
 
   return (
-    <div className="min-h-full bg-[#f7f1ea] px-5 py-6 md:mx-auto md:max-w-lg md:px-6 md:py-8">
+    <div className="relative min-h-full bg-[#f7f1ea] px-5 py-6 md:mx-auto md:max-w-lg md:px-6 md:py-8">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-[#e8cfc4]/45 blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#f3e6dc]/70 to-transparent"
+      />
       {!parsedFocus && (
-        <div className="mb-6 flex items-start justify-between gap-3">
+        <div className="relative mb-7 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="font-serif text-[32px] font-semibold leading-9 tracking-[-0.02em] text-neutral-900">{headline}</h1>
-            <p className="mt-1.5 text-[15px] text-neutral-500">
+            <h1 className="font-display text-[36px] font-semibold leading-[1.08] tracking-[-0.03em] text-neutral-900">
+              <span className="font-medium italic text-neutral-800">{greeting},</span>
+              {ownerFirstName ? ` ${ownerFirstName}` : ""}
+            </h1>
+            <p className="mt-2 text-[15px] text-neutral-500">
               {formatLocal(new Date(), "EEEE")} · {APP_MARKET}
             </p>
           </div>

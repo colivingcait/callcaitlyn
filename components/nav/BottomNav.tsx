@@ -26,11 +26,11 @@ export function BottomNav({ counts = {}, userEmail }: { counts?: NavCounts; user
                     type="button"
                     onClick={() => setMoreOpen(true)}
                     className={cn(
-                      "flex h-full min-h-[66px] w-full flex-col items-center justify-center gap-[5px] py-3 text-[12.5px] font-medium active:bg-neutral-50",
-                      moreActive ? "text-brand-600 font-semibold" : "text-neutral-400",
+                      "flex h-full min-h-[66px] w-full flex-col items-center justify-center gap-[5px] py-3 text-[12.5px] font-medium active:bg-[#efe6dc]",
+                      moreActive ? "font-semibold text-[#c45c4a]" : "text-neutral-400",
                     )}
                   >
-                    <item.icon size={25} strokeWidth={moreActive ? 2.4 : 2} />
+                    <item.icon size={25} strokeWidth={moreActive ? 2.3 : 1.8} />
                     {item.label}
                   </button>
                 </li>
@@ -39,20 +39,25 @@ export function BottomNav({ counts = {}, userEmail }: { counts?: NavCounts; user
 
             const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
             const count = countFor[item.href];
+            const fillActive = item.href === "/" || item.href === "/contacts" || item.href === "/messages";
 
             return (
               <li key={item.href} className="flex-1">
                 <Link
                   href={item.href}
                   className={cn(
-                    "relative flex h-full min-h-[66px] flex-col items-center justify-center gap-[5px] py-3 text-[12.5px] font-medium active:bg-neutral-50",
-                    active ? "text-brand-600 font-semibold" : "text-neutral-400",
+                    "relative flex h-full min-h-[66px] flex-col items-center justify-center gap-[5px] py-3 text-[12.5px] font-medium active:bg-[#efe6dc]",
+                    active ? "font-semibold text-[#c45c4a]" : "text-neutral-400",
                   )}
                 >
                   <span className="relative">
-                    <item.icon size={25} strokeWidth={active ? 2.4 : 2} />
+                    <item.icon
+                      size={25}
+                      strokeWidth={active ? 2.3 : 1.8}
+                      className={active && fillActive ? "fill-current" : undefined}
+                    />
                     {count && count.value > 0 && (
-                      <span className="absolute -right-2.5 -top-2.5 flex h-[19px] min-w-[19px] items-center justify-center rounded-full bg-brand-600 px-1 text-[11px] font-semibold text-white">
+                      <span className="absolute -right-2.5 -top-2.5 flex h-[19px] min-w-[19px] items-center justify-center rounded-full bg-[#c45c4a] px-1 text-[11px] font-semibold text-white">
                         {count.value}
                       </span>
                     )}

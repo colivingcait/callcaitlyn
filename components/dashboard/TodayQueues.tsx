@@ -5,8 +5,9 @@ import { todayFocusHref } from "@/lib/crm/today-focus";
 import { inboxHref } from "@/lib/crm/inbox-href";
 import type { WorklistPerson } from "@/lib/data/today";
 
-const CARD = "border border-[#eadfd6] bg-[#fffbf8]";
+const CARD = "border border-[#eadfd6]/90 bg-[#fffbf8] shadow-card";
 const BADGE = "flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-[13px] font-semibold";
+const LABEL = "mb-2.5 px-0.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7a5c50]";
 
 function QueueRow({
   href,
@@ -27,9 +28,9 @@ function QueueRow({
     <Link
       href={href}
       data-today-control={control}
-      className={cn("flex min-h-[56px] items-center gap-3 rounded-[14px] px-3.5 py-3", CARD)}
+      className={cn("flex min-h-[58px] items-center gap-3 rounded-[16px] px-3.5 py-3.5", CARD)}
     >
-      <Icon size={20} strokeWidth={1.7} className={cn("shrink-0", accent ? "text-[#c45c4a]" : "text-neutral-700")} />
+      <Icon size={20} strokeWidth={1.7} className={cn("shrink-0", accent || count > 0 ? "text-[#c45c4a]" : "text-neutral-500")} />
       <p className="min-w-0 flex-1 truncate text-[16px] text-neutral-900">
         {label}
         <span className="text-neutral-400"> · {count}</span>
@@ -58,9 +59,9 @@ export function TodayQueues({
   const owedCount = messages.length;
 
   return (
-    <div className="space-y-5">
+    <div className="relative space-y-6">
       <section>
-        <p className="mb-2 px-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">Do next</p>
+        <p className={LABEL}>Do next</p>
         <div className="space-y-2">
           <QueueRow href={todayFocusHref("overdue")} icon={Clock} label="Overdue" count={overdueCount} accent control="queue-overdue" />
           <QueueRow href={todayFocusHref("call-today")} icon={Phone} label="Call today" count={callTodayCount} control="queue-call-today" />
@@ -69,18 +70,22 @@ export function TodayQueues({
       </section>
 
       <section>
-        <p className="mb-2 px-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">Quiet leads</p>
+        <p className={LABEL}>Quiet leads</p>
         <QueueRow href={todayFocusHref("quiet")} icon={Bell} label="No touch 14+ days" count={quietCount} control="queue-quiet" />
       </section>
 
       <section>
-        <p className="mb-2 px-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">Messages</p>
-        <Link href="/messages" data-today-control="messages" className={cn("block rounded-[14px] px-3.5 py-3", CARD)}>
+        <p className={LABEL}>Messages</p>
+        <Link
+          href="/messages"
+          data-today-control="messages"
+          className="block rounded-[16px] border border-[#f0e4df] bg-[#fdf6f3] px-3.5 py-3.5 shadow-card"
+        >
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#c45c4a] text-white">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#c45c4a] text-white shadow-[0_4px_10px_rgb(196_92_74_/_0.28)]">
               <MessageCircle size={18} strokeWidth={1.6} fill="currentColor" />
             </div>
-            <p className={cn("min-w-0 flex-1 text-[16px] font-semibold", owedCount > 0 ? "text-[#c45c4a]" : "text-neutral-700")}>
+            <p className={cn("min-w-0 flex-1 font-serif text-[18px] font-semibold", owedCount > 0 ? "text-[#c45c4a]" : "text-neutral-700")}>
               {owedCount === 0 ? "Inbox is clear" : `${owedCount} unread thread${owedCount === 1 ? "" : "s"}`}
             </p>
             <ChevronRight size={18} strokeWidth={1.75} className="shrink-0 text-neutral-300" />
