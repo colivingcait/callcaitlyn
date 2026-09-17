@@ -1,7 +1,7 @@
 // Pure string logic, no imports - same style as event-text-templates.ts.
 //
-// First-touch SMS for New/uncontacted. Caitlyn's confirmed copy, 2026-09-17:
-// Women's REI vs House Hacking Atlanta, {{first_name}} merged at compose.
+// First-touch SMS for New/uncontacted. Caitlyn's locked copy, 2026-09-17:
+// five source-routed templates, {{first_name}} merged at compose.
 // Eventbrite stores lead_source as the event *name* (see process-order.ts),
 // so routing also reads last_event_name, Meetup tags, and eventbrite_account.
 
@@ -19,7 +19,10 @@ export type NewLeadSourceBucket =
 
 export type NewLeadSourceInfo = { bucket: NewLeadSourceBucket; label: string };
 
-export type FirstTouchMeetup = "womens_rei" | "house_hacking" | "other";
+export type FirstTouchSource = "womens_rei" | "house_hacking" | "blinq" | "listing" | "webform" | "other";
+
+/** @deprecated use FirstTouchSource */
+export type FirstTouchMeetup = FirstTouchSource;
 
 export type FirstTouchSignals = {
   leadSource?: string | null;
@@ -35,11 +38,22 @@ export const FIRST_TOUCH_WOMENS_REI =
 export const FIRST_TOUCH_HOUSE_HACKING =
   "Hi {{first_name}}, this is Caitlyn Verdugo, the organizer of the House Hacking Atlanta Meetup. Just wanted to introduce myself and welcome you to the group! Any questions I can answer for you? 🙂";
 
-// Used only when New/uncontacted isn't a Women's REI or House Hacking lead.
+export const FIRST_TOUCH_BLINQ = "Hi {{first_name}}, this is Caitlyn! It was great meeting you! 🙂";
+
+export const FIRST_TOUCH_LISTING =
+  "Hi {{first_name}}, this is Caitlyn Verdugo with KW Metro Atlanta. I saw you checked out the offering on one of my listings - what questions I can answer for you? 🙂";
+
+export const FIRST_TOUCH_WEBFORM =
+  "Hi {{first_name}}, this is Caitlyn Verdugo with KW Metro Atlanta. Thanks for reaching out through my site — just wanted to introduce myself and see what you’re looking for! Any questions I can answer for you? 🙂";
+
+// Last resort only when none of the five sources match.
 export const FIRST_TOUCH_FALLBACK = "Hi {{first_name}}, this is Caitlyn Verdugo…";
 
 const WOMENS_TEXT = /women'?s?\s*(rei|r\.?e\.?i\.?|real estate|investors?)/i;
 const HOUSE_HACK_TEXT = /house\s*hack/i;
+const BLINQ_TEXT = /\bblinq\b/i;
+const LISTING_PAGE_TEXT = /^listing page\b/i;
+const CALLCAITLYN_WEBFORM_TEXT = /callcaitlyn\.com\b|^callcaitlyn\b/i;
 
 function blob(signals: FirstTouchSignals): string {
   return [signals.leadSource, signals.lastEventName].filter(Boolean).join("\n");
@@ -49,10 +63,11 @@ function tagSet(signals: FirstTouchSignals): Set<string> {
   return new Set((signals.tagNames ?? []).map((name) => name.trim().toLowerCase()).filter(Boolean));
 }
 
-export function resolveFirstTouchMeetup(signals: FirstTouchSignals): FirstTouchMeetup {
+export function resolveFirstTouchSource(signals: FirstTouchSignals): FirstTouchSource {
   const tags = tagSet(signals);
   const account = signals.eventbriteAccount?.trim();
   const text = blob(signals);
+  const lead = signals.leadSource?.trim() ?? "";
 
   // Women's REI tag/account wins even when the event name mentions house
   // hacking (a real Eventbrite case — see process-order.ts).
@@ -62,25 +77,52 @@ export function resolveFirstTouchMeetup(signals: FirstTouchSignals): FirstTouchM
   if (account === "house_hacking" || tags.has("house hacking")) return "house_hacking";
   if (HOUSE_HACK_TEXT.test(text)) return "house_hacking";
 
+  if (tags.has("blinq") || BLINQ_TEXT.test(lead) || BLINQ_TEXT.test(text)) return "blinq";
+
+  // Public OM unlock / offer / seller analysis — lead_source is
+  // "Listing page — {nickname}" (see app/listing/[slug]/actions.ts).
+  // Investor Lead is only applied on that unlock path.
+  if (LISTING_PAGE_TEXT.test(lead) || tags.has("investor lead")) return "listing";
+
+  if (CALLCAITLYN_WEBFORM_TEXT.test(lead)) return "webform";
+
   return "other";
 }
 
-export function firstTouchTemplate(signals: FirstTouchSignals): string {
-  const meetup = resolveFirstTouchMeetup(signals);
-  if (meetup === "womens_rei") return FIRST_TOUCH_WOMENS_REI;
-  if (meetup === "house_hacking") return FIRST_TOUCH_HOUSE_HACKING;
-  return FIRST_TOUCH_FALLBACK;
+/** @deprecated use resolveFirstTouchSource */
+export function resolveFirstTouchMeetup(signals: FirstTouchSignals): FirstTouchSource {
+  return resolveFirstTouchSource(signals);
 }
 
-// First SMS compose (no outbound text yet). Meetup copy still fills after
-// a call; the fallback only fills when this is a true first touch.
+export function firstTouchTemplate(signals: FirstTouchSignals): string {
+  switch (resolveFirstTouchSource(signals)) {
+    case "womens_rei":
+      return FIRST_TOUCH_WOMENS_REI;
+    case "house_hacking":
+      return FIRST_TOUCH_HOUSE_HACKING;
+    case "blinq":
+      return FIRST_TOUCH_BLINQ;
+    case "listing":
+      return FIRST_TOUCH_LISTING;
+    case "webform":
+      return FIRST_TOUCH_WEBFORM;
+    default:
+      return FIRST_TOUCH_FALLBACK;
+  }
+}
+
+// First SMS compose (no outbound text yet). A matched source still fills
+// after a call; the last-resort intro only fills when this is a true first touch.
 export function shouldPrefillFirstTouchSms(opts: {
   hasOutboundText: boolean;
   hasPriorOutreach?: boolean;
-  meetup: FirstTouchMeetup;
+  source: FirstTouchSource;
+  /** @deprecated use source */
+  meetup?: FirstTouchSource;
 }): boolean {
   if (opts.hasOutboundText) return false;
-  if (opts.meetup !== "other") return true;
+  const source = opts.source ?? opts.meetup ?? "other";
+  if (source !== "other") return true;
   return !opts.hasPriorOutreach;
 }
 

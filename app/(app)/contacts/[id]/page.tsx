@@ -32,7 +32,7 @@ import { ContactEventHistory } from "@/components/contacts/ContactEventHistory";
 import { listTextTemplates } from "@/lib/data/text-templates";
 import { countRecentTexts } from "@/lib/crm/engagement";
 import { applyMergeFields } from "@/lib/crm/merge-fields";
-import { firstTouchTemplate, resolveFirstTouchMeetup, shouldPrefillFirstTouchSms } from "@/lib/crm/new-lead-text-templates";
+import { firstTouchTemplate, resolveFirstTouchSource, shouldPrefillFirstTouchSms } from "@/lib/crm/new-lead-text-templates";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ContactRecordMobile } from "@/components/contacts/mobile/ContactRecordMobile";
 import { ContactEngageBlock } from "@/components/contacts/ContactEngageBlock";
@@ -66,10 +66,10 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
   const likelihood = computeLikelihood(contact, stages);
   const tagNames = contact.contact_tags.map((ct) => ct.tags?.name).filter((name): name is string => !!name);
   const firstTouchSignals = { leadSource: contact.lead_source, lastEventName: contact.last_event_name, tagNames };
-  const meetup = resolveFirstTouchMeetup(firstTouchSignals);
+  const source = resolveFirstTouchSource(firstTouchSignals);
   const hasOutboundText = activities.some((a) => a.type === "text" && a.direction === "outbound");
   const hasPriorOutreach = activities.some((a) => a.direction === "outbound" && (a.type === "call" || a.type === "text" || a.type === "email"));
-  const firstTouchBody = shouldPrefillFirstTouchSms({ hasOutboundText, hasPriorOutreach, meetup })
+  const firstTouchBody = shouldPrefillFirstTouchSms({ hasOutboundText, hasPriorOutreach, source })
     ? applyMergeFields(firstTouchTemplate(firstTouchSignals), contact)
     : undefined;
 

@@ -2,12 +2,15 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  FIRST_TOUCH_BLINQ,
   FIRST_TOUCH_FALLBACK,
   FIRST_TOUCH_HOUSE_HACKING,
+  FIRST_TOUCH_LISTING,
+  FIRST_TOUCH_WEBFORM,
   FIRST_TOUCH_WOMENS_REI,
   buildNewLeadDraft,
   firstTouchTemplate,
-  resolveFirstTouchMeetup,
+  resolveFirstTouchSource,
   shouldPrefillFirstTouchSms,
 } from "./new-lead-text-templates";
 
@@ -24,21 +27,32 @@ assert.equal(
   FIRST_TOUCH_HOUSE_HACKING,
   "Hi {{first_name}}, this is Caitlyn Verdugo, the organizer of the House Hacking Atlanta Meetup. Just wanted to introduce myself and welcome you to the group! Any questions I can answer for you? 🙂",
 );
+assert.equal(FIRST_TOUCH_BLINQ, "Hi {{first_name}}, this is Caitlyn! It was great meeting you! 🙂");
+assert.equal(
+  FIRST_TOUCH_LISTING,
+  "Hi {{first_name}}, this is Caitlyn Verdugo with KW Metro Atlanta. I saw you checked out the offering on one of my listings - what questions I can answer for you? 🙂",
+);
+assert.equal(
+  FIRST_TOUCH_WEBFORM,
+  "Hi {{first_name}}, this is Caitlyn Verdugo with KW Metro Atlanta. Thanks for reaching out through my site — just wanted to introduce myself and see what you’re looking for! Any questions I can answer for you? 🙂",
+);
 assert.equal(FIRST_TOUCH_FALLBACK, "Hi {{first_name}}, this is Caitlyn Verdugo…");
 
-assert.equal(resolveFirstTouchMeetup({ tagNames: ["Women's REI"] }), "womens_rei");
-assert.equal(resolveFirstTouchMeetup({ eventbriteAccount: "womens_rei" }), "womens_rei");
-assert.equal(resolveFirstTouchMeetup({ leadSource: "Women's Real Estate Investing — August" }), "womens_rei");
-assert.equal(resolveFirstTouchMeetup({ lastEventName: "Women's REI Meetup" }), "womens_rei");
+assert.equal(resolveFirstTouchSource({ tagNames: ["Women's REI"] }), "womens_rei");
+assert.equal(resolveFirstTouchSource({ eventbriteAccount: "womens_rei" }), "womens_rei");
+assert.equal(resolveFirstTouchSource({ leadSource: "Women's Real Estate Investing — August" }), "womens_rei");
+assert.equal(resolveFirstTouchSource({ lastEventName: "Women's REI Meetup" }), "womens_rei");
+assert.equal(resolveFirstTouchSource({ leadSource: "Atlanta Women Investors (Newsletter)" }), "womens_rei");
 
-assert.equal(resolveFirstTouchMeetup({ tagNames: ["House Hacking"] }), "house_hacking");
-assert.equal(resolveFirstTouchMeetup({ eventbriteAccount: "house_hacking" }), "house_hacking");
-assert.equal(resolveFirstTouchMeetup({ leadSource: "House Hacking Site" }), "house_hacking");
-assert.equal(resolveFirstTouchMeetup({ lastEventName: "Financing a House Hack" }), "house_hacking");
+assert.equal(resolveFirstTouchSource({ tagNames: ["House Hacking"] }), "house_hacking");
+assert.equal(resolveFirstTouchSource({ eventbriteAccount: "house_hacking" }), "house_hacking");
+assert.equal(resolveFirstTouchSource({ leadSource: "House Hacking Site" }), "house_hacking");
+assert.equal(resolveFirstTouchSource({ leadSource: "House Hacking Site (Listing Alerts)" }), "house_hacking");
+assert.equal(resolveFirstTouchSource({ lastEventName: "Financing a House Hack" }), "house_hacking");
 
 // Women's tag wins when the event name talks about house hacking.
 assert.equal(
-  resolveFirstTouchMeetup({
+  resolveFirstTouchSource({
     tagNames: ["Women's REI", "House Hacking"],
     leadSource: "House hacking for women",
     eventbriteAccount: "house_hacking",
@@ -46,8 +60,23 @@ assert.equal(
   "womens_rei",
 );
 
-assert.equal(resolveFirstTouchMeetup({ leadSource: "Instagram" }), "other");
-assert.equal(resolveFirstTouchMeetup({ leadSource: "Eventbrite" }), "other");
+assert.equal(resolveFirstTouchSource({ leadSource: "Blinq" }), "blinq");
+assert.equal(resolveFirstTouchSource({ tagNames: ["Blinq"] }), "blinq");
+
+assert.equal(resolveFirstTouchSource({ leadSource: "Listing page — Ponce" }), "listing");
+assert.equal(resolveFirstTouchSource({ leadSource: "Listing page offer — Ponce" }), "listing");
+assert.equal(resolveFirstTouchSource({ leadSource: "Listing page — seller analysis request" }), "listing");
+assert.equal(resolveFirstTouchSource({ tagNames: ["Investor Lead"] }), "listing");
+
+assert.equal(resolveFirstTouchSource({ leadSource: "CallCaitlyn.com (Contact Form)" }), "webform");
+assert.equal(resolveFirstTouchSource({ leadSource: "CallCaitlyn.com (Work With Me)" }), "webform");
+assert.equal(resolveFirstTouchSource({ leadSource: "callcaitlyn (contact)" }), "webform");
+
+assert.equal(resolveFirstTouchSource({ leadSource: "Instagram" }), "other");
+assert.equal(resolveFirstTouchSource({ leadSource: "Eventbrite" }), "other");
+assert.equal(resolveFirstTouchSource({ leadSource: "CoLivingCait (Contact Form)" }), "other");
+assert.equal(resolveFirstTouchSource({ leadSource: "Women's Coliving Summit (Newsletter)" }), "other");
+assert.equal(resolveFirstTouchSource({ leadSource: "Referral partner (agent)" }), "other");
 
 const womensFilled = buildNewLeadDraft(leandra.first_name, "Women's REI Meetup");
 assert.equal(
@@ -56,19 +85,27 @@ assert.equal(
 );
 assert.equal(womensFilled.includes("{{first_name}}"), false);
 
-const hhFilled = buildNewLeadDraft(leandra.first_name, "House Hacking Atlanta Meetup");
 assert.equal(
-  hhFilled,
+  buildNewLeadDraft(leandra.first_name, "House Hacking Atlanta Meetup"),
   "Hi Leandra, this is Caitlyn Verdugo, the organizer of the House Hacking Atlanta Meetup. Just wanted to introduce myself and welcome you to the group! Any questions I can answer for you? 🙂",
+);
+assert.equal(buildNewLeadDraft(leandra.first_name, "Blinq"), "Hi Leandra, this is Caitlyn! It was great meeting you! 🙂");
+assert.equal(
+  buildNewLeadDraft(leandra.first_name, "Listing page — Ponce"),
+  "Hi Leandra, this is Caitlyn Verdugo with KW Metro Atlanta. I saw you checked out the offering on one of my listings - what questions I can answer for you? 🙂",
+);
+assert.equal(
+  buildNewLeadDraft(leandra.first_name, "CallCaitlyn.com (Contact Form)"),
+  "Hi Leandra, this is Caitlyn Verdugo with KW Metro Atlanta. Thanks for reaching out through my site — just wanted to introduce myself and see what you’re looking for! Any questions I can answer for you? 🙂",
 );
 
 assert.equal(buildNewLeadDraft(leandra.first_name, "Instagram"), "Hi Leandra, this is Caitlyn Verdugo…");
 assert.equal(firstTouchTemplate({ leadSource: "Instagram" }), FIRST_TOUCH_FALLBACK);
 
-assert.equal(shouldPrefillFirstTouchSms({ hasOutboundText: true, meetup: "womens_rei" }), false);
-assert.equal(shouldPrefillFirstTouchSms({ hasOutboundText: false, meetup: "womens_rei", hasPriorOutreach: true }), true);
-assert.equal(shouldPrefillFirstTouchSms({ hasOutboundText: false, meetup: "other", hasPriorOutreach: true }), false);
-assert.equal(shouldPrefillFirstTouchSms({ hasOutboundText: false, meetup: "other", hasPriorOutreach: false }), true);
+assert.equal(shouldPrefillFirstTouchSms({ hasOutboundText: true, source: "womens_rei" }), false);
+assert.equal(shouldPrefillFirstTouchSms({ hasOutboundText: false, source: "blinq", hasPriorOutreach: true }), true);
+assert.equal(shouldPrefillFirstTouchSms({ hasOutboundText: false, source: "other", hasPriorOutreach: true }), false);
+assert.equal(shouldPrefillFirstTouchSms({ hasOutboundText: false, source: "other", hasPriorOutreach: false }), true);
 
 const root = join(process.cwd());
 function read(rel: string) {
