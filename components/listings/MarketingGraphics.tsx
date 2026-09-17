@@ -96,7 +96,7 @@ function useCanvasLayout(canvasRef: React.RefObject<HTMLCanvasElement | null>, w
 }
 
 function wrapText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number) {
-  const words = text.split(" ");
+  const words = (text ?? "").split(" ");
   let line = "";
   let curY = y;
   for (const word of words) {
