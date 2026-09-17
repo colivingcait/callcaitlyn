@@ -282,6 +282,10 @@ export async function createListingSend(input: {
   message: string;
   audience: "all" | "not_contacted" | "non_repliers";
   sendImmediately: boolean;
+  // Text path: the composer splits Fresh vs Recent and sends one bucket
+  // per confirm. IDs must belong to this listing; opted-out / no-phone
+  // rows are still dropped here so a stale client list can't sneak them in.
+  listingAgentIds?: string[];
 }): Promise<ActionResult<{ sendId: string; recipientCount: number }>> {
   const supabase = await createClient();
   const {
@@ -293,7 +297,13 @@ export async function createListingSend(input: {
 
   const { data: agents } = await supabase.from("listing_agents").select("id, state, email, phone").eq("listing_id", input.listingId);
   const filter = AUDIENCE_FILTER[input.audience];
-  const recipients = (agents ?? []).filter((a) => a.state !== "opted_out" && filter(a.state) && (input.channel === "email" ? !!a.email : !!a.phone));
+  const allowedIds = input.listingAgentIds ? new Set(input.listingAgentIds) : null;
+  const recipients = (agents ?? []).filter((a) => {
+    if (a.state === "opted_out") return false;
+    if (input.channel === "email" ? !a.email : !a.phone) return false;
+    if (allowedIds) return allowedIds.has(a.id);
+    return filter(a.state);
+  });
 
   if (recipients.length === 0) return { ok: false, error: "No one in this audience can receive that channel" };
 

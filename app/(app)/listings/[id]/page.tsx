@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { getListingDetail, getSendProgress } from "@/lib/data/listings";
+import { fetchListingAgentTextRecency } from "@/lib/data/listing-outbound-texts";
 import { createClient } from "@/lib/supabase/server";
 import { formatCurrency, cn } from "@/lib/utils";
 import { STATUS_LABEL } from "@/lib/listings/status";
@@ -40,6 +41,10 @@ export default async function ListingDetailPage({ params, searchParams }: { para
 
   const sendProgressMap = activeTab === "rp" ? await getSendProgress(sends.map((s) => s.id)) : new Map();
   const sendProgress = Object.fromEntries(sendProgressMap);
+  const textRecency =
+    activeTab === "rp"
+      ? await fetchListingAgentTextRecency(listing.id, agents)
+      : { lastOutboundAtByAgentId: {}, queuedOnThisListing: [] };
 
   const specs = [listing.beds != null && listing.baths != null ? `${listing.beds} bd / ${listing.baths} ba` : null, listing.property_type, listing.sqft ? `${listing.sqft.toLocaleString()} sqft` : null]
     .filter(Boolean)
@@ -122,6 +127,8 @@ export default async function ListingDetailPage({ params, searchParams }: { para
                 listPrice={listing.list_price ? formatCurrency(listing.list_price) : null}
                 zillowUrl={listing.zillow_url}
                 agents={agents}
+                lastOutboundAtByAgentId={textRecency.lastOutboundAtByAgentId}
+                queuedOnThisListing={textRecency.queuedOnThisListing}
               />
 
               {/* Reporting - status at a glance, then the send-by-send log. */}
