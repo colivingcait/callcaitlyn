@@ -133,7 +133,6 @@ export async function listTextableContacts(): Promise<TextableContact[]> {
     .from("contacts")
     .select("id, first_name, last_name, phone")
     .eq("archived", false)
-    .eq("spam", false)
     .not("phone", "is", null)
     .order("first_name", { ascending: true });
   return (data ?? []) as TextableContact[];

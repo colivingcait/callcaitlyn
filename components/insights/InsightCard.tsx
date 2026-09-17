@@ -45,7 +45,7 @@ export function InsightCard({
   if (dismissed) return null;
 
   return (
-    <div className={`overflow-hidden rounded-2xl border border-[#eadfd6] bg-[#fffbf8] shadow-card ${muted ? "opacity-60" : ""}`}>
+    <div className={`overflow-hidden rounded-2xl border border-[#ebe9e7] bg-white ${muted ? "opacity-60" : ""}`}>
       <div className="flex items-center gap-3 px-[18px] py-4">
         <span className="mt-0.5 shrink-0 text-neutral-500">{icon}</span>
         <button

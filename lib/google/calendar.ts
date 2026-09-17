@@ -2,7 +2,6 @@ import { google } from "googleapis";
 import { randomUUID } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAuthorizedGoogleClient } from "@/lib/google/oauth";
-import { dateInputToAppIso } from "@/lib/format-time";
 
 export type CreateMeetingInput = {
   // null when the only contact info on hand is a phone number (e.g. a
@@ -27,54 +26,17 @@ export type UpcomingCalendarEvent = {
   endAt: string;
   location: string | null;
   attendeeEmails: string[];
-  htmlLink?: string | null;
-  allDay?: boolean;
 };
 
-export type CalendarFeedStatus = "ok" | "disconnected" | "needs_reconnect";
-
-export type CalendarFeed =
-  | { status: "ok"; events: UpcomingCalendarEvent[] }
-  | { status: "disconnected"; events: [] }
-  | { status: "needs_reconnect"; events: [] };
-
-function mapCalendarEvent(e: {
-  id?: string | null;
-  summary?: string | null;
-  status?: string | null;
-  start?: { dateTime?: string | null; date?: string | null } | null;
-  end?: { dateTime?: string | null; date?: string | null } | null;
-  location?: string | null;
-  attendees?: { email?: string | null }[] | null;
-  htmlLink?: string | null;
-}): UpcomingCalendarEvent | null {
-  if (e.status === "cancelled") return null;
-  const dateTime = e.start?.dateTime;
-  const dateOnly = e.start?.date;
-  if (!dateTime && !dateOnly) return null;
-  const startAt = dateTime ?? dateInputToAppIso(dateOnly!);
-  const endAt = e.end?.dateTime ?? (e.end?.date ? dateInputToAppIso(e.end.date) : startAt);
-  return {
-    id: e.id ?? "",
-    title: e.summary ?? "Untitled event",
-    startAt,
-    endAt,
-    location: e.location ?? null,
-    attendeeEmails: (e.attendees ?? []).map((a) => a.email).filter((email): email is string => !!email),
-    htmlLink: e.htmlLink ?? null,
-    allDay: !dateTime,
-  };
-}
-
-async function listPrimaryCalendarEvents(
-  admin: SupabaseClient,
-  ownerId: string,
-  timeMin: string,
-  timeMax: string,
-  includeAllDay: boolean,
-): Promise<CalendarFeed> {
+// Read-only counterpart to createMeetingInvite above - nothing in this
+// app has ever listed calendar events back, only created them. Used by
+// the prep-sheet cron to find meetings starting soon; singleEvents
+// expands recurring events into individual instances (otherwise a
+// weekly-recurring meeting would show as one event with the series'
+// original start time, not its next actual occurrence).
+export async function listUpcomingEvents(admin: SupabaseClient, ownerId: string, timeMin: string, timeMax: string): Promise<UpcomingCalendarEvent[]> {
   const client = await getAuthorizedGoogleClient(admin, ownerId);
-  if (!client) return { status: "disconnected", events: [] };
+  if (!client) return [];
 
   const calendar = google.calendar({ version: "v3", auth: client });
   try {
@@ -84,36 +46,22 @@ async function listPrimaryCalendarEvents(
       timeMax,
       singleEvents: true,
       orderBy: "startTime",
-      maxResults: 50,
     });
 
-    const events = (data.items ?? [])
-      .map(mapCalendarEvent)
-      .filter((e): e is UpcomingCalendarEvent => !!e)
-      .filter((e) => includeAllDay || !e.allDay);
-
-    return { status: "ok", events };
+    return (data.items ?? [])
+      .filter((e) => e.status !== "cancelled" && e.start?.dateTime)
+      .map((e) => ({
+        id: e.id ?? "",
+        title: e.summary ?? "Untitled event",
+        startAt: e.start!.dateTime!,
+        endAt: e.end?.dateTime ?? e.start!.dateTime!,
+        location: e.location ?? null,
+        attendeeEmails: (e.attendees ?? []).map((a) => a.email).filter((email): email is string => !!email),
+      }));
   } catch (err) {
     console.error("Google Calendar list failed", err);
-    return { status: "needs_reconnect", events: [] };
+    return [];
   }
-}
-
-// Read-only counterpart to createMeetingInvite above. Used by the
-// prep-sheet cron to find meetings starting soon; singleEvents expands
-// recurring events into individual instances (otherwise a weekly-
-// recurring meeting would show as one event with the series' original
-// start time, not its next actual occurrence). Timed events only — the
-// cron matches on a real start datetime.
-export async function listUpcomingEvents(admin: SupabaseClient, ownerId: string, timeMin: string, timeMax: string): Promise<UpcomingCalendarEvent[]> {
-  const feed = await listPrimaryCalendarEvents(admin, ownerId, timeMin, timeMax, false);
-  return feed.events;
-}
-
-// Today home: same helper, but we need to tell the UI whether Google is
-// missing/needs a reconnect so we never fake CRM meetups as calendar rows.
-export async function listTodayGoogleEvents(admin: SupabaseClient, ownerId: string, timeMin: string, timeMax: string): Promise<CalendarFeed> {
-  return listPrimaryCalendarEvents(admin, ownerId, timeMin, timeMax, true);
 }
 
 // Google only attaches a Meet link to an event that explicitly requests

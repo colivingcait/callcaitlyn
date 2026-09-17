@@ -147,7 +147,7 @@ export function InboxMobile({
         ) : (
           <>
             {owedVisible.length > 0 && (
-              <StickyGroupHeader label="Waiting on you" count={owedVisible.length} collapsible sectionKey="inbox:waiting" defaultOpen>
+              <StickyGroupHeader label="Waiting on you" count={owedVisible.length}>
                 <div className="divide-y divide-neutral-100">
                   {owedVisible.map((c) => (
                     <InboxRow key={c.contact.id} conversation={c} ownerId={ownerId} openRowId={openRowId} onOpenChange={setOpenRowId} filter={filter} />
@@ -156,7 +156,7 @@ export function InboxMobile({
               </StickyGroupHeader>
             )}
             {notOwedVisible.length > 0 && (
-              <StickyGroupHeader label="Nothing owed" count={notOwedVisible.length} collapsible sectionKey="inbox:nothing-owed" defaultOpen={false}>
+              <StickyGroupHeader label="Nothing owed" count={notOwedVisible.length}>
                 <div className="divide-y divide-neutral-100">
                   {notOwedVisible.map((c) => (
                     <InboxRow key={c.contact.id} conversation={c} ownerId={ownerId} openRowId={openRowId} onOpenChange={setOpenRowId} filter={filter} />
