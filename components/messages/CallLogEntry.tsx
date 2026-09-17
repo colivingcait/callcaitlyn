@@ -24,7 +24,7 @@ export function CallLogEntry({ activity }: { activity: Activity }) {
   return (
     <div className="flex flex-col items-center gap-2 py-2">
       {/* Mobile: full-width card, not a small pill */}
-      <div className="flex w-full items-center gap-3 rounded-[16px] border border-[#ebe9e7] bg-white px-3.5 py-3 md:hidden">
+      <div className="flex w-full items-center gap-3 rounded-[16px] border border-[#ebe9e7] bg-white px-3.5 py-3 lg:hidden">
         <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full bg-neutral-100 text-neutral-500">
           <Icon size={18} />
         </div>
@@ -39,7 +39,7 @@ export function CallLogEntry({ activity }: { activity: Activity }) {
       </div>
 
       {/* Desktop: unchanged small pill */}
-      <div className="hidden max-w-full items-center gap-2 rounded-full bg-neutral-100 px-3.5 py-1.5 text-xs text-neutral-600 md:flex">
+      <div className="hidden max-w-full items-center gap-2 rounded-full bg-neutral-100 px-3.5 py-1.5 text-xs text-neutral-600 lg:flex">
         <Icon size={13} className="shrink-0 text-neutral-400" />
         <span className="min-w-0 truncate">{activity.body ?? "Call"}</span>
         <span className="shrink-0 text-neutral-400">· {formatLocal(activity.occurred_at, "h:mm a")}</span>

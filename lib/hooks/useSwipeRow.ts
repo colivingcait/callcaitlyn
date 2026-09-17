@@ -13,6 +13,10 @@ export type SwipeRowAction = { icon: React.ComponentType<{ size?: number }>; lab
 // vertical means bailing out entirely and letting the row's native
 // scroll take over - this is the actual mechanism behind "must not
 // swallow vertical scroll."
+//
+// Do NOT setPointerCapture on pointerdown. Capturing immediately on an
+// inner <a> swallows the subsequent click, so "open this contact" never
+// fires. Capture only after the gesture is confirmed horizontal.
 export function useSwipeRow({
   rowId,
   openRowId,
@@ -35,6 +39,7 @@ export function useSwipeRow({
   const startY = useRef(0);
   const axisLocked = useRef<"x" | "y" | null>(null);
   const dragging = useRef(false);
+  const didSwipe = useRef(false);
   const [liveTranslate, setLiveTranslate] = useState<number | null>(null);
 
   const isOpen = openRowId === rowId;
@@ -51,7 +56,7 @@ export function useSwipeRow({
     startY.current = e.clientY;
     axisLocked.current = null;
     dragging.current = true;
-    (e.target as Element).setPointerCapture?.(e.pointerId);
+    didSwipe.current = false;
   }
 
   function onPointerMove(e: React.PointerEvent) {
@@ -66,6 +71,8 @@ export function useSwipeRow({
         reset();
         return;
       }
+      didSwipe.current = true;
+      e.currentTarget.setPointerCapture?.(e.pointerId);
     }
     if (axisLocked.current !== "x") return;
 
@@ -80,22 +87,30 @@ export function useSwipeRow({
       return;
     }
     const current = liveTranslate ?? (isOpen ? -maxReveal : 0);
+    const swiped = axisLocked.current === "x";
     dragging.current = false;
     axisLocked.current = null;
 
-    if (Math.abs(current) >= commitFirstAction) {
+    if (swiped && Math.abs(current) >= commitFirstAction) {
       setLiveTranslate(null);
       onOpenChange(null);
       actions[0]?.onClick();
       return;
     }
-    if (Math.abs(current) >= commitThreshold) {
+    if (swiped && Math.abs(current) >= commitThreshold) {
       setLiveTranslate(null);
       onOpenChange(rowId);
       return;
     }
     setLiveTranslate(null);
-    onOpenChange(null);
+    if (openRowId === rowId) onOpenChange(null);
+  }
+
+  function onClickCapture(e: React.MouseEvent) {
+    if (!didSwipe.current) return;
+    didSwipe.current = false;
+    e.preventDefault();
+    e.stopPropagation();
   }
 
   return {
@@ -103,7 +118,7 @@ export function useSwipeRow({
     translateX,
     maxReveal,
     actionWidth,
-    handlers: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel: onPointerUp },
+    handlers: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel: onPointerUp, onClickCapture },
     transitionStyle: reducedMotion ? { transition: "none" } : { transition: liveTranslate === null ? "transform 180ms ease-out" : "none" },
   };
 }

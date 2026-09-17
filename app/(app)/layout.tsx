@@ -42,26 +42,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   };
 
   return (
-    // md:h-dvh + md:overflow-hidden on this row and the inner column cap
-    // the desktop app shell to exactly the viewport, so the sidebar is no
-    // longer a normal flex child that scrolls away with a tall page -
-    // <main>'s own md:overflow-y-auto becomes the only thing that
-    // scrolls. Confirmed on Contacts first (which layers its own sticky
-    // sub-header inside main's scroll) before rolling out here. Mobile
-    // keeps its plain min-h-dvh document scroll (BottomNav is already
-    // fixed, independent of this either way).
-    <div className="flex min-h-dvh md:h-dvh md:overflow-hidden">
-      <Suspense fallback={<aside className="hidden w-[220px] shrink-0 border-r border-[#eadfd6] bg-[#f7f1ea] md:flex" />}>
+    // Desktop shell starts at lg (1024px) — not md (768). Below that the
+    // phone 5-tab bar stays; at 1024+ the sidebar is a real app chrome
+    // and <main> is the only scroller (lg:h-dvh + overflow-hidden).
+    <div className="flex min-h-dvh lg:h-dvh lg:overflow-hidden">
+      <Suspense fallback={<aside className="hidden w-[220px] shrink-0 border-r border-[#eadfd6] bg-[#f7f1ea] lg:flex" />}>
         <Sidebar userEmail={user?.email} counts={navCounts} />
       </Suspense>
-      <div className="flex min-h-dvh min-w-0 flex-1 flex-col md:h-dvh md:overflow-hidden">
-        <main className="flex-1 bg-[#f7f1ea] pb-[calc(var(--app-bottom-nav)+12px)] md:min-h-0 md:overflow-y-auto md:pb-8">{children}</main>
+      <div className="flex min-h-dvh min-w-0 flex-1 flex-col lg:h-dvh lg:overflow-hidden">
+        <main className="flex-1 bg-[#f7f1ea] pb-[calc(var(--app-bottom-nav)+12px)] lg:min-h-0 lg:overflow-y-auto lg:pb-8">{children}</main>
       </div>
       {/* Mobile's FAB slot is Today-only-Log now (LogPill below); New
           contact lives on the Contacts header, New task in the More sheet,
           so QuickAddButton stays desktop-only. Commissions and Settings
           are More-only — no duplicate mobile header icons. */}
-      <div className="hidden md:block">
+      <div className="hidden lg:block">
         <QuickAddButton />
       </div>
       {user && <LogPill ownerId={user.id} />}

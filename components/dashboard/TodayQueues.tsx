@@ -48,6 +48,7 @@ export function TodayQueues({
   quietCount,
   messages,
   spamFilteredCount = 0,
+  wide = false,
 }: {
   overdueCount: number;
   callTodayCount: number;
@@ -55,60 +56,83 @@ export function TodayQueues({
   quietCount: number;
   messages: WorklistPerson[];
   spamFilteredCount?: number;
+  wide?: boolean;
 }) {
   const owedCount = messages.length;
 
+  const doNext = (
+    <section>
+      <p className={LABEL}>Do next</p>
+      <div className={wide ? "grid grid-cols-3 gap-3" : "space-y-2"}>
+        <QueueRow href={todayFocusHref("overdue")} icon={Clock} label="Overdue" count={overdueCount} accent control="queue-overdue" />
+        <QueueRow href={todayFocusHref("call-today")} icon={Phone} label="Call today" count={callTodayCount} control="queue-call-today" />
+        <QueueRow href={todayFocusHref("new")} icon={UserPlus} label="New / uncontacted" count={newUncontactedCount} control="queue-new" />
+      </div>
+    </section>
+  );
+
+  const quiet = (
+    <section>
+      <p className={LABEL}>Quiet leads</p>
+      <QueueRow href={todayFocusHref("quiet")} icon={Bell} label="No touch 14+ days" count={quietCount} control="queue-quiet" />
+    </section>
+  );
+
+  const inbox = (
+    <section>
+      <p className={LABEL}>Messages</p>
+      <Link
+        href="/messages"
+        data-today-control="messages"
+        className="block rounded-[16px] border border-[#f0e4df] bg-[#fdf6f3] px-3.5 py-3.5 shadow-card"
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#c45c4a] text-white shadow-[0_4px_10px_rgb(196_92_74_/_0.28)]">
+            <MessageCircle size={18} strokeWidth={1.6} fill="currentColor" />
+          </div>
+          <p className={cn("min-w-0 flex-1 font-serif text-[18px] font-semibold", owedCount > 0 ? "text-[#c45c4a]" : "text-neutral-700")}>
+            {owedCount === 0 ? "Inbox is clear" : `${owedCount} unread thread${owedCount === 1 ? "" : "s"}`}
+          </p>
+          <ChevronRight size={18} strokeWidth={1.75} className="shrink-0 text-neutral-300" />
+        </div>
+        {messages.slice(0, wide ? 5 : 2).map((m) => (
+          <p key={m.id} className="mt-1 truncate pl-[52px] text-[14px] text-neutral-500">
+            <span className="text-neutral-800">{m.name}</span>
+            {m.meta ? ` · ${m.meta}` : ""}
+          </p>
+        ))}
+      </Link>
+      {spamFilteredCount > 0 && (
+        <Link
+          href={inboxHref({ spam: true })}
+          data-today-control="spam-filtered"
+          className="mt-2 flex min-h-11 items-center gap-2 px-1 text-[13px] text-neutral-400"
+        >
+          <ShieldAlert size={14} className="shrink-0" />
+          Spam filtered · {spamFilteredCount}
+          <ChevronRight size={14} className="ml-auto shrink-0 text-neutral-300" />
+        </Link>
+      )}
+    </section>
+  );
+
+  if (wide) {
+    return (
+      <div className="relative space-y-8">
+        {doNext}
+        <div className="grid grid-cols-2 gap-8">
+          {quiet}
+          {inbox}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative space-y-6">
-      <section>
-        <p className={LABEL}>Do next</p>
-        <div className="space-y-2">
-          <QueueRow href={todayFocusHref("overdue")} icon={Clock} label="Overdue" count={overdueCount} accent control="queue-overdue" />
-          <QueueRow href={todayFocusHref("call-today")} icon={Phone} label="Call today" count={callTodayCount} control="queue-call-today" />
-          <QueueRow href={todayFocusHref("new")} icon={UserPlus} label="New / uncontacted" count={newUncontactedCount} control="queue-new" />
-        </div>
-      </section>
-
-      <section>
-        <p className={LABEL}>Quiet leads</p>
-        <QueueRow href={todayFocusHref("quiet")} icon={Bell} label="No touch 14+ days" count={quietCount} control="queue-quiet" />
-      </section>
-
-      <section>
-        <p className={LABEL}>Messages</p>
-        <Link
-          href="/messages"
-          data-today-control="messages"
-          className="block rounded-[16px] border border-[#f0e4df] bg-[#fdf6f3] px-3.5 py-3.5 shadow-card"
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#c45c4a] text-white shadow-[0_4px_10px_rgb(196_92_74_/_0.28)]">
-              <MessageCircle size={18} strokeWidth={1.6} fill="currentColor" />
-            </div>
-            <p className={cn("min-w-0 flex-1 font-serif text-[18px] font-semibold", owedCount > 0 ? "text-[#c45c4a]" : "text-neutral-700")}>
-              {owedCount === 0 ? "Inbox is clear" : `${owedCount} unread thread${owedCount === 1 ? "" : "s"}`}
-            </p>
-            <ChevronRight size={18} strokeWidth={1.75} className="shrink-0 text-neutral-300" />
-          </div>
-          {messages.slice(0, 2).map((m) => (
-            <p key={m.id} className="mt-1 truncate pl-[52px] text-[14px] text-neutral-500">
-              <span className="text-neutral-800">{m.name}</span>
-              {m.meta ? ` · ${m.meta}` : ""}
-            </p>
-          ))}
-        </Link>
-        {spamFilteredCount > 0 && (
-          <Link
-            href={inboxHref({ spam: true })}
-            data-today-control="spam-filtered"
-            className="mt-2 flex min-h-11 items-center gap-2 px-1 text-[13px] text-neutral-400"
-          >
-            <ShieldAlert size={14} className="shrink-0" />
-            Spam filtered · {spamFilteredCount}
-            <ChevronRight size={14} className="ml-auto shrink-0 text-neutral-300" />
-          </Link>
-        )}
-      </section>
+      {doNext}
+      {quiet}
+      {inbox}
     </div>
   );
 }

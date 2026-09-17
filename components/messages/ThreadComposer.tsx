@@ -32,12 +32,12 @@ export function ThreadComposer({
   const bottom = keyboardOpen ? `max(${keyboardInset}px, var(--app-bottom-nav))` : undefined;
 
   const chrome =
-    "fixed inset-x-0 z-50 border-t border-neutral-200 bg-white/95 px-3 py-2.5 backdrop-blur md:sticky md:bottom-0 md:bg-white/95";
+    "fixed inset-x-0 z-50 border-t border-[#eadfd6] bg-[#fffbf8]/95 px-3 py-2.5 backdrop-blur lg:sticky lg:bottom-0 lg:bg-[#fffbf8]/95";
 
   if (!phone) {
     return (
       <div
-        className={`${chrome} bottom-[var(--app-bottom-nav)] px-4 py-3 text-center text-xs text-neutral-400 md:relative md:bottom-0`}
+        className={`${chrome} bottom-[var(--app-bottom-nav)] px-4 py-3 text-center text-xs text-neutral-400 lg:relative lg:bottom-0`}
         style={bottom != null ? { bottom } : undefined}
       >
         This contact has no phone number on file.
@@ -74,7 +74,7 @@ export function ThreadComposer({
       style={bottom != null ? { bottom } : undefined}
     >
       {textTemplates && textTemplates.length > 0 && (
-        <div className="mb-2 flex gap-1.5 overflow-x-auto md:hidden">
+        <div className="mb-2 flex gap-1.5 overflow-x-auto lg:hidden">
           {textTemplates.slice(0, 3).map((t) => (
             <button
               key={t.id}

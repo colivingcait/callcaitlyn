@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { X, Download, Plus } from "lucide-react";
 import {
   listContacts,
@@ -53,28 +54,27 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
 
   return (
     <>
-      <PeopleMobile
-        contacts={contacts}
-        stages={stages}
-        tags={tags}
-        leadSources={leadSources}
-        eventNames={eventNames}
-        registeredEventNames={registeredEventNames}
-        segments={segments}
-        sequences={sequences.map((s) => ({ id: s.id, name: s.name, type: s.type }))}
-        ownerId={user?.id ?? ""}
-        lastActivityLabels={Object.fromEntries(lastActivityLabels)}
-      />
-      {/* Now that <main> itself (app/(app)/layout.tsx) is the page's one
-          scroll container, this header/filters/segment-bar block just
-          needs to stick to the top of that scroll instead of owning its
-          own nested scrollbar - one scrolling region for the page,
-          not two fighting each other. */}
-      <div className="mx-auto hidden max-w-3xl md:block">
-      <div className="sticky top-0 z-10 bg-[#fafaf9]">
-        <div className="flex items-start justify-between gap-3 px-4 pt-6 pb-2 sm:px-0">
+      <Suspense fallback={<div className="px-4 py-8 text-[15px] text-neutral-400 lg:hidden">Loading contacts…</div>}>
+        <PeopleMobile
+          contacts={contacts}
+          stages={stages}
+          tags={tags}
+          leadSources={leadSources}
+          eventNames={eventNames}
+          registeredEventNames={registeredEventNames}
+          segments={segments}
+          sequences={sequences.map((s) => ({ id: s.id, name: s.name, type: s.type }))}
+          ownerId={user?.id ?? ""}
+          lastActivityLabels={Object.fromEntries(lastActivityLabels)}
+        />
+      </Suspense>
+      {/* Desktop list uses the full main column at lg+, not a phone-width
+          max-w-3xl. Mobile PeopleMobile is lg:hidden so the two never stack. */}
+      <div className="mx-auto hidden w-full max-w-[1400px] px-8 lg:block">
+      <div className="sticky top-0 z-10 bg-[#f7f1ea]">
+        <div className="flex items-start justify-between gap-3 pt-8 pb-3">
           <div>
-            <h1 className="font-serif text-2xl font-semibold leading-9 text-neutral-900 sm:text-[28px]">Contacts</h1>
+            <h1 className="font-display text-[32px] font-semibold leading-9 tracking-[-0.03em] text-neutral-900">Contacts</h1>
             <p className="mt-1.5 text-[15px] leading-[22px] text-neutral-600">
               {contacts.length} people · {withPhoneCount} have a phone number you can text. Lists are the chips below. Deal board:{" "}
               <Link href="/pipeline" className="font-medium text-brand-700 hover:underline">
@@ -100,7 +100,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
           </div>
         </div>
         {filters.leadDateWithinDays && (
-          <div className="mx-4 mb-2 flex items-center justify-between gap-2 rounded-xl bg-amber-50 px-3.5 py-2.5 text-sm text-amber-800">
+          <div className="mb-2 flex items-center justify-between gap-2 rounded-xl bg-amber-50 px-3.5 py-2.5 text-sm text-amber-800">
             <span>
               Showing new leads from the last {filters.leadDateWithinDays} day{filters.leadDateWithinDays === 1 ? "" : "s"}
             </span>
@@ -118,7 +118,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
         />
         {user && <SegmentBar segments={segments} ownerId={user.id} />}
       </div>
-      <div className="bg-white sm:bg-transparent">
+      <div className="bg-transparent pb-8">
         <ContactsList
           contacts={contacts}
           tags={tags}

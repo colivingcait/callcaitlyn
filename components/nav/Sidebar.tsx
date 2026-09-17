@@ -24,7 +24,7 @@ export function Sidebar({ userEmail, counts = {} }: { userEmail?: string | null;
   const countFor = countForCounts(counts);
 
   return (
-    <aside className="hidden w-[220px] shrink-0 flex-col border-r border-[#eadfd6] bg-[#f7f1ea] px-3 py-[22px] md:flex">
+    <aside className="hidden w-[220px] shrink-0 flex-col border-r border-[#eadfd6] bg-[#f7f1ea] px-3 py-[22px] lg:flex">
       <div className="px-2.5 pb-[22px]">
         <BrandWordmark />
         {userEmail && <p className="mt-0.5 truncate text-sm text-neutral-400">{userEmail}</p>}

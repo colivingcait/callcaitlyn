@@ -67,10 +67,10 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
           listingRepliesCount={listingRepliesCount}
         />
       )}
-      <div className={hidden ? "mx-auto max-w-2xl overflow-x-hidden" : "mx-auto hidden max-w-2xl overflow-x-hidden md:block"}>
-      <div className="flex items-start justify-between gap-3 px-4 pt-6 pb-4">
+      <div className={hidden ? "mx-auto w-full max-w-[1400px] overflow-x-hidden px-8" : "mx-auto hidden w-full max-w-[1400px] overflow-x-hidden px-8 lg:block"}>
+      <div className="flex items-start justify-between gap-3 pt-8 pb-4">
         <div>
-          <h1 className="font-serif text-2xl font-semibold text-neutral-900">{hidden ? "Hidden threads" : "Messages"}</h1>
+          <h1 className="font-display text-[32px] font-semibold tracking-[-0.03em] text-neutral-900">{hidden ? "Hidden threads" : "Messages"}</h1>
           <p className="mt-0.5 text-[15px] leading-[22px] text-neutral-600">
             {hidden
               ? "Spam/trash leads you've hidden from the inbox."

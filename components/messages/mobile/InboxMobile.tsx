@@ -76,10 +76,10 @@ export function InboxMobile({
   const notOwedVisible = visible.filter((c) => !c.owed);
 
   return (
-    <div className="pb-4 md:hidden">
+    <div className="pb-4 lg:hidden">
       <div className="flex items-start justify-between gap-3 px-4 pt-5 pb-3">
         <div>
-          <p className="font-serif text-2xl font-semibold text-neutral-900">Messages</p>
+          <p className="font-display text-[28px] font-semibold tracking-[-0.02em] text-neutral-900">Messages</p>
           <p className="mt-0.5 text-[15px] text-neutral-500">
             {owedCount > 0 ? `${owedCount} ${owedCount === 1 ? "person is" : "people are"} waiting on you.` : "Nothing waiting on you."}
           </p>

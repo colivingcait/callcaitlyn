@@ -103,7 +103,7 @@ export async function PipelineBoard({
       />
       <StageJumpChips stages={ordered.map((s) => ({ ...s, count: rowsForStage(s, byStage.get(s.id) ?? [], extras).length }))} />
 
-      <div className="space-y-3 px-4 pb-8 md:px-6">
+      <div className="space-y-3 px-4 pb-8 lg:px-8">
         {ordered.map((stage) => {
           const items = byStage.get(stage.id) ?? [];
           const rows = rowsForStage(stage, items, extras);
@@ -112,7 +112,7 @@ export async function PipelineBoard({
           return (
             <div key={stage.id} id={`pipeline-stage-${stage.id}`} style={{ scrollMarginTop: 130 }}>
               {/* Mobile: StickyGroupHeader + plain rows */}
-              <div className="rounded-[16px] border border-[#ebe9e7] bg-white md:hidden">
+              <div className="rounded-[16px] border border-[#ebe9e7] bg-white lg:hidden">
                 <StickyGroupHeader
                   label={stage.name}
                   count={rows.length}
@@ -135,7 +135,7 @@ export async function PipelineBoard({
               </div>
 
               {/* Desktop: unchanged Section + PipelineCard */}
-              <div className="hidden md:block">
+              <div className="hidden lg:block">
                 <Section
                   sectionKey={`pipeline:stage:${stage.id}`}
                   title={stage.name}
@@ -162,7 +162,7 @@ export async function PipelineBoard({
             </div>
           );
         })}
-        <p className="hidden px-0.5 pt-2 text-[15px] leading-[22px] text-neutral-500 md:block">
+        <p className="hidden px-0.5 pt-2 text-[15px] leading-[22px] text-neutral-500 lg:block">
           Stages are ordered by how close they are to money, not by pipeline order — the two you act on sit at the top, the rest stay shut until you want
           them.
         </p>

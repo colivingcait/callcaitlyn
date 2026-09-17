@@ -4,6 +4,7 @@ import { WeeklyReviewCard } from "@/components/dashboard/WeeklyReviewCard";
 import { TodaySearch } from "@/components/dashboard/mobile/TodaySearch";
 import { TodayQueues } from "@/components/dashboard/TodayQueues";
 import { TodayQueuePanel } from "@/components/dashboard/TodayQueuePanel";
+import { TodayDesktop } from "@/components/dashboard/TodayDesktop";
 import { buildTodayPersonGroups, parseTodayFocus, type TodayChipKey } from "@/lib/crm/today-focus";
 import type { getTodayData } from "@/lib/data/today";
 import type { WeeklyReviewPayload } from "@/lib/data/weekly-review";
@@ -36,7 +37,7 @@ export function TodayScreen({
   const greeting = timeOfDayGreeting();
 
   return (
-    <div className="relative min-h-full bg-[#f7f1ea] px-5 py-6 md:mx-auto md:max-w-lg md:px-6 md:py-8">
+    <div className="relative min-h-full bg-[#f7f1ea]">
       <div
         aria-hidden
         className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-[#e8cfc4]/45 blur-3xl"
@@ -45,63 +46,79 @@ export function TodayScreen({
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#f3e6dc]/70 to-transparent"
       />
-      {!parsedFocus && (
-        <div className="relative mb-7 flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="font-display text-[36px] font-semibold leading-[1.08] tracking-[-0.03em] text-neutral-900">
-              <span className="font-medium italic text-neutral-800">{greeting},</span>
-              {ownerFirstName ? ` ${ownerFirstName}` : ""}
-            </h1>
-            <p className="mt-2 text-[15px] text-neutral-500">
-              {formatLocal(new Date(), "EEEE")} · {APP_MARKET}
-            </p>
+
+      <div className="relative px-5 py-6 lg:hidden">
+        {!parsedFocus && (
+          <div className="mb-7 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="font-display text-[36px] font-semibold leading-[1.08] tracking-[-0.03em] text-neutral-900">
+                <span className="font-medium italic text-neutral-800">{greeting},</span>
+                {ownerFirstName ? ` ${ownerFirstName}` : ""}
+              </h1>
+              <p className="mt-2 text-[15px] text-neutral-500">
+                {formatLocal(new Date(), "EEEE")} · {APP_MARKET}
+              </p>
+            </div>
+            <TodaySearch contacts={contacts} />
           </div>
-          <TodaySearch contacts={contacts} />
-        </div>
-      )}
+        )}
 
-      {!parsedFocus && activePrepSheets.length > 0 && (
-        <div className="mb-5 space-y-3">
-          {activePrepSheets.map((p) => (
-            <PrepSheetCard key={p.id} id={p.id} payload={p.payload as unknown as PrepSheetPayload} />
-          ))}
-        </div>
-      )}
+        {!parsedFocus && activePrepSheets.length > 0 && (
+          <div className="mb-5 space-y-3">
+            {activePrepSheets.map((p) => (
+              <PrepSheetCard key={p.id} id={p.id} payload={p.payload as unknown as PrepSheetPayload} />
+            ))}
+          </div>
+        )}
 
-      {!parsedFocus && pinnedWeeklyReview && (
-        <div className="mb-5">
-          <WeeklyReviewCard id={pinnedWeeklyReview.id} payload={pinnedWeeklyReview.payload} />
-        </div>
-      )}
+        {!parsedFocus && pinnedWeeklyReview && (
+          <div className="mb-5">
+            <WeeklyReviewCard id={pinnedWeeklyReview.id} payload={pinnedWeeklyReview.payload} />
+          </div>
+        )}
 
-      {today.newLeadsError && !parsedFocus && (
-        <p className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          Couldn&apos;t load new leads: {today.newLeadsError}
-        </p>
-      )}
+        {today.newLeadsError && !parsedFocus && (
+          <p className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            Couldn&apos;t load new leads: {today.newLeadsError}
+          </p>
+        )}
 
-      {parsedFocus ? (
-        <TodayQueuePanel
-          key={parsedFocus}
-          focus={parsedFocus}
-          initialChip={initialChip}
-          groups={groups}
-          tasks={today.myTasks}
-          ownerId={ownerId}
+        {parsedFocus ? (
+          <TodayQueuePanel
+            key={parsedFocus}
+            focus={parsedFocus}
+            initialChip={initialChip}
+            groups={groups}
+            tasks={today.myTasks}
+            ownerId={ownerId}
+            contacts={contacts}
+            bookingRequests={today.bookingRequests}
+            newLeadsError={today.newLeadsError}
+          />
+        ) : (
+          <TodayQueues
+            overdueCount={groups.late.length}
+            callTodayCount={groups.dueToday.length}
+            newUncontactedCount={groups.newUncontacted.length}
+            quietCount={groups.quiet.length}
+            messages={groups.owed}
+            spamFilteredCount={today.spamFilteredCount}
+          />
+        )}
+      </div>
+
+      <div className="relative hidden lg:block">
+        <TodayDesktop
+          today={today}
           contacts={contacts}
-          bookingRequests={today.bookingRequests}
-          newLeadsError={today.newLeadsError}
+          ownerId={ownerId}
+          ownerFirstName={ownerFirstName}
+          activePrepSheets={activePrepSheets}
+          pinnedWeeklyReview={pinnedWeeklyReview}
+          focus={focus}
+          initialChip={initialChip}
         />
-      ) : (
-        <TodayQueues
-          overdueCount={groups.late.length}
-          callTodayCount={groups.dueToday.length}
-          newUncontactedCount={groups.newUncontacted.length}
-          quietCount={groups.quiet.length}
-          messages={groups.owed}
-          spamFilteredCount={today.spamFilteredCount}
-        />
-      )}
+      </div>
     </div>
   );
 }

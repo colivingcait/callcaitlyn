@@ -15,7 +15,7 @@ export function BottomNav({ counts = {}, userEmail }: { counts?: NavCounts; user
 
   return (
     <>
-      <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-[#eadfd6] bg-[#f7f1ea]/95 backdrop-blur md:hidden">
+      <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-[#eadfd6] bg-[#f7f1ea]/95 backdrop-blur lg:hidden">
         <ul className="flex items-stretch justify-around">
           {MOBILE_NAV_ITEMS.map((item) => {
             if (item.kind === "more") {
