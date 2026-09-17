@@ -91,6 +91,12 @@ export function AgentComposer({
   const quietHours = channel === "text" && isWithinQuietHours();
   const daysLabel = recentDays === 1 ? "day" : "days";
 
+  useEffect(() => {
+    if (channel !== "text") return;
+    if (textBucket === "fresh" && freshAgents.length === 0 && recentAgents.length > 0) setTextBucket("recent");
+    if (textBucket === "recent" && recentAgents.length === 0 && freshAgents.length > 0) setTextBucket("fresh");
+  }, [channel, textBucket, freshAgents.length, recentAgents.length]);
+
   function applyTemplate(t: { subject: string; body: string }) {
     setSubject(t.subject);
     setMessage(t.body);
