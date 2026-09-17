@@ -60,6 +60,22 @@ opens full-screen like a native app.
 3. Add the same two environment variables (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`) in the Vercel project settings — plus the Quo-related ones from the section below once you're setting that up.
 4. Deploy. Then go back to Supabase **Authentication → URL Configuration** and add `https://your-app.vercel.app/auth/confirm` to the redirect URLs (and your custom domain's `/auth/confirm` once that's live).
 
+Canonical public URL is **`https://crm.callcaitlyn.com/login`**. The branded magic-link page is `/login` (there is no `/auth/login` route; that path redirects to `/login`). Unauthenticated `/` also redirects to `/login`.
+
+`vercel.json` in this repo only schedules cron jobs. It does **not** turn on Vercel Deployment Protection or the Firewall. Those live in the Vercel dashboard. If a visitor (or a review bot) sees **“This request was blocked” / HTTP 403** with a diagnostic ID instead of the CallCaitlyn login page, the request never reached this app — fix it here:
+
+1. Open the **CRM** Vercel project (the one whose domains include `crm.callcaitlyn.com` and `callcaitlyn.vercel.app` — not the separate marketing-site project).
+2. **Settings → Deployment Protection**
+   - Keep protection on **Preview** if you want (Standard Protection).
+   - Production / the `.vercel.app` alias used for login, `/book`, `/listing`, webhooks, and magic links must stay **public**. “All Deployments” would lock those URLs behind Vercel auth and break sign-in + public pages.
+3. **Settings → Firewall** (WAF / Attack Challenge / bot rules)
+   - A 403 whose HTML is “This request was blocked” (not our login UI) is a Firewall hit. Open **Firewall → Logs** or **Observability** and search the diagnostic / `x-vercel-id`.
+   - Turn **Attack Challenge Mode** off for production unless you are actively under attack. Challenge/bot rules often 403 datacenter IPs (UI reviewers, some crawlers) while a normal phone browser still loads `/login`.
+   - Do not enable a blanket “block AI crawlers” rule if `/book` and `/listing` should stay publicly shareable.
+4. Share **`https://crm.callcaitlyn.com/login`**, not a unique `*-projects.vercel.app` deployment URL — those preview hosts are protected by default on Standard Protection.
+
+Do not put protection-bypass tokens in this repo.
+
 ## What's in phase 1
 
 - **Dashboard** — active lead count (only stages not marked closed — see below), hot/ready count, follow-ups due today/overdue, recent activity, pipeline snapshot, and an accountability section (see below).

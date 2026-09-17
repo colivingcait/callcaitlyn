@@ -30,6 +30,15 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Tools and old docs sometimes guess /auth/login. The branded magic-link
+  // page is /login; /auth/* is otherwise a session bypass (confirm callback).
+  if (request.nextUrl.pathname === "/auth/login") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.search = request.nextUrl.search;
+    return NextResponse.redirect(url);
+  }
+
   const isAuthRoute = request.nextUrl.pathname.startsWith("/login");
   const isAuthCallback = request.nextUrl.pathname.startsWith("/auth");
   // The QR check-in page - scanned by attendees' own phones, not the
@@ -74,7 +83,9 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/manifest.json") ||
     request.nextUrl.pathname.startsWith("/_next") ||
     request.nextUrl.pathname.startsWith("/favicon") ||
-    request.nextUrl.pathname.startsWith("/sw.js");
+    request.nextUrl.pathname.startsWith("/sw.js") ||
+    request.nextUrl.pathname === "/robots.txt" ||
+    request.nextUrl.pathname === "/sitemap.xml";
 
   if (isAuthCallback || isWebhook || isCheckIn || isPublicQuote || isPublicBooking || isPublicConfirm || isPublicListing) {
     return response;
