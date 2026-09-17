@@ -139,18 +139,25 @@ export function BookingFlow({ slug }: { slug: string | null }) {
           {step === "info" && (
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-medium text-neutral-500">Your name</label>
-                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" className={inputClass} />
+                <label htmlFor="book-name" className="text-xs font-medium text-neutral-500">
+                  Your name <span className="text-neutral-400">(required)</span>
+                </label>
+                <input id="book-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" required autoComplete="name" className={inputClass} />
               </div>
               <div>
-                <label className="text-xs font-medium text-neutral-500">Phone</label>
-                <input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" placeholder="(555) 555-1234" className={inputClass} />
+                <label htmlFor="book-phone" className="text-xs font-medium text-neutral-500">
+                  Phone <span className="text-neutral-400">(required)</span>
+                </label>
+                <input id="book-phone" value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" placeholder="(555) 555-1234" required autoComplete="tel" className={inputClass} />
               </div>
               <div>
-                <label className="text-xs font-medium text-neutral-500">Email (optional)</label>
-                <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" className={inputClass} />
+                <label htmlFor="book-email" className="text-xs font-medium text-neutral-500">Email (optional)</label>
+                <input id="book-email" value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" className={inputClass} />
               </div>
               {error && <p className="text-sm text-red-600">{error}</p>}
+              {(!name.trim() || !phone.trim()) && (
+                <p className="text-sm text-neutral-500">Add your name and phone to continue — Caitlyn uses them to confirm the meeting.</p>
+              )}
               <button
                 type="button"
                 onClick={submitInfo}

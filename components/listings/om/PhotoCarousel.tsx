@@ -6,7 +6,7 @@ import type { PadsplitPhoto } from "@/types/database";
 // Slide/thumb/keyboard behavior straight from the design spec: prev/next
 // wrap, thumb rail jumps directly, track animates via translateX, arrow
 // keys move it (ignored while a form field has focus).
-export function PhotoCarousel({ photos }: { photos: PadsplitPhoto[] }) {
+export function PhotoCarousel({ photos, nickname }: { photos: PadsplitPhoto[]; nickname: string }) {
   const [index, setIndex] = useState(0);
   const count = photos.length;
 
@@ -38,7 +38,11 @@ export function PhotoCarousel({ photos }: { photos: PadsplitPhoto[] }) {
           {photos.map((photo, i) => (
             <div key={photo.url + i} style={{ flex: "0 0 100%", aspectRatio: "21 / 9", position: "relative", display: "flex", alignItems: "flex-end", padding: 22 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={photo.url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+              <img
+                src={photo.url}
+                alt={photo.category ? `${nickname} — ${photo.category.replace(/_/g, " ")}` : `${nickname}, photo ${i + 1}`}
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+              />
               {photo.category && (
                 <span
                   style={{

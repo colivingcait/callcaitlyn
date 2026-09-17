@@ -28,7 +28,7 @@ export function MobileActionBar({ priceLabel, occupancyLabel }: { priceLabel: st
     >
       <div style={{ minWidth: 0 }}>
         <p style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 21, lineHeight: 1, color: "#f4f1ec" }}>{priceLabel}</p>
-        <p style={{ margin: "5px 0 0", fontSize: 12, color: "#a39a8e", whiteSpace: "nowrap" }}>{occupancyLabel}</p>
+        <p style={{ margin: "5px 0 0", fontSize: 12, color: "#a39a8e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{occupancyLabel}</p>
       </div>
       <a
         href={unlocked ? "#offer" : "#unlock"}

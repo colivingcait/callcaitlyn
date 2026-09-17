@@ -14,9 +14,8 @@ function LoginForm() {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setStatus("sending");
+  async function sendLink(keepSent = false) {
+    if (!keepSent) setStatus("sending");
     setErrorMessage("");
 
     const supabase = createClient();
@@ -35,12 +34,17 @@ function LoginForm() {
     setStatus("sent");
   }
 
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await sendLink();
+  }
+
   return (
     <main className="flex min-h-dvh items-center justify-center bg-neutral-50 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <h1 className="font-serif text-3xl font-semibold text-neutral-900">CallCaitlyn</h1>
-          <p className="mt-1 text-sm text-neutral-500">Sign in to manage your leads and clients.</p>
+          <p className="mt-1 text-sm text-neutral-500">We&apos;ll email a magic link — no password. It expires in about an hour.</p>
         </div>
 
         {authError && status !== "sent" && (
@@ -52,11 +56,15 @@ function LoginForm() {
         {status === "sent" ? (
           <div className="rounded-2xl border border-neutral-200/70 bg-white p-6 text-center shadow-card">
             <p className="text-sm text-neutral-700">
-              Check <span className="font-medium">{email}</span> for a sign-in link.
+              Check <span className="font-medium">{email}</span> for a sign-in link. It expires in about an hour.
             </p>
-            <Button variant="ghost" className="mt-4" onClick={() => setStatus("idle")}>
-              Use a different email
-            </Button>
+            <p className="mt-2 text-sm text-neutral-500">If it isn&apos;t there, look in spam or promotions, then resend below.</p>
+            <div className="mt-4 flex flex-col gap-2">
+              <Button onClick={() => void sendLink(true)}>Resend link</Button>
+              <Button variant="ghost" onClick={() => setStatus("idle")}>
+                Use a different email
+              </Button>
+            </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="rounded-2xl border border-neutral-200/70 bg-white p-6 shadow-card">
