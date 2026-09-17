@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import type { WorklistPerson } from "@/lib/data/today";
 import type { BookingRequestWithContact } from "@/lib/data/scheduling";
 
-export type TodayDesktopChipKey = "late" | "dueToday" | "owed" | "neverTexted" | "registered" | "meetings";
+export type TodayDesktopChipKey = "late" | "dueToday" | "owed" | "registered" | "meetings";
 
 // Desktop's version of the same model the phone already had (TodayWorklist):
 // one list card behind a row of chips, instead of five always-open
@@ -28,7 +28,6 @@ export function TodayWorklistDesktop({
     { key: "late", label: `Late ${groups.late.length}` },
     { key: "dueToday", label: `Due today ${groups.dueToday.length}` },
     { key: "owed", label: `Owed a reply ${groups.owed.length}` },
-    { key: "neverTexted", label: `Never texted ${groups.neverTexted.length}` },
     { key: "registered", label: `Registered ${groups.registered.length}` },
     { key: "meetings", label: `Meetings ${bookingRequests.length}` },
   ];
@@ -76,8 +75,6 @@ export function TodayWorklistDesktop({
             dismissContactLabel="No follow-up needed"
             onNeverQueue={markKnownPersonally}
           />
-        ) : active === "neverTexted" ? (
-          <WorklistGroup people={groups.neverTexted} />
         ) : (
           <WorklistGroup people={groups[active]} onDismissContact={clearFollowUp} dismissContactLabel="Clear follow-up" />
         )}

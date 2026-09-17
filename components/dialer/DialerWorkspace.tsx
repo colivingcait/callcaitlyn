@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import type { DialerContact, DialerMode, UpcomingConfirmationEvent } from "@/lib/data/dialer";
 import type { TextTemplate } from "@/types/database";
 
-type Tab = "new" | "followup" | "confirm";
+type Tab = "followup" | "confirm";
 
 // One workspace, one queue, one card - the tabs used to be three
 // different products (a mobile-only card flow for two of them, a flat
@@ -26,7 +26,6 @@ export function DialerWorkspace({
   contacts,
   mode,
   activeTab,
-  newCount,
   followupCount,
   confirmCount,
   confirmationEvents,
@@ -36,7 +35,6 @@ export function DialerWorkspace({
   contacts: DialerContact[];
   mode: DialerMode;
   activeTab: Tab;
-  newCount: number;
   followupCount: number;
   confirmCount: number;
   confirmationEvents: UpcomingConfirmationEvent[];
@@ -57,11 +55,10 @@ export function DialerWorkspace({
   const subtitle =
     mode === "confirmation"
       ? `${confirmationEvents.length === 1 ? confirmationEvents[0].eventName : "Events in the next couple days"} · ${queue.length} left`
-      : `${mode === "event-followup" ? "Post-event follow-ups" : "Untouched registrations"} · ${doneCount} of ${startCount} done`;
+      : `Post-event follow-ups · ${doneCount} of ${startCount} done`;
 
   const tabs: { key: Tab; href: string; label: string; count: number }[] = [
-    { key: "new", href: "/dialer", label: "New registrations", count: newCount },
-    { key: "followup", href: "/dialer?tab=followup", label: "Post-event", count: followupCount },
+    { key: "followup", href: "/dialer", label: "Post-event", count: followupCount },
     { key: "confirm", href: "/dialer?tab=confirm", label: "Confirm", count: confirmCount },
   ];
 
@@ -131,7 +128,7 @@ export function DialerWorkspace({
         <UpNextList contacts={queue.slice(1)} layout="mobile" />
         {queue.length > 0 && (
           <div className="mt-3">
-            <BulkSendCard contacts={queue} label={mode === "event-followup" ? "Post-event follow-ups" : "New registrations"} />
+            <BulkSendCard contacts={queue} label={mode === "event-followup" ? "Post-event follow-ups" : "Confirmations"} />
           </div>
         )}
       </div>
@@ -213,7 +210,7 @@ export function DialerWorkspace({
           </div>
           {queue.length > 0 && (
             <div className="w-[340px] shrink-0">
-              <BulkSendCard contacts={queue} label={mode === "event-followup" ? "Post-event follow-ups" : "New registrations"} />
+              <BulkSendCard contacts={queue} label={mode === "event-followup" ? "Post-event follow-ups" : "Confirmations"} />
             </div>
           )}
         </div>

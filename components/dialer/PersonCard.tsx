@@ -5,18 +5,11 @@ import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { Send, Phone, PhoneMissed, Clock, Check, History } from "lucide-react";
 import Link from "next/link";
-import { Avatar, Badge } from "@/components/ui";
+import { Avatar } from "@/components/ui";
 import { openQuoCall } from "@/lib/quo/call-link";
 import { sendTextToContact } from "@/app/(app)/contacts/actions";
-import {
-  markDialerConnected,
-  markDialerSnoozed,
-  markEventFollowupConnected,
-  markEventFollowupSnoozed,
-  markConfirmationConnected,
-  markConfirmationSnoozed,
-} from "@/app/(app)/dialer/actions";
-import { newRegistrationTemplate, returningRegistrationTemplate, MESSAGE_TEMPLATE_CATEGORIES } from "@/lib/crm/event-text-templates";
+import { markEventFollowupConnected, markEventFollowupSnoozed, markConfirmationConnected, markConfirmationSnoozed } from "@/app/(app)/dialer/actions";
+import { MESSAGE_TEMPLATE_CATEGORIES } from "@/lib/crm/event-text-templates";
 import { applyMergeFields } from "@/lib/crm/merge-fields";
 import { RecentThreadPanel } from "@/components/dialer/RecentThreadPanel";
 import { fullName, formatPhone, cn } from "@/lib/utils";
@@ -58,18 +51,12 @@ export function PersonCard({
   onAdvance: () => void;
 }) {
   const router = useRouter();
-  const eventName = mode === "new-registration" || mode === "confirmation" ? contact.registrationLabel : contact.last_event_name;
-  const eventAccount = mode === "new-registration" || mode === "confirmation" ? contact.registrationAccount : null;
+  const eventName = mode === "confirmation" ? contact.registrationLabel : contact.last_event_name;
+  const eventAccount = mode === "confirmation" ? contact.registrationAccount : null;
   const eventId = contact.confirmationEventId;
   const eventStart = contact.confirmationEventStart;
 
   const templates: { label: string; body: string }[] = [];
-  if (mode === "new-registration" && contact.isNew !== false) {
-    templates.push({ label: "Welcome / intro", body: newRegistrationTemplate(contact.first_name, eventAccount, eventName) });
-  }
-  if (mode === "new-registration" && contact.isNew !== true) {
-    templates.push({ label: "Welcome back", body: returningRegistrationTemplate(contact.first_name, eventAccount, eventName) });
-  }
   if (mode === "event-followup") {
     for (const t of FOLLOW_UP_TEMPLATES) {
       templates.push({ label: t.label, body: applyMergeFields(t.build(eventAccount, eventName), contact) });
@@ -98,14 +85,12 @@ export function PersonCard({
 
   async function markConnected() {
     if (mode === "event-followup") return markEventFollowupConnected(contact.id);
-    if (mode === "confirmation") return markConfirmationConnected(contact.id, eventId!, eventName ?? "");
-    return markDialerConnected(contact.id);
+    return markConfirmationConnected(contact.id, eventId!, eventName ?? "");
   }
 
   async function markSnoozed() {
     if (mode === "event-followup") return markEventFollowupSnoozed(contact.id);
-    if (mode === "confirmation") return markConfirmationSnoozed(contact.id, eventId!, eventName ?? "");
-    return markDialerSnoozed(contact.id);
+    return markConfirmationSnoozed(contact.id, eventId!, eventName ?? "");
   }
 
   async function sendAndNext() {
@@ -145,12 +130,7 @@ export function PersonCard({
       <div className="flex items-center gap-3.5">
         <Avatar firstName={contact.first_name} lastName={contact.last_name} size={52} />
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <p className={cn("truncate font-serif font-semibold text-neutral-900", layout === "desktop" ? "text-[21px]" : "text-[21px]")}>{fullName(contact)}</p>
-            {mode === "new-registration" && contact.isNew !== undefined && (
-              <Badge className={contact.isNew ? "bg-brand-50 text-brand-700" : "bg-neutral-100 text-neutral-600"}>{contact.isNew ? "New" : "Returning"}</Badge>
-            )}
-          </div>
+          <p className={cn("truncate font-serif font-semibold text-neutral-900", layout === "desktop" ? "text-[21px]" : "text-[21px]")}>{fullName(contact)}</p>
           <p className="truncate text-[15px] text-neutral-500">
             {[eventName, mode === "confirmation" ? null : contact.lead_source, layout === "desktop" ? formatPhone(contact.phone) : null]
               .filter(Boolean)

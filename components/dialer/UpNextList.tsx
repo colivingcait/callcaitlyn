@@ -39,11 +39,7 @@ export function UpNextList({ contacts, layout = "mobile" }: { contacts: DialerCo
 }
 
 function UpNextRow({ contact }: { contact: DialerContact }) {
-  const meta = contact.dialer_snoozed_at
-    ? `${contact.isNew === false ? "Returning" : "New"} · tried already`
-    : [contact.isNew === false ? "Returning" : contact.isNew === true ? "New" : null, contact.registrationLabel ?? contact.lead_source]
-        .filter(Boolean)
-        .join(" · ");
+  const meta = contact.dialer_snoozed_at ? "Tried already" : contact.lead_source;
 
   return (
     <div className="flex items-center gap-3 px-3.5 py-2.5">

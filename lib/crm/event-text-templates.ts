@@ -25,21 +25,6 @@ export function organizerRole(account: string | null | undefined, eventName: str
   return isHouseHacking ? "the organizer of" : "one of the organizers for";
 }
 
-// Single-send versions (a real first name, not a merge token) - used by the
-// Dialer's one-off "text this person right now" flow, not the bulk blast
-// composer below. Kept separate from MESSAGE_TEMPLATES since that one needs
-// the literal {{first_name}} token for applyMergeFields to substitute once
-// per recipient during a staggered send.
-export function newRegistrationTemplate(firstName: string, account: string | null | undefined, eventName: string | null | undefined): string {
-  const group = eventGroupLabel(account, eventName);
-  return `Hi ${firstName}, this is Caitlyn Verdugo, ${organizerRole(account, eventName)} ${group}. Just wanted to introduce myself and welcome you to the group! Any questions I can answer for you? 🙂`;
-}
-
-export function returningRegistrationTemplate(firstName: string, account: string | null | undefined, eventName: string | null | undefined): string {
-  const group = eventGroupLabel(account, eventName);
-  return `Hey ${firstName}, this is Caitlyn Verdugo, ${organizerRole(account, eventName)} ${group}. Just got your registration for this month's meetup - looking forward to seeing you again!`;
-}
-
 export type MessageTemplateOption = { label: string; build: (account: string | null | undefined, eventName: string | null | undefined) => string };
 export type MessageTemplateCategory = { key: "registration" | "pre_event" | "follow_up"; label: string; options: MessageTemplateOption[] };
 

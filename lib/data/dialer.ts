@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { fullName } from "@/lib/utils";
 import type { Contact } from "@/types/database";
 
-export type DialerMode = "new-registration" | "event-followup" | "confirmation";
+export type DialerMode = "event-followup" | "confirmation";
 
 export type DialerContact = Pick<
   Contact,
@@ -17,31 +17,10 @@ export type DialerContact = Pick<
   | "dialer_snoozed_at"
   | "stage_id"
 > & {
-  // New-registrations queue only: true if this contact has never actually
-  // attended one of her events (contacts.last_event_at is null) - not
-  // "never registered before." A lot of people register multiple times and
-  // never show up, and re-registering shouldn't make them "returning" if
-  // they've genuinely never been to one; last_event_at only ever gets set
-  // by a real check-in (see lib/crm/events.ts's recordEventAttendance), so
-  // it's already the right signal without a separate registration count.
-  // Not used by the event-followup queue.
-  isNew?: boolean;
-  // New-registrations queue only: the specific event name from their
-  // MOST RECENT registration's activity record, not the contact's static
-  // lead_source - lead_source only gets set once, at first creation, so a
-  // returning registrant's card would otherwise show whatever their very
-  // first source was instead of what they just signed up for. Falls back
-  // to lead_source when the latest registration has no event name on it
-  // (e.g. a Calendly booking).
+  // Confirmation queue only: the event name/account for this occurrence,
+  // via lib/crm/dialer-mapping.ts's confirmationItemToDialerContact -
+  // shown as the card's subtitle and fed into the pre-event templates.
   registrationLabel?: string | null;
-  // New-registrations queue only: "womens_rei" | "house_hacking" | null,
-  // from the same registration's metadata.eventbrite_account (set at
-  // ingestion by which Eventbrite account the webhook/backfill fired
-  // under - see lib/eventbrite/process-order.ts). This is the reliable
-  // signal for which meetup a registration belongs to; the event NAME
-  // text can't be trusted for that (an event like "Inside the Making of a
-  // 250-Home Neighborhood" doesn't contain "women" even when it's a
-  // Women's REI event) - see lib/crm/event-text-templates.ts.
   registrationAccount?: string | null;
   // Confirmation queue only: which occurrence this card is confirming
   // attendance for. The queue is keyed by (contact, event) rather than
@@ -52,128 +31,6 @@ export type DialerContact = Pick<
   confirmationEventStart?: string;
   confirmationSource?: "registered" | "manual";
 };
-
-// "New Registrations": anyone with an untouched Eventbrite/Calendly
-// registration, or an untouched offering-memorandum unlock/offer from the
-// public listing pages (source "listing_page" - see
-// app/listing/[slug]/actions.ts's unlockListingFinancials/
-// submitListingOffer) - deliberately NOT scoped to pipeline stage, since stage
-// reflects sales-readiness (a self-reported "I'm ready to buy" answer can
-// jump a brand-new contact straight to Hot/Ready) while this queue is
-// about outreach: has this specific registration been touched yet. A
-// contact re-registering later re-arms the queue even if they were
-// touched before, since "contacted" here means "since their most recent
-// registration," not "ever, once, for life" - that's what makes repeat
-// registrants keep showing up as a re-engagement opportunity instead of
-// disappearing after the first call. Each row is flagged isNew/returning
-// so the two don't look identical, but a returning registrant isn't
-// treated as lower priority - it's still a live touch, just a different
-// kind (a chance to reconnect, not a first contact).
-export async function listNewRegistrationsQueue(): Promise<{ contacts: DialerContact[]; error: string | null }> {
-  const supabase = await createClient();
-
-  const { data: candidates, error: candidatesError } = await supabase
-    .from("contacts")
-    .select("id, first_name, last_name, phone, lead_source, last_event_name, last_event_at, created_at, dialer_contacted_at, dialer_snoozed_at, stage_id")
-    .eq("archived", false)
-    .eq("known_personally", false)
-    .not("phone", "is", null);
-
-  // A query error here (e.g. a column the dialer depends on doesn't exist
-  // yet because a migration hasn't been run) must never silently render as
-  // "nobody left to call" - that's indistinguishable from a genuinely
-  // empty, healthy queue. Surface it instead.
-  if (candidatesError) return { contacts: [], error: candidatesError.message };
-  if (!candidates || candidates.length === 0) return { contacts: [], error: null };
-
-  const { data: registrations, error: regError } = await supabase
-    .from("activities")
-    .select("contact_id, occurred_at, metadata")
-    .in("source", ["eventbrite", "calendly", "listing_page"])
-    .in(
-      "contact_id",
-      candidates.map((c) => c.id),
-    )
-    .order("occurred_at", { ascending: false });
-  if (regError) return { contacts: [], error: regError.message };
-
-  // Real outreach (a call or text actually sent) counts as "contacted" the
-  // same as clicking the dialer's Connected/No-answer buttons does -
-  // otherwise texting someone straight from the dialer's new compose box,
-  // or a call that Quo's own webhook later logs, never clears them from
-  // this queue since dialer_contacted_at only gets set by that one button.
-  const { data: outreach, error: outreachError } = await supabase
-    .from("activities")
-    .select("contact_id, occurred_at")
-    .in("type", ["call", "text"])
-    .eq("direction", "outbound")
-    .in(
-      "contact_id",
-      candidates.map((c) => c.id),
-    )
-    .order("occurred_at", { ascending: false });
-  if (outreachError) return { contacts: [], error: outreachError.message };
-
-  const latestOutreachByContact = new Map<string, string>();
-  for (const row of outreach ?? []) {
-    if (!latestOutreachByContact.has(row.contact_id)) latestOutreachByContact.set(row.contact_id, row.occurred_at);
-  }
-
-  const latestRegByContact = new Map<string, string>();
-  const latestEventNameByContact = new Map<string, string | null>();
-  const latestEventAccountByContact = new Map<string, string | null>();
-  for (const row of registrations ?? []) {
-    // First hit per contact wins the "latest" slot since the query is
-    // ordered newest-first.
-    if (!latestRegByContact.has(row.contact_id)) {
-      latestRegByContact.set(row.contact_id, row.occurred_at);
-      const metadata = row.metadata as Record<string, unknown> | null;
-      latestEventNameByContact.set(row.contact_id, typeof metadata?.event_name === "string" ? metadata.event_name : null);
-      latestEventAccountByContact.set(row.contact_id, typeof metadata?.eventbrite_account === "string" ? metadata.eventbrite_account : null);
-    }
-  }
-
-  const eligible = candidates
-    .filter((c) => {
-      const latestReg = latestRegByContact.get(c.id);
-      if (!latestReg) return false;
-      // "contacted" only counts if it happened at or after their most
-      // recent registration - an old touch from before they registered
-      // again doesn't cover the new registration. Either signal counts:
-      // the manual Connected/No-answer button (dialer_contacted_at) or a
-      // real text/call actually logged since then.
-      const regTime = new Date(latestReg).getTime();
-      const contactedAt = c.dialer_contacted_at ? new Date(c.dialer_contacted_at).getTime() : null;
-      const outreachAt = latestOutreachByContact.has(c.id) ? new Date(latestOutreachByContact.get(c.id)!).getTime() : null;
-      if (contactedAt !== null && contactedAt >= regTime) return false;
-      if (outreachAt !== null && outreachAt >= regTime) return false;
-      return true;
-    })
-    .map(
-      (c) =>
-        ({
-          ...c,
-          isNew: !c.last_event_at,
-          registrationLabel: latestEventNameByContact.get(c.id) ?? c.lead_source,
-          registrationAccount: latestEventAccountByContact.get(c.id) ?? null,
-        }) as DialerContact,
-    );
-
-  const sorted = eligible.sort((a, b) => {
-    const latestA = new Date(latestRegByContact.get(a.id) as string).getTime();
-    const latestB = new Date(latestRegByContact.get(b.id) as string).getTime();
-    // A snooze only sticks if nothing's happened since - a fresh
-    // registration after a "no answer" un-snoozes them back to the top
-    // instead of leaving them stuck at the bottom forever.
-    const aSnoozed = !!a.dialer_snoozed_at && new Date(a.dialer_snoozed_at).getTime() >= latestA;
-    const bSnoozed = !!b.dialer_snoozed_at && new Date(b.dialer_snoozed_at).getTime() >= latestB;
-    if (aSnoozed !== bSnoozed) return aSnoozed ? 1 : -1;
-    if (aSnoozed && bSnoozed) return new Date(a.dialer_snoozed_at as string).getTime() - new Date(b.dialer_snoozed_at as string).getTime();
-    return latestB - latestA;
-  });
-
-  return { contacts: sorted, error: null };
-}
 
 // A second, independent queue: people who actually attended (last_event_at
 // is only set by a real Jotform check-in, distinct from just registering)
@@ -198,8 +55,7 @@ export async function listEventFollowupQueue(): Promise<{ contacts: DialerContac
   if (!candidates || candidates.length === 0) return { contacts: [], error: null };
 
   // "Followed up" only counts if it happened at or after their most recent
-  // event attendance - same idea listNewRegistrationsQueue already uses for
-  // dialer_contacted_at vs. the latest registration. Without this, someone
+  // event attendance. Without this, someone
   // who attended before, already got followed up on, then attended again
   // (or was marked attended for a new event) would never reappear here -
   // and doing the comparison at query time instead of clearing the column

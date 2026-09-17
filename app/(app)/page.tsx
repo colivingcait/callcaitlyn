@@ -12,12 +12,12 @@ import { TodayTasksGroup } from "@/components/dashboard/TodayTasksGroup";
 import { TodayStatStrip } from "@/components/dashboard/TodayStatStrip";
 import { PipelineMiniCard } from "@/components/dashboard/PipelineMiniCard";
 import { CommissionMiniCard } from "@/components/dashboard/CommissionMiniCard";
-import { DialerStrip } from "@/components/dashboard/DialerStrip";
+import { NewLeadsSection } from "@/components/dashboard/NewLeadsSection";
 import { WeeklyReviewCard } from "@/components/dashboard/WeeklyReviewCard";
 import { PrepSheetCard } from "@/components/dashboard/PrepSheetCard";
 import { Sparkles, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { pickUpNext, buildNeverTextedGroup, buildNeverTextedDrafts, countDistinctPeople } from "@/lib/crm/today-priority";
+import { pickUpNext, countDistinctPeople } from "@/lib/crm/today-priority";
 import { filterResolvedWeeklyReviewItems, type WeeklyReviewPayload } from "@/lib/data/weekly-review";
 import type { PrepSheetPayload } from "@/lib/data/prep-sheet";
 
@@ -54,18 +54,14 @@ export default async function TodayPage() {
     late: today.calls.filter((c) => c.late),
     dueToday: today.calls.filter((c) => !c.late),
     owed: today.repliesOwed,
-    neverTexted: buildNeverTextedGroup(today.newLeadsNeverCalledContacts),
     registered: today.registeredNoFollowUp,
   };
-  const neverTextedDrafts = buildNeverTextedDrafts(today.newLeadsNeverCalledContacts);
   const { item: upNext, reason: upNextReason } = pickUpNext(desktopGroups);
-  const upNextOverrideDraft = upNext?.source === "call" ? neverTextedDrafts[upNext.id] : undefined;
   const upNextMoreCount = Math.max(
     countDistinctPeople(
       desktopGroups.late.map((c) => c.id),
       desktopGroups.dueToday.map((c) => c.id),
       desktopGroups.owed.map((c) => c.id),
-      desktopGroups.neverTexted.map((c) => c.id),
     ) - (upNext ? 1 : 0),
     0,
   );
@@ -73,7 +69,7 @@ export default async function TodayPage() {
   const openItems = countDistinctPeople(
     today.calls.map((c) => c.id),
     today.repliesOwed.map((c) => c.id),
-    desktopGroups.neverTexted.map((c) => c.id),
+    today.newLeads.map((c) => c.id),
     today.registeredNoFollowUp.map((c) => c.id),
     today.bookingRequests.map((r) => r.contact_id),
   );
@@ -124,8 +120,14 @@ export default async function TodayPage() {
         />
       </div>
 
+      {today.newLeads.length > 0 && (
+        <div className="mt-4">
+          <NewLeadsSection contacts={today.newLeads} layout="desktop" defaultDraftTemplate={defaultDraftTemplate} />
+        </div>
+      )}
+
       <div className="mt-5">
-        <UpNextCard item={upNext} reason={upNextReason} draftTemplate={defaultDraftTemplate} overrideDraft={upNextOverrideDraft} moreCount={upNextMoreCount} />
+        <UpNextCard item={upNext} reason={upNextReason} draftTemplate={defaultDraftTemplate} moreCount={upNextMoreCount} />
       </div>
 
       <div className="mt-5">
@@ -142,10 +144,6 @@ export default async function TodayPage() {
           <ChevronRight size={17} className="shrink-0 text-neutral-400" />
         </Link>
       )}
-
-      <div className="mt-3">
-        <DialerStrip count={today.newLeadsNeverCalled} />
-      </div>
 
       <div className="mt-3">
         <Section sectionKey="today:tasks" title="My tasks" meta={`${today.myTasks.length}`}>

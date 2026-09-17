@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { relativeTime, isTodayLocal } from "@/lib/format-time";
 import { filterByQueue } from "@/lib/crm/contact-queue-filter";
 import { listContacts } from "@/lib/data/contacts";
-import { listNewRegistrationsQueue } from "@/lib/data/dialer";
+import { listNewLeadsQueue } from "@/lib/data/new-leads";
 import { listWonDeals, listPendingDeals } from "@/lib/data/commissions";
 import { listPendingBookingRequests } from "@/lib/data/scheduling";
 import { computeDeals, summarizeDeals, capYearKey, capYearStart, KW_CAP } from "@/lib/crm/commission";
@@ -182,7 +182,7 @@ export async function getTodayData() {
       getRegisteredNoFollowUpGroup(stages),
       getStatStrip(stages),
       getCommissionYearSummary(),
-      listNewRegistrationsQueue(),
+      listNewLeadsQueue(),
       // Someone actively waiting on her to approve a meeting time is
       // higher priority than anything else on Today - surfaced separately
       // (not folded into WorklistPerson) so the row keeps its own
@@ -198,10 +198,7 @@ export async function getTodayData() {
     registeredNoFollowUp,
     statStrip,
     commissionYear,
-    newLeadsNeverCalled: newLeads.contacts.length,
-    // The mobile "Never texted" filter chip needs the actual people, not
-    // just the count the desktop DialerStrip uses.
-    newLeadsNeverCalledContacts: newLeads.contacts,
+    newLeads: newLeads.contacts,
     bookingRequests,
   };
 }

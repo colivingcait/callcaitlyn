@@ -7,7 +7,7 @@ import { QuickAddButton } from "@/components/nav/QuickAddButton";
 import { LogPill } from "@/components/nav/LogPill";
 import { SignOutButton } from "@/components/nav/SignOutButton";
 import { listConversations } from "@/lib/data/messages";
-import { listNewRegistrationsQueue } from "@/lib/data/dialer";
+import { listEventFollowupQueue, listConfirmationQueue } from "@/lib/data/dialer";
 import { getUnmatchedNotesCount } from "@/lib/data/notes-inbox";
 import { getSuggestionQueue } from "@/lib/data/insights";
 import { getUnansweredAgentMessageCount } from "@/lib/data/listings";
@@ -18,18 +18,23 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ count: contactsCount }, conversations, { contacts: newLeads }, unmatchedNotes, suggestionQueue, unansweredAgents] = await Promise.all([
-    supabase.from("contacts").select("id", { count: "exact", head: true }).eq("archived", false).eq("spam", false),
-    listConversations(),
-    listNewRegistrationsQueue(),
-    getUnmatchedNotesCount(),
-    getSuggestionQueue(),
-    getUnansweredAgentMessageCount(),
-  ]);
+  const [{ count: contactsCount }, conversations, { contacts: followups }, { items: confirmations }, unmatchedNotes, suggestionQueue, unansweredAgents] =
+    await Promise.all([
+      supabase.from("contacts").select("id", { count: "exact", head: true }).eq("archived", false).eq("spam", false),
+      listConversations(),
+      listEventFollowupQueue(),
+      listConfirmationQueue(),
+      getUnmatchedNotesCount(),
+      getSuggestionQueue(),
+      getUnansweredAgentMessageCount(),
+    ]);
   const waitingOnReply = conversations.filter((c) => c.owed).length;
   const navCounts = {
     contacts: contactsCount ?? 0,
-    dialer: newLeads.length,
+    // New leads now live on Today, not the Dialer - this badge reflects
+    // what's actually left to do in the Dialer itself (post-event
+    // follow-ups + pre-event confirmations).
+    dialer: followups.length + confirmations.length,
     messages: waitingOnReply,
     notes: unmatchedNotes,
     insights: suggestionQueue.count,

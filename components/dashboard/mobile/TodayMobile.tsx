@@ -5,7 +5,8 @@ import { UpNextCard } from "@/components/dashboard/mobile/UpNextCard";
 import { TodayWorklist } from "@/components/dashboard/mobile/TodayWorklist";
 import { TodayFooterLine } from "@/components/dashboard/mobile/TodayFooterLine";
 import { TodaySearch } from "@/components/dashboard/mobile/TodaySearch";
-import { pickUpNext, buildNeverTextedGroup, buildNeverTextedDrafts, countDistinctPeople } from "@/lib/crm/today-priority";
+import { NewLeadsSection } from "@/components/dashboard/NewLeadsSection";
+import { pickUpNext, countDistinctPeople } from "@/lib/crm/today-priority";
 import type { getTodayData, WorklistPerson } from "@/lib/data/today";
 import type { WeeklyReviewPayload } from "@/lib/data/weekly-review";
 import type { PrepSheetPayload } from "@/lib/data/prep-sheet";
@@ -29,11 +30,10 @@ export function TodayMobile({
   pinnedWeeklyReview: { id: string; payload: unknown } | null;
   defaultDraftTemplate: TextTemplate | null;
 }) {
-  const groups: Record<"late" | "dueToday" | "owed" | "neverTexted" | "registered", WorklistPerson[]> = {
+  const groups: Record<"late" | "dueToday" | "owed" | "registered", WorklistPerson[]> = {
     late: today.calls.filter((c) => c.late),
     dueToday: today.calls.filter((c) => !c.late),
     owed: today.repliesOwed,
-    neverTexted: buildNeverTextedGroup(today.newLeadsNeverCalledContacts),
     registered: today.registeredNoFollowUp,
   };
 
@@ -41,21 +41,15 @@ export function TodayMobile({
     today.calls.map((c) => c.id),
     today.repliesOwed.map((c) => c.id),
     today.myTasks.map((t) => t.contactId),
-    groups.neverTexted.map((c) => c.id),
+    today.newLeads.map((c) => c.id),
     today.registeredNoFollowUp.map((c) => c.id),
     today.bookingRequests.map((r) => r.contact_id),
   );
 
-  // Same welcome/welcome-back template the Dialer drafts for these exact
-  // contacts (today.newLeadsNeverCalledContacts is the Dialer's own new-
-  // registrations queue) - keyed by contact id so both the worklist row's
-  // Text tap and the Up next card can prefill it instead of a blank box.
-  const neverTextedDrafts = buildNeverTextedDrafts(today.newLeadsNeverCalledContacts);
-
-  // Priority: overdue > due today > owed reply > never texted - the
-  // highest-priority non-empty group's first person becomes Up next.
+  // Priority: overdue > due today > owed reply - the highest-priority
+  // non-empty group's first person becomes Up next. New Leads has its own
+  // top-of-page stack now, so it no longer feeds into this.
   const { item: upNext, reason: upNextReason } = pickUpNext(groups);
-  const upNextOverrideDraft = upNext?.source === "call" ? neverTextedDrafts[upNext.id] : undefined;
 
   return (
     <div className="px-4 py-5 md:hidden">
@@ -81,10 +75,16 @@ export function TodayMobile({
         </div>
       )}
 
-      <UpNextCard item={upNext} reason={upNextReason} draftTemplate={defaultDraftTemplate} overrideDraft={upNextOverrideDraft} />
+      {today.newLeads.length > 0 && (
+        <div className="mb-3">
+          <NewLeadsSection contacts={today.newLeads} layout="mobile" defaultDraftTemplate={defaultDraftTemplate} />
+        </div>
+      )}
+
+      <UpNextCard item={upNext} reason={upNextReason} draftTemplate={defaultDraftTemplate} />
 
       <div className="mt-4">
-        <TodayWorklist groups={groups} tasks={today.myTasks} ownerId={ownerId} contacts={contacts} bookingRequests={today.bookingRequests} drafts={neverTextedDrafts} />
+        <TodayWorklist groups={groups} tasks={today.myTasks} ownerId={ownerId} contacts={contacts} bookingRequests={today.bookingRequests} />
       </div>
 
       <TodayFooterLine

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { writeDismissal } from "@/lib/crm/dismissed-insights";
+import { NEW_LEAD_DISMISS_KEY } from "@/lib/data/new-leads";
 
 export async function clearPinnedItem(id: string) {
   const supabase = await createClient();
@@ -106,6 +107,24 @@ export async function dismissRegisteredNoFollowUp(contactId: string) {
   if (!user) return { ok: false as const, error: "Not signed in" };
 
   const result = await writeDismissal(supabase, user.id, "registered_no_followup", contactId);
+  if (!result.ok) return result;
+  revalidatePath("/");
+  return { ok: true as const };
+}
+
+// "Doesn't need a follow-up" / "remove from New Leads altogether" - the
+// product owner confirmed these are the same single permanent action, not
+// two states. No time-window check on read (unlike
+// dismissRegisteredNoFollowUp's "only while newer than the triggering
+// registration") - this is a true forever-dismiss.
+export async function dismissNewLead(contactId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const result = await writeDismissal(supabase, user.id, NEW_LEAD_DISMISS_KEY, contactId);
   if (!result.ok) return result;
   revalidatePath("/");
   return { ok: true as const };

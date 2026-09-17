@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MessageSquareText, Phone, ChevronRight, X, RotateCcw, UserMinus } from "lucide-react";
-import Link from "next/link";
+import { MessageSquareText, Phone, X, RotateCcw, UserMinus } from "lucide-react";
 import { ListRow } from "@/components/mobile/ListRow";
 import { SwipeActions } from "@/components/mobile/SwipeActions";
 import { Toast } from "@/components/mobile/Toast";
@@ -17,7 +16,7 @@ import type { WorklistPerson, WorklistTask } from "@/lib/data/today";
 import type { BookingRequestWithContact } from "@/lib/data/scheduling";
 import type { MergeCandidate } from "@/lib/data/contacts";
 
-export type TodayChipKey = "late" | "dueToday" | "owed" | "tasks" | "neverTexted" | "registered" | "meetings";
+export type TodayChipKey = "late" | "dueToday" | "owed" | "tasks" | "registered" | "meetings";
 
 export function TodayWorklist({
   groups,
@@ -25,18 +24,12 @@ export function TodayWorklist({
   ownerId,
   contacts,
   bookingRequests,
-  drafts,
 }: {
-  groups: Record<"late" | "dueToday" | "owed" | "neverTexted" | "registered", WorklistPerson[]>;
+  groups: Record<"late" | "dueToday" | "owed" | "registered", WorklistPerson[]>;
   tasks: WorklistTask[];
   ownerId: string;
   contacts: MergeCandidate[];
   bookingRequests: BookingRequestWithContact[];
-  // Never-texted only: contact id -> the Dialer's own welcome/welcome-back
-  // template text, prefilled into the message thread on tap instead of a
-  // blank compose box - same template a new registration would get from
-  // the Dialer, just reachable from Today too.
-  drafts?: Record<string, string>;
 }) {
   const router = useRouter();
   const { toast, showToast } = useToast();
@@ -47,7 +40,6 @@ export function TodayWorklist({
     { key: "dueToday", label: `Due today ${groups.dueToday.length}` },
     { key: "owed", label: `Owed a reply ${groups.owed.length}` },
     { key: "tasks", label: `Tasks ${tasks.length}` },
-    { key: "neverTexted", label: `Never texted ${groups.neverTexted.length}` },
     { key: "registered", label: `Registered ${groups.registered.length}` },
     { key: "meetings", label: `Meetings ${bookingRequests.length}` },
   ];
@@ -59,7 +51,7 @@ export function TodayWorklist({
   // Late/due-today both come from today.calls - the only groups where "I
   // don't need to call this person" (clearing next_follow_up_at) applies.
   const isCallGroup = active === "late" || active === "dueToday";
-  const isPersonGroup = active === "late" || active === "dueToday" || active === "owed" || active === "neverTexted" || active === "registered";
+  const isPersonGroup = active === "late" || active === "dueToday" || active === "owed" || active === "registered";
   const people = isPersonGroup ? groups[active].filter((p) => !cleared.has(p.id)) : [];
 
   async function handleClear(contactId: string) {
@@ -142,10 +134,7 @@ export function TodayWorklist({
                             icon: MessageSquareText,
                             variant: "primary",
                             "aria-label": "Text",
-                            onClick: () => {
-                              const draft = drafts?.[person.id];
-                              router.push(draft ? `/messages/${person.id}?draft=${encodeURIComponent(draft)}` : `/messages/${person.id}`);
-                            },
+                            onClick: () => router.push(`/messages/${person.id}`),
                           }
                       : undefined
                   }
@@ -189,11 +178,6 @@ export function TodayWorklist({
         )}
       </div>
 
-      {active === "neverTexted" && people.length > 0 && (
-        <Link href="/dialer" className="mt-2 flex items-center justify-center gap-1 py-1 text-[14px] font-medium text-brand-600">
-          Work through these one at a time in the Dialer <ChevronRight size={14} />
-        </Link>
-      )}
       {active === "registered" && people.length > 0 && (
         <p className="mt-2 px-1 text-[13px] text-neutral-400">
           People marked &quot;never queue&quot; are listed in Settings → People you know.
