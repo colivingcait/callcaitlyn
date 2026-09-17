@@ -151,14 +151,17 @@ async function getMyTasksGroup(): Promise<WorklistTask[]> {
 async function getRegisteredNoFollowUpGroup(stages: PipelineStage[]): Promise<WorklistPerson[]> {
   const contacts = (await listContacts({})).filter((c) => !c.known_personally);
   const matched = await filterByQueue(contacts, "no_followup_after_registration", stages);
-  return matched.slice(0, 20).map((c) => ({
-    id: c.id,
-    name: `${c.first_name} ${c.last_name}`.trim(),
-    phone: c.phone,
-    email: c.email,
-    meta: c.last_event_name ? `Registered · ${c.last_event_name}` : "Registered, no follow-up yet",
-    late: false,
-  }));
+  return matched
+    .filter((c) => isTodayWorkContact(c))
+    .slice(0, 20)
+    .map((c) => ({
+      id: c.id,
+      name: `${c.first_name} ${c.last_name}`.trim(),
+      phone: c.phone,
+      email: c.email,
+      meta: c.last_event_name ? `Registered · ${c.last_event_name}` : "Registered, no follow-up yet",
+      late: false,
+    }));
 }
 
 async function getQuietLeadsGroup(): Promise<WorklistPerson[]> {

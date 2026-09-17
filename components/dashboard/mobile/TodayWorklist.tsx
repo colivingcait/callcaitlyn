@@ -1,5 +1,8 @@
 "use client";
 
+// NOT mounted on Today. Home is TodayScreen → TodayQueues / TodayQueuePanel.
+// Chip `useState` here ignores `?focus=new` — do not re-import.
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { MessageSquareText, Phone, X, RotateCcw, UserMinus } from "lucide-react";

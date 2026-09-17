@@ -42,40 +42,55 @@ export function TodayQueuePanel({
   const count = countForFocus(focus, groups, tasks.length, bookingRequests.length);
 
   let body: React.ReactNode;
-  if (focus === "tasks") {
-    body = <TodayTasksGroup tasks={tasks} ownerId={ownerId} contacts={contacts} />;
-  } else if (focus === "meetings") {
-    body =
-      bookingRequests.length === 0 ? (
-        <p className="px-4 py-6 text-center text-[15px] text-neutral-400">Nothing here right now.</p>
+  switch (focus) {
+    case "tasks":
+      body = <TodayTasksGroup tasks={tasks} ownerId={ownerId} contacts={contacts} />;
+      break;
+    case "meetings":
+      body =
+        bookingRequests.length === 0 ? (
+          <p className="px-4 py-6 text-center text-[15px] text-neutral-400">Nothing here right now.</p>
+        ) : (
+          <div className="divide-y divide-neutral-100">
+            {bookingRequests.map((r) => (
+              <BookingRequestRow key={r.id} request={r} />
+            ))}
+          </div>
+        );
+      break;
+    case "new":
+      body = newLeadsError ? (
+        <p className="px-4 py-6 text-center text-sm text-red-700">Couldn&apos;t load new leads: {newLeadsError}</p>
       ) : (
-        <div className="divide-y divide-neutral-100">
-          {bookingRequests.map((r) => (
-            <BookingRequestRow key={r.id} request={r} />
-          ))}
-        </div>
+        <WorklistGroup people={groups.newUncontacted} onDismissContact={dismissNewLead} dismissContactLabel="Doesn't need a follow-up" />
       );
-  } else if (focus === "new") {
-    body = newLeadsError ? (
-      <p className="px-4 py-6 text-center text-sm text-red-700">Couldn&apos;t load new leads: {newLeadsError}</p>
-    ) : (
-      <WorklistGroup people={groups.newUncontacted} onDismissContact={dismissNewLead} dismissContactLabel="Doesn't need a follow-up" />
-    );
-  } else if (focus === "messages") {
-    body = <WorklistGroup people={groups.owed} onDismiss={dismissReplyOwed} dismissLabel="Doesn't need a reply" />;
-  } else if (focus === "registered") {
-    body = (
-      <WorklistGroup
-        people={groups.registered}
-        onDismissContact={dismissRegisteredNoFollowUp}
-        dismissContactLabel="No follow-up needed"
-        onNeverQueue={markKnownPersonally}
-      />
-    );
-  } else if (focus === "overdue" || focus === "call-today") {
-    body = <WorklistGroup people={groups[focus === "overdue" ? "late" : "dueToday"]} onDismissContact={clearFollowUp} dismissContactLabel="Clear follow-up" />;
-  } else {
-    body = <WorklistGroup people={groups.quiet} />;
+      break;
+    case "messages":
+      body = <WorklistGroup people={groups.owed} onDismiss={dismissReplyOwed} dismissLabel="Doesn't need a reply" />;
+      break;
+    case "registered":
+      body = (
+        <WorklistGroup
+          people={groups.registered}
+          onDismissContact={dismissRegisteredNoFollowUp}
+          dismissContactLabel="No follow-up needed"
+          onNeverQueue={markKnownPersonally}
+        />
+      );
+      break;
+    case "overdue":
+      body = <WorklistGroup people={groups.late} onDismissContact={clearFollowUp} dismissContactLabel="Clear follow-up" />;
+      break;
+    case "call-today":
+      body = <WorklistGroup people={groups.dueToday} onDismissContact={clearFollowUp} dismissContactLabel="Clear follow-up" />;
+      break;
+    case "quiet":
+      body = <WorklistGroup people={groups.quiet} />;
+      break;
+    default: {
+      const _exhaustive: never = focus;
+      throw new Error(`Unhandled Today focus: ${_exhaustive}`);
+    }
   }
 
   return (

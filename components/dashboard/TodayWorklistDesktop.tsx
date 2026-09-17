@@ -1,5 +1,9 @@
 "use client";
 
+// NOT mounted on Today. Home is TodayScreen → TodayQueues / TodayQueuePanel
+// with `?focus=` as the only source of truth. This chip strip omits New and
+// ignores the URL — do not re-import.
+
 import { useState } from "react";
 import { dismissReplyOwed, clearFollowUp, dismissRegisteredNoFollowUp, markKnownPersonally } from "@/app/(app)/today-actions";
 import { WorklistGroup } from "@/components/dashboard/WorklistGroup";

@@ -1,5 +1,7 @@
 "use client";
 
+// NOT mounted on Today. The black Up Next hero was the triple-stack. Do not re-import.
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Send, Phone, Clock, Check } from "lucide-react";
