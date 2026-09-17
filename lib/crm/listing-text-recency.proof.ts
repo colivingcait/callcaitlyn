@@ -54,7 +54,7 @@ assert.equal(page.includes("onSend="), false, "no function props from the listin
 
 const composer = read("components/listings/AgentComposer.tsx");
 assert.ok(composer.includes("Flag anyone I texted in the last"));
-assert.ok(composer.includes("listingAgentIds: channel === \"text\" ? bucketAgents.map((a) => a.id) : undefined"));
+assert.ok(composer.includes("listingAgentIds: (channel === \"text\" ? bucketAgents : uniqueSendable).map((a) => a.id)"));
 assert.ok(composer.includes("Not texted in last"));
 assert.ok(composer.includes("Texted in last"));
 

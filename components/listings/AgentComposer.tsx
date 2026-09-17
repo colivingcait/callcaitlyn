@@ -12,6 +12,7 @@ import {
   listingTextBucket,
   neverOutboundTexted,
 } from "@/lib/crm/listing-text-recency";
+import { collapseListingAgents } from "@/lib/crm/agent-identity";
 import {
   dedupeListingTextRecipients,
   isListingTextPhoneQueued,
@@ -67,10 +68,11 @@ export function AgentComposer({
   }, [channel]);
 
   const lastOutbound = lastOutboundAtByAgentId ?? {};
+  const people = useMemo(() => collapseListingAgents(agents), [agents]);
   const queued = useMemo(() => new Set([...(queuedOnThisListing ?? []), ...localQueued]), [queuedOnThisListing, localQueued]);
-  const queuedPhoneKeys = useMemo(() => queuedListingTextPhoneKeys(agents, queued), [agents, queued]);
+  const queuedPhoneKeys = useMemo(() => queuedListingTextPhoneKeys(people, queued), [people, queued]);
 
-  const eligible = agents.filter((a) => a.state !== "opted_out" && (channel === "email" ? !!a.email : !!a.phone));
+  const eligible = people.filter((a) => a.state !== "opted_out" && (channel === "email" ? !!a.email : !!a.phone));
   const audienceEligible = eligible.filter((a) => {
     if (audience === "not_contacted") return a.state === "not_contacted";
     if (audience === "non_repliers") return a.state === "emailed" || a.state === "texted";
@@ -95,9 +97,9 @@ export function AgentComposer({
     not_contacted: eligible.filter((a) => a.state === "not_contacted").length,
     non_repliers: eligible.filter((a) => a.state === "emailed" || a.state === "texted").length,
   };
-  const audienceCount = channel === "text" ? bucketAgents.length : audienceEligible.length;
-  const optedOutCount = agents.filter((a) => a.state === "opted_out").length;
-  const noContactCount = agents.filter((a) => (channel === "email" ? !a.email : !a.phone)).length;
+  const audienceCount = channel === "text" ? bucketAgents.length : uniqueSendable.length;
+  const optedOutCount = people.filter((a) => a.state === "opted_out").length;
+  const noContactCount = people.filter((a) => (channel === "email" ? !a.email : !a.phone)).length;
 
   const quietHours = channel === "text" && isWithinQuietHours();
   const daysLabel = recentDays === 1 ? "day" : "days";
@@ -132,7 +134,7 @@ export function AgentComposer({
       message,
       audience,
       sendImmediately,
-      listingAgentIds: channel === "text" ? bucketAgents.map((a) => a.id) : undefined,
+      listingAgentIds: (channel === "text" ? bucketAgents : uniqueSendable).map((a) => a.id),
     });
     setSending(false);
     if (!result.ok) {
