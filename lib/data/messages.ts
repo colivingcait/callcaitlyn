@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { conversationOwedFromHistory } from "@/lib/crm/message-owed";
+import { isSpamLikeMissedCall } from "@/lib/crm/today-eligible";
+import { listAllowlistedPhoneKeys } from "@/lib/crm/spam-signals";
 import type { Activity, ContactWithRelations } from "@/types/database";
 
 type ContactSummary = Pick<
@@ -52,16 +54,38 @@ export async function listConversations(opts?: { hidden?: boolean; spam?: boolea
   const { data } = await query;
 
   const byContact = new Map<string, { contact: ContactSummary; activities: Activity[] }>();
-  for (const row of data ?? []) {
-    const contact = row.contacts as unknown as ContactSummary | null;
-    if (!contact) continue;
-    const { contacts: _contacts, ...activity } = row as Activity & { contacts: unknown };
-    const entry = byContact.get(contact.id);
-    if (entry) {
-      entry.activities.push(activity as Activity);
-    } else {
-      byContact.set(contact.id, { contact, activities: [activity as Activity] });
+  function ingest(rows: typeof data) {
+    for (const row of rows ?? []) {
+      const contact = row.contacts as unknown as ContactSummary | null;
+      if (!contact) continue;
+      const { contacts: _contacts, ...activity } = row as Activity & { contacts: unknown };
+      const entry = byContact.get(contact.id);
+      if (entry) {
+        entry.activities.push(activity as Activity);
+      } else {
+        byContact.set(contact.id, { contact, activities: [activity as Activity] });
+      }
     }
+  }
+  ingest(data);
+
+  const allowlisted = await listAllowlistedPhoneKeys(supabase);
+
+  // Realtor robocalls usually auto-create a contact named after the phone
+  // and never get contacts.spam=true (no transcript yet / rotating CID).
+  // Those belong in the spam bucket with flagged spam, not the inbox.
+  if (opts?.spam) {
+    const { data: stubs } = await supabase
+      .from("activities")
+      .select(
+        "*, contacts!inner(id, first_name, last_name, phone, contact_type, timeline, representing, archived, spam, pipeline_stages(*), contact_tags(tags(*)))",
+      )
+      .eq("contacts.archived", false)
+      .eq("contacts.spam", false)
+      .in("type", ["call", "text"])
+      .order("occurred_at", { ascending: false })
+      .limit(300);
+    ingest(stubs);
   }
 
   const conversations: Conversation[] = [];
@@ -69,8 +93,20 @@ export async function listConversations(opts?: { hidden?: boolean; spam?: boolea
     const lastActivity = activities[0];
     if (opts?.filter === "calls" && lastActivity.type !== "call") continue;
     const { owed, activity } = conversationOwedFromHistory(activities);
-    if (opts?.filter === "owed" && !owed) continue;
-    conversations.push({ contact, lastActivity, owed, owedActivity: owed ? activity : null });
+    const spamLike = !!(activity && isSpamLikeMissedCall(contact, activity, allowlisted));
+    if (opts?.spam) {
+      if (!contact.spam && !spamLike) continue;
+    } else if (!opts?.hidden && spamLike) {
+      continue;
+    }
+    const showOwed = opts?.spam || opts?.hidden ? owed : owed && !spamLike;
+    if (opts?.filter === "owed" && !showOwed) continue;
+    conversations.push({
+      contact,
+      lastActivity,
+      owed: showOwed,
+      owedActivity: showOwed ? activity : null,
+    });
   }
 
   return conversations;

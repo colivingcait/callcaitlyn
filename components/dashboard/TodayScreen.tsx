@@ -86,6 +86,7 @@ export function TodayScreen({
           newUncontactedCount={groups.newUncontacted.length}
           quietCount={groups.quiet.length}
           messages={groups.owed}
+          spamFilteredCount={today.spamFilteredCount}
         />
       )}
     </div>

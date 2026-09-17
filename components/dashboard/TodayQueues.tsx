@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Clock, Phone, UserPlus, Bell, ChevronRight, MessageCircle } from "lucide-react";
+import { Clock, Phone, UserPlus, Bell, ChevronRight, MessageCircle, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { todayFocusHref } from "@/lib/crm/today-focus";
+import { inboxHref } from "@/lib/crm/inbox-href";
 import type { WorklistPerson } from "@/lib/data/today";
 
 const CARD = "border border-[#eadfd6] bg-[#fffbf8]";
@@ -45,12 +46,14 @@ export function TodayQueues({
   newUncontactedCount,
   quietCount,
   messages,
+  spamFilteredCount = 0,
 }: {
   overdueCount: number;
   callTodayCount: number;
   newUncontactedCount: number;
   quietCount: number;
   messages: WorklistPerson[];
+  spamFilteredCount?: number;
 }) {
   const owedCount = messages.length;
 
@@ -89,6 +92,17 @@ export function TodayQueues({
             </p>
           ))}
         </Link>
+        {spamFilteredCount > 0 && (
+          <Link
+            href={inboxHref({ spam: true })}
+            data-today-control="spam-filtered"
+            className="mt-2 flex min-h-11 items-center gap-2 px-1 text-[13px] text-neutral-400"
+          >
+            <ShieldAlert size={14} className="shrink-0" />
+            Spam filtered · {spamFilteredCount}
+            <ChevronRight size={14} className="ml-auto shrink-0 text-neutral-300" />
+          </Link>
+        )}
       </section>
     </div>
   );

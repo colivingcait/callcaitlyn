@@ -8,6 +8,9 @@ import { listWonDeals, listPendingDeals } from "@/lib/data/commissions";
 import { listPendingBookingRequests } from "@/lib/data/scheduling";
 import { computeDeals, summarizeDeals, capYearKey, capYearStart, KW_CAP } from "@/lib/crm/commission";
 import { conversationOwedFromHistory } from "@/lib/crm/message-owed";
+import { isSpamLikeMissedCall, isTodayWorkContact } from "@/lib/crm/today-eligible";
+import { listAllowlistedPhoneKeys } from "@/lib/crm/spam-signals";
+import { listConversations } from "@/lib/data/messages";
 import type { PipelineStage } from "@/types/database";
 
 export type WorklistPerson = { id: string; name: string; phone: string | null; email?: string | null; meta: string; late: boolean; activityId?: string };
@@ -20,16 +23,19 @@ async function getCallsGroup(): Promise<WorklistPerson[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("contacts")
-    .select("id, first_name, last_name, phone, next_follow_up_at")
+    .select("id, first_name, last_name, phone, email, lead_source, next_follow_up_at")
     .eq("archived", false)
     .eq("known_personally", false)
     .eq("spam", false)
     .not("next_follow_up_at", "is", null)
     .lte("next_follow_up_at", endOfLocalDayIso())
     .order("next_follow_up_at", { ascending: true })
-    .limit(30);
+    .limit(50);
 
-  return (data ?? []).map((c) => {
+  return (data ?? [])
+    .filter((c) => isTodayWorkContact(c))
+    .slice(0, 30)
+    .map((c) => {
     const due = new Date(c.next_follow_up_at as string);
     const today = isTodayLocal(c.next_follow_up_at as string);
     const overdue = isPast(due) && !today;
@@ -49,11 +55,12 @@ async function getCallsGroup(): Promise<WorklistPerson[]> {
 // call failed, or the row predates this column) still shows, same
 // fail-open posture as everywhere else uncertain signal gets surfaced
 // rather than silently dropped.
-async function getRepliesOwedGroup(): Promise<WorklistPerson[]> {
+async function getRepliesOwedGroup(): Promise<{ people: WorklistPerson[]; hiddenSpamLikeCount: number }> {
   const supabase = await createClient();
+  const allowlisted = await listAllowlistedPhoneKeys(supabase);
   const { data } = await supabase
     .from("activities")
-    .select("id, contact_id, type, direction, occurred_at, body, needs_reply, reply_dismissed_at, metadata, contacts!inner(id, first_name, last_name, phone, archived, known_personally, spam)")
+    .select("id, contact_id, type, direction, occurred_at, body, needs_reply, reply_dismissed_at, metadata, contacts!inner(id, first_name, last_name, phone, email, lead_source, archived, known_personally, spam)")
     .in("type", ["text", "call"])
     .eq("contacts.archived", false)
     .eq("contacts.known_personally", false)
@@ -61,9 +68,19 @@ async function getRepliesOwedGroup(): Promise<WorklistPerson[]> {
     .order("occurred_at", { ascending: false })
     .limit(1000);
 
-  const grouped = new Map<string, { contact: { id: string; first_name: string; last_name: string; phone: string | null }; rows: NonNullable<typeof data> }>();
+  type ContactRow = {
+    id: string;
+    first_name: string;
+    last_name: string;
+    phone: string | null;
+    email: string | null;
+    lead_source: string | null;
+    spam: boolean;
+  };
+
+  const grouped = new Map<string, { contact: ContactRow; rows: NonNullable<typeof data> }>();
   for (const row of data ?? []) {
-    const contact = row.contacts as unknown as { id: string; first_name: string; last_name: string; phone: string | null } | null;
+    const contact = row.contacts as unknown as ContactRow | null;
     if (!contact) continue;
     const entry = grouped.get(contact.id);
     if (entry) entry.rows.push(row);
@@ -71,9 +88,14 @@ async function getRepliesOwedGroup(): Promise<WorklistPerson[]> {
   }
 
   const owed: WorklistPerson[] = [];
+  let hiddenSpamLikeCount = 0;
   for (const { contact, rows } of grouped.values()) {
     const { owed: isOwed, activity } = conversationOwedFromHistory(rows);
     if (!isOwed || !activity) continue;
+    if (isSpamLikeMissedCall(contact, activity, allowlisted)) {
+      hiddenSpamLikeCount += 1;
+      continue;
+    }
     const preview =
       activity.type === "call"
         ? "Missed call"
@@ -89,7 +111,7 @@ async function getRepliesOwedGroup(): Promise<WorklistPerson[]> {
       activityId: activity.id,
     });
   }
-  return owed;
+  return { people: owed, hiddenSpamLikeCount };
 }
 
 export type WorklistTask = {
@@ -144,7 +166,7 @@ async function getQuietLeadsGroup(): Promise<WorklistPerson[]> {
   const cutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
   const { data } = await supabase
     .from("activities")
-    .select("contact_id, type, occurred_at, contacts!inner(id, first_name, last_name, phone, archived, known_personally, spam)")
+    .select("contact_id, type, occurred_at, contacts!inner(id, first_name, last_name, phone, email, lead_source, archived, known_personally, spam)")
     .in("type", ["call", "text", "email"])
     .eq("contacts.archived", false)
     .eq("contacts.known_personally", false)
@@ -155,8 +177,17 @@ async function getQuietLeadsGroup(): Promise<WorklistPerson[]> {
   const seen = new Set<string>();
   const quiet: WorklistPerson[] = [];
   for (const row of data ?? []) {
-    const contact = row.contacts as unknown as { id: string; first_name: string; last_name: string; phone: string | null } | null;
+    const contact = row.contacts as unknown as {
+      id: string;
+      first_name: string;
+      last_name: string;
+      phone: string | null;
+      email: string | null;
+      lead_source: string | null;
+      spam: boolean;
+    } | null;
     if (!contact || seen.has(contact.id)) continue;
+    if (!isTodayWorkContact(contact)) continue;
     seen.add(contact.id);
     if (new Date(row.occurred_at as string).getTime() >= cutoff) continue;
     const verb = row.type === "call" ? "called" : row.type === "email" ? "emailed" : "texted";
@@ -229,7 +260,7 @@ export async function getTodayData() {
   const { data: stagesData } = await supabase.from("pipeline_stages").select("*").order("sort_order", { ascending: true });
   const stages = (stagesData ?? []) as PipelineStage[];
 
-  const [calls, repliesOwed, myTasks, registeredNoFollowUp, statStrip, commissionYear, newLeads, bookingRequests, quietLeads] =
+  const [calls, repliesOwedResult, myTasks, registeredNoFollowUp, statStrip, commissionYear, newLeads, bookingRequests, quietLeads, spamConversations] =
     await Promise.all([
       getCallsGroup(),
       getRepliesOwedGroup(),
@@ -238,18 +269,15 @@ export async function getTodayData() {
       getStatStrip(stages),
       getCommissionYearSummary(),
       listNewLeadsQueue(),
-      // Someone actively waiting on her to approve a meeting time is
-      // higher priority than anything else on Today - surfaced separately
-      // (not folded into WorklistPerson) so the row keeps its own
-      // Approve/Decline actions instead of just linking out.
       listPendingBookingRequests(),
       getQuietLeadsGroup(),
+      listConversations({ spam: true }),
     ]);
 
   return {
     stages,
     calls,
-    repliesOwed,
+    repliesOwed: repliesOwedResult.people,
     myTasks,
     registeredNoFollowUp,
     statStrip,
@@ -258,5 +286,6 @@ export async function getTodayData() {
     newLeadsError: newLeads.error,
     bookingRequests,
     quietLeads,
+    spamFilteredCount: spamConversations.length,
   };
 }

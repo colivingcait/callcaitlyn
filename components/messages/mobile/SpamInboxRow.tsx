@@ -19,7 +19,12 @@ export function SpamInboxRow({
   onCleared: () => void;
 }) {
   const { contact, lastActivity } = conversation;
-  const reason = typeof lastActivity.metadata?.spam_reason === "string" ? lastActivity.metadata.spam_reason : null;
+  const reason =
+    typeof lastActivity.metadata?.spam_reason === "string"
+      ? lastActivity.metadata.spam_reason
+      : contact.spam
+        ? null
+        : "Unknown number · missed call";
 
   const actions = [
     { icon: RotateCcw, label: "Not spam", bg: "#e7e5e4", onClick: async () => { await markNotSpam(contact.id); onCleared(); } },
