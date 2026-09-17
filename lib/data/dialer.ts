@@ -53,8 +53,11 @@ export type DialerContact = Pick<
   confirmationSource?: "registered" | "manual";
 };
 
-// "New Registrations": anyone with an untouched Eventbrite or Calendly
-// registration - deliberately NOT scoped to pipeline stage, since stage
+// "New Registrations": anyone with an untouched Eventbrite/Calendly
+// registration, or an untouched offering-memorandum unlock/offer from the
+// public listing pages (source "listing_page" - see
+// app/listing/[slug]/actions.ts's unlockListingFinancials/
+// submitListingOffer) - deliberately NOT scoped to pipeline stage, since stage
 // reflects sales-readiness (a self-reported "I'm ready to buy" answer can
 // jump a brand-new contact straight to Hot/Ready) while this queue is
 // about outreach: has this specific registration been touched yet. A
@@ -86,7 +89,7 @@ export async function listNewRegistrationsQueue(): Promise<{ contacts: DialerCon
   const { data: registrations, error: regError } = await supabase
     .from("activities")
     .select("contact_id, occurred_at, metadata")
-    .in("source", ["eventbrite", "calendly"])
+    .in("source", ["eventbrite", "calendly", "listing_page"])
     .in(
       "contact_id",
       candidates.map((c) => c.id),

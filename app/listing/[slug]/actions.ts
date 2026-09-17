@@ -164,7 +164,10 @@ export async function submitListingOffer(
     metadata: { listing_id: listing.id, offer: input },
   });
 
-  await notifyNewLead(admin, OWNER_ID, { title: name, body: `Submitted an offer on ${nickname}`, url: `/contacts/${contact.id}` });
+  // Unmistakable from the notification alone that this needs a call right
+  // away, not just "another lead" - distinct from unlockListingFinancials's
+  // notification wording on purpose.
+  await notifyNewLead(admin, OWNER_ID, { title: "OFFER INTEREST", body: `${name} submitted an offer on ${nickname} — call now`, url: `/contacts/${contact.id}` });
   await sendQuoText(OWNER_PHONE, termsLines.join("\n"));
 
   return { ok: true };
