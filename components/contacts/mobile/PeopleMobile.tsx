@@ -141,7 +141,15 @@ export function PeopleMobile({
       ) : (
         <>
           <div className="mb-3 flex items-center justify-between gap-2">
-            <p className="font-serif text-2xl font-semibold text-neutral-900">Contacts</p>
+            <div className="min-w-0">
+              <p className="font-serif text-2xl font-semibold text-neutral-900">Contacts</p>
+              <p className="mt-0.5 text-[13px] text-neutral-400">
+                People and lists. Deal board:{" "}
+                <Link href="/pipeline" className="font-medium text-brand-700">
+                  Pipeline
+                </Link>
+              </p>
+            </div>
             <div className="flex items-center gap-2">
               <Link href="/contacts/new" aria-label="New contact" className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-600 text-white">
                 <Plus size={20} />

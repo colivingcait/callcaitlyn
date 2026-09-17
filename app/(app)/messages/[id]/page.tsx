@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Mail } from "lucide-react";
+import { ArrowLeft, Mail, ChevronRight } from "lucide-react";
 import { CallButton } from "@/components/CallButton";
 import { getContact, getContactInsights, listStages, listTags } from "@/lib/data/contacts";
 import { getContactThread } from "@/lib/data/messages";
@@ -49,12 +49,13 @@ export default async function MessageThreadPage({
           <Link href={backHref} aria-label="Back to messages" className="text-neutral-500">
             <ArrowLeft size={20} />
           </Link>
-          <Link href={`/contacts/${contact.id}`} className="flex min-w-0 flex-1 items-center gap-2.5">
+          <Link href={`/contacts/${contact.id}`} aria-label={`Open ${fullName(contact)} record`} className="flex min-w-0 flex-1 items-center gap-2.5">
             <Avatar id={contact.id} firstName={contact.first_name} lastName={contact.last_name} size={36} />
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-neutral-900">{fullName(contact)}</p>
-              <p className="truncate text-xs text-neutral-400">{formatPhone(contact.phone)}</p>
+              <p className="truncate text-xs text-neutral-400">{formatPhone(contact.phone) || "Open record"}</p>
             </div>
+            <ChevronRight size={16} className="shrink-0 text-neutral-300" />
           </Link>
           {contact.phone && <CallButton phone={contact.phone} />}
           {contact.email && (

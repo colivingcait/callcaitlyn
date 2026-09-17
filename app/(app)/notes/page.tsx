@@ -9,8 +9,10 @@ export default async function NotesPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6">
-      <h1 className="font-serif text-2xl font-semibold text-neutral-900 sm:text-[28px]">Notes</h1>
-      <p className="mt-1 text-[15px] text-neutral-500">Meetings and notes Granola captured that need a look before anything&apos;s saved.</p>
+      <h1 className="font-serif text-2xl font-semibold text-neutral-900 sm:text-[28px]">Meeting notes</h1>
+      <p className="mt-1 text-[15px] text-neutral-500">
+        Granola captures that still need a look. Notes you log yourself live on the contact record.
+      </p>
 
       <div className="mt-5 space-y-3">
         <Section sectionKey="notes:unmatched" title="Who was this with?" meta={`${unmatched.length}`}>

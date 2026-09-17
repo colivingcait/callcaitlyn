@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock, Phone, UserPlus, Bell, ChevronRight, MessageCircle, FileCheck } from "lucide-react";
+import { Clock, Phone, UserPlus, Bell, ChevronRight, MessageCircle, FileCheck, ListTodo } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { WorklistPerson } from "@/lib/data/today";
 
@@ -55,6 +55,7 @@ export function TodayQueues({
   quietCount,
   messages,
   underContractCount = 0,
+  taskCount = 0,
   focus,
 }: {
   overdueCount: number;
@@ -63,6 +64,7 @@ export function TodayQueues({
   quietCount: number;
   messages: WorklistPerson[];
   underContractCount?: number;
+  taskCount?: number;
   focus?: string;
 }) {
   const owedCount = messages.length;
@@ -75,6 +77,7 @@ export function TodayQueues({
           <QueueRow href="/?focus=overdue" icon={Clock} label="Overdue" count={overdueCount} danger active={focus === "overdue"} />
           <QueueRow href="/?focus=call-today" icon={Phone} label="Call today" count={callTodayCount} active={focus === "call-today"} />
           <QueueRow href="/?focus=new" icon={UserPlus} label="New / uncontacted" count={newUncontactedCount} active={focus === "new"} />
+          <QueueRow href="/?focus=tasks" icon={ListTodo} label="Tasks" count={taskCount} active={focus === "tasks"} />
         </div>
       </section>
 

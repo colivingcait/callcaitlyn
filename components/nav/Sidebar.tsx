@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Plus } from "lucide-react";
 import { useState } from "react";
-import { PRIMARY_NAV_ITEMS, MORE_NAV_GROUPS, type NavCounts } from "./nav-items";
+import { PRIMARY_NAV_ITEMS, MORE_NAV_GROUPS, navItemIsActive, type NavCounts } from "./nav-items";
 import { SignOutButton } from "./SignOutButton";
 import { QuickAddMenu } from "./QuickAddMenu";
 import { countFor as countForCounts } from "@/lib/nav/countFor";
@@ -14,6 +14,8 @@ export type { NavCounts };
 
 export function Sidebar({ userEmail, counts = {} }: { userEmail?: string | null; counts?: NavCounts }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const focus = searchParams.get("focus");
   const [quickAddOpen, setQuickAddOpen] = useState(false);
 
   const countFor = countForCounts(counts);
@@ -36,7 +38,7 @@ export function Sidebar({ userEmail, counts = {} }: { userEmail?: string | null;
       <nav className="flex-1 space-y-5 overflow-y-auto">
         <div>
           {PRIMARY_NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-            const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+            const active = navItemIsActive(href, pathname, focus);
             const count = countFor[href];
             return (
               <Link
@@ -62,13 +64,14 @@ export function Sidebar({ userEmail, counts = {} }: { userEmail?: string | null;
           <div key={group.label}>
             <p className="mb-2 px-2.5 text-[11px] font-semibold uppercase tracking-[.08em] text-neutral-400">{group.label}</p>
             <div className="flex flex-col gap-0.5">
-              {group.items.map(({ href, label, icon: Icon }) => {
-                const active = href.startsWith("/?") ? false : href === "/" ? pathname === "/" : pathname.startsWith(href);
+              {group.items.map(({ href, label, icon: Icon, hint }) => {
+                const active = navItemIsActive(href, pathname, focus);
                 const count = countFor[href];
                 return (
                   <Link
                     key={href}
                     href={href}
+                    title={hint}
                     className={cn(
                       "flex items-center gap-3 rounded-[11px] px-3 py-3 text-base font-medium",
                       active ? "bg-neutral-100 font-semibold text-neutral-900" : "text-neutral-700 hover:bg-neutral-100/60",

@@ -20,7 +20,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-export type NavItem = { href: string; label: string; icon: LucideIcon };
+export type NavItem = { href: string; label: string; icon: LucideIcon; hint?: string };
 export type NavGroup = { label: string; items: NavItem[] };
 export type NavCounts = { contacts?: number; dialer?: number; messages?: number; notes?: number; insights?: number; listings?: number };
 
@@ -36,29 +36,29 @@ export const PRIMARY_NAV_ITEMS: NavItem[] = [
 
 export const MORE_NAV_GROUPS: NavGroup[] = [
   {
-    label: "Work",
+    label: "Also today",
     items: [
-      { href: "/?focus=tasks", label: "Tasks", icon: ListTodo },
-      { href: "/insights", label: "Insights", icon: Lightbulb },
-      { href: "/dialer", label: "Dialer", icon: PhoneCall },
-      { href: "/notes", label: "Notes", icon: NotebookText },
+      { href: "/?focus=tasks", label: "Today's tasks", icon: ListTodo, hint: "Lives on Today" },
+      { href: "/insights", label: "Insights", icon: Lightbulb, hint: "What changed on its own" },
+      { href: "/notes", label: "Meeting notes", icon: NotebookText, hint: "Granola inbox" },
+      { href: "/dialer", label: "Event calls", icon: PhoneCall, hint: "Meetup follow-up, not daily calls" },
     ],
   },
   {
     label: "People",
     items: [
-      { href: "/sphere", label: "Sphere", icon: HeartHandshake },
-      { href: "/events", label: "Events", icon: CalendarHeart },
+      { href: "/sphere", label: "Past clients", icon: HeartHandshake, hint: "Birthdays, reviews, referrers" },
+      { href: "/events", label: "Events", icon: CalendarHeart, hint: "Rosters & check-in" },
     ],
   },
   {
-    label: "Business",
+    label: "Money & tools",
     items: [
-      { href: "/commissions", label: "Commissions", icon: DollarSign },
-      { href: "/sequences", label: "Campaigns", icon: Mail },
-      { href: "/numbers", label: "Numbers", icon: Calculator },
-      { href: "/scheduling", label: "Scheduling", icon: CalendarClock },
-      { href: "/listings", label: "Listings", icon: Home },
+      { href: "/commissions", label: "Commissions", icon: DollarSign, hint: "Deals and cap" },
+      { href: "/scheduling", label: "Bookings", icon: CalendarClock, hint: "Approve requests" },
+      { href: "/sequences", label: "Campaigns", icon: Mail, hint: "Email and text sequences" },
+      { href: "/numbers", label: "House hack", icon: Calculator, hint: "Calculator" },
+      { href: "/listings", label: "Listings", icon: Home, hint: "Your listing pages" },
       { href: "/recruiting", label: "Agent recruiting", icon: UserPlus },
       { href: "/reports", label: "Reports", icon: BarChart3 },
       { href: "/settings", label: "Settings", icon: Settings },
@@ -78,3 +78,19 @@ export const MOBILE_NAV_ITEMS: MobileNavItem[] = [
   { kind: "link", href: "/pipeline", label: "Pipeline", icon: KanbanSquare },
   { kind: "more", label: "More", icon: Menu },
 ];
+
+export function navItemIsActive(href: string, pathname: string, focus?: string | null): boolean {
+  if (href === "/?focus=tasks") return pathname === "/" && focus === "tasks";
+  if (href === "/") return pathname === "/";
+  if (href.startsWith("/?")) return false;
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+export function isMorePath(pathname: string): boolean {
+  return MORE_NAV_GROUPS.some((group) =>
+    group.items.some((item) => {
+      if (item.href.startsWith("/?")) return false;
+      return pathname === item.href || pathname.startsWith(`${item.href}/`);
+    }),
+  );
+}

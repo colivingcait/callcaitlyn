@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Badge } from "@/components/ui";
 import { RepresentingBadge } from "@/components/contacts/RepresentingBadge";
 import { LikelihoodBadge } from "@/components/contacts/LikelihoodBadge";
@@ -10,7 +11,7 @@ import { computeLikelihood } from "@/lib/crm/likelihood";
 import { formatCurrency, TIMELINE_LABELS } from "@/lib/utils";
 import { formatLocal, isFollowUpOverdue } from "@/lib/format-time";
 import { clearFollowUp, snoozeFollowUp } from "@/app/(app)/today-actions";
-import { CalendarClock, Check, Bell, Plus } from "lucide-react";
+import { CalendarClock, Check, Bell, Plus, ChevronRight } from "lucide-react";
 import type { ContactWithRelations, PipelineStage } from "@/types/database";
 
 // Everything worth knowing at a glance before texting someone - who they
@@ -64,6 +65,12 @@ export function ContactContextBar({ contact, stages }: { contact: ContactWithRel
               {ct.tags!.name}
             </Badge>
           ))}
+        <Link
+          href={`/contacts/${contact.id}`}
+          className="ml-auto inline-flex items-center gap-0.5 text-[11px] font-semibold text-brand-600"
+        >
+          Open record <ChevronRight size={12} />
+        </Link>
       </div>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] text-neutral-500">
         {contact.next_follow_up_at ? (

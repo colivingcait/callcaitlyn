@@ -78,6 +78,7 @@ export function TodayMobile({
             {formatLocal(new Date(), "EEEE")}
             {openItems > 0 ? ` · ${openItems} to work` : ""}
           </p>
+          <p className="mt-0.5 text-[13px] text-neutral-400">Morning loop. People in Contacts · texts in Messages · deals in Pipeline.</p>
         </div>
         <TodaySearch contacts={contacts} />
       </div>
@@ -109,6 +110,7 @@ export function TodayMobile({
         quietCount={groups.quiet.length}
         messages={groups.owed}
         underContractCount={today.statStrip.underContractCount}
+        taskCount={today.myTasks.length}
         focus={focus}
       />
 

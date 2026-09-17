@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/nav/Sidebar";
 import { BottomNav } from "@/components/nav/BottomNav";
@@ -31,7 +32,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const navCounts = {
     contacts: contactsCount ?? 0,
     // New leads now live on Today, not the Dialer - this badge reflects
-    // what's actually left to do in the Dialer itself (post-event
+    // what's actually left to do in Event calls (post-event
     // follow-ups + pre-event confirmations).
     dialer: followups.length + confirmations.length,
     messages: waitingOnReply,
@@ -50,7 +51,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // keeps its plain min-h-dvh document scroll (BottomNav is already
     // fixed, independent of this either way).
     <div className="flex min-h-dvh md:h-dvh md:overflow-hidden">
-      <Sidebar userEmail={user?.email} counts={navCounts} />
+      <Suspense fallback={<aside className="hidden w-[220px] shrink-0 border-r border-neutral-100 bg-[#fcfbfa] md:flex" />}>
+        <Sidebar userEmail={user?.email} counts={navCounts} />
+      </Suspense>
       <div className="flex min-h-dvh min-w-0 flex-1 flex-col md:h-dvh md:overflow-hidden">
         <main className="flex-1 bg-neutral-50/60 pb-[calc(var(--app-bottom-nav)+12px)] md:min-h-0 md:overflow-y-auto md:pb-8">{children}</main>
       </div>

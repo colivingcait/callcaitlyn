@@ -113,6 +113,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
         {formatLocal(new Date(), "EEEE, MMMM d")}
         {openItems > 0 ? ` · ${openItems} to work` : ""}
       </p>
+      <p className="mt-0.5 text-[13px] text-neutral-400">Morning loop. People in Contacts · texts in Messages · deals in Pipeline.</p>
 
       {activePrepSheets.length > 0 && (
         <div className="mt-4 space-y-3">
@@ -152,6 +153,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
           quietCount={desktopGroups.quiet.length}
           messages={desktopGroups.owed}
           underContractCount={today.statStrip.underContractCount}
+          taskCount={today.myTasks.length}
           focus={focus}
         />
       </div>
