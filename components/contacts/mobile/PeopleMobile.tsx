@@ -144,7 +144,7 @@ export function PeopleMobile({
             <div className="min-w-0">
               <p className="font-serif text-2xl font-semibold text-neutral-900">Contacts</p>
               <p className="mt-0.5 text-[13px] text-neutral-400">
-                People and lists. Deal board:{" "}
+                People and lists. Deal board is under More →{" "}
                 <Link href="/pipeline" className="font-medium text-brand-700">
                   Pipeline
                 </Link>
@@ -176,6 +176,13 @@ export function PeopleMobile({
               { value: "my-lists", label: "My lists" },
             ]}
           />
+          <Link
+            href="/pipeline"
+            className="mt-3 flex h-11 items-center justify-between rounded-[12px] border border-neutral-200 px-3.5 text-[15px] font-semibold text-neutral-800"
+          >
+            Deal board
+            <span className="text-[13px] font-medium text-neutral-400">Pipeline</span>
+          </Link>
 
           {view !== "my-lists" && (
             <>

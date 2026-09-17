@@ -78,7 +78,7 @@ export function TodayMobile({
             {formatLocal(new Date(), "EEEE")}
             {openItems > 0 ? ` · ${openItems} to work` : ""}
           </p>
-          <p className="mt-0.5 text-[13px] text-neutral-400">Morning loop. People in Contacts · texts in Messages · deals in Pipeline.</p>
+          <p className="mt-0.5 text-[13px] text-neutral-400">Morning loop. Contacts · Messages · Pipeline is under More.</p>
         </div>
         <TodaySearch contacts={contacts} />
       </div>

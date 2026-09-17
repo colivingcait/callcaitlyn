@@ -24,17 +24,20 @@ export type NavItem = { href: string; label: string; icon: LucideIcon; hint?: st
 export type NavGroup = { label: string; items: NavItem[] };
 export type NavCounts = { contacts?: number; dialer?: number; messages?: number; notes?: number; insights?: number; listings?: number };
 
-// Five primaries match the approved IA: Today | Contacts | Messages |
-// Pipeline | More. Everything else is secondary and lives in the More
-// sheet (mobile) / More group (sidebar). Routes stay live.
+// Four mobile primaries: Today | Contacts | Messages | More.
+// Pipeline is a deal board, not a second people list — it lives first in
+// More (and is linked from Contacts / Today's Under contract). Routes stay live.
 export const PRIMARY_NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Today", icon: Home },
   { href: "/contacts", label: "Contacts", icon: Users },
   { href: "/messages", label: "Messages", icon: MessageCircle },
-  { href: "/pipeline", label: "Pipeline", icon: KanbanSquare },
 ];
 
 export const MORE_NAV_GROUPS: NavGroup[] = [
+  {
+    label: "Deals",
+    items: [{ href: "/pipeline", label: "Pipeline", icon: KanbanSquare, hint: "Deal board · hot and under contract" }],
+  },
   {
     label: "Also today",
     items: [
@@ -66,7 +69,6 @@ export const MORE_NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-// Sidebar still wants a grouped list: primaries first, then More.
 export const NAV_GROUPS: NavGroup[] = [{ label: "Work", items: PRIMARY_NAV_ITEMS }, ...MORE_NAV_GROUPS];
 
 export type MobileNavItem = { kind: "link"; href: string; label: string; icon: LucideIcon } | { kind: "more"; label: string; icon: LucideIcon };
@@ -75,7 +77,6 @@ export const MOBILE_NAV_ITEMS: MobileNavItem[] = [
   { kind: "link", href: "/", label: "Today", icon: Home },
   { kind: "link", href: "/contacts", label: "Contacts", icon: Users },
   { kind: "link", href: "/messages", label: "Messages", icon: MessageCircle },
-  { kind: "link", href: "/pipeline", label: "Pipeline", icon: KanbanSquare },
   { kind: "more", label: "More", icon: Menu },
 ];
 

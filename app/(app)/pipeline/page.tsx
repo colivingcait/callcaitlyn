@@ -13,7 +13,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
       <div className="px-4 pt-6 pb-4 md:px-6">
         <h1 className="font-serif text-2xl font-semibold text-neutral-900 sm:text-[28px]">Pipeline</h1>
         <p className="mt-1 text-[15px] leading-[22px] text-neutral-500">
-          {activeCount} active people across {stages.length} stages. Search everyone and lists live in{" "}
+          {activeCount} active people across {stages.length} stages. This board is under More. Search everyone and lists live in{" "}
           <Link href="/contacts" className="font-medium text-brand-700 hover:underline">
             Contacts
           </Link>

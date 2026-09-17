@@ -9,9 +9,8 @@ import { SignOutButton } from "@/components/nav/SignOutButton";
 import { MORE_NAV_GROUPS, type NavCounts } from "@/components/nav/nav-items";
 import { countFor as countForCounts } from "@/lib/nav/countFor";
 
-// Everything not on the 5-tab bar, grouped exactly like the desktop
-// sidebar. Hints exist so a solo agent can find a buried tool without
-// memorizing which page it lives on.
+// Everything not on the 4-tab bar. Pipeline is first under Deals so the
+// deal board stays one tap away after leaving the primary tabs.
 export function MoreSheet({ open, onClose, userEmail, counts }: { open: boolean; onClose: () => void; userEmail?: string | null; counts: NavCounts }) {
   const [newTaskOpen, setNewTaskOpen] = useState(false);
   const countFor = countForCounts(counts);
@@ -22,10 +21,10 @@ export function MoreSheet({ open, onClose, userEmail, counts }: { open: boolean;
         <div className="pb-4">
           {userEmail && <p className="mb-2 truncate text-[14px] text-neutral-400">{userEmail}</p>}
           <p className="mb-3 text-[14px] leading-5 text-neutral-500">
-            Morning loop is <span className="font-semibold text-neutral-800">Today</span>. People and lists:{" "}
-            <span className="font-semibold text-neutral-800">Contacts</span>. Texts:{" "}
-            <span className="font-semibold text-neutral-800">Messages</span>. Deals:{" "}
-            <span className="font-semibold text-neutral-800">Pipeline</span>.
+            Four tabs: <span className="font-semibold text-neutral-800">Today</span>,{" "}
+            <span className="font-semibold text-neutral-800">Contacts</span>,{" "}
+            <span className="font-semibold text-neutral-800">Messages</span>, More. Deal board is{" "}
+            <span className="font-semibold text-neutral-800">Pipeline</span> below.
           </p>
           <button
             type="button"
