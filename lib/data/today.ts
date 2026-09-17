@@ -5,7 +5,9 @@ import { filterByQueue } from "@/lib/crm/contact-queue-filter";
 import { listContacts } from "@/lib/data/contacts";
 import { listNewLeadsQueue } from "@/lib/data/new-leads";
 import { listWonDeals, listPendingDeals } from "@/lib/data/commissions";
-import { listPendingBookingRequests, listUpcomingApprovedBookingRequests } from "@/lib/data/scheduling";
+import { listPendingBookingRequests } from "@/lib/data/scheduling";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { listTodayGoogleEvents, type CalendarFeedStatus } from "@/lib/google/calendar";
 import { computeDeals, summarizeDeals, capYearKey, capYearStart, KW_CAP } from "@/lib/crm/commission";
 import { conversationOwedFromHistory } from "@/lib/crm/message-owed";
 import { isSpamLikeMissedCall, isTodayWorkContact } from "@/lib/crm/today-eligible";
@@ -127,12 +129,17 @@ async function getMyTasksGroup(): Promise<WorklistTask[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("tasks")
-    .select("id, title, due_at, contact_id, contacts(first_name, last_name, phone)")
+    .select("id, title, due_at, contact_id, contacts(first_name, last_name, phone, spam)")
     .is("completed_at", null)
     .order("due_at", { ascending: true, nullsFirst: false })
     .limit(30);
 
-  return (data ?? []).map((t) => {
+  return (data ?? [])
+    .filter((t) => {
+      const contact = t.contacts as unknown as { spam?: boolean } | null;
+      return !contact?.spam;
+    })
+    .map((t) => {
     const contact = t.contacts as unknown as { first_name: string; last_name: string; phone: string | null } | null;
     const late = t.due_at ? isPast(new Date(t.due_at)) && !isTodayLocal(t.due_at) : false;
     return {
@@ -218,8 +225,8 @@ async function getStatStrip(stages: PipelineStage[]) {
   // pattern getCallsGroup already uses), rather than a UTC day boundary
   // that would cut off early-morning/late-evening calls incorrectly.
   const [{ data: contacts }, { count: newLeadsWeek }, { data: recentCalls }] = await Promise.all([
-    supabase.from("contacts").select("id, stage_id").eq("archived", false),
-    supabase.from("contacts").select("id", { count: "exact", head: true }).eq("archived", false).gte("lead_date", daysAgo(7)),
+    supabase.from("contacts").select("id, stage_id").eq("archived", false).eq("spam", false),
+    supabase.from("contacts").select("id", { count: "exact", head: true }).eq("archived", false).eq("spam", false).gte("lead_date", daysAgo(7)),
     supabase.from("activities").select("occurred_at").eq("type", "call").eq("direction", "outbound").gte("occurred_at", daysAgo(1.5)),
   ]);
   const callsToday = (recentCalls ?? []).filter((c) => isTodayLocal(c.occurred_at as string)).length;
@@ -263,14 +270,40 @@ export type TodayCalendarItem = {
   startsAt: string;
   href: string;
   meta?: string;
+  allDay?: boolean;
 };
+
+export type { CalendarFeedStatus };
+
+async function getGoogleCalendarFeed(ownerId: string): Promise<{ calendar: TodayCalendarItem[]; calendarStatus: CalendarFeedStatus }> {
+  if (!ownerId) return { calendar: [], calendarStatus: "disconnected" };
+  const timeMin = new Date().toISOString();
+  const timeMax = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+  const feed = await listTodayGoogleEvents(createAdminClient(), ownerId, timeMin, timeMax);
+  if (feed.status !== "ok") return { calendar: [], calendarStatus: feed.status };
+
+  return {
+    calendarStatus: "ok",
+    calendar: feed.events.slice(0, 20).map((e) => ({
+      id: e.id,
+      title: e.title,
+      startsAt: e.startAt,
+      href: e.htmlLink || "https://calendar.google.com",
+      meta: e.allDay ? "All day" : e.location ?? undefined,
+      allDay: e.allDay,
+    })),
+  };
+}
 
 export async function getTodayData() {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const { data: stagesData } = await supabase.from("pipeline_stages").select("*").order("sort_order", { ascending: true });
   const stages = (stagesData ?? []) as PipelineStage[];
 
-  const [calls, repliesOwedResult, myTasks, registeredNoFollowUp, statStrip, commissionYear, newLeads, bookingRequests, quietLeads, spamConversations, upcomingMeetings, { data: upcomingEventRows }] =
+  const [calls, repliesOwedResult, myTasks, registeredNoFollowUp, statStrip, commissionYear, newLeads, bookingRequests, quietLeads, spamConversations, googleCal] =
     await Promise.all([
       getCallsGroup(),
       getRepliesOwedGroup(),
@@ -282,30 +315,8 @@ export async function getTodayData() {
       listPendingBookingRequests(),
       getQuietLeadsGroup(),
       listConversations({ spam: true }),
-      listUpcomingApprovedBookingRequests(),
-      supabase.from("events").select("id, name, series, starts_at, eventbrite_event_id").gte("starts_at", new Date().toISOString()).order("starts_at", { ascending: true }).limit(5),
+      getGoogleCalendarFeed(user?.id ?? ""),
     ]);
-
-  const calendar: TodayCalendarItem[] = [
-    ...(upcomingEventRows ?? []).map((e) => ({
-      id: `event-${e.id}`,
-      title: e.name,
-      startsAt: e.starts_at as string,
-      href: e.eventbrite_event_id ? `/events/${e.series}:${e.eventbrite_event_id}` : "/events",
-      meta: e.series === "womens_rei" ? "Women's REI" : e.series === "house_hacking" ? "House hacking" : undefined,
-    })),
-    ...upcomingMeetings
-      .filter((m) => m.starts_at)
-      .map((m) => ({
-        id: `meeting-${m.id}`,
-        title: m.contact_name ? m.contact_name : m.visitor_name || "Client meeting",
-        startsAt: m.starts_at as string,
-        href: "/scheduling",
-        meta: "Booked meeting",
-      })),
-  ]
-    .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())
-    .slice(0, 5);
 
   return {
     stages,
@@ -320,6 +331,7 @@ export async function getTodayData() {
     bookingRequests,
     quietLeads,
     spamFilteredCount: spamConversations.length,
-    calendar,
+    calendar: googleCal.calendar,
+    calendarStatus: googleCal.calendarStatus,
   };
 }

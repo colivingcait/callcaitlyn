@@ -35,7 +35,11 @@ const RULES: { reason: string; patterns: RegExp[] }[] = [
     // nothing else to match on. A real caller never says this to a real
     // estate agent's voicemail; hearing it at all means it's a recording.
     reason: "Robocall opt-out script",
-    patterns: [/\bopt out\b/i, /press \d.{0,20}opt.?out/i],
+    // Any reasonable casing/punctuation ("opt out", "opt-out", "optout",
+    // "OPT OUT.") - a real caller never recites a TCPA opt-out line into
+    // a realtor's voicemail. Word-boundary `\bopt out\b` missed hyphen and
+    // jammed forms that show up in transcripts.
+    patterns: [/opt[\s._-]*out/i],
   },
   { reason: "Business loans / funding", patterns: [/business loan/i, /working capital/i, /\bfunding\b/i, /merchant advance/i, /line of credit/i] },
   { reason: "Taxes / IRS", patterns: [/\birs\b/i, /tax relief/i, /back taxes/i, /tax settlement/i] },
@@ -50,15 +54,39 @@ const RULES: { reason: string; patterns: RegExp[] }[] = [
 export const MISSED_STATUSES = new Set(["missed", "no-answer", "no_answer", "busy", "voicemail"]);
 
 const ROBOCALL_REASON = "Robocall, no voicemail";
+export const TOLL_FREE_CALLBACK_REASON = "Toll-free callback (8xx)";
 
-// Settings → Spam filters lists exactly these ten, each independently
-// toggleable (see spam_rule_overrides) - the regex-matched ones above plus
-// the repeat-attempts rule, which has no pattern list of its own.
-export const ALL_SPAM_RULE_REASONS: string[] = [...RULES.map((r) => r.reason), ROBOCALL_REASON];
+// NANP toll-free NPAs. A local exchange that happens to be 8xx
+// (Atlanta 404-877-xxxx) is NOT toll-free - strip those before matching
+// so "call me back, I'm at 404-877-1212" never flags a real lead.
+const LOCAL_EIGHT_HUNDRED_LOOKALIKE = /\b[2-9]\d{2}[\s.-]8(?:00|22|33|44|55|66|77|88)[\s.-]\d{4}\b/g;
+const TOLL_FREE_NPA = "8(?:00|22|33|44|55|66|77|88)";
+const CALLBACK_LANGUAGE =
+  /\b(call(?:[\s_-]*(?:us|me|this|back))?|give us a call|dial|return(?:\s+(?:our|the))?\s+call|reach(?:\s+us)?|callback)\b/i;
+
+export function isTollFreeCallbackPitch(text: string): boolean {
+  const cleaned = text.replace(LOCAL_EIGHT_HUNDRED_LOOKALIKE, " ");
+  const fullNumber = new RegExp(
+    String.raw`(?:\+?1[\s.-]*)?\(?${TOLL_FREE_NPA}\)?[\s./-]*\d{3}[\s.-]*\d{4}`,
+    "i",
+  );
+  const spoken = new RegExp(String.raw`\b${TOLL_FREE_NPA}[\s-]*(?:number|#|num)\b`, "i");
+  if (!fullNumber.test(cleaned) && !spoken.test(cleaned)) return false;
+  return CALLBACK_LANGUAGE.test(cleaned);
+}
+
+// Settings → Spam filters lists each of these, independently toggleable
+// (see spam_rule_overrides) - the regex-matched ones above plus the
+// toll-free callback and repeat-attempts rules, which have no pattern
+// list of their own.
+export const ALL_SPAM_RULE_REASONS: string[] = [...RULES.map((r) => r.reason), TOLL_FREE_CALLBACK_REASON, ROBOCALL_REASON];
 
 export type SpamCheckInput = {
   summary: string | null;
   transcript: string | null;
+  // Call body / SMS text / describeCall() line - voicemail transcripts
+  // often land here when summary/transcript columns are still empty.
+  body?: string | null;
   durationSeconds: number | null;
   status: string | null;
   hasVoicemail: boolean;
@@ -79,12 +107,16 @@ export type SpamCheckResult = { isSpam: boolean; reason: string | null };
 // duration/unknown-number alone would bury genuine leads in the bucket.
 export function detectSpam(input: SpamCheckInput): SpamCheckResult {
   const disabled = input.disabledReasons;
-  const text = [input.summary, input.transcript].filter(Boolean).join("\n");
+  const text = [input.summary, input.transcript, input.body].filter(Boolean).join("\n");
   for (const rule of RULES) {
     if (disabled?.has(rule.reason)) continue;
     if (rule.patterns.some((p) => p.test(text))) {
       return { isSpam: true, reason: rule.reason };
     }
+  }
+
+  if (!disabled?.has(TOLL_FREE_CALLBACK_REASON) && isTollFreeCallbackPitch(text)) {
+    return { isSpam: true, reason: TOLL_FREE_CALLBACK_REASON };
   }
 
   const missed = input.status ? MISSED_STATUSES.has(input.status.toLowerCase()) : false;

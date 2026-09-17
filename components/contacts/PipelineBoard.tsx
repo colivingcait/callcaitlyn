@@ -112,7 +112,7 @@ export async function PipelineBoard({
           return (
             <div key={stage.id} id={`pipeline-stage-${stage.id}`} style={{ scrollMarginTop: 130 }}>
               {/* Mobile: StickyGroupHeader + plain rows */}
-              <div className="rounded-[16px] border border-[#ebe9e7] bg-white lg:hidden">
+              <div className="rounded-[16px] border border-[#eadfd6] bg-[#fffbf8] shadow-card lg:hidden">
                 <StickyGroupHeader
                   label={stage.name}
                   count={rows.length}
@@ -148,7 +148,7 @@ export async function PipelineBoard({
                     ) : undefined
                   }
                 >
-                  <div className="space-y-2 bg-[#fcfbfa] p-3.5">
+                  <div className="space-y-2 bg-[#f7f1ea]/40 p-3.5">
                     {rows.length === 0 ? (
                       <p className="py-4 text-center text-sm text-neutral-400">Nobody in this stage.</p>
                     ) : (

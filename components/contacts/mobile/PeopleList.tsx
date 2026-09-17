@@ -8,7 +8,7 @@ import { SwipeActions } from "@/components/mobile/SwipeActions";
 import { StickyGroupHeader } from "@/components/mobile/StickyGroupHeader";
 import { LogSheet } from "@/components/contacts/mobile/LogSheet";
 import { snoozeFollowUp } from "@/app/(app)/today-actions";
-import { groupContacts } from "@/lib/crm/contact-grouping";
+import { groupContacts, defaultContactsGroupOpen } from "@/lib/crm/contact-grouping";
 import { useToast } from "@/lib/hooks/useToast";
 import { Toast } from "@/components/mobile/Toast";
 import { CONTACT_TYPE_LABELS, formatPhone } from "@/lib/utils";
@@ -58,18 +58,18 @@ export function PeopleList({
   }
 
   return (
-    <div className="rounded-[16px] border border-[#ebe9e7] bg-white">
+    <div className="rounded-[16px] border border-[#eadfd6] bg-[#fffbf8] shadow-card">
       {contacts.length === 0 ? (
         <p className="px-4 py-10 text-center text-[15px] text-neutral-400">No contacts match. Try clearing filters or add a new contact.</p>
       ) : (
-        groups.map((group) => (
+        groups.map((group, index) => (
         <StickyGroupHeader
           key={group.key}
           label={group.label || "All"}
           count={group.contacts.length}
           collapsible={collapsible}
-          sectionKey={`people:${groupBy}:${group.key}`}
-          defaultOpen
+          sectionKey={`people-v2:${groupBy}:${group.key}`}
+          defaultOpen={defaultContactsGroupOpen(group.key, group.contacts.length, stages, index, groupBy)}
         >
           <div className="divide-y divide-neutral-100">
             {group.contacts.map((contact) => {

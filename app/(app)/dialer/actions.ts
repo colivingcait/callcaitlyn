@@ -16,7 +16,7 @@ export async function searchContactsToConfirm(query: string): Promise<Confirmati
   if (q.length < 2) return [];
 
   const supabase = await createClient();
-  const { data } = await supabase.from("contacts").select("id, first_name, last_name, phone").eq("archived", false);
+  const { data } = await supabase.from("contacts").select("id, first_name, last_name, phone").eq("archived", false).eq("spam", false);
 
   return (data ?? [])
     .filter((c) => `${c.first_name} ${c.last_name}`.toLowerCase().includes(q))

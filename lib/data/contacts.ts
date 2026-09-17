@@ -55,6 +55,7 @@ export async function listMergeCandidates(): Promise<MergeCandidate[]> {
     .from("contacts")
     .select("id, first_name, last_name, phone, email")
     .eq("archived", false)
+    .eq("spam", false)
     .order("first_name", { ascending: true });
   return (data ?? []) as MergeCandidate[];
 }
@@ -242,7 +243,7 @@ export async function listContacts(filters: ContactListFilters) {
 // pattern as listLeadSources below.
 export async function listLastEventNames() {
   const supabase = await createClient();
-  const { data } = await supabase.from("contacts").select("last_event_name").eq("archived", false).not("last_event_name", "is", null);
+  const { data } = await supabase.from("contacts").select("last_event_name").eq("archived", false).eq("spam", false).not("last_event_name", "is", null);
   const values = new Set((data ?? []).map((c) => c.last_event_name as string).filter((s) => s.trim().length > 0));
   return [...values].sort((a, b) => a.localeCompare(b));
 }
@@ -276,7 +277,7 @@ export async function listRegisteredEventNames() {
 // suggestion list.
 export async function listLeadSources() {
   const supabase = await createClient();
-  const { data } = await supabase.from("contacts").select("lead_source").eq("archived", false).not("lead_source", "is", null);
+  const { data } = await supabase.from("contacts").select("lead_source").eq("archived", false).eq("spam", false).not("lead_source", "is", null);
   const values = new Set((data ?? []).map((c) => c.lead_source as string).filter((s) => s.trim().length > 0));
   return [...values].sort((a, b) => a.localeCompare(b));
 }

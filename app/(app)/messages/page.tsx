@@ -3,8 +3,7 @@ import { listConversations, listTextableContacts } from "@/lib/data/messages";
 import { listMergeCandidates } from "@/lib/data/contacts";
 import { getUnmatchedInstagramThreads } from "@/lib/data/instagram";
 import { createClient } from "@/lib/supabase/server";
-import { ConversationRow } from "@/components/messages/ConversationRow";
-import { NotOwedList } from "@/components/messages/NotOwedList";
+import { CappedConversationList, NotOwedList } from "@/components/messages/NotOwedList";
 import { NewMessageButton } from "@/components/messages/NewMessageButton";
 import { InstagramStrangerRow } from "@/components/messages/InstagramStrangerRow";
 import { MessageFilters } from "@/components/messages/MessageFilters";
@@ -108,7 +107,8 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
         </div>
       )}
 
-      <div className="space-y-2 px-4 py-3">
+      <div className="grid min-w-0 grid-cols-12 gap-6 px-0 py-3">
+        <div className="col-span-12 min-w-0 space-y-2 xl:col-span-8">
         {visible.length === 0 ? (
           <p className="py-10 text-center text-sm text-neutral-400">
             {hidden
@@ -119,12 +119,21 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
           </p>
         ) : (
           <>
-            {owedVisible.map((c) => (
-              <ConversationRow key={c.contact.id} conversation={c} filter={filter} hidden={hidden} />
-            ))}
-            {notOwedVisible.length > 0 && <p className="px-0.5 pb-1 pt-2 text-base font-semibold text-neutral-900">Nothing owed</p>}
+            <CappedConversationList conversations={owedVisible} filter={filter} hidden={hidden} initial={8} />
+            {notOwedVisible.length > 0 && <p className="px-0.5 pb-1 pt-3 text-base font-semibold text-neutral-900">Nothing owed</p>}
             <NotOwedList conversations={notOwedVisible} filter={filter} hidden={hidden} />
           </>
+        )}
+        </div>
+        {!hidden && (
+          <aside className="col-span-4 hidden min-w-0 xl:block">
+            <div className="sticky top-6 rounded-[16px] border border-[#eadfd6]/90 bg-[#fffbf8] p-5 shadow-card">
+              <p className="font-display text-[22px] font-semibold tracking-[-0.02em] text-neutral-900">While you message</p>
+              <p className="mt-2 text-[14px] leading-5 text-neutral-500">
+                Open a thread and the leftover width fills with who they are — stage, last touch, notes, meetup history, and open tasks — so you can act without flipping to Contacts.
+              </p>
+            </div>
+          </aside>
         )}
       </div>
 

@@ -3,9 +3,11 @@ import { Clock, Phone, UserPlus, Bell, ChevronRight, MessageCircle, ShieldAlert 
 import { cn } from "@/lib/utils";
 import { todayFocusHref } from "@/lib/crm/today-focus";
 import { inboxHref } from "@/lib/crm/inbox-href";
+import { PAPER_CARD } from "@/lib/ui/paper";
+import { ShowMoreList } from "@/components/ui/ShowMoreList";
 import type { WorklistPerson } from "@/lib/data/today";
 
-const CARD = "border border-[#eadfd6]/90 bg-[#fffbf8] shadow-card";
+const CARD = PAPER_CARD;
 const BADGE = "flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-[13px] font-semibold";
 const LABEL = "mb-2.5 px-0.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7a5c50]";
 
@@ -28,7 +30,7 @@ function QueueRow({
     <Link
       href={href}
       data-today-control={control}
-      className={cn("flex min-h-[58px] items-center gap-3 rounded-[16px] px-3.5 py-3.5", CARD)}
+      className={cn("flex min-h-[58px] min-w-0 items-center gap-3 rounded-[16px] px-3.5 py-3.5", CARD)}
     >
       <Icon size={20} strokeWidth={1.7} className={cn("shrink-0", accent || count > 0 ? "text-[#c45c4a]" : "text-neutral-500")} />
       <p className="min-w-0 flex-1 truncate text-[16px] text-neutral-900">
@@ -61,32 +63,26 @@ export function TodayQueues({
   const owedCount = messages.length;
 
   const doNext = (
-    <section>
+    <section className="min-w-0">
       <p className={LABEL}>Do next</p>
-      <div className={wide ? "grid grid-cols-3 gap-3" : "space-y-2"}>
+      <div className={wide ? "grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4" : "space-y-2"}>
         <QueueRow href={todayFocusHref("overdue")} icon={Clock} label="Overdue" count={overdueCount} accent control="queue-overdue" />
         <QueueRow href={todayFocusHref("call-today")} icon={Phone} label="Call today" count={callTodayCount} control="queue-call-today" />
         <QueueRow href={todayFocusHref("new")} icon={UserPlus} label="New / uncontacted" count={newUncontactedCount} control="queue-new" />
+        <QueueRow href={todayFocusHref("quiet")} icon={Bell} label="Quiet 14+ days" count={quietCount} control="queue-quiet" />
       </div>
     </section>
   );
 
-  const quiet = (
-    <section>
-      <p className={LABEL}>Quiet leads</p>
-      <QueueRow href={todayFocusHref("quiet")} icon={Bell} label="No touch 14+ days" count={quietCount} control="queue-quiet" />
-    </section>
-  );
-
   const inbox = (
-    <section>
+    <section className="min-w-0">
       <p className={LABEL}>Messages</p>
       <Link
         href="/messages"
         data-today-control="messages"
-        className="block rounded-[16px] border border-[#f0e4df] bg-[#fdf6f3] px-3.5 py-3.5 shadow-card"
+        className="block min-w-0 overflow-hidden rounded-[16px] border border-[#f0e4df] bg-[#fdf6f3] px-3.5 py-3.5 shadow-card"
       >
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#c45c4a] text-white shadow-[0_4px_10px_rgb(196_92_74_/_0.28)]">
             <MessageCircle size={18} strokeWidth={1.6} fill="currentColor" />
           </div>
@@ -95,13 +91,21 @@ export function TodayQueues({
           </p>
           <ChevronRight size={18} strokeWidth={1.75} className="shrink-0 text-neutral-300" />
         </div>
-        {messages.slice(0, wide ? 5 : 2).map((m) => (
-          <p key={m.id} className="mt-1 truncate pl-[52px] text-[14px] text-neutral-500">
-            <span className="text-neutral-800">{m.name}</span>
-            {m.meta ? ` · ${m.meta}` : ""}
-          </p>
-        ))}
       </Link>
+      {owedCount > 0 && (
+        <div className={cn("mt-2 min-w-0 overflow-hidden", CARD)}>
+          <ShowMoreList
+            items={messages}
+            initial={wide ? 4 : 2}
+            renderItem={(m) => (
+              <Link key={m.id} href={`/messages/${m.id}`} className="block truncate border-t border-[#eadfd6]/80 px-3.5 py-2.5 first:border-t-0">
+                <span className="text-[14px] font-medium text-neutral-800">{m.name}</span>
+                {m.meta ? <span className="text-[13px] text-neutral-400">{` · ${m.meta}`}</span> : null}
+              </Link>
+            )}
+          />
+        </div>
+      )}
       {spamFilteredCount > 0 && (
         <Link
           href={inboxHref({ spam: true })}
@@ -118,12 +122,9 @@ export function TodayQueues({
 
   if (wide) {
     return (
-      <div className="relative space-y-8">
+      <div className="relative min-w-0 space-y-6">
         {doNext}
-        <div className="grid grid-cols-2 gap-8">
-          {quiet}
-          {inbox}
-        </div>
+        {inbox}
       </div>
     );
   }
@@ -131,7 +132,6 @@ export function TodayQueues({
   return (
     <div className="relative space-y-6">
       {doNext}
-      {quiet}
       {inbox}
     </div>
   );

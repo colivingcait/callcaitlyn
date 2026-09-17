@@ -34,10 +34,10 @@ export default async function EventsPage() {
     : 0;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6">
+    <div className="mx-auto w-full min-w-0 max-w-[1400px] px-5 py-6 lg:px-8 lg:py-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-serif text-2xl font-semibold text-neutral-900 sm:text-[28px]">Events</h1>
+          <h1 className="font-display text-[32px] font-semibold tracking-[-0.03em] text-neutral-900">Events</h1>
           <p className="mt-1 text-[15px] text-neutral-500">
             {totalUniqueAttendees} people have come to at least one. {eventsInLastYear} events in the last year.
           </p>

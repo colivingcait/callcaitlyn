@@ -54,6 +54,7 @@ export async function getNewLeadsReport(period: Period): Promise<NewLeadsReportD
     .from("contacts")
     .select("lead_source")
     .eq("archived", false)
+    .eq("spam", false)
     .gte("lead_date", daysAgo(PERIOD_DAYS[period]));
 
   const countBySource = new Map<string, number>();
@@ -91,7 +92,7 @@ export type LeadSourceReportRow = {
 export async function getLeadSourceReport(): Promise<LeadSourceReportRow[]> {
   const supabase = await createClient();
   const [{ data: contacts }, { data: deals }] = await Promise.all([
-    supabase.from("contacts").select("id, lead_source").eq("archived", false),
+    supabase.from("contacts").select("id, lead_source").eq("archived", false).eq("spam", false),
     supabase.from("deals").select("contact_id, gross_commission").eq("status", "won"),
   ]);
 
@@ -200,7 +201,7 @@ export type ContactTypeBreakdownRow = { type: string; label: string; count: numb
 
 export async function getContactTypeBreakdown(): Promise<ContactTypeBreakdownRow[]> {
   const supabase = await createClient();
-  const { data: contacts } = await supabase.from("contacts").select("contact_type").eq("archived", false);
+  const { data: contacts } = await supabase.from("contacts").select("contact_type").eq("archived", false).eq("spam", false);
 
   const counts = new Map<string, number>();
   for (const c of contacts ?? []) {
@@ -227,6 +228,7 @@ export async function getSpeedToLeadDistribution(period: Period): Promise<SpeedT
     .from("contacts")
     .select("id, created_at")
     .eq("archived", false)
+    .eq("spam", false)
     .gte("created_at", start)
     .lt("created_at", end);
 
@@ -282,6 +284,7 @@ export async function getSourceTrend(): Promise<SourceTrendData> {
     .from("contacts")
     .select("lead_source, lead_date")
     .eq("archived", false)
+    .eq("spam", false)
     .gte("lead_date", months[0].start.toISOString());
 
   const countsBySource = new Map<string, number[]>();
@@ -309,7 +312,7 @@ export async function getTagSegments(): Promise<TagSegmentData> {
   const [{ data: tags }, { data: contactTags }, { data: contacts }] = await Promise.all([
     supabase.from("tags").select("id, name, color"),
     supabase.from("contact_tags").select("contact_id, tag_id"),
-    supabase.from("contacts").select("id").eq("archived", false),
+    supabase.from("contacts").select("id").eq("archived", false).eq("spam", false),
   ]);
 
   const activeContactIds = new Set((contacts ?? []).map((c) => c.id));
@@ -340,7 +343,7 @@ export async function getJourneyStageBreakdown(): Promise<JourneyStageRow[]> {
   const [{ data: tags }, { data: contactTags }, { data: contacts }] = await Promise.all([
     supabase.from("tags").select("id, name"),
     supabase.from("contact_tags").select("contact_id, tag_id"),
-    supabase.from("contacts").select("id").eq("archived", false),
+    supabase.from("contacts").select("id").eq("archived", false).eq("spam", false),
   ]);
 
   const tagIdByName = new Map((tags ?? []).map((t) => [t.name, t.id]));
@@ -472,7 +475,7 @@ export async function getStaleLeadsReport(): Promise<StaleLeadBucket[]> {
   const supabase = await createClient();
   const [{ data: stages }, { data: contacts }, { data: activities }] = await Promise.all([
     supabase.from("pipeline_stages").select("id, is_closed_won, is_closed_lost, is_trash"),
-    supabase.from("contacts").select("id, stage_id, lead_date").eq("archived", false),
+    supabase.from("contacts").select("id, stage_id, lead_date").eq("archived", false).eq("spam", false),
     supabase.from("activities").select("contact_id, occurred_at"),
   ]);
 
@@ -524,7 +527,8 @@ export async function getDuplicateRiskPairs(): Promise<DuplicateRiskPair[]> {
   const { data: contacts } = await supabase
     .from("contacts")
     .select("id, first_name, last_name, email, phone")
-    .eq("archived", false);
+    .eq("archived", false)
+    .eq("spam", false);
 
   const list = contacts ?? [];
   const pairs: DuplicateRiskPair[] = [];
@@ -603,7 +607,7 @@ export async function getStageDistribution(): Promise<StageDistributionRow[]> {
   const supabase = await createClient();
   const [{ data: stages }, { data: contacts }] = await Promise.all([
     supabase.from("pipeline_stages").select("id, name, color, sort_order").order("sort_order", { ascending: true }),
-    supabase.from("contacts").select("stage_id").eq("archived", false),
+    supabase.from("contacts").select("stage_id").eq("archived", false).eq("spam", false),
   ]);
 
   const countByStage = new Map<string, number>();

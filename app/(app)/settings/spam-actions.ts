@@ -153,7 +153,7 @@ export async function recheckSpamRules(): Promise<RecheckResult> {
   const admin = createAdminClient();
   const { data: rows } = await admin
     .from("activities")
-    .select("dedupe_value, contact_id, metadata")
+    .select("dedupe_value, contact_id, metadata, body")
     .eq("owner_id", user.id)
     .eq("source", "quo")
     .eq("type", "call");
@@ -183,6 +183,7 @@ export async function recheckSpamRules(): Promise<RecheckResult> {
     const spamCheck = detectSpam({
       summary: typeof metadata?.summary === "string" ? metadata.summary : null,
       transcript: typeof metadata?.transcript === "string" ? metadata.transcript : null,
+      body: typeof activity.body === "string" ? activity.body : null,
       durationSeconds: typeof metadata?.duration_seconds === "number" ? metadata.duration_seconds : null,
       status: typeof metadata?.status === "string" ? metadata.status : null,
       hasVoicemail: typeof metadata?.recording_url === "string" && !!metadata.recording_url,
