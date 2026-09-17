@@ -83,13 +83,14 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      const spamCheck = await checkCallForSpam(admin, OWNER_ID, call);
       const contact = await findOrCreateContact(admin, OWNER_ID, {
         phone: call.counterpartNumber,
         leadSource: "Quo (auto-created from call)",
+        spam: spamCheck.isSpam,
+        skipQuoSync: spamCheck.isSpam,
       });
       if (contact) {
-        const spamCheck = await checkCallForSpam(admin, OWNER_ID, call);
-
         await upsertActivity(admin, OWNER_ID, contact.id, "quo", "quo_call_id", call.quoCallId, {
           type: "call",
           direction: call.direction,
@@ -245,9 +246,15 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      const textSpam =
+        eventType === "message.received" && msg.text
+          ? await checkTextForSpam(admin, OWNER_ID, msg.text, msg.counterpartNumber)
+          : { isSpam: false, reason: null as string | null };
       const contact = await findOrCreateContact(admin, OWNER_ID, {
         phone: msg.counterpartNumber,
         leadSource: "Quo (auto-created from text)",
+        spam: textSpam.isSpam,
+        skipQuoSync: textSpam.isSpam,
       });
       if (contact) {
         const activity = await upsertActivity(admin, OWNER_ID, contact.id, "quo", "quo_message_id", msg.quoMessageId, {
@@ -255,11 +262,20 @@ export async function POST(request: NextRequest) {
           direction: msg.direction,
           occurred_at: msg.occurredAt,
           body: msg.text,
-          metadata: { quo_message_id: msg.quoMessageId, quo_event_type: eventType, raw: body },
+          metadata: {
+            quo_message_id: msg.quoMessageId,
+            quo_event_type: eventType,
+            raw: body,
+            ...(textSpam.isSpam ? { spam_reason: textSpam.reason, spam_detected_at: new Date().toISOString() } : {}),
+          },
         });
-        await updateEngagementTag(admin, OWNER_ID, contact.id);
+        if (textSpam.isSpam) {
+          await admin.from("contacts").update({ spam: true }).eq("id", contact.id);
+        } else {
+          await updateEngagementTag(admin, OWNER_ID, contact.id);
+        }
 
-        if (eventType === "message.received" && msg.text) {
+        if (!textSpam.isSpam && eventType === "message.received" && msg.text) {
           if (isOptOutMessage(msg.text)) {
             // Fines here are per message - marked immediately, no AI
             // analysis on an opt-out (there's nothing to read into it),
@@ -308,10 +324,32 @@ async function checkCallForSpam(
   return detectSpam({
     summary: call.summary,
     transcript: call.transcript,
+    body: describeCall(call),
     durationSeconds: call.durationSeconds,
     status: call.status,
     hasVoicemail: !!call.recordingUrl,
     repeatedInboundNoVoicemail,
+    disabledReasons,
+  });
+}
+
+async function checkTextForSpam(
+  admin: ReturnType<typeof createAdminClient>,
+  ownerId: string,
+  text: string,
+  phone: string | null,
+): Promise<SpamCheckResult> {
+  if (await isNumberAllowlisted(admin, ownerId, phone)) {
+    return { isSpam: false, reason: null };
+  }
+  const disabledReasons = await getDisabledSpamReasons(admin, ownerId);
+  return detectSpam({
+    summary: null,
+    transcript: null,
+    body: text,
+    durationSeconds: null,
+    status: null,
+    hasVoicemail: false,
     disabledReasons,
   });
 }

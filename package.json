@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "prove-today": "npx tsx lib/crm/today-controls.proof.ts && npx tsx lib/crm/desktop-shell.proof.ts"
+    "prove-today": "npx tsx lib/crm/today-controls.proof.ts && npx tsx lib/crm/desktop-shell.proof.ts && npx tsx lib/crm/spam-signals.proof.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",

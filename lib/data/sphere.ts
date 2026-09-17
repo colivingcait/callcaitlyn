@@ -70,7 +70,8 @@ export async function getSphereData() {
     supabase
       .from("contacts")
       .select("id, first_name, last_name, phone, email, birthday, known_personally, referred_by, archived, pipeline_stages(is_closed_won)")
-      .eq("archived", false),
+      .eq("archived", false)
+      .eq("spam", false),
     supabase.from("deals").select("*").eq("status", "won"),
     supabase.from("deals").select("contact_id, status").eq("status", "pending"),
     supabase.from("dismissed_insights").select("insight_key, dismissed_at").like("insight_key", "review_%"),

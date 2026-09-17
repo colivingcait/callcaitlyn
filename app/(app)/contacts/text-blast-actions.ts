@@ -63,6 +63,7 @@ async function resolveEventAudience(
     .select("id, first_name, last_name, phone, email, opted_out_at")
     .in("id", contactIds)
     .eq("archived", false)
+    .eq("spam", false)
     .not("phone", "is", null);
 
   return splitByOptOut((contacts ?? []) as (AudienceContact & { opted_out_at: string | null })[]);
@@ -111,6 +112,7 @@ async function resolveOccurrenceAudience(
     .select("id, first_name, last_name, phone, email, opted_out_at")
     .in("id", contactIds)
     .eq("archived", false)
+    .eq("spam", false)
     .not("phone", "is", null);
 
   return splitByOptOut((contacts ?? []) as (AudienceContact & { opted_out_at: string | null })[]);
@@ -130,6 +132,7 @@ async function resolveTagAudience(admin: SupabaseClient, ownerId: string, tagId:
     .in("id", contactIds)
     .eq("owner_id", ownerId)
     .eq("archived", false)
+    .eq("spam", false)
     .not("phone", "is", null);
 
   return splitByOptOut((contacts ?? []) as (AudienceContact & { opted_out_at: string | null })[]);
@@ -146,6 +149,7 @@ async function resolveContactsAudience(admin: SupabaseClient, ownerId: string, c
     .in("id", contactIds)
     .eq("owner_id", ownerId)
     .eq("archived", false)
+    .eq("spam", false)
     .not("phone", "is", null);
 
   return splitByOptOut((contacts ?? []) as (AudienceContact & { opted_out_at: string | null })[]);

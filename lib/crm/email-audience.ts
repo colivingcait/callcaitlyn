@@ -71,7 +71,7 @@ export async function resolveEmailAudience(
 
   const { data: contacts } = await admin
     .from("contacts")
-    .select("id, email, first_name, last_name, archived, known_personally, opted_out_at, stage_id, timeline, unsubscribe_token")
+    .select("id, email, first_name, last_name, archived, known_personally, opted_out_at, stage_id, timeline, unsubscribe_token, spam")
     .eq("owner_id", ownerId)
     .in("id", includedIds);
 
@@ -81,7 +81,7 @@ export async function resolveEmailAudience(
   const eligible: SequenceContact[] = [];
 
   for (const c of contacts ?? []) {
-    if (c.archived || c.known_personally) {
+    if (c.archived || c.known_personally || c.spam) {
       excludedCount++;
       continue;
     }

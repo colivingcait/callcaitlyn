@@ -129,12 +129,17 @@ async function getMyTasksGroup(): Promise<WorklistTask[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("tasks")
-    .select("id, title, due_at, contact_id, contacts(first_name, last_name, phone)")
+    .select("id, title, due_at, contact_id, contacts(first_name, last_name, phone, spam)")
     .is("completed_at", null)
     .order("due_at", { ascending: true, nullsFirst: false })
     .limit(30);
 
-  return (data ?? []).map((t) => {
+  return (data ?? [])
+    .filter((t) => {
+      const contact = t.contacts as unknown as { spam?: boolean } | null;
+      return !contact?.spam;
+    })
+    .map((t) => {
     const contact = t.contacts as unknown as { first_name: string; last_name: string; phone: string | null } | null;
     const late = t.due_at ? isPast(new Date(t.due_at)) && !isTodayLocal(t.due_at) : false;
     return {
@@ -220,8 +225,8 @@ async function getStatStrip(stages: PipelineStage[]) {
   // pattern getCallsGroup already uses), rather than a UTC day boundary
   // that would cut off early-morning/late-evening calls incorrectly.
   const [{ data: contacts }, { count: newLeadsWeek }, { data: recentCalls }] = await Promise.all([
-    supabase.from("contacts").select("id, stage_id").eq("archived", false),
-    supabase.from("contacts").select("id", { count: "exact", head: true }).eq("archived", false).gte("lead_date", daysAgo(7)),
+    supabase.from("contacts").select("id, stage_id").eq("archived", false).eq("spam", false),
+    supabase.from("contacts").select("id", { count: "exact", head: true }).eq("archived", false).eq("spam", false).gte("lead_date", daysAgo(7)),
     supabase.from("activities").select("occurred_at").eq("type", "call").eq("direction", "outbound").gte("occurred_at", daysAgo(1.5)),
   ]);
   const callsToday = (recentCalls ?? []).filter((c) => isTodayLocal(c.occurred_at as string)).length;

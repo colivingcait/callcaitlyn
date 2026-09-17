@@ -61,7 +61,7 @@ export default async function SettingsPage({
       .limit(1)
       .maybeSingle()
       .then((r) => r.data),
-    supabase.from("contacts").select("stage_id").eq("archived", false).then((r) => r.data),
+    supabase.from("contacts").select("stage_id").eq("archived", false).eq("spam", false).then((r) => r.data),
     getQaReport(),
   ]);
 

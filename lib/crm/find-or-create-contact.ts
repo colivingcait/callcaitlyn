@@ -29,6 +29,10 @@ export async function findOrCreateContact(
     // big CSV. Skip it there; the one-time backfill button in Settings
     // catches every contact this leaves un-synced.
     skipQuoSync?: boolean;
+    // Realtor spam is stored as a row (Spam bucket needs one) but must
+    // never sync into Quo as a "real" contact and must ship with
+    // contacts.spam=true so every CRM query can filter it out.
+    spam?: boolean;
   },
 ): Promise<{ id: string; wasCreated: boolean } | null> {
   const email = input.email?.trim().toLowerCase() || null;
@@ -37,7 +41,7 @@ export async function findOrCreateContact(
 
   const { data: candidates } = await admin
     .from("contacts")
-    .select("id, first_name, last_name, email, phone, secondary_phone, quo_contact_id")
+    .select("id, first_name, last_name, email, phone, secondary_phone, quo_contact_id, spam")
     .eq("owner_id", ownerId)
     .eq("archived", false);
 
@@ -54,7 +58,9 @@ export async function findOrCreateContact(
     // user-initiated correction, not a silent overwrite from an unrelated
     // source (every other integration leaves leadDate unset).
     if (input.leadDate) await admin.from("contacts").update({ lead_date: input.leadDate }).eq("id", match.id);
-    if (phone && !input.skipQuoSync) {
+    if (input.spam && !match.spam) await admin.from("contacts").update({ spam: true }).eq("id", match.id);
+    const treatAsSpam = !!(input.spam || match.spam);
+    if (phone && !input.skipQuoSync && !treatAsSpam) {
       await syncContactToQuo(admin, {
         id: match.id,
         first_name: input.firstName?.trim() || match.first_name,
@@ -87,13 +93,14 @@ export async function findOrCreateContact(
       lead_source: input.leadSource,
       stage_id: firstStage?.id ?? null,
       ...(input.leadDate ? { lead_date: input.leadDate } : {}),
+      ...(input.spam ? { spam: true } : {}),
     })
     .select("id")
     .single();
 
   if (error || !created) return null;
 
-  if (phone && !input.skipQuoSync) {
+  if (phone && !input.skipQuoSync && !input.spam) {
     await syncContactToQuo(admin, {
       id: created.id,
       first_name: input.firstName?.trim() || email || phone || "Unknown",
