@@ -1,6 +1,6 @@
 "use client";
 
-// NOT mounted on Today. The black Up Next hero was the triple-stack. Do not re-import.
+// NOT mounted. Today home is queue-first cards — no black Up Next hero.
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";

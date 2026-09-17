@@ -1,5 +1,8 @@
 import type { WorklistPerson } from "@/lib/data/today";
 
+// Today home does not render Up Next. Calls/owed groups passed in are
+// already spam-filtered in getTodayData, so a robocall cannot win the hero
+// if this is ever called again.
 export function pickUpNext(groups: {
   late: WorklistPerson[];
   dueToday: WorklistPerson[];

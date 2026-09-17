@@ -15,10 +15,9 @@ import type { PipelineStage } from "@/types/database";
 
 export type WorklistPerson = { id: string; name: string; phone: string | null; email?: string | null; meta: string; late: boolean; activityId?: string };
 
-// "Calls" - contacts.next_follow_up_at due or overdue, or a missed call
-// logged. The overdue/today math previously lived inside FollowUpList
-// (client component) - moved here so the group's red "N late" count and
-// each row's own late styling can only ever agree with each other.
+// "Calls" - contacts.next_follow_up_at due or overdue. Spam-flagged
+// contacts are excluded here (same as Quiet/New) so realtor robocalls
+// cannot land in Overdue / Call today or win Up Next via pickUpNext.
 async function getCallsGroup(): Promise<WorklistPerson[]> {
   const supabase = await createClient();
   const { data } = await supabase

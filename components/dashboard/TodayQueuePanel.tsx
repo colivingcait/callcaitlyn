@@ -8,12 +8,15 @@ import { BookingRequestRow } from "@/components/scheduling/BookingRequestRow";
 import { TodayTasksGroup } from "@/components/dashboard/TodayTasksGroup";
 import { TextAllButton } from "@/components/dashboard/TextAllButton";
 import { cn } from "@/lib/utils";
+import { TodayWorklistDesktop } from "@/components/dashboard/TodayWorklistDesktop";
 import {
+  FOCUS_TO_CHIP,
   TODAY_QUEUE_SHORT_LABELS,
   TODAY_QUEUE_SWITCHER,
   TODAY_QUEUE_TITLES,
   countForFocus,
   todayFocusHref,
+  type TodayChipKey,
   type TodayFocus,
   type TodayPersonGroups,
 } from "@/lib/crm/today-focus";
@@ -23,6 +26,7 @@ import type { MergeCandidate } from "@/lib/data/contacts";
 
 export function TodayQueuePanel({
   focus,
+  initialChip,
   groups,
   tasks,
   ownerId,
@@ -31,6 +35,7 @@ export function TodayQueuePanel({
   newLeadsError,
 }: {
   focus: TodayFocus;
+  initialChip?: TodayChipKey;
   groups: TodayPersonGroups;
   tasks: WorklistTask[];
   ownerId: string;
@@ -106,39 +111,54 @@ export function TodayQueuePanel({
       <h2 className="font-display text-[30px] font-semibold leading-8 tracking-[-0.03em] text-neutral-900">{title}</h2>
       <p className="mt-1.5 text-[15px] text-neutral-500">{count === 0 ? "Nothing in this queue." : `${count} in this queue`}</p>
 
-      <div className="mt-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {TODAY_QUEUE_SWITCHER.map((key) => {
-          const n = countForFocus(key, groups, tasks.length, bookingRequests.length);
-          return (
-            <Link
-              key={key}
-              href={todayFocusHref(key)}
-              data-today-control={`chip-${key}`}
-              className={cn(
-                "flex h-11 shrink-0 items-center whitespace-nowrap rounded-full px-3.5 text-[14px] font-medium",
-                focus === key ? "bg-[#c45c4a] text-white shadow-[0_4px_10px_rgb(196_92_74_/_0.28)]" : "border border-[#eadfd6] bg-[#fffbf8] text-neutral-600",
-              )}
-            >
-              {TODAY_QUEUE_SHORT_LABELS[key]} {n}
-            </Link>
-          );
-        })}
+      <div className="mt-4 hidden md:block">
+        <TodayWorklistDesktop
+          key={focus}
+          initialChip={initialChip ?? FOCUS_TO_CHIP[focus]}
+          groups={groups}
+          bookingRequests={bookingRequests}
+          tasks={tasks}
+          ownerId={ownerId}
+          contacts={contacts}
+          newLeadsError={newLeadsError}
+        />
       </div>
 
-      {focus === "registered" && groups.registered.length > 0 && (
-        <div className="mt-3 flex items-center gap-3 rounded-[16px] border border-[#eadfd6] bg-[#fffbf8] px-[18px] py-3.5 shadow-card">
-          <p className="min-w-0 flex-1 text-[15px] text-neutral-700">Registered for something and hasn&apos;t heard from you since.</p>
-          <TextAllButton contactIds={groups.registered.map((p) => p.id)} label="Registered, no follow-up" />
+      <div className="mt-4 md:hidden">
+        <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {TODAY_QUEUE_SWITCHER.map((key) => {
+            const n = countForFocus(key, groups, tasks.length, bookingRequests.length);
+            return (
+              <Link
+                key={key}
+                href={todayFocusHref(key)}
+                data-today-control={`chip-${key}`}
+                className={cn(
+                  "flex h-11 shrink-0 items-center whitespace-nowrap rounded-full px-3.5 text-[14px] font-medium",
+                  focus === key ? "bg-[#c45c4a] text-white shadow-[0_4px_10px_rgb(196_92_74_/_0.28)]" : "border border-[#eadfd6] bg-[#fffbf8] text-neutral-600",
+                )}
+              >
+                {TODAY_QUEUE_SHORT_LABELS[key]} {n}
+              </Link>
+            );
+          })}
         </div>
-      )}
 
-      <div className="mt-3 overflow-hidden rounded-[16px] border border-[#eadfd6] bg-[#fffbf8] shadow-card">{body}</div>
+        {focus === "registered" && groups.registered.length > 0 && (
+          <div className="mt-3 flex items-center gap-3 rounded-[16px] border border-[#eadfd6] bg-[#fffbf8] px-[18px] py-3.5 shadow-card">
+            <p className="min-w-0 flex-1 text-[15px] text-neutral-700">Registered for something and hasn&apos;t heard from you since.</p>
+            <TextAllButton contactIds={groups.registered.map((p) => p.id)} label="Registered, no follow-up" />
+          </div>
+        )}
 
-      {focus === "registered" && groups.registered.length > 0 && (
-        <p className="mt-2 px-1 text-[13px] text-neutral-400">
-          People marked &quot;never queue&quot; are listed in Settings → People you know.
-        </p>
-      )}
+        <div className="mt-3 overflow-hidden rounded-[16px] border border-[#eadfd6] bg-[#fffbf8] shadow-card">{body}</div>
+
+        {focus === "registered" && groups.registered.length > 0 && (
+          <p className="mt-2 px-1 text-[13px] text-neutral-400">
+            People marked &quot;never queue&quot; are listed in Settings → People you know.
+          </p>
+        )}
+      </div>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { WeeklyReviewCard } from "@/components/dashboard/WeeklyReviewCard";
 import { TodaySearch } from "@/components/dashboard/mobile/TodaySearch";
 import { TodayQueues } from "@/components/dashboard/TodayQueues";
 import { TodayQueuePanel } from "@/components/dashboard/TodayQueuePanel";
-import { buildTodayPersonGroups, parseTodayFocus } from "@/lib/crm/today-focus";
+import { buildTodayPersonGroups, parseTodayFocus, type TodayChipKey } from "@/lib/crm/today-focus";
 import type { getTodayData } from "@/lib/data/today";
 import type { WeeklyReviewPayload } from "@/lib/data/weekly-review";
 import type { PrepSheetPayload } from "@/lib/data/prep-sheet";
@@ -20,6 +20,7 @@ export function TodayScreen({
   activePrepSheets,
   pinnedWeeklyReview,
   focus,
+  initialChip,
 }: {
   today: Today;
   contacts: MergeCandidate[];
@@ -28,6 +29,7 @@ export function TodayScreen({
   activePrepSheets: { id: string; payload: unknown }[];
   pinnedWeeklyReview: { id: string; payload: WeeklyReviewPayload } | null;
   focus?: string;
+  initialChip?: TodayChipKey;
 }) {
   const groups = buildTodayPersonGroups(today);
   const parsedFocus = parseTodayFocus(focus);
@@ -82,6 +84,7 @@ export function TodayScreen({
         <TodayQueuePanel
           key={parsedFocus}
           focus={parsedFocus}
+          initialChip={initialChip}
           groups={groups}
           tasks={today.myTasks}
           ownerId={ownerId}

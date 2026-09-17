@@ -3,11 +3,14 @@ import { listMergeCandidates } from "@/lib/data/contacts";
 import { createClient } from "@/lib/supabase/server";
 import { TodayScreen } from "@/components/dashboard/TodayScreen";
 import { firstNameFromEmail } from "@/lib/utils";
+import { FOCUS_TO_CHIP, parseTodayFocus } from "@/lib/crm/today-focus";
 import { filterResolvedWeeklyReviewItems, type WeeklyReviewPayload } from "@/lib/data/weekly-review";
 import type { PrepSheetPayload } from "@/lib/data/prep-sheet";
 
 export default async function TodayPage({ searchParams }: { searchParams: Promise<{ focus?: string }> }) {
   const { focus } = await searchParams;
+  const parsedFocus = parseTodayFocus(focus);
+  const initialChip = parsedFocus ? FOCUS_TO_CHIP[parsedFocus] : undefined;
   const supabase = await createClient();
   const [
     {
@@ -43,6 +46,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
       activePrepSheets={activePrepSheets}
       pinnedWeeklyReview={resolvedWeeklyReview}
       focus={focus}
+      initialChip={initialChip}
     />
   );
 }

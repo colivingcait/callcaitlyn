@@ -1,10 +1,8 @@
 "use client";
 
-// NOT mounted on Today. Home is TodayScreen → TodayQueues / TodayQueuePanel.
-// Chip `useState` here ignores `?focus=new` — do not re-import.
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { MessageSquareText, Phone, X, RotateCcw, UserMinus } from "lucide-react";
 import { ListRow } from "@/components/mobile/ListRow";
 import { SwipeActions } from "@/components/mobile/SwipeActions";
@@ -14,12 +12,13 @@ import { TodayTasksGroup } from "@/components/dashboard/TodayTasksGroup";
 import { useToast } from "@/lib/hooks/useToast";
 import { openQuoCall } from "@/lib/quo/call-link";
 import { clearFollowUp, dismissRegisteredNoFollowUp, markKnownPersonally } from "@/app/(app)/today-actions";
+import { CHIP_TO_FOCUS, todayFocusHref, type TodayChipKey } from "@/lib/crm/today-focus";
 import { cn } from "@/lib/utils";
 import type { WorklistPerson, WorklistTask } from "@/lib/data/today";
 import type { BookingRequestWithContact } from "@/lib/data/scheduling";
 import type { MergeCandidate } from "@/lib/data/contacts";
 
-export type TodayChipKey = "late" | "dueToday" | "owed" | "tasks" | "registered" | "meetings" | "newUncontacted" | "quiet";
+export type { TodayChipKey };
 
 export function TodayWorklist({
   groups,
@@ -54,6 +53,10 @@ export function TodayWorklist({
     key === "tasks" ? tasks.length > 0 : key === "meetings" ? bookingRequests.length > 0 : groups[key].length > 0;
   const firstNonEmpty = chips.find((c) => isNonEmpty(c.key))?.key ?? "late";
   const [active, setActive] = useState<TodayChipKey>(initialChip ?? firstNonEmpty);
+
+  useEffect(() => {
+    if (initialChip) setActive(initialChip);
+  }, [initialChip]);
 
   // Late/due-today both come from today.calls - the only groups where "I
   // don't need to call this person" (clearing next_follow_up_at) applies.
@@ -95,17 +98,17 @@ export function TodayWorklist({
     <div>
       <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {chips.map((chip) => (
-          <button
+          <Link
             key={chip.key}
-            type="button"
+            href={todayFocusHref(CHIP_TO_FOCUS[chip.key])}
             onClick={() => setActive(chip.key)}
             className={cn(
-              "h-11 shrink-0 whitespace-nowrap rounded-full px-3.5 text-[14px] font-medium",
-              active === chip.key ? "bg-neutral-900 text-white" : "border border-neutral-200 text-neutral-600",
+              "flex h-11 shrink-0 items-center whitespace-nowrap rounded-full px-3.5 text-[14px] font-medium",
+              active === chip.key ? "bg-[#c45c4a] text-white" : "border border-[#eadfd6] bg-[#fffbf8] text-neutral-600",
             )}
           >
             {chip.label}
-          </button>
+          </Link>
         ))}
       </div>
 
