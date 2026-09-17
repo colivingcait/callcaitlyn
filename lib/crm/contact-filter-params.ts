@@ -3,6 +3,11 @@ import type { ContactQueue } from "@/lib/crm/contact-queues";
 
 export type ContactGroupBy = "none" | "stage" | "tag" | "source" | "month";
 
+// Sentinel for the Contacts "Registered for: any event" option. Empty
+// regEvent means no registration filter (anyone, registered or not).
+// Never label the empty option as "any event" — that was the P0 lie.
+export const REGISTERED_FOR_ANY_EVENT = "__any__";
+
 export type ContactFilterParams = {
   q?: string;
   stageId?: string;

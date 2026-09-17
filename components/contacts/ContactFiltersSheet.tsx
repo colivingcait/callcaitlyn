@@ -6,7 +6,7 @@ import { X } from "lucide-react";
 import { Button, Input, Select, Label } from "@/components/ui";
 import { CONTACT_TYPE_LABELS, TIMELINE_LABELS, REPRESENTING_LABELS, cn } from "@/lib/utils";
 import type { PipelineStage, Tag } from "@/types/database";
-import type { ContactGroupBy } from "@/lib/crm/contact-filter-params";
+import { REGISTERED_FOR_ANY_EVENT, type ContactGroupBy } from "@/lib/crm/contact-filter-params";
 import { SHEET_PARAM_KEYS } from "@/components/contacts/ContactFilters";
 
 const LEAD_DATE_PRESETS = [
@@ -280,16 +280,15 @@ export function ContactFiltersSheet({
                 </option>
               ))}
             </Select>
-            {registeredEventNames.length > 0 && (
-              <Select value={draft.regEvent ?? ""} onChange={(e) => set("regEvent", e.target.value)}>
-                <option value="">Registered for: any event</option>
-                {registeredEventNames.map((e) => (
-                  <option key={e} value={e}>
-                    Registered for: {e}
-                  </option>
-                ))}
-              </Select>
-            )}
+            <Select value={draft.regEvent ?? ""} onChange={(e) => set("regEvent", e.target.value)}>
+              <option value="">Anyone (not filtered by registration)</option>
+              <option value={REGISTERED_FOR_ANY_EVENT}>Registered for: any event</option>
+              {registeredEventNames.map((e) => (
+                <option key={e} value={e}>
+                  Registered for: {e}
+                </option>
+              ))}
+            </Select>
           </Section>
 
           <Section title="Personal details">

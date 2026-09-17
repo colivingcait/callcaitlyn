@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Calendar, Globe, Bookmark, ArrowUp, ArrowDown, Trash2 } from "lucide-react";
 import type { ContactWithRelations, ContactSegment } from "@/types/database";
+import { REGISTERED_FOR_ANY_EVENT } from "@/lib/crm/contact-filter-params";
 
 function Tile({ icon: Icon, label, meta, onClick }: { icon: React.ComponentType<{ size?: number }>; label: string; meta: string; onClick: () => void }) {
   return (
@@ -153,10 +154,15 @@ export function MyLists({
         </div>
       </div>
 
-      {registeredEventNames.length > 0 && (
-        <div>
+      <div>
           <p className="mb-1.5 px-1 text-[13px] font-semibold uppercase tracking-[.05em] text-neutral-400">Registered for</p>
           <div className="rounded-[16px] border border-[#ebe9e7] bg-white px-4">
+            <Tile
+              icon={Calendar}
+              label="Any event"
+              meta="Eventbrite / CRM event signups"
+              onClick={() => goto("regEvent", REGISTERED_FOR_ANY_EVENT, "Registered: any event")}
+            />
             {registeredEventNames.map((name) => (
               <Tile
                 key={name}
@@ -168,7 +174,6 @@ export function MyLists({
             ))}
           </div>
         </div>
-      )}
 
       <div>
         <p className="mb-1.5 px-1 text-[13px] font-semibold uppercase tracking-[.05em] text-neutral-400">How they found you</p>

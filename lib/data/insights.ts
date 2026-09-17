@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { listContacts, listStages } from "@/lib/data/contacts";
 import { filterByQueue } from "@/lib/crm/contact-queue-filter";
+import { hasUsablePhone } from "@/lib/crm/contact-filter-predicates";
 import { getDuplicateRiskPairs } from "@/lib/data/reports";
 import { computeDeals } from "@/lib/crm/commission";
 import { getWarmRanking, type WarmContact } from "@/lib/data/warm";
@@ -195,7 +196,7 @@ export async function getInsightsData(): Promise<InsightsData> {
   }
 
   // --- Data problems: no phone, duplicates ---
-  const noPhone = cardLevelDismissed.has("data_problems") ? [] : known.filter((c) => !c.phone);
+  const noPhone = cardLevelDismissed.has("data_problems") ? [] : known.filter((c) => !hasUsablePhone(c.phone));
 
   // --- Registered for an event, no follow-up since ---
   let registeredNoFollowUp: SimplePerson[] = [];

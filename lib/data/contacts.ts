@@ -2,6 +2,14 @@ import { createClient } from "@/lib/supabase/server";
 import { computeLikelihood } from "@/lib/crm/likelihood";
 import { filterByQueue } from "@/lib/crm/contact-queue-filter";
 import { relativeTime } from "@/lib/format-time";
+import {
+  EVENT_ATTENDANCE_SOURCES,
+  EVENT_REGISTRATION_SOURCE,
+  attendedContactIds,
+  eventNameFromMetadata,
+  hasUsablePhone,
+  registeredContactIds,
+} from "@/lib/crm/contact-filter-predicates";
 import type { ContactQueue } from "@/lib/crm/contact-queues";
 import type { Activity, AiInsight, ContactSegment, ContactWithRelations, Deal, PipelineStage, Tag, Task } from "@/types/database";
 
@@ -94,13 +102,13 @@ export type ContactListFilters = {
   state?: string;
   minBudget?: number;
   notSyncedQuo?: boolean;
-  // Attended (Jotform check-in ever set last_event_name) - retrospective.
+  // Attended: Jotform/QR check-in for this event (any occurrence), not only
+  // last_event_name — attending a later meetup must not hide the earlier one.
   eventName?: string;
-  // Registered for (an Eventbrite signup exists for this event, whether or
-  // not it's happened/they showed up yet) - prospective. This is the one
-  // that matters for "who do I need to text a reminder to before Thursday's
-  // meetup" since last_event_name stays whatever they last *attended* and
-  // won't reflect an upcoming event they've only registered for.
+  // Registered for: Eventbrite/CRM signup. Sentinel REGISTERED_FOR_ANY_EVENT
+  // ("__any__") means any signup; a specific title means that event.
+  // Call-only Other / inbound-call stubs never match — they have no
+  // eventbrite activity. contact_type=attendee is a label, not this filter.
   registeredEventName?: string;
   likelihood?: "high" | "medium" | "low";
   queue?: ContactQueue;
@@ -131,7 +139,8 @@ export async function listContacts(filters: ContactListFilters) {
   if (filters.representing) query = query.eq("representing", filters.representing);
   if (filters.leadSource) query = query.eq("lead_source", filters.leadSource);
   if (filters.hasPhone) query = query.not("phone", "is", null);
-  if (filters.missingPhone) query = query.is("phone", null);
+  // Empty-string phones are not "missing" at SQL null-check time; JS
+  // hasUsablePhone below is the real predicate so "" counts as no phone.
   if (filters.hasEmail) query = query.not("email", "is", null);
   if (filters.missingEmail) query = query.is("email", null);
   if (filters.hasFollowUp) query = query.not("next_follow_up_at", "is", null);
@@ -141,7 +150,6 @@ export async function listContacts(filters: ContactListFilters) {
   if (filters.state) query = query.ilike("state", `%${filters.state}%`);
   if (filters.minBudget) query = query.gte("budget_max", filters.minBudget);
   if (filters.notSyncedQuo) query = query.is("quo_synced_at", null);
-  if (filters.eventName) query = query.eq("last_event_name", filters.eventName);
   if (filters.leadDateWithinDays) {
     query = query.gte("lead_date", new Date(Date.now() - filters.leadDateWithinDays * 24 * 60 * 60 * 1000).toISOString());
   }
@@ -166,19 +174,43 @@ export async function listContacts(filters: ContactListFilters) {
   const { data } = await query;
   let contacts = (data ?? []) as ContactWithRelations[];
 
+  if (filters.hasPhone) contacts = contacts.filter((c) => hasUsablePhone(c.phone));
+  if (filters.missingPhone) contacts = contacts.filter((c) => !hasUsablePhone(c.phone));
+
   if (filters.tagIds?.length) {
     const tagIds = filters.tagIds;
     contacts = contacts.filter((c) => c.contact_tags.some((ct) => ct.tags && tagIds.includes(ct.tags.id)));
   }
 
   if (filters.registeredEventName) {
+    // Any-event (__any__) matches every Eventbrite/CRM signup, including
+    // rows whose event_name is null. A named event still matches on title.
+    // Call-only Other / inbound Quo stubs have no eventbrite activity.
     const { data: registrations } = await supabase
       .from("activities")
-      .select("contact_id")
-      .eq("source", "eventbrite")
-      .eq("metadata->>event_name", filters.registeredEventName);
-    const registeredIds = new Set((registrations ?? []).map((r) => r.contact_id as string));
+      .select("contact_id, source, metadata")
+      .eq("source", EVENT_REGISTRATION_SOURCE);
+    const refs = (registrations ?? []).map((r) => ({
+      contactId: r.contact_id as string,
+      eventName: eventNameFromMetadata(r.metadata),
+      source: (r.source as string) ?? EVENT_REGISTRATION_SOURCE,
+    }));
+    const registeredIds = registeredContactIds(filters.registeredEventName, refs);
     contacts = contacts.filter((c) => registeredIds.has(c.id));
+  }
+
+  if (filters.eventName) {
+    const { data: attendance } = await supabase
+      .from("activities")
+      .select("contact_id, source, metadata")
+      .in("source", [...EVENT_ATTENDANCE_SOURCES]);
+    const refs = (attendance ?? []).map((r) => ({
+      contactId: r.contact_id as string,
+      eventName: eventNameFromMetadata(r.metadata),
+      source: r.source as string,
+    }));
+    const attendedIds = attendedContactIds(filters.eventName, contacts, refs);
+    contacts = contacts.filter((c) => attendedIds.has(c.id));
   }
 
   if (filters.hasNotes) contacts = contacts.filter((c) => !!c.notes?.trim());
@@ -238,12 +270,24 @@ export async function listContacts(filters: ContactListFilters) {
 }
 
 // Populates the "Last event attended" filter dropdown with whatever event
-// names actually exist on real contacts (from Jotform check-ins), same
-// pattern as listLeadSources below.
+// names actually exist on real contacts (from Jotform/QR check-ins), plus
+// historical attendance activity titles so an older meetup still appears
+// after someone checks in at a later one.
 export async function listLastEventNames() {
   const supabase = await createClient();
-  const { data } = await supabase.from("contacts").select("last_event_name").eq("archived", false).not("last_event_name", "is", null);
-  const values = new Set((data ?? []).map((c) => c.last_event_name as string).filter((s) => s.trim().length > 0));
+  const [{ data: contacts }, { data: attendance }] = await Promise.all([
+    supabase.from("contacts").select("last_event_name").eq("archived", false).not("last_event_name", "is", null),
+    supabase.from("activities").select("metadata").in("source", [...EVENT_ATTENDANCE_SOURCES]),
+  ]);
+  const values = new Set<string>();
+  for (const c of contacts ?? []) {
+    const name = c.last_event_name as string | null;
+    if (name?.trim()) values.add(name);
+  }
+  for (const row of attendance ?? []) {
+    const name = eventNameFromMetadata(row.metadata);
+    if (name) values.add(name);
+  }
   return [...values].sort((a, b) => a.localeCompare(b));
 }
 
