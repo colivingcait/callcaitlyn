@@ -39,7 +39,7 @@ export function PipelineMobileRow({
 
   return (
     <div className="flex items-center gap-3 bg-white px-4 py-3">
-      <Link href={`/contacts/${contact.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+      <Link href={`/contacts/${contact.id}`} data-contact-open={contact.id} className="flex min-w-0 flex-1 items-center gap-3">
         <Avatar firstName={contact.first_name} lastName={contact.last_name} size={44} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-[16px] font-semibold text-neutral-900">{fullName(contact)}</p>

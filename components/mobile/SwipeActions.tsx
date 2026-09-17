@@ -29,7 +29,7 @@ export function SwipeActions({
   });
 
   return (
-    <div className="relative overflow-hidden" style={{ touchAction: "pan-y" }}>
+    <div className="relative overflow-hidden" style={{ touchAction: "pan-y" }} onClickCapture={handlers.onClickCapture}>
       <div className="absolute inset-y-0 right-0 flex">
         {actions.map((action) => (
           <button

@@ -34,6 +34,8 @@ import { countRecentTexts } from "@/lib/crm/engagement";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ContactRecordMobile } from "@/components/contacts/mobile/ContactRecordMobile";
 import { ContactEngageBlock } from "@/components/contacts/ContactEngageBlock";
+import Link from "next/link";
+import { CalendarDays, ChevronLeft, Leaf } from "lucide-react";
 
 export default async function ContactDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -65,6 +67,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
   const daysLate = isOverdue
     ? Math.max(1, Math.floor((Date.now() - new Date(contact.next_follow_up_at!).getTime()) / (24 * 60 * 60 * 1000)))
     : 0;
+  const stage = stages.find((s) => s.id === contact.stage_id);
 
   return (
     <>
@@ -81,13 +84,16 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
         textsThisWeek={textsThisWeek}
         openTasks={openTasks.map((t) => ({ id: t.id, title: t.title, due_at: t.due_at }))}
       />
-      <div className="mx-auto hidden max-w-3xl px-4 py-6 md:block">
+      <div className="mx-auto hidden w-full max-w-[1400px] px-8 py-8 lg:block">
+      <Link href="/contacts" className="mb-4 inline-flex min-h-10 items-center gap-1.5 text-[15px] font-medium text-neutral-500 hover:text-neutral-800">
+        <ChevronLeft size={18} /> Contacts
+      </Link>
       <div className="flex flex-wrap items-start gap-[18px]">
-        <div className="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full bg-neutral-100 text-xl font-semibold text-neutral-600">
+        <div className="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full bg-[#f3e4dc] text-xl font-semibold text-brand-700">
           {initials(contact.first_name, contact.last_name)}
         </div>
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-[32px] font-semibold leading-9 tracking-[-0.03em] text-neutral-900 sm:text-[34px]">{fullName(contact)}</h1>
+          <h1 className="font-display text-[36px] font-semibold leading-9 tracking-[-0.03em] text-neutral-900">{fullName(contact)}</h1>
           <p className="mt-1.5 text-base leading-6 text-neutral-600">
             {[formatPhone(contact.phone), contact.email].filter(Boolean).join(" · ") || "No contact info on file"}
           </p>
@@ -102,6 +108,28 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
               {contact.last_event_at && ` (${formatLocal(contact.last_event_at, "MMM d, yyyy")})`}
             </p>
           )}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className="flex h-[36px] items-center gap-1.5 rounded-full bg-[#f3e4dc] px-3 text-[14px] font-medium text-brand-700">
+              <Leaf size={14} strokeWidth={2} />
+              {stage?.name ?? "No stage"}
+            </span>
+            {contact.lead_source && (
+              <span className="flex h-[36px] items-center gap-1.5 rounded-full border border-[#eadfd6] bg-[#fffbf8] px-3 text-[14px] font-medium text-neutral-600">
+                <CalendarDays size={14} strokeWidth={1.8} className="text-brand-700" />
+                Source: {contact.lead_source}
+              </span>
+            )}
+            {contact.contact_tags
+              .filter((ct) => ct.tags)
+              .map((ct) => (
+                <span
+                  key={ct.tags!.id}
+                  className="flex h-[36px] items-center rounded-full border border-[#eadfd6] bg-[#fffbf8] px-3 text-[14px] font-medium text-brand-700"
+                >
+                  {ct.tags!.name}
+                </span>
+              ))}
+          </div>
           <ConsentStatus contactId={contact.id} optedOutAt={contact.opted_out_at} />
           {isOverdue && (
             <p className="mt-3 flex flex-wrap items-center gap-2.5 text-[15px] font-semibold text-red-700">
@@ -114,98 +142,104 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
-      <div className="mt-4">
+      <div className="mt-5">
         <ContactEngageBlock contact={contact} stages={stages} tags={tags} ownerId={contact.owner_id} />
       </div>
 
-      <div className="mt-4">
-        <QuickActions contactId={contact.id} contactName={fullName(contact)} phone={contact.phone} email={contact.email} instagramSenderId={instagramSenderId} />
-      </div>
+      <div className="mt-6 grid grid-cols-12 gap-6">
+        <div className="col-span-7 space-y-3">
+          {readyTranscript && (
+            <ApprovePanel
+              transcript={readyTranscript.transcript}
+              proposals={readyTranscript.proposals}
+              contactId={contact.id}
+              contactName={fullName(contact)}
+              ownerId={contact.owner_id}
+              contactStageId={contact.stage_id}
+              contactCreatedAt={contact.created_at}
+              representing={contact.representing}
+              stages={stages}
+            />
+          )}
 
-      <div className="mt-5 space-y-3">
-        {readyTranscript && (
-          <ApprovePanel
-            transcript={readyTranscript.transcript}
-            proposals={readyTranscript.proposals}
-            contactId={contact.id}
-            contactName={fullName(contact)}
-            ownerId={contact.owner_id}
-            contactStageId={contact.stage_id}
-            contactCreatedAt={contact.created_at}
-            representing={contact.representing}
-            stages={stages}
-          />
-        )}
+          {insights.length > 0 && (
+            <Section sectionKey="contact-detail:suggested" title="Suggested" meta={`${insights.length}`}>
+              {insights.map((insight) => (
+                <SuggestedRow
+                  key={insight.id}
+                  insight={insight}
+                  contactId={contact.id}
+                  ownerId={contact.owner_id}
+                  contactStageId={contact.stage_id}
+                  contactName={fullName(contact)}
+                  contactCreatedAt={contact.created_at}
+                  representing={contact.representing}
+                  stages={stages}
+                  tags={tags}
+                />
+              ))}
+            </Section>
+          )}
 
-        <Section sectionKey="contact-detail:message" title="Send a message" meta="text or email" defaultOpen={false}>
-          <SendMessageCard
-            contactId={contact.id}
-            phone={contact.phone}
-            email={contact.email}
-            firstName={contact.first_name}
-            lastName={contact.last_name}
-          />
-        </Section>
-
-        {insights.length > 0 && (
-          <Section sectionKey="contact-detail:suggested" title="Suggested" meta={`${insights.length}`}>
-            {insights.map((insight) => (
-              <SuggestedRow
-                key={insight.id}
-                insight={insight}
-                contactId={contact.id}
-                ownerId={contact.owner_id}
-                contactStageId={contact.stage_id}
-                contactName={fullName(contact)}
-                contactCreatedAt={contact.created_at}
-                representing={contact.representing}
-                stages={stages}
-                tags={tags}
-              />
-            ))}
-          </Section>
-        )}
-
-        <div id="details">
-          <Section sectionKey="contact-detail:details" title="Details">
-            <ContactDetailsCard contact={contact} tags={tags} stages={stages} contacts={mergeCandidates} />
+          <Section sectionKey="contact-detail:activity" title="Activity" meta={`${activities.length} entries`}>
+            <div className="border-b border-neutral-100 p-[18px] pb-0">
+              <AddActivityForm contactId={contact.id} ownerId={contact.owner_id} />
+            </div>
+            <ActivityTimeline activities={activities} />
           </Section>
         </div>
 
-        {eventHistory.length > 0 && (
-          <Section sectionKey="contact-detail:events" title="Events" meta={`${eventHistory.length}`} defaultOpen={false}>
-            <ContactEventHistory events={eventHistory} />
-          </Section>
-        )}
-
-        <Section sectionKey="contact-detail:deals" title="Deals" meta={`${deals.length}`} defaultOpen={false}>
-          <div className="p-[18px]">
-            <DealsList
-              deals={deals}
+        <div className="col-span-5 space-y-3">
+          <Section sectionKey="contact-detail:message" title="Send a message" meta="text or email" defaultOpen={false}>
+            <SendMessageCard
               contactId={contact.id}
-              ownerId={contact.owner_id}
-              contactName={fullName(contact)}
-              contactCreatedAt={contact.created_at}
-              representing={contact.representing}
+              phone={contact.phone}
+              email={contact.email}
+              firstName={contact.first_name}
+              lastName={contact.last_name}
             />
+          </Section>
+
+          <div id="details">
+            <Section sectionKey="contact-detail:details" title="Details">
+              <ContactDetailsCard contact={contact} tags={tags} stages={stages} contacts={mergeCandidates} />
+            </Section>
           </div>
-        </Section>
 
-        <Section sectionKey="contact-detail:tasks" title="Tasks" meta={`${openTasks.length} open`}>
-          <TaskList contactId={contact.id} ownerId={contact.owner_id} tasks={[...openTasks, ...doneTasks]} />
-        </Section>
+          {eventHistory.length > 0 && (
+            <Section sectionKey="contact-detail:events" title="Events" meta={`${eventHistory.length}`} defaultOpen={false}>
+              <ContactEventHistory events={eventHistory} />
+            </Section>
+          )}
 
-        <Section sectionKey="contact-detail:activity" title="Activity" meta={`${activities.length} entries`}>
-          <div className="border-b border-neutral-100 p-[18px] pb-0">
-            <AddActivityForm contactId={contact.id} ownerId={contact.owner_id} />
+          <Section sectionKey="contact-detail:deals" title="Deals" meta={`${deals.length}`} defaultOpen={false}>
+            <div className="p-[18px]">
+              <DealsList
+                deals={deals}
+                contactId={contact.id}
+                ownerId={contact.owner_id}
+                contactName={fullName(contact)}
+                contactCreatedAt={contact.created_at}
+                representing={contact.representing}
+              />
+            </div>
+          </Section>
+
+          <Section sectionKey="contact-detail:tasks" title="Tasks" meta={`${openTasks.length} open`}>
+            <TaskList contactId={contact.id} ownerId={contact.owner_id} tasks={[...openTasks, ...doneTasks]} />
+          </Section>
+
+          <Section sectionKey="contact-detail:more" title="More actions" defaultOpen={false}>
+            <div className="p-[18px]">
+              <QuickActions contactId={contact.id} contactName={fullName(contact)} phone={contact.phone} email={contact.email} instagramSenderId={instagramSenderId} />
+            </div>
+          </Section>
+
+          <div className="flex items-center gap-2 border-t border-[#eadfd6] pt-5">
+            <MergeContactButton contactId={contact.id} contactName={fullName(contact)} candidates={mergeCandidates} />
+            <ArchiveButton contactId={contact.id} archived={contact.archived} />
           </div>
-          <ActivityTimeline activities={activities} />
-        </Section>
-      </div>
-
-      <div className="mt-6 flex items-center gap-2 border-t border-neutral-100 pt-5">
-        <MergeContactButton contactId={contact.id} contactName={fullName(contact)} candidates={mergeCandidates} />
-        <ArchiveButton contactId={contact.id} archived={contact.archived} />
+        </div>
       </div>
       </div>
     </>

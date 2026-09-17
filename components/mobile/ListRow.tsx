@@ -68,7 +68,7 @@ export function ListRow({
 
   if (href) {
     return (
-      <Link href={href} className="block active:bg-neutral-50">
+      <Link href={href} className="block active:bg-neutral-50" data-contact-open={href.startsWith("/contacts/") ? href.replace("/contacts/", "") : undefined}>
         {content}
       </Link>
     );

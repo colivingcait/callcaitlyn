@@ -110,7 +110,7 @@ export function ContactsList({
   const groups = groupContacts(contacts, groupBy, stages);
 
   return (
-    <div className={selecting && selected.size > 0 ? "pb-[calc(var(--app-bottom-nav)+4.5rem)] md:pb-28" : undefined}>
+    <div className={selecting && selected.size > 0 ? "pb-[calc(var(--app-bottom-nav)+4.5rem)] lg:pb-28" : undefined}>
       <div className="flex items-center justify-between px-4 py-2.5 sm:px-0">
         <button onClick={() => (selecting ? exitSelection() : setSelecting(true))} className="text-sm font-semibold text-brand-600">
           {selecting ? "Cancel" : "Select"}
@@ -151,7 +151,7 @@ export function ContactsList({
       )}
 
       {selecting && selected.size > 0 && (
-        <div className="fixed inset-x-0 bottom-[var(--app-bottom-nav)] z-40 bg-[#1c1917] p-3.5 shadow-lg md:bottom-0">
+        <div className="fixed inset-x-0 bottom-[var(--app-bottom-nav)] z-40 bg-[#1c1917] p-3.5 shadow-lg lg:bottom-0">
           <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-2">
             {confirmingArchive ? (
               <>

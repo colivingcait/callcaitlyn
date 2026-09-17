@@ -43,13 +43,13 @@ export default async function MessageThreadPage({
   if (!contact) notFound();
 
   return (
-    <div className="mx-auto flex min-w-0 max-w-2xl flex-col">
-      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur">
+    <div className="mx-auto flex min-w-0 max-w-3xl flex-col">
+      <div className="sticky top-0 z-10 bg-[#f7f1ea]/95 backdrop-blur">
         <div className="flex items-center gap-3 border-b border-neutral-200 px-3 py-2.5">
           <Link href={backHref} aria-label="Back to messages" className="text-neutral-500">
             <ArrowLeft size={20} />
           </Link>
-          <Link href={`/contacts/${contact.id}`} aria-label={`Open ${fullName(contact)} record`} className="flex min-w-0 flex-1 items-center gap-2.5">
+          <Link href={`/contacts/${contact.id}`} data-contact-open={contact.id} aria-label={`Open ${fullName(contact)} record`} className="flex min-w-0 flex-1 items-center gap-2.5">
             <Avatar id={contact.id} firstName={contact.first_name} lastName={contact.last_name} size={36} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-neutral-900">{fullName(contact)}</p>
@@ -73,7 +73,7 @@ export default async function MessageThreadPage({
         <ContactContextBar contact={contact} stages={stages} />
       </div>
 
-      <div className="flex-1 space-y-3 px-3 py-4 pb-[7.5rem] md:pb-4">
+      <div className="flex-1 space-y-3 px-3 py-4 pb-[7.5rem] lg:pb-4">
         {insights.length > 0 && (
           <div className="overflow-hidden rounded-2xl border border-[#ebe9e7] bg-white">
             {insights.map((insight) => (

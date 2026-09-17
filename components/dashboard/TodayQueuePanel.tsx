@@ -111,7 +111,7 @@ export function TodayQueuePanel({
       <h2 className="font-display text-[30px] font-semibold leading-8 tracking-[-0.03em] text-neutral-900">{title}</h2>
       <p className="mt-1.5 text-[15px] text-neutral-500">{count === 0 ? "Nothing in this queue." : `${count} in this queue`}</p>
 
-      <div className="mt-4 hidden md:block">
+      <div className="mt-4 hidden lg:block">
         <TodayWorklistDesktop
           key={focus}
           initialChip={initialChip ?? FOCUS_TO_CHIP[focus]}
@@ -124,7 +124,7 @@ export function TodayQueuePanel({
         />
       </div>
 
-      <div className="mt-4 md:hidden">
+      <div className="mt-4 lg:hidden">
         <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {TODAY_QUEUE_SWITCHER.map((key) => {
             const n = countForFocus(key, groups, tasks.length, bookingRequests.length);

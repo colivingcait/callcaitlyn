@@ -65,7 +65,7 @@ export function ContactRecordMobile({
   const lastExchange = lastText ? { body: lastText.body ?? "", occurred_at: lastText.occurred_at } : null;
 
   return (
-    <div className="pb-4 md:hidden">
+    <div className="pb-4 lg:hidden">
       <div className="flex items-center justify-between px-3 py-2">
         <button type="button" onClick={() => router.back()} className="flex h-12 w-12 items-center justify-center rounded-full text-neutral-600">
           <ChevronLeft size={22} />
