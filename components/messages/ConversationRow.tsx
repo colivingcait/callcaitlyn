@@ -55,7 +55,7 @@ export function ConversationRow({
     <div
       className={cn(
         "flex items-center gap-3.5 rounded-2xl border px-4 py-[15px]",
-        owed ? "border-[#ebe9e7] bg-white" : "border-[#f0efee] bg-[#fcfbfa]",
+        owed ? "border-[#eadfd6] bg-[#fffbf8] shadow-card" : "border-[#eadfd6]/70 bg-[#fffbf8]/70",
       )}
     >
       <Link href={threadHref(contact.id, { filter, hidden })} className="flex min-w-0 flex-1 items-center gap-3.5">

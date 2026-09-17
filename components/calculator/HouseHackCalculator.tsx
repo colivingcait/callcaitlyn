@@ -88,7 +88,7 @@ export function HouseHackCalculator({
     <div className="flex flex-wrap items-start gap-4">
       <InputsCard values={values} onChange={updateValue} />
 
-      <div className="min-w-[340px] flex-1">
+      <div className="min-w-0 flex-1">
         <ResultCard firstName={firstName} breakdown={breakdown} />
 
         <div className="mt-3.5 flex items-center gap-2.5">

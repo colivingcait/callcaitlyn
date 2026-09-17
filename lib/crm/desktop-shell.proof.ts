@@ -28,6 +28,31 @@ assert.ok(todayHome.includes("TodayPipelineOverview"), "Today home mounts the pi
 assert.ok(todayHome.includes("My Tasks"), "Today home has My Tasks quick link");
 assert.ok(todayHome.includes("Upcoming Events"), "Today home has Upcoming Events");
 assert.ok(todayHome.includes("grid-cols-12"), "Desktop home is a wide grid, not a stacked phone");
+assert.ok(todayHome.includes("min-w-0"), "Desktop home grid children can shrink (no horizontal page scroll)");
+assert.ok(todayHome.includes("calendarStatus"), "Upcoming Events knows whether Google is connected");
+assert.ok(todayHome.includes("/settings#gmail"), "Disconnected calendar points at Settings reconnect");
+assert.equal(todayHome.includes("Open Events"), false, "Must not fake CRM events as Google Calendar");
+
+const todayScreenOverflow = read("components/dashboard/TodayScreen.tsx");
+assert.ok(todayScreenOverflow.includes("overflow-x-hidden"), "Today contains the decorative blur so it cannot force horizontal scroll");
+
+const todayData = read("lib/data/today.ts");
+assert.ok(todayData.includes("listTodayGoogleEvents"), "Today Upcoming Events is wired to Google Calendar");
+assert.equal(todayData.includes("upcomingEventRows"), false, "Today must not list CRM meetup rows as calendar");
+
+const calendarHelper = read("lib/google/calendar.ts");
+assert.ok(calendarHelper.includes("listUpcomingEvents"), "Existing listUpcomingEvents helper remains");
+assert.ok(calendarHelper.includes("listTodayGoogleEvents"), "Today uses a status-aware wrapper around that helper");
+
+const threadPage = read("app/(app)/messages/[id]/page.tsx");
+assert.ok(threadPage.includes("ContactContextSidebar"), "Message threads fill leftover width with contact context");
+
+const sidebarCtx = read("components/messages/ContactContextSidebar.tsx");
+assert.ok(sidebarCtx.includes("Open tasks"), "Context sidebar shows open tasks");
+assert.ok(sidebarCtx.includes("Meetups"), "Context sidebar shows meetup/event attendance");
+
+const layoutOverflow = read("app/(app)/layout.tsx");
+assert.ok(layoutOverflow.includes("lg:overflow-x-hidden"), "App main cannot grow a horizontal scrollbar from wide children");
 
 const pipelineOverview = read("components/dashboard/TodayPipelineOverview.tsx");
 assert.ok(pipelineOverview.includes("Pipeline Overview"), "Pipeline card uses the mockup title");

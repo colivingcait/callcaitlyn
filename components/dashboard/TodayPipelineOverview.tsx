@@ -49,10 +49,10 @@ export function TodayPipelineOverview({
   return (
     <section
       data-today-home="pipeline"
-      className="rounded-[20px] border border-[#eadfd6]/90 bg-[#fffbf8] p-4 shadow-card sm:p-5"
+      className="h-full min-w-0 overflow-hidden rounded-[20px] border border-[#eadfd6]/90 bg-[#fffbf8] p-4 shadow-card sm:p-5"
     >
       <p className="text-[13px] font-semibold text-neutral-800">Pipeline Overview</p>
-      <div className={cn("mt-3 flex items-center gap-5", size === "desktop" && "gap-8")}>
+      <div className={cn("mt-3 flex min-w-0 items-center gap-5", size === "desktop" && "gap-8")}>
         <Link href="/pipeline" aria-label={`${total} in pipeline`} className="relative shrink-0">
           <div className={cn("rounded-full", donut)} style={{ background: gradient }} />
           <div className={cn("absolute inset-0 m-auto flex flex-col items-center justify-center rounded-full bg-[#fffbf8]", hole)}>

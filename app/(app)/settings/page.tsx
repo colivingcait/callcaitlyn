@@ -172,9 +172,9 @@ export default async function SettingsPage({
   ];
 
   return (
-    <div className="mx-auto max-w-2xl space-y-3 px-4 py-6">
+    <div className="mx-auto w-full min-w-0 max-w-[1400px] space-y-3 px-5 py-6 lg:px-8 lg:py-8">
       <div>
-        <h1 className="font-serif text-2xl font-semibold text-neutral-900">Settings</h1>
+        <h1 className="font-display text-[32px] font-semibold tracking-[-0.03em] text-neutral-900">Settings</h1>
         {user?.email && <p className="mt-1.5 text-[15px] leading-[22px] text-neutral-600">{user.email}</p>}
       </div>
 

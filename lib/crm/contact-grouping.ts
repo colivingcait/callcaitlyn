@@ -62,3 +62,19 @@ export function groupContacts(contacts: ContactWithRelations[], groupBy: Contact
 
   return groups;
 }
+
+export function defaultContactsGroupOpen(
+  groupKey: string,
+  count: number,
+  stages: PipelineStage[],
+  index: number,
+  groupBy: ContactGroupBy,
+) {
+  if (groupBy !== "stage") return index === 0 || count <= 8;
+  const stage = stages.find((s) => s.id === groupKey);
+  if (!stage) return false;
+  if (stage.is_closed_won || stage.is_closed_lost || stage.is_trash) return false;
+  if (stage.is_under_contract) return true;
+  if (stage.name.toLowerCase().includes("hot")) return true;
+  return false;
+}
