@@ -1,10 +1,8 @@
-import { formatLocal, timeOfDayGreeting, APP_MARKET } from "@/lib/format-time";
 import { PrepSheetCard } from "@/components/dashboard/PrepSheetCard";
 import { WeeklyReviewCard } from "@/components/dashboard/WeeklyReviewCard";
-import { TodaySearch } from "@/components/dashboard/mobile/TodaySearch";
-import { TodayQueues } from "@/components/dashboard/TodayQueues";
 import { TodayQueuePanel } from "@/components/dashboard/TodayQueuePanel";
 import { TodayDesktop } from "@/components/dashboard/TodayDesktop";
+import { TodayHome } from "@/components/dashboard/TodayHome";
 import { buildTodayPersonGroups, parseTodayFocus, type TodayChipKey } from "@/lib/crm/today-focus";
 import type { getTodayData } from "@/lib/data/today";
 import type { WeeklyReviewPayload } from "@/lib/data/weekly-review";
@@ -34,7 +32,6 @@ export function TodayScreen({
 }) {
   const groups = buildTodayPersonGroups(today);
   const parsedFocus = parseTodayFocus(focus);
-  const greeting = timeOfDayGreeting();
 
   return (
     <div className="relative min-h-full bg-[#f7f1ea]">
@@ -47,22 +44,7 @@ export function TodayScreen({
         className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#f3e6dc]/70 to-transparent"
       />
 
-      <div className="relative px-5 py-6 lg:hidden">
-        {!parsedFocus && (
-          <div className="mb-7 flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h1 className="font-display text-[36px] font-semibold leading-[1.08] tracking-[-0.03em] text-neutral-900">
-                <span className="font-medium italic text-neutral-800">{greeting},</span>
-                {ownerFirstName ? ` ${ownerFirstName}` : ""}
-              </h1>
-              <p className="mt-2 text-[15px] text-neutral-500">
-                {formatLocal(new Date(), "EEEE")} · {APP_MARKET}
-              </p>
-            </div>
-            <TodaySearch contacts={contacts} />
-          </div>
-        )}
-
+      <div className="relative px-5 py-5 lg:hidden">
         {!parsedFocus && activePrepSheets.length > 0 && (
           <div className="mb-5 space-y-3">
             {activePrepSheets.map((p) => (
@@ -96,14 +78,7 @@ export function TodayScreen({
             newLeadsError={today.newLeadsError}
           />
         ) : (
-          <TodayQueues
-            overdueCount={groups.late.length}
-            callTodayCount={groups.dueToday.length}
-            newUncontactedCount={groups.newUncontacted.length}
-            quietCount={groups.quiet.length}
-            messages={groups.owed}
-            spamFilteredCount={today.spamFilteredCount}
-          />
+          <TodayHome today={today} contacts={contacts} ownerFirstName={ownerFirstName} groups={groups} />
         )}
       </div>
 

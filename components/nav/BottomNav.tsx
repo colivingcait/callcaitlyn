@@ -26,12 +26,19 @@ export function BottomNav({ counts = {}, userEmail }: { counts?: NavCounts; user
                     type="button"
                     onClick={() => setMoreOpen(true)}
                     className={cn(
-                      "flex h-full min-h-[66px] w-full flex-col items-center justify-center gap-[5px] py-3 text-[12.5px] font-medium active:bg-[#efe6dc]",
+                      "flex h-full min-h-[66px] w-full flex-col items-center justify-center py-2 text-[12.5px] font-medium active:bg-[#efe6dc]",
                       moreActive ? "font-semibold text-[#c45c4a]" : "text-neutral-400",
                     )}
                   >
-                    <item.icon size={25} strokeWidth={moreActive ? 2.3 : 1.8} />
-                    {item.label}
+                    <span
+                      className={cn(
+                        "flex min-w-[56px] flex-col items-center gap-[5px] rounded-[14px] px-2.5 py-1.5",
+                        moreActive && "bg-[#f3e4dc]",
+                      )}
+                    >
+                      <item.icon size={25} strokeWidth={moreActive ? 2.3 : 1.8} />
+                      {item.label}
+                    </span>
                   </button>
                 </li>
               );
@@ -46,23 +53,28 @@ export function BottomNav({ counts = {}, userEmail }: { counts?: NavCounts; user
                 <Link
                   href={item.href}
                   className={cn(
-                    "relative flex h-full min-h-[66px] flex-col items-center justify-center gap-[5px] py-3 text-[12.5px] font-medium active:bg-[#efe6dc]",
+                    "relative flex h-full min-h-[66px] flex-col items-center justify-center gap-[5px] py-2 text-[12.5px] font-medium active:bg-[#efe6dc]",
                     active ? "font-semibold text-[#c45c4a]" : "text-neutral-400",
                   )}
                 >
-                  <span className="relative">
+                  <span
+                    className={cn(
+                      "relative flex min-w-[56px] flex-col items-center gap-[5px] rounded-[14px] px-2.5 py-1.5",
+                      active && "bg-[#f3e4dc]",
+                    )}
+                  >
                     <item.icon
                       size={25}
                       strokeWidth={active ? 2.3 : 1.8}
                       className={active && fillActive ? "fill-current" : undefined}
                     />
                     {count && count.value > 0 && (
-                      <span className="absolute -right-2.5 -top-2.5 flex h-[19px] min-w-[19px] items-center justify-center rounded-full bg-[#c45c4a] px-1 text-[11px] font-semibold text-white">
+                      <span className="absolute right-0 top-0 flex h-[19px] min-w-[19px] items-center justify-center rounded-full bg-[#c45c4a] px-1 text-[11px] font-semibold text-white">
                         {count.value}
                       </span>
                     )}
+                    {item.label}
                   </span>
-                  {item.label}
                 </Link>
               </li>
             );

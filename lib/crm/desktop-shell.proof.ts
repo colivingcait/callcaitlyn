@@ -20,8 +20,17 @@ assert.ok(todayScreen.includes("TodayDesktop"), "Today mounts a real desktop lay
 
 const todayDesktop = read("components/dashboard/TodayDesktop.tsx");
 assert.ok(todayDesktop.includes("max-w-[1400px]"), "Desktop Today uses a wide max width, not a phone column");
-assert.ok(todayDesktop.includes("TodayQueues"), "Desktop Today is still queue-first");
+assert.ok(todayDesktop.includes("TodayHome"), "Desktop Today uses the mockup home, not a phone column of queues");
 assert.equal(todayDesktop.includes("max-w-lg"), false);
+
+const todayHome = read("components/dashboard/TodayHome.tsx");
+assert.ok(todayHome.includes("TodayPipelineOverview"), "Today home mounts the pipeline overview");
+assert.ok(todayHome.includes("My Tasks"), "Today home has My Tasks quick link");
+assert.ok(todayHome.includes("Upcoming Events"), "Today home has Upcoming Events");
+assert.ok(todayHome.includes("grid-cols-12"), "Desktop home is a wide grid, not a stacked phone");
+
+const pipelineOverview = read("components/dashboard/TodayPipelineOverview.tsx");
+assert.ok(pipelineOverview.includes("Pipeline Overview"), "Pipeline card uses the mockup title");
 
 const layout = read("app/(app)/layout.tsx");
 assert.ok(layout.includes("lg:h-dvh"), "App shell uses the 1024px lg breakpoint");
