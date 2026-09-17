@@ -58,8 +58,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <main className="flex-1 bg-neutral-50/60 pb-[calc(var(--app-bottom-nav)+12px)] md:min-h-0 md:overflow-y-auto md:pb-8">{children}</main>
       </div>
       {/* Mobile's FAB slot is Today-only-Log now (LogPill below); New
-          contact/New task move to People's header button (Phase 3) and
-          the More sheet respectively, so QuickAddButton stays desktop-only. */}
+          contact lives on the Contacts header, New task in the More sheet,
+          so QuickAddButton stays desktop-only. Commissions and Settings
+          are More-only — no duplicate mobile header icons. */}
       <div className="hidden md:block">
         <QuickAddButton />
       </div>

@@ -43,7 +43,7 @@ export function TodayWorklist({
     { key: "newUncontacted", label: `New ${groups.newUncontacted.length}` },
     { key: "quiet", label: `Quiet ${groups.quiet.length}` },
     { key: "owed", label: `Owed a reply ${groups.owed.length}` },
-    { key: "tasks", label: `Tasks ${tasks.length}` },
+    { key: "tasks", label: `My tasks ${tasks.length}` },
     { key: "registered", label: `Registered ${groups.registered.length}` },
     { key: "meetings", label: `Meetings ${bookingRequests.length}` },
   ];

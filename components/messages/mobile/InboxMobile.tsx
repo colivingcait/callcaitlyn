@@ -14,6 +14,7 @@ import { useToast } from "@/lib/hooks/useToast";
 import { useSectionOpen } from "@/lib/hooks/useSectionOpen";
 import { archiveAllSpam, unarchiveContacts } from "@/app/(app)/messages/spam-actions";
 import { inboxHref } from "@/lib/crm/inbox-href";
+import { ListingRepliesBanner } from "@/components/messages/ListingRepliesBanner";
 import { cn } from "@/lib/utils";
 import type { Conversation, TextableContact } from "@/lib/data/messages";
 import type { InstagramThread } from "@/lib/data/instagram";
@@ -29,6 +30,7 @@ export function InboxMobile({
   mergeCandidates,
   ownerId,
   filter: filterProp = "all",
+  listingRepliesCount = 0,
 }: {
   conversations: Conversation[];
   spamConversations: Conversation[];
@@ -37,6 +39,7 @@ export function InboxMobile({
   mergeCandidates: MergeCandidate[];
   ownerId: string;
   filter?: Filter;
+  listingRepliesCount?: number;
 }) {
   const router = useRouter();
   const { toast, showToast, dismissToast } = useToast();
@@ -76,7 +79,7 @@ export function InboxMobile({
     <div className="pb-4 md:hidden">
       <div className="flex items-start justify-between gap-3 px-4 pt-5 pb-3">
         <div>
-          <p className="font-serif text-2xl font-semibold text-neutral-900">Inbox</p>
+          <p className="font-serif text-2xl font-semibold text-neutral-900">Messages</p>
           <p className="mt-0.5 text-[15px] text-neutral-500">
             {owedCount > 0 ? `${owedCount} ${owedCount === 1 ? "person is" : "people are"} waiting on you.` : "Nothing waiting on you."}
           </p>
@@ -119,6 +122,12 @@ export function InboxMobile({
           </button>
         )}
       </div>
+
+      {listingRepliesCount > 0 && (
+        <div className="mb-3 px-4">
+          <ListingRepliesBanner count={listingRepliesCount} />
+        </div>
+      )}
 
       {instagramThreads.length > 0 && (
         <div className="mb-3 px-4">

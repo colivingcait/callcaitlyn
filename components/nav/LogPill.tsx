@@ -8,8 +8,7 @@ import { LogSheet } from "@/components/contacts/mobile/LogSheet";
 // Replaces the generic "+" FAB on Today only - a labeled Log pill, since
 // logging a follow-up is the one thing worth a dedicated always-visible
 // button. Every other screen's FAB slot goes quiet on mobile (New contact
-// moves to People's header button in Phase 3, New task moves into the
-// More sheet).
+// lives on the Contacts header, New task lives in the More sheet).
 export function LogPill({ ownerId }: { ownerId: string }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);

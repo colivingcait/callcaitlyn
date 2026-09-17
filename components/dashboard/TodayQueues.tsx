@@ -77,7 +77,7 @@ export function TodayQueues({
           <QueueRow href="/?focus=overdue" icon={Clock} label="Overdue" count={overdueCount} danger active={focus === "overdue"} />
           <QueueRow href="/?focus=call-today" icon={Phone} label="Call today" count={callTodayCount} active={focus === "call-today"} />
           <QueueRow href="/?focus=new" icon={UserPlus} label="New / uncontacted" count={newUncontactedCount} active={focus === "new"} />
-          <QueueRow href="/?focus=tasks" icon={ListTodo} label="Tasks" count={taskCount} active={focus === "tasks"} />
+          <QueueRow href="/?focus=tasks" icon={ListTodo} label="My tasks" count={taskCount} active={focus === "tasks"} />
         </div>
       </section>
 

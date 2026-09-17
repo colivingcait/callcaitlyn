@@ -13,6 +13,8 @@ import { InboxMobile } from "@/components/messages/mobile/InboxMobile";
 import { Section } from "@/components/ui/Section";
 import { ShieldAlert, ChevronRight } from "lucide-react";
 import { inboxHref } from "@/lib/crm/inbox-href";
+import { getUnansweredAgentMessageCount } from "@/lib/data/listings";
+import { ListingRepliesBanner } from "@/components/messages/ListingRepliesBanner";
 
 export default async function MessagesPage({ searchParams }: { searchParams: Promise<{ hidden?: string; filter?: string; spam?: string }> }) {
   const { hidden: hiddenParam, filter: filterParam, spam: spamParam } = await searchParams;
@@ -24,12 +26,13 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const [conversations, spamConversations, contacts, instagramThreads, mergeCandidates] = await Promise.all([
+  const [conversations, spamConversations, contacts, instagramThreads, mergeCandidates, listingRepliesCount] = await Promise.all([
     listConversations({ hidden }),
     hidden ? Promise.resolve([]) : listConversations({ spam: true }),
     listTextableContacts(),
     hidden ? Promise.resolve([]) : getUnmatchedInstagramThreads(),
     hidden ? Promise.resolve([]) : listMergeCandidates(),
+    hidden ? Promise.resolve(0) : getUnansweredAgentMessageCount(),
   ]);
 
   const owedCount = conversations.filter((c) => c.owed).length;
@@ -61,6 +64,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
           mergeCandidates={mergeCandidates}
           ownerId={user?.id ?? ""}
           filter={filter}
+          listingRepliesCount={listingRepliesCount}
         />
       )}
       <div className={hidden ? "mx-auto max-w-2xl overflow-x-hidden" : "mx-auto hidden max-w-2xl overflow-x-hidden md:block"}>
@@ -86,6 +90,12 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
         </div>
       ) : (
         <MessageFilters activeFilter={filter} owedCount={owedCount} spamCount={spamConversations.length} />
+      )}
+
+      {!hidden && listingRepliesCount > 0 && (
+        <div className="px-4 pt-3">
+          <ListingRepliesBanner count={listingRepliesCount} />
+        </div>
       )}
 
       {instagramThreads.length > 0 && (

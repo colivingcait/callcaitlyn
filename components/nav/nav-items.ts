@@ -24,27 +24,23 @@ export type NavItem = { href: string; label: string; icon: LucideIcon; hint?: st
 export type NavGroup = { label: string; items: NavItem[] };
 export type NavCounts = { contacts?: number; dialer?: number; messages?: number; notes?: number; insights?: number; listings?: number };
 
-// Four mobile primaries: Today | Contacts | Messages | More.
-// Pipeline is a deal board, not a second people list — it lives first in
-// More (and is linked from Contacts / Today's Under contract). Routes stay live.
+// Five mobile primaries: Today | Contacts | Messages | Pipeline | More.
+// More is only destinations that are not already a tab. Routes stay live.
 export const PRIMARY_NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Today", icon: Home },
   { href: "/contacts", label: "Contacts", icon: Users },
   { href: "/messages", label: "Messages", icon: MessageCircle },
+  { href: "/pipeline", label: "Pipeline", icon: KanbanSquare },
 ];
 
 export const MORE_NAV_GROUPS: NavGroup[] = [
   {
-    label: "Deals",
-    items: [{ href: "/pipeline", label: "Pipeline", icon: KanbanSquare, hint: "Deal board · hot and under contract" }],
-  },
-  {
     label: "Also today",
     items: [
-      { href: "/?focus=tasks", label: "Today's tasks", icon: ListTodo, hint: "Lives on Today" },
+      { href: "/?focus=tasks", label: "My tasks", icon: ListTodo, hint: "Lives on Today — not its own tab" },
       { href: "/insights", label: "Insights", icon: Lightbulb, hint: "What changed on its own" },
-      { href: "/notes", label: "Meeting notes", icon: NotebookText, hint: "Granola inbox" },
-      { href: "/dialer", label: "Event calls", icon: PhoneCall, hint: "Meetup follow-up, not daily calls" },
+      { href: "/notes", label: "Meeting notes", icon: NotebookText, hint: "Granola review, not contact notes" },
+      { href: "/dialer", label: "Event calls", icon: PhoneCall, hint: "Meetup follow-up and confirmations, not daily calls" },
     ],
   },
   {
@@ -61,7 +57,7 @@ export const MORE_NAV_GROUPS: NavGroup[] = [
       { href: "/scheduling", label: "Bookings", icon: CalendarClock, hint: "Approve requests" },
       { href: "/sequences", label: "Campaigns", icon: Mail, hint: "Email and text sequences" },
       { href: "/numbers", label: "House hack", icon: Calculator, hint: "Calculator" },
-      { href: "/listings", label: "Listings", icon: Home, hint: "Your listing pages" },
+      { href: "/listings", label: "Listings", icon: Home, hint: "Listing pages · agent replies live here" },
       { href: "/recruiting", label: "Agent recruiting", icon: UserPlus },
       { href: "/reports", label: "Reports", icon: BarChart3 },
       { href: "/settings", label: "Settings", icon: Settings },
@@ -77,8 +73,23 @@ export const MOBILE_NAV_ITEMS: MobileNavItem[] = [
   { kind: "link", href: "/", label: "Today", icon: Home },
   { kind: "link", href: "/contacts", label: "Contacts", icon: Users },
   { kind: "link", href: "/messages", label: "Messages", icon: MessageCircle },
+  { kind: "link", href: "/pipeline", label: "Pipeline", icon: KanbanSquare },
   { kind: "more", label: "More", icon: Menu },
 ];
+
+export function isPrimaryNavHref(href: string): boolean {
+  if (href.startsWith("/?")) return false;
+  const path = href.split("?")[0] ?? href;
+  return PRIMARY_NAV_ITEMS.some((item) => item.href === path);
+}
+
+/** More sheet/sidebar: never re-list Today/Contacts/Messages/Pipeline. */
+export function moreNavGroupsForSheet(): NavGroup[] {
+  return MORE_NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => !isPrimaryNavHref(item.href)),
+  })).filter((group) => group.items.length > 0);
+}
 
 export function navItemIsActive(href: string, pathname: string, focus?: string | null): boolean {
   if (href === "/?focus=tasks") return pathname === "/" && focus === "tasks";
@@ -88,7 +99,7 @@ export function navItemIsActive(href: string, pathname: string, focus?: string |
 }
 
 export function isMorePath(pathname: string): boolean {
-  return MORE_NAV_GROUPS.some((group) =>
+  return moreNavGroupsForSheet().some((group) =>
     group.items.some((item) => {
       if (item.href.startsWith("/?")) return false;
       return pathname === item.href || pathname.startsWith(`${item.href}/`);

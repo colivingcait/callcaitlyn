@@ -6,14 +6,16 @@ import { ChevronRight, ListTodo } from "lucide-react";
 import { BottomSheet } from "@/components/mobile/BottomSheet";
 import { QuickAddMenu } from "@/components/nav/QuickAddMenu";
 import { SignOutButton } from "@/components/nav/SignOutButton";
-import { MORE_NAV_GROUPS, type NavCounts } from "@/components/nav/nav-items";
+import { moreNavGroupsForSheet, type NavCounts } from "@/components/nav/nav-items";
 import { countFor as countForCounts } from "@/lib/nav/countFor";
 
-// Everything not on the 4-tab bar. Pipeline is first under Deals so the
-// deal board stays one tap away after leaving the primary tabs.
+// Only destinations that are not already a bottom-tab. Primaries are
+// filtered in moreNavGroupsForSheet so Today/Contacts/Messages/Pipeline
+// cannot leak back in if someone concatenates NAV_GROUPS by mistake.
 export function MoreSheet({ open, onClose, userEmail, counts }: { open: boolean; onClose: () => void; userEmail?: string | null; counts: NavCounts }) {
   const [newTaskOpen, setNewTaskOpen] = useState(false);
   const countFor = countForCounts(counts);
+  const groups = moreNavGroupsForSheet();
 
   return (
     <>
@@ -21,10 +23,11 @@ export function MoreSheet({ open, onClose, userEmail, counts }: { open: boolean;
         <div className="pb-4">
           {userEmail && <p className="mb-2 truncate text-[14px] text-neutral-400">{userEmail}</p>}
           <p className="mb-3 text-[14px] leading-5 text-neutral-500">
-            Four tabs: <span className="font-semibold text-neutral-800">Today</span>,{" "}
+            Tabs are <span className="font-semibold text-neutral-800">Today</span>,{" "}
             <span className="font-semibold text-neutral-800">Contacts</span>,{" "}
-            <span className="font-semibold text-neutral-800">Messages</span>, More. Deal board is{" "}
-            <span className="font-semibold text-neutral-800">Pipeline</span> below.
+            <span className="font-semibold text-neutral-800">Messages</span>,{" "}
+            <span className="font-semibold text-neutral-800">Pipeline</span>. Everything else is here —
+            including Commissions and Settings.
           </p>
           <button
             type="button"
@@ -35,7 +38,7 @@ export function MoreSheet({ open, onClose, userEmail, counts }: { open: boolean;
             <span className="flex-1 text-[17px] font-medium text-neutral-900">New task</span>
             <ChevronRight size={18} className="shrink-0 text-neutral-300" />
           </button>
-          {MORE_NAV_GROUPS.map((group) => (
+          {groups.map((group) => (
             <div key={group.label} className="border-t border-neutral-100 py-1">
               <p className="px-1 pb-1 pt-2 text-[13px] font-semibold uppercase tracking-[.05em] text-neutral-400">{group.label}</p>
               {group.items.map(({ href, label, icon: Icon, hint }) => {

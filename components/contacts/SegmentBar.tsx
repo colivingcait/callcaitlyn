@@ -37,10 +37,19 @@ export function SegmentBar({ segments, ownerId }: { segments: ContactSegment[]; 
     router.push(`${pathname}?${params.toString()}`);
   }
 
-  if (segments.length === 0 && !hasActiveFilters) return null;
+  if (segments.length === 0 && !hasActiveFilters && !saving) {
+    return (
+      <div className="border-b border-neutral-100 bg-white px-4 py-2.5">
+        <p className="text-[11px] font-semibold uppercase tracking-[.08em] text-neutral-400">Lists</p>
+        <p className="mt-1 text-xs text-neutral-400">Filter the table, then save this view as a list.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b border-neutral-100 bg-white px-4 py-2.5">
+    <div className="border-b border-neutral-100 bg-white px-4 py-2.5">
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-[.08em] text-neutral-400">Lists</p>
+      <div className="flex flex-wrap items-center gap-2">
       {segments.map((seg) => (
         <span
           key={seg.id}
@@ -81,6 +90,7 @@ export function SegmentBar({ segments, ownerId }: { segments: ContactSegment[]; 
           </button>
         )
       )}
+      </div>
     </div>
   );
 }

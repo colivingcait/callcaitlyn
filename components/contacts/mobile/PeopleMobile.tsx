@@ -144,10 +144,11 @@ export function PeopleMobile({
             <div className="min-w-0">
               <p className="font-serif text-2xl font-semibold text-neutral-900">Contacts</p>
               <p className="mt-0.5 text-[13px] text-neutral-400">
-                People and lists. Deal board is under More →{" "}
+                People and lists. Deal board is the{" "}
                 <Link href="/pipeline" className="font-medium text-brand-700">
                   Pipeline
-                </Link>
+                </Link>{" "}
+                tab.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -173,9 +174,12 @@ export function PeopleMobile({
             options={[
               { value: "everyone", label: "Everyone" },
               { value: "by-stage", label: "By stage" },
-              { value: "my-lists", label: "My lists" },
+              { value: "my-lists", label: "Lists" },
             ]}
           />
+          {view === "my-lists" && (
+            <p className="mt-2 px-0.5 text-[13px] text-neutral-400">Saved lists live here — not a separate tab.</p>
+          )}
           <Link
             href="/pipeline"
             className="mt-3 flex h-11 items-center justify-between rounded-[12px] border border-neutral-200 px-3.5 text-[15px] font-semibold text-neutral-800"

@@ -76,11 +76,11 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
           <div>
             <h1 className="font-serif text-2xl font-semibold leading-9 text-neutral-900 sm:text-[28px]">Contacts</h1>
             <p className="mt-1.5 text-[15px] leading-[22px] text-neutral-600">
-              {contacts.length} people · {withPhoneCount} have a phone number you can text. Deal board (More):{" "}
+              {contacts.length} people · {withPhoneCount} have a phone number you can text. Lists are the chips below. Deal board:{" "}
               <Link href="/pipeline" className="font-medium text-brand-700 hover:underline">
                 Pipeline
               </Link>
-              . Saved lists sit on the bar below.
+              .
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">

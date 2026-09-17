@@ -113,7 +113,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
         {formatLocal(new Date(), "EEEE, MMMM d")}
         {openItems > 0 ? ` · ${openItems} to work` : ""}
       </p>
-      <p className="mt-0.5 text-[13px] text-neutral-400">Morning loop. Contacts · Messages · Pipeline is under More.</p>
+      <p className="mt-0.5 text-[13px] text-neutral-400">Morning loop: Today · Contacts · Messages · Pipeline.</p>
 
       {activePrepSheets.length > 0 && (
         <div className="mt-4 space-y-3">
