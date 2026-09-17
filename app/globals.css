@@ -8,6 +8,10 @@
      Fixed/sticky chrome (Engage strip, thread composer, bulk bar, Log pill)
      must sit above this, not the old 64px `bottom-16`. */
   --app-bottom-nav: calc(66px + max(env(safe-area-inset-bottom), 10px));
+  --paper: #f7f1ea;
+  --paper-card: #fffbf8;
+  --paper-line: #eadfd6;
+  --terracotta: #c45c4a;
 }
 
 html {
@@ -15,7 +19,16 @@ html {
 }
 
 body {
-  @apply bg-neutral-50 text-neutral-900;
+  @apply bg-[#f7f1ea] text-neutral-900;
+}
+
+/* Display serif: Fraunces at poster optical size so greetings and names
+   read editorial instead of "Inter but slightly different." Ignored if
+   the loaded cut is not variable. */
+.font-display {
+  font-family: var(--font-serif), ui-serif, Georgia, serif;
+  font-optical-sizing: none;
+  font-variation-settings: "opsz" 96, "SOFT" 28, "WONK" 0.8;
 }
 
 /* Comfortable tap targets on mobile */

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronDown, Plus } from "lucide-react";
+import { ChevronLeft, ChevronDown, Plus, Leaf, CalendarDays } from "lucide-react";
 import { Avatar } from "@/components/ui";
 import { QuickActions } from "@/components/contacts/QuickActions";
 import { MergeContactButton } from "@/components/contacts/MergeContactButton";
@@ -15,6 +15,7 @@ import { DealsTab } from "@/components/contacts/mobile/DealsTab";
 import { EngageStrip } from "@/components/contacts/EngageStrip";
 import { FollowUpBar } from "@/components/contacts/FollowUpBar";
 import { QuickAddMenu } from "@/components/nav/QuickAddMenu";
+import { BrandWordmark } from "@/components/brand/BrandWordmark";
 import { formatPhone } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import type { Activity, AiInsight, ContactWithRelations, Deal, PipelineStage, Tag, TextTemplate } from "@/types/database";
@@ -65,7 +66,7 @@ export function ContactRecordMobile({
 
   return (
     <div className="pb-4 md:hidden">
-      <div className="flex items-center justify-between px-4 py-2.5">
+      <div className="flex items-center justify-between px-3 py-2">
         <button type="button" onClick={() => router.back()} className="flex h-12 w-12 items-center justify-center rounded-full text-neutral-600">
           <ChevronLeft size={22} />
         </button>
@@ -75,12 +76,16 @@ export function ContactRecordMobile({
         </div>
       </div>
 
+      <div className="px-4 pb-2 text-center">
+        <BrandWordmark size="sm" className="inline-block" />
+      </div>
+
       <div className="px-4">
         <div className="flex items-start gap-3.5">
           <Avatar firstName={contact.first_name} lastName={contact.last_name} size={64} />
           <div className="min-w-0 flex-1">
-            <p className="font-serif text-[26px] font-semibold leading-8 text-neutral-900">{name}</p>
-            <p className="mt-1 text-[15px] text-neutral-500">
+            <p className="font-display text-[32px] font-semibold leading-[1.1] tracking-[-0.03em] text-neutral-900">{name}</p>
+            <p className="mt-1.5 text-[15px] text-neutral-500">
               {[formatPhone(contact.phone), contact.representing ? `${contact.representing} side` : null].filter(Boolean).join(" · ") || "No contact info"}
             </p>
           </div>
@@ -90,12 +95,14 @@ export function ContactRecordMobile({
           <button
             type="button"
             onClick={() => setStageSheetOpen(true)}
-            className="flex h-[36px] items-center gap-1 rounded-full border border-brand-200 bg-brand-50 px-3 text-[14px] font-medium text-brand-700"
+            className="flex h-[36px] items-center gap-1.5 rounded-full bg-[#f3e4dc] px-3 text-[14px] font-medium text-brand-700"
           >
+            <Leaf size={14} strokeWidth={2} />
             {stage?.name ?? "No stage"}
           </button>
           {contact.lead_source && (
-            <span className="flex h-[36px] items-center rounded-full border border-neutral-200 px-3 text-[14px] font-medium text-neutral-600">
+            <span className="flex h-[36px] items-center gap-1.5 rounded-full border border-[#eadfd6] bg-[#fffbf8] px-3 text-[14px] font-medium text-neutral-600">
+              <CalendarDays size={14} strokeWidth={1.8} className="text-brand-700" />
               Source: {contact.lead_source}
             </span>
           )}

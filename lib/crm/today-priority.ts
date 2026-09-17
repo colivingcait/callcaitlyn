@@ -1,10 +1,8 @@
 import type { WorklistPerson } from "@/lib/data/today";
 
-// Shared by desktop (app/(app)/page.tsx) and mobile (TodayMobile) so Up
-// next's priority rule can't drift between the two: overdue > due today >
-// owed a reply. "Never texted" used to be a 4th tier here (the Dialer's
-// registration queue) - New Leads now handles that as its own top-of-page
-// stack, with its own priority ordering, rather than feeding into Up Next.
+// Today home does not render Up Next. Calls/owed groups passed in are
+// already spam-filtered in getTodayData, so a robocall cannot win the hero
+// if this is ever called again.
 export function pickUpNext(groups: {
   late: WorklistPerson[];
   dueToday: WorklistPerson[];
@@ -16,10 +14,6 @@ export function pickUpNext(groups: {
   return { item: null, reason: "" };
 }
 
-// Today's headline count: distinct people across every queue the chip row
-// exposes on that platform, not a sum of queue lengths - previously a
-// person due a call who also owed a reply counted (and appeared) twice,
-// while never-texted was in the list but missing from the count.
 export function countDistinctPeople(...idLists: (string | null | undefined)[][]): number {
   const ids = new Set<string>();
   for (const list of idLists) {

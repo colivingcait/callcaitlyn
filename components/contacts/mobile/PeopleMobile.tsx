@@ -142,7 +142,7 @@ export function PeopleMobile({
         <>
           <div className="mb-3 flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <p className="font-serif text-2xl font-semibold text-neutral-900">Contacts</p>
+              <p className="font-serif text-[28px] font-semibold tracking-[-0.02em] text-neutral-900">Contacts</p>
               <p className="mt-0.5 text-[13px] text-neutral-400">
                 People and lists. Deal board is the{" "}
                 <Link href="/pipeline" className="font-medium text-brand-700">

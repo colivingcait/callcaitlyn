@@ -51,11 +51,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // keeps its plain min-h-dvh document scroll (BottomNav is already
     // fixed, independent of this either way).
     <div className="flex min-h-dvh md:h-dvh md:overflow-hidden">
-      <Suspense fallback={<aside className="hidden w-[220px] shrink-0 border-r border-neutral-100 bg-[#fcfbfa] md:flex" />}>
+      <Suspense fallback={<aside className="hidden w-[220px] shrink-0 border-r border-[#eadfd6] bg-[#f7f1ea] md:flex" />}>
         <Sidebar userEmail={user?.email} counts={navCounts} />
       </Suspense>
       <div className="flex min-h-dvh min-w-0 flex-1 flex-col md:h-dvh md:overflow-hidden">
-        <main className="flex-1 bg-neutral-50/60 pb-[calc(var(--app-bottom-nav)+12px)] md:min-h-0 md:overflow-y-auto md:pb-8">{children}</main>
+        <main className="flex-1 bg-[#f7f1ea] pb-[calc(var(--app-bottom-nav)+12px)] md:min-h-0 md:overflow-y-auto md:pb-8">{children}</main>
       </div>
       {/* Mobile's FAB slot is Today-only-Log now (LogPill below); New
           contact lives on the Contacts header, New task in the More sheet,

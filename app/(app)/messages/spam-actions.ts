@@ -28,6 +28,7 @@ export async function markNotSpam(contactId: string): Promise<ActionResult> {
   await addToSpamAllowlist(supabase, user.id, contact.phone);
 
   revalidatePath("/messages");
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -38,6 +39,7 @@ export async function archiveSpam(contactId: string): Promise<ActionResult> {
   const { error } = await supabase.from("contacts").update({ archived: true }).eq("id", contactId);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/messages");
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -51,6 +53,7 @@ export async function archiveAllSpam(): Promise<{ ok: true; contactIds: string[]
   if (error) return { ok: false, error: error.message };
 
   revalidatePath("/messages");
+  revalidatePath("/");
   return { ok: true, contactIds: ids };
 }
 
@@ -62,5 +65,6 @@ export async function unarchiveContacts(contactIds: string[]): Promise<ActionRes
   const { error } = await supabase.from("contacts").update({ archived: false }).in("id", contactIds);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/messages");
+  revalidatePath("/");
   return { ok: true };
 }

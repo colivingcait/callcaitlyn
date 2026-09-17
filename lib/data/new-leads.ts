@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Contact } from "@/types/database";
+import { isTodayWorkContact } from "@/lib/crm/today-eligible";
 
 export const NEW_LEAD_DISMISS_KEY = "new_lead_never_contacted";
 const NEW_LEAD_WINDOW_DAYS = 14;
@@ -56,7 +57,9 @@ export async function listNewLeadsQueue(): Promise<{ contacts: NewLeadContact[];
   if (dismissError) return { contacts: [], error: dismissError.message };
   const dismissedIds = new Set((dismissals ?? []).map((r) => r.contact_id as string));
 
-  const eligible = candidates.filter((c) => !contactedIds.has(c.id) && !dismissedIds.has(c.id)) as NewLeadContact[];
+  const eligible = candidates.filter(
+    (c) => !contactedIds.has(c.id) && !dismissedIds.has(c.id) && isTodayWorkContact(c),
+  ) as NewLeadContact[];
 
   // Oldest first - whoever's been sitting untouched the longest inside the
   // 14-day window surfaces first, since the whole point is nobody should

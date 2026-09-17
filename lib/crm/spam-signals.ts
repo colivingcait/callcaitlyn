@@ -121,6 +121,13 @@ export async function addToSpamAllowlist(admin: SupabaseClient, ownerId: string,
   await admin.from("spam_number_allowlist").upsert({ owner_id: ownerId, phone: normalized }, { onConflict: "owner_id,phone" });
 }
 
+export async function listAllowlistedPhoneKeys(client: SupabaseClient, ownerId?: string): Promise<Set<string>> {
+  let query = client.from("spam_number_allowlist").select("phone");
+  if (ownerId) query = query.eq("owner_id", ownerId);
+  const { data } = await query;
+  return new Set((data ?? []).map((r) => r.phone as string).filter(Boolean));
+}
+
 const BURST_WINDOW_HOURS = 3;
 const BURST_THRESHOLD = 2;
 

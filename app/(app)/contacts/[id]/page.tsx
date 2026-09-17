@@ -87,7 +87,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
           {initials(contact.first_name, contact.last_name)}
         </div>
         <div className="min-w-0 flex-1">
-          <h1 className="font-serif text-2xl font-semibold leading-9 text-neutral-900 sm:text-[28px]">{fullName(contact)}</h1>
+          <h1 className="font-display text-[32px] font-semibold leading-9 tracking-[-0.03em] text-neutral-900 sm:text-[34px]">{fullName(contact)}</h1>
           <p className="mt-1.5 text-base leading-6 text-neutral-600">
             {[formatPhone(contact.phone), contact.email].filter(Boolean).join(" · ") || "No contact info on file"}
           </p>

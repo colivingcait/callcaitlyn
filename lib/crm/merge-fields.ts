@@ -17,8 +17,23 @@ export function applyMergeFields(text: string, contact: { first_name: string; la
 // name to a naive truthiness check, but neither is a real one to greet
 // someone by. Exported here too so any bulk send using {{first_name}} can
 // check before personalizing "Hi {{first_name}}" into "Hi 5739992048".
+function looksLikePhoneString(value: string): boolean {
+  const trimmed = value.trim();
+  const digits = trimmed.replace(/\D/g, "");
+  return digits.length >= 10 && /^[\d+\s().\-]+$/.test(trimmed);
+}
+
 export function hasPlaceholderName(contact: { first_name: string; phone?: string | null; email?: string | null }): boolean {
-  return !contact.first_name || contact.first_name === "Unknown" || contact.first_name === contact.phone || contact.first_name === contact.email;
+  if (!contact.first_name || contact.first_name === "Unknown") return true;
+  if (contact.email && contact.first_name === contact.email) return true;
+  if (looksLikePhoneString(contact.first_name)) return true;
+  if (contact.phone) {
+    if (contact.first_name === contact.phone) return true;
+    const nameDigits = contact.first_name.replace(/\D/g, "");
+    const phoneDigits = contact.phone.replace(/\D/g, "");
+    if (nameDigits.length >= 10 && phoneDigits.slice(-10) === nameDigits.slice(-10)) return true;
+  }
+  return false;
 }
 
 // True only when the message would actually try to greet someone by name -

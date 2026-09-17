@@ -28,7 +28,7 @@ const config: Config = {
         serif: ["var(--font-serif)", "ui-serif", "Georgia", "serif"],
       },
       boxShadow: {
-        card: "0 1px 2px 0 rgb(120 53 15 / 0.04), 0 1px 3px 0 rgb(120 53 15 / 0.06)",
+        card: "0 1px 2px rgb(120 53 15 / 0.05), 0 10px 24px -14px rgb(120 53 15 / 0.22)",
       },
     },
   },

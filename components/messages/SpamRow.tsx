@@ -18,7 +18,12 @@ export function SpamRow({ conversation }: { conversation: Conversation }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  const reason = typeof lastActivity.metadata?.spam_reason === "string" ? lastActivity.metadata.spam_reason : null;
+  const reason =
+    typeof lastActivity.metadata?.spam_reason === "string"
+      ? lastActivity.metadata.spam_reason
+      : contact.spam
+        ? null
+        : "Unknown number · missed call";
   const preview = lastActivity.body ?? "Call";
 
   async function handleNotSpam() {

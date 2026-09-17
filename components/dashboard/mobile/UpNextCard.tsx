@@ -1,5 +1,7 @@
 "use client";
 
+// NOT mounted. Today home is queue-first cards — no black Up Next hero.
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Send, Phone, Clock, Check } from "lucide-react";
