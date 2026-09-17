@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { parseRpExport, type ParsedRpRow } from "@/lib/listings/parse-rp-csv";
 import { isAgentOptedOut, recordAgentOptOut } from "@/lib/listings/agent-lookup";
 import { applyAgentMergeFields } from "@/lib/crm/listing-sends";
+import { dedupeListingTextRecipients } from "@/lib/crm/listing-text-dedupe";
 import { sendQuoText } from "@/lib/quo/send-message";
 import { sendGmailMessage } from "@/lib/google/send-email";
 import { draftToHtml } from "@/lib/crm/merge-fields";
@@ -295,15 +296,19 @@ export async function createListingSend(input: {
   if (!input.message.trim()) return { ok: false, error: "Write a message first" };
   if (input.channel === "email" && !input.subject?.trim()) return { ok: false, error: "Give the email a subject" };
 
-  const { data: agents } = await supabase.from("listing_agents").select("id, state, email, phone").eq("listing_id", input.listingId);
+  const { data: agents } = await supabase.from("listing_agents").select("id, name, state, email, phone").eq("listing_id", input.listingId);
   const filter = AUDIENCE_FILTER[input.audience];
   const allowedIds = input.listingAgentIds ? new Set(input.listingAgentIds) : null;
-  const recipients = (agents ?? []).filter((a) => {
+  let recipients = (agents ?? []).filter((a) => {
     if (a.state === "opted_out") return false;
     if (input.channel === "email" ? !a.email : !a.phone) return false;
     if (allowedIds) return allowedIds.has(a.id);
     return filter(a.state);
   });
+  // Text: one outbound per number, even if the RP list has three buyer-ref
+  // rows (or the same digits with different punctuation). Email still sends
+  // per row — that path does not share this blast.
+  if (input.channel === "text") recipients = dedupeListingTextRecipients(recipients);
 
   if (recipients.length === 0) return { ok: false, error: "No one in this audience can receive that channel" };
 
