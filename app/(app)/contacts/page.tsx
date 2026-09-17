@@ -59,11 +59,12 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
         stages={stages}
         tags={tags}
         leadSources={leadSources}
-        eventNames={registeredEventNames}
+        eventNames={eventNames}
+        registeredEventNames={registeredEventNames}
         segments={segments}
         sequences={sequences.map((s) => ({ id: s.id, name: s.name, type: s.type }))}
         ownerId={user?.id ?? ""}
-        lastActivityLabels={lastActivityLabels}
+        lastActivityLabels={Object.fromEntries(lastActivityLabels)}
       />
       {/* Now that <main> itself (app/(app)/layout.tsx) is the page's one
           scroll container, this header/filters/segment-bar block just
@@ -120,7 +121,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
           ownerId={user?.id ?? ""}
           sequences={sequences.map((s) => ({ id: s.id, name: s.name, type: s.type }))}
           groupBy={groupBy}
-          lastActivityLabels={lastActivityLabels}
+          lastActivityLabels={Object.fromEntries(lastActivityLabels)}
         />
       </div>
       </div>

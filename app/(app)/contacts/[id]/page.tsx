@@ -33,6 +33,7 @@ import { listTextTemplates } from "@/lib/data/text-templates";
 import { countRecentTexts } from "@/lib/crm/engagement";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ContactRecordMobile } from "@/components/contacts/mobile/ContactRecordMobile";
+import { ContactEngageBlock } from "@/components/contacts/ContactEngageBlock";
 
 export default async function ContactDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -111,6 +112,10 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
             </p>
           )}
         </div>
+      </div>
+
+      <div className="mt-4">
+        <ContactEngageBlock contact={contact} stages={stages} tags={tags} ownerId={contact.owner_id} />
       </div>
 
       <div className="mt-4">

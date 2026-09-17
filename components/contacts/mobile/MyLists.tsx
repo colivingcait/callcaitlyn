@@ -23,11 +23,13 @@ function Tile({ icon: Icon, label, meta, onClick }: { icon: React.ComponentType<
 export function MyLists({
   contacts,
   eventNames,
+  registeredEventNames = [],
   leadSources,
   segments,
 }: {
   contacts: ContactWithRelations[];
   eventNames: string[];
+  registeredEventNames?: string[];
   leadSources: string[];
   segments: ContactSegment[];
 }) {
@@ -89,7 +91,7 @@ export function MyLists({
     router.refresh();
   }
 
-  const registeredEvents = eventNames.filter((name) => contacts.some((c) => c.last_event_name === name));
+  const attendedEvents = eventNames.filter((name) => contacts.some((c) => c.last_event_name === name));
   const usedSources = leadSources.filter((source) => contacts.some((c) => c.lead_source === source));
   const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const metThisMonth = contacts.filter((c) => c.lead_date && new Date(c.lead_date) >= monthAgo).length;
@@ -135,10 +137,10 @@ export function MyLists({
       <div>
         <p className="mb-1.5 px-1 text-[13px] font-semibold uppercase tracking-[.05em] text-neutral-400">Where you met</p>
         <div className="rounded-[16px] border border-[#ebe9e7] bg-white px-4">
-          {registeredEvents.length === 0 ? (
+          {attendedEvents.length === 0 ? (
             <p className="py-4 text-center text-[15px] text-neutral-400">No events yet.</p>
           ) : (
-            registeredEvents.map((name) => (
+            attendedEvents.map((name) => (
               <Tile
                 key={name}
                 icon={Calendar}
@@ -150,6 +152,23 @@ export function MyLists({
           )}
         </div>
       </div>
+
+      {registeredEventNames.length > 0 && (
+        <div>
+          <p className="mb-1.5 px-1 text-[13px] font-semibold uppercase tracking-[.05em] text-neutral-400">Registered for</p>
+          <div className="rounded-[16px] border border-[#ebe9e7] bg-white px-4">
+            {registeredEventNames.map((name) => (
+              <Tile
+                key={name}
+                icon={Calendar}
+                label={name}
+                meta="Eventbrite registrations"
+                onClick={() => goto("regEvent", name, `Registered: ${name}`)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       <div>
         <p className="mb-1.5 px-1 text-[13px] font-semibold uppercase tracking-[.05em] text-neutral-400">How they found you</p>

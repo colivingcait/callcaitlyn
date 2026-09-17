@@ -122,6 +122,39 @@ async function getRegisteredNoFollowUpGroup(stages: PipelineStage[]): Promise<Wo
   }));
 }
 
+async function getQuietLeadsGroup(): Promise<WorklistPerson[]> {
+  const supabase = await createClient();
+  const cutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
+  const { data } = await supabase
+    .from("activities")
+    .select("contact_id, type, occurred_at, contacts!inner(id, first_name, last_name, phone, archived, known_personally, spam)")
+    .in("type", ["call", "text", "email"])
+    .eq("contacts.archived", false)
+    .eq("contacts.known_personally", false)
+    .eq("contacts.spam", false)
+    .order("occurred_at", { ascending: false })
+    .limit(3000);
+
+  const seen = new Set<string>();
+  const quiet: WorklistPerson[] = [];
+  for (const row of data ?? []) {
+    const contact = row.contacts as unknown as { id: string; first_name: string; last_name: string; phone: string | null } | null;
+    if (!contact || seen.has(contact.id)) continue;
+    seen.add(contact.id);
+    if (new Date(row.occurred_at as string).getTime() >= cutoff) continue;
+    const verb = row.type === "call" ? "called" : row.type === "email" ? "emailed" : "texted";
+    quiet.push({
+      id: contact.id,
+      name: `${contact.first_name} ${contact.last_name}`.trim(),
+      phone: contact.phone,
+      meta: `${verb} ${relativeTime(row.occurred_at as string)}`,
+      late: false,
+    });
+    if (quiet.length >= 30) break;
+  }
+  return quiet;
+}
+
 function daysAgo(n: number) {
   return new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString();
 }
@@ -179,7 +212,7 @@ export async function getTodayData() {
   const { data: stagesData } = await supabase.from("pipeline_stages").select("*").order("sort_order", { ascending: true });
   const stages = (stagesData ?? []) as PipelineStage[];
 
-  const [calls, repliesOwed, myTasks, registeredNoFollowUp, statStrip, commissionYear, newLeads, bookingRequests] =
+  const [calls, repliesOwed, myTasks, registeredNoFollowUp, statStrip, commissionYear, newLeads, bookingRequests, quietLeads] =
     await Promise.all([
       getCallsGroup(),
       getRepliesOwedGroup(),
@@ -193,6 +226,7 @@ export async function getTodayData() {
       // (not folded into WorklistPerson) so the row keeps its own
       // Approve/Decline actions instead of just linking out.
       listPendingBookingRequests(),
+      getQuietLeadsGroup(),
     ]);
 
   return {
@@ -206,5 +240,6 @@ export async function getTodayData() {
     newLeads: newLeads.contacts,
     newLeadsError: newLeads.error,
     bookingRequests,
+    quietLeads,
   };
 }

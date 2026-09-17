@@ -12,13 +12,20 @@ import { useEffect, useState } from "react";
 // visible area in real time, keyboard included, everywhere it's
 // supported (all current iOS/Android); falls back to a plain 100dvh box
 // with no offset where it isn't.
-export function useVisualViewportBox(): { height: string; top: number } {
-  const [box, setBox] = useState<{ height: string; top: number }>({ height: "100dvh", top: 0 });
+export function useVisualViewportBox(): { height: string; top: number; keyboardInset: number } {
+  const [box, setBox] = useState<{ height: string; top: number; keyboardInset: number }>({
+    height: "100dvh",
+    top: 0,
+    keyboardInset: 0,
+  });
 
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-    const update = () => setBox({ height: `${vv.height}px`, top: vv.offsetTop });
+    const update = () => {
+      const keyboardInset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setBox({ height: `${vv.height}px`, top: vv.offsetTop, keyboardInset });
+    };
     update();
     vv.addEventListener("resize", update);
     vv.addEventListener("scroll", update);

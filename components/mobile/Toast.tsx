@@ -11,7 +11,7 @@ export function Toast({ toast, onDismiss }: { toast: ToastState; onDismiss?: () 
   return (
     <div
       className="fixed inset-x-4 z-[60] flex justify-center md:hidden"
-      style={{ bottom: "calc(90px + max(env(safe-area-inset-bottom), 10px))" }}
+      style={{ bottom: "calc(var(--app-bottom-nav) + 12px)" }}
     >
       <div
         className={cn(

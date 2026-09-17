@@ -41,12 +41,14 @@ export function ContactFiltersSheet({
   tags,
   leadSources,
   eventNames,
+  registeredEventNames = [],
   onClose,
 }: {
   stages: PipelineStage[];
   tags: Tag[];
   leadSources: string[];
   eventNames: string[];
+  registeredEventNames?: string[];
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -78,16 +80,26 @@ export function ContactFiltersSheet({
     set("leadTo", "");
   }
 
+  function preserveChrome(params: URLSearchParams) {
+    const view = searchParams.get("view");
+    const list = searchParams.get("list");
+    if (view) params.set("view", view);
+    if (list) params.set("list", list);
+  }
+
   function apply() {
     const params = new URLSearchParams(draft);
     if (selectedTags.length) params.set("tags", selectedTags.join(","));
     else params.delete("tags");
+    preserveChrome(params);
     router.push(`${pathname}?${params.toString()}`);
     onClose();
   }
 
   function clearAll() {
-    router.push(pathname);
+    const params = new URLSearchParams();
+    preserveChrome(params);
+    router.push(params.toString() ? `${pathname}?${params.toString()}` : pathname);
     onClose();
   }
 
@@ -265,10 +277,20 @@ export function ContactFiltersSheet({
               <option value="">Any / no event attended</option>
               {eventNames.map((e) => (
                 <option key={e} value={e}>
-                  {e}
+                  Attended: {e}
                 </option>
               ))}
             </Select>
+            {registeredEventNames.length > 0 && (
+              <Select value={draft.regEvent ?? ""} onChange={(e) => set("regEvent", e.target.value)}>
+                <option value="">Registered for: any event</option>
+                {registeredEventNames.map((e) => (
+                  <option key={e} value={e}>
+                    Registered for: {e}
+                  </option>
+                ))}
+              </Select>
+            )}
           </Section>
 
           <Section title="Personal details">

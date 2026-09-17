@@ -65,7 +65,7 @@ export default async function MessageThreadPage({
         <ContactContextBar contact={contact} stages={stages} />
       </div>
 
-      <div className="flex-1 space-y-3 px-3 py-4">
+      <div className="flex-1 space-y-3 px-3 py-4 pb-[calc(var(--app-bottom-nav)+7.5rem)] md:pb-4">
         {insights.length > 0 && (
           <div className="overflow-hidden rounded-2xl border border-[#ebe9e7] bg-white">
             {insights.map((insight) => (
@@ -96,7 +96,7 @@ export default async function MessageThreadPage({
             ),
           )
         )}
-        <ScrollToBottomOnLoad />
+        <ScrollToBottomOnLoad token={thread.at(-1)?.id} />
       </div>
 
       <ThreadComposer

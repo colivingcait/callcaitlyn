@@ -34,7 +34,7 @@ export function ContactsList({
   ownerId: string;
   sequences: SequenceOption[];
   groupBy?: ContactGroupBy;
-  lastActivityLabels: Map<string, string>;
+  lastActivityLabels: Record<string, string>;
 }) {
   const router = useRouter();
   const [selecting, setSelecting] = useState(false);
@@ -110,7 +110,7 @@ export function ContactsList({
   const groups = groupContacts(contacts, groupBy, stages);
 
   return (
-    <div className={selecting && selected.size > 0 ? "pb-28" : undefined}>
+    <div className={selecting && selected.size > 0 ? "pb-[calc(var(--app-bottom-nav)+4.5rem)] md:pb-28" : undefined}>
       <div className="flex items-center justify-between px-4 py-2.5 sm:px-0">
         <button onClick={() => (selecting ? exitSelection() : setSelecting(true))} className="text-sm font-semibold text-brand-600">
           {selecting ? "Cancel" : "Select"}
@@ -151,7 +151,7 @@ export function ContactsList({
       )}
 
       {selecting && selected.size > 0 && (
-        <div className="fixed inset-x-0 bottom-16 z-40 bg-[#1c1917] p-3.5 shadow-lg md:bottom-0">
+        <div className="fixed inset-x-0 bottom-[var(--app-bottom-nav)] z-40 bg-[#1c1917] p-3.5 shadow-lg md:bottom-0">
           <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-2">
             {confirmingArchive ? (
               <>
@@ -272,7 +272,7 @@ function ContactGroup({
   selecting: boolean;
   selected: Set<string>;
   onToggle: (id: string) => void;
-  lastActivityLabels: Map<string, string>;
+  lastActivityLabels: Record<string, string>;
   onTextGroup: (ids: string[]) => void;
 }) {
   const [open, setOpen] = useSectionOpen(`contacts-group:${groupKey}`, true);
@@ -292,7 +292,7 @@ function ContactGroup({
             selecting={selecting}
             selected={selected.has(c.id)}
             onToggle={() => onToggle(c.id)}
-            lastActivityLabel={lastActivityLabels.get(c.id)}
+            lastActivityLabel={lastActivityLabels[c.id]}
           />
         ))}
       </div>
@@ -301,27 +301,22 @@ function ContactGroup({
 
   return (
     <div className="overflow-hidden rounded-2xl border border-[#ebe9e7] bg-white">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-2.5 px-[18px] py-4 text-left"
-      >
-        {open ? <ChevronDown size={17} className="text-neutral-400" /> : <ChevronRight size={17} className="text-neutral-400" />}
-        <span className="text-base font-semibold text-neutral-900">{label}</span>
-        <span className="text-[15px] text-neutral-400">{contacts.length}</span>
+      <div className="flex w-full items-center gap-2.5 px-[18px] py-4 text-left">
+        <button type="button" onClick={() => setOpen(!open)} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
+          {open ? <ChevronDown size={17} className="text-neutral-400" /> : <ChevronRight size={17} className="text-neutral-400" />}
+          <span className="text-base font-semibold text-neutral-900">{label}</span>
+          <span className="text-[15px] text-neutral-400">{contacts.length}</span>
+        </button>
         {withPhone.length > 0 && (
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onTextGroup(withPhone.map((c) => c.id));
-            }}
-            className="ml-auto text-[15px] font-semibold text-brand-700"
+            onClick={() => onTextGroup(withPhone.map((c) => c.id))}
+            className="ml-auto shrink-0 text-[15px] font-semibold text-brand-700"
           >
             Text the {withPhone.length} with numbers
           </button>
         )}
-      </button>
+      </div>
       {open && <div className="divide-y divide-neutral-100 border-t border-neutral-100">
           {contacts.map((c) => (
             <ContactRow
@@ -332,7 +327,7 @@ function ContactGroup({
               selecting={selecting}
               selected={selected.has(c.id)}
               onToggle={() => onToggle(c.id)}
-              lastActivityLabel={lastActivityLabels.get(c.id)}
+              lastActivityLabel={lastActivityLabels[c.id]}
             />
           ))}
         </div>}

@@ -4,8 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { formatLocal, dateInputToAppIso, isoToDateInput } from "@/lib/format-time";
-import { Pencil, Trash2, Check, Plus } from "lucide-react";
+import { Pencil, Trash2, Check, Plus, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { snoozeTask } from "@/app/(app)/today-actions";
+import { SnoozeMenu } from "@/components/contacts/SnoozeMenu";
 import type { Task } from "@/types/database";
 
 export function TaskList({ contactId, ownerId, tasks }: { contactId: string; ownerId: string; tasks: Task[] }) {
@@ -19,6 +21,7 @@ export function TaskList({ contactId, ownerId, tasks }: { contactId: string; own
   const [editTitle, setEditTitle] = useState("");
   const [editDueAt, setEditDueAt] = useState("");
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const [snoozeId, setSnoozeId] = useState<string | null>(null);
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -72,6 +75,16 @@ export function TaskList({ contactId, ownerId, tasks }: { contactId: string; own
       return;
     }
     setEditingId(null);
+    router.refresh();
+  }
+
+  async function snooze(taskId: string, days: number) {
+    setSnoozeId(null);
+    const res = await snoozeTask(taskId, days);
+    if (!res.ok) {
+      setError(res.error);
+      return;
+    }
     router.refresh();
   }
 
@@ -141,6 +154,19 @@ export function TaskList({ contactId, ownerId, tasks }: { contactId: string; own
                   <p className="text-sm text-neutral-500">{task.completed_at ? "Done " : "Due "}{formatLocal(task.due_at, "MMM d")}</p>
                 )}
               </div>
+              {!task.completed_at && (
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setSnoozeId(snoozeId === task.id ? null : task.id)}
+                    className="shrink-0 rounded-[10px] border border-neutral-200 bg-white p-2 text-neutral-500"
+                    aria-label="Snooze task"
+                  >
+                    <Clock size={14} />
+                  </button>
+                  {snoozeId === task.id && <SnoozeMenu onPick={(days) => snooze(task.id, days)} />}
+                </div>
+              )}
               <button onClick={() => startEdit(task)} className="shrink-0 rounded-[10px] border border-neutral-200 bg-white p-2 text-neutral-500">
                 <Pencil size={14} />
               </button>

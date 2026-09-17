@@ -27,6 +27,7 @@ export function InboxMobile({
   instagramThreads,
   mergeCandidates,
   ownerId,
+  filter: filterProp = "all",
 }: {
   conversations: Conversation[];
   spamConversations: Conversation[];
@@ -34,10 +35,11 @@ export function InboxMobile({
   instagramThreads: InstagramThread[];
   mergeCandidates: MergeCandidate[];
   ownerId: string;
+  filter?: Filter;
 }) {
   const router = useRouter();
   const { toast, showToast, dismissToast } = useToast();
-  const [filter, setFilter] = useState<Filter>("all");
+  const filter = filterProp;
   const [openRowId, setOpenRowId] = useState<string | null>(null);
   const [spamOpen, setSpamOpen] = useSectionOpen("messages:spam-mobile", true);
   const [clearing, setClearing] = useState(false);
@@ -95,7 +97,7 @@ export function InboxMobile({
           <button
             key={chip.value}
             type="button"
-            onClick={() => setFilter(chip.value)}
+            onClick={() => router.push(chip.value === "all" ? "/messages" : `/messages?filter=${chip.value}`)}
             className={`h-11 shrink-0 whitespace-nowrap rounded-full px-3.5 text-[14px] font-medium ${filter === chip.value ? "bg-neutral-900 text-white" : "border border-neutral-200 text-neutral-600"}`}
           >
             {chip.label}

@@ -41,17 +41,19 @@ export function LogSheet({
   ownerId,
   contactId: prefilledContactId,
   contactName: prefilledContactName,
+  initialType = "call",
 }: {
   open: boolean;
   onClose: () => void;
   ownerId: string;
   contactId?: string;
   contactName?: string;
+  initialType?: ActivityType;
 }) {
   const router = useRouter();
   const [contacts, setContacts] = useState<ContactOption[] | null>(null);
   const [contactId, setContactId] = useState(prefilledContactId ?? "");
-  const [type, setType] = useState<ActivityType>("call");
+  const [type, setType] = useState<ActivityType>(initialType);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [body, setBody] = useState("");
   const [followUpDays, setFollowUpDays] = useState<number | null>(null);
@@ -72,11 +74,12 @@ export function LogSheet({
   useEffect(() => {
     if (open) {
       setContactId(prefilledContactId ?? "");
+      setType(initialType);
       setOutcome(null);
       setFollowUpDays(null);
       setFollowUpDate("");
     }
-  }, [open, prefilledContactId]);
+  }, [open, prefilledContactId, initialType]);
 
   const showsOutcome = type === "call" || type === "text";
 

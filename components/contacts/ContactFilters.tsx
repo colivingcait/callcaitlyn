@@ -31,7 +31,7 @@ export const SORT_OPTIONS: { value: string; label: string }[] = [
 const SHEET_PARAM_KEYS = [
   "stage", "type", "tags", "source", "timeline", "representing", "likelihood",
   "email", "followup", "notes", "newSince", "leadFrom", "leadTo",
-  "event", "city", "state", "birthdayMonth", "minBudget", "archived", "quoSync", "group",
+  "event", "regEvent", "city", "state", "birthdayMonth", "minBudget", "archived", "quoSync", "group", "queue",
 ];
 
 export function ContactFilters({
@@ -76,7 +76,12 @@ export function ContactFilters({
 
   function clearAll() {
     setQ("");
-    startTransition(() => router.push(pathname));
+    const params = new URLSearchParams();
+    const view = searchParams.get("view");
+    const list = searchParams.get("list");
+    if (view) params.set("view", view);
+    if (list) params.set("list", list);
+    startTransition(() => router.push(params.toString() ? `${pathname}?${params.toString()}` : pathname));
   }
 
   const anyActive = activeFilterCount > 0 || hasPhoneOnly || !!activeQueue || !!searchParams.get("regEvent");
@@ -135,7 +140,7 @@ export function ContactFilters({
 
       {registeredEventNames.length > 0 && (
         <select
-          defaultValue={searchParams.get("regEvent") ?? ""}
+          value={searchParams.get("regEvent") ?? ""}
           onChange={(e) => updateParam("regEvent", e.target.value)}
           className="w-full rounded-[11px] border border-neutral-200 bg-white px-3 py-2.5 text-[15px] text-neutral-800"
         >
@@ -190,7 +195,14 @@ export function ContactFilters({
       {activeQueue && <p className="text-sm text-neutral-400">{QUEUES.find((q) => q.value === activeQueue)?.description}</p>}
 
       {sheetOpen && (
-        <ContactFiltersSheet stages={stages} tags={tags} leadSources={leadSources} eventNames={eventNames} onClose={() => setSheetOpen(false)} />
+        <ContactFiltersSheet
+          stages={stages}
+          tags={tags}
+          leadSources={leadSources}
+          eventNames={eventNames}
+          registeredEventNames={registeredEventNames}
+          onClose={() => setSheetOpen(false)}
+        />
       )}
     </div>
   );

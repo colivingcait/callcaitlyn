@@ -59,6 +59,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
           instagramThreads={instagramThreads}
           mergeCandidates={mergeCandidates}
           ownerId={user?.id ?? ""}
+          filter={filter}
         />
       )}
       <div className={hidden ? "mx-auto max-w-2xl overflow-x-hidden" : "mx-auto hidden max-w-2xl overflow-x-hidden md:block"}>

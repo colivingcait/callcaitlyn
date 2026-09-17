@@ -77,3 +77,14 @@ export function endOfLocalDayIso(date = new Date()): string {
 export function todayLocalDateInput(): string {
   return formatLocal(new Date(), "yyyy-MM-dd");
 }
+
+export function timeOfDayGreeting(date = new Date()): "Good morning" | "Good afternoon" | "Good evening" {
+  const hour = Number(formatLocal(date, "H"));
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+export function addDaysIso(days: number, from = new Date()): string {
+  return new Date(from.getTime() + days * 24 * 60 * 60 * 1000).toISOString();
+}
