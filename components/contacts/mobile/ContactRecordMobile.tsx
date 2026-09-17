@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronDown, ChevronUp, Plus, Phone, MessageSquare, StickyNote } from "lucide-react";
+import { ChevronLeft, ChevronDown, Plus } from "lucide-react";
 import { Avatar } from "@/components/ui";
 import { QuickActions } from "@/components/contacts/QuickActions";
 import { MergeContactButton } from "@/components/contacts/MergeContactButton";
@@ -12,9 +12,10 @@ import { LogSheet } from "@/components/contacts/mobile/LogSheet";
 import { OverviewTab } from "@/components/contacts/mobile/OverviewTab";
 import { ActivityTab } from "@/components/contacts/mobile/ActivityTab";
 import { DealsTab } from "@/components/contacts/mobile/DealsTab";
-import { openQuoCall } from "@/lib/quo/call-link";
-import { formatLocal } from "@/lib/format-time";
-import { CONTACT_TYPE_LABELS, fullName, formatPhone } from "@/lib/utils";
+import { EngageStrip } from "@/components/contacts/EngageStrip";
+import { FollowUpBar } from "@/components/contacts/FollowUpBar";
+import { QuickAddMenu } from "@/components/nav/QuickAddMenu";
+import { formatPhone } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import type { Activity, AiInsight, ContactWithRelations, Deal, PipelineStage, Tag, TextTemplate } from "@/types/database";
 import type { MergeCandidate } from "@/lib/data/contacts";
@@ -47,31 +48,24 @@ export function ContactRecordMobile({
   openTasks: { id: string; title: string; due_at: string | null }[];
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>(activities.length > 0 ? "activity" : "overview");
   const [stageSheetOpen, setStageSheetOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
+  const [logType, setLogType] = useState<"note" | "call">("note");
+  const [taskOpen, setTaskOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
 
-  const name = fullName(contact);
+  const name = `${contact.first_name} ${contact.last_name}`.trim();
   const stage = stages.find((s) => s.id === contact.stage_id);
   const engagedTag = contact.contact_tags.find((ct) => ct.tags?.name === "Engaged");
-  const isOverdue = !!contact.next_follow_up_at && new Date(contact.next_follow_up_at).getTime() < Date.now();
-  const daysLate = isOverdue
-    ? Math.max(1, Math.floor((Date.now() - new Date(contact.next_follow_up_at!).getTime()) / (24 * 60 * 60 * 1000)))
-    : 0;
 
   const activeActivities = activities.filter((a) => !!a.contact_id);
-  const openTasksOpen = openTasks.filter((t) => !t.due_at || true);
   const lastText = activities.find((a) => a.type === "text" && a.body);
   const lastExchange = lastText ? { body: lastText.body ?? "", occurred_at: lastText.occurred_at } : null;
 
-  function goToThread() {
-    router.push(`/messages/${contact.id}`);
-  }
-
   return (
-    <div className="pb-28 md:hidden">
-      <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-2.5">
+    <div className="pb-4 md:hidden">
+      <div className="flex items-center justify-between px-4 py-2.5">
         <button type="button" onClick={() => router.back()} className="flex h-12 w-12 items-center justify-center rounded-full text-neutral-600">
           <ChevronLeft size={22} />
         </button>
@@ -81,7 +75,7 @@ export function ContactRecordMobile({
         </div>
       </div>
 
-      <div className="px-4 pt-4">
+      <div className="px-4">
         <div className="flex items-start gap-3.5">
           <Avatar firstName={contact.first_name} lastName={contact.last_name} size={64} />
           <div className="min-w-0 flex-1">
@@ -92,31 +86,21 @@ export function ContactRecordMobile({
           </div>
         </div>
 
-        {isOverdue && (
-          <div className="mt-3 flex items-center justify-between gap-2 rounded-[14px] bg-[#fef2f2] px-3.5 py-2.5">
-            <p className="text-[15px] font-semibold text-[#b91c1c]">
-              Follow-up was due {formatLocal(contact.next_follow_up_at!, "MMM d")} - {daysLate} day{daysLate === 1 ? "" : "s"} late
-            </p>
-            <button
-              type="button"
-              onClick={() => setStageSheetOpen(true)}
-              className="shrink-0 rounded-[10px] border border-[#fecaca] bg-white px-3 py-1.5 text-[13px] font-semibold text-neutral-800"
-            >
-              Reschedule
-            </button>
-          </div>
-        )}
-
         <div className="mt-3 flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => setStageSheetOpen(true)}
-            className="flex h-[45px] items-center gap-1 rounded-full border border-brand-300 bg-brand-50 px-3.5 text-[15px] font-medium text-brand-700"
+            className="flex h-[36px] items-center gap-1 rounded-full border border-brand-200 bg-brand-50 px-3 text-[14px] font-medium text-brand-700"
           >
-            {stage?.name ?? "No stage"} <ChevronDown size={15} />
+            {stage?.name ?? "No stage"}
           </button>
+          {contact.lead_source && (
+            <span className="flex h-[36px] items-center rounded-full border border-neutral-200 px-3 text-[14px] font-medium text-neutral-600">
+              Source: {contact.lead_source}
+            </span>
+          )}
           {engagedTag && (
-            <span className="flex h-[45px] items-center rounded-full border border-neutral-200 px-3.5 text-[15px] font-medium text-neutral-600">
+            <span className="flex h-[36px] items-center rounded-full border border-neutral-200 px-3 text-[14px] font-medium text-neutral-600">
               Engaged · {textsThisWeek} text{textsThisWeek === 1 ? "" : "s"} this week
             </span>
           )}
@@ -125,7 +109,7 @@ export function ContactRecordMobile({
             .map((ct) => (
               <span
                 key={ct.tags!.id}
-                className="flex h-[45px] items-center rounded-full px-3.5 text-[15px] font-medium text-white"
+                className="flex h-[36px] items-center rounded-full px-3 text-[14px] font-medium text-white"
                 style={{ backgroundColor: ct.tags!.color }}
               >
                 {ct.tags!.name}
@@ -134,10 +118,28 @@ export function ContactRecordMobile({
           <button
             type="button"
             onClick={() => setStageSheetOpen(true)}
-            className="flex h-[45px] items-center gap-1 rounded-full border border-dashed border-neutral-300 px-3.5 text-[15px] font-medium text-neutral-500"
+            className="flex h-[36px] items-center gap-1 rounded-full border border-dashed border-neutral-300 px-3 text-[14px] font-medium text-neutral-500"
           >
             <Plus size={14} /> Tag
           </button>
+        </div>
+
+        <div className="mt-3">
+          <EngageStrip
+            contactId={contact.id}
+            phone={contact.phone}
+            email={contact.email}
+            onNote={() => {
+              setLogType("note");
+              setLogOpen(true);
+            }}
+            onTask={() => setTaskOpen(true)}
+            onStage={() => setStageSheetOpen(true)}
+          />
+        </div>
+
+        <div className="mt-3">
+          <FollowUpBar contactId={contact.id} nextFollowUpAt={contact.next_follow_up_at} />
         </div>
       </div>
 
@@ -173,7 +175,7 @@ export function ContactRecordMobile({
             textTemplates={textTemplates}
             insights={insights}
             ownerId={ownerId}
-            openTasks={openTasksOpen}
+            openTasks={openTasks}
             lastExchange={lastExchange}
           />
         )}
@@ -181,43 +183,16 @@ export function ContactRecordMobile({
         {tab === "deals" && (
           <DealsTab deals={deals} contactId={contact.id} ownerId={ownerId} contactName={name} contactCreatedAt={contact.created_at} representing={contact.representing} />
         )}
-      </div>
 
-      <div className="fixed inset-x-0 bottom-16 z-30 border-t border-neutral-100 bg-white px-4 py-2.5">
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={goToThread}
-            disabled={!contact.phone}
-            className="flex h-[54px] flex-1 items-center justify-center gap-2 rounded-xl bg-brand-600 text-[15px] font-semibold text-white disabled:opacity-40"
-          >
-            <MessageSquare size={17} /> Text
-          </button>
-          <button
-            type="button"
-            onClick={() => contact.phone && openQuoCall(contact.phone)}
-            disabled={!contact.phone}
-            className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-xl border border-neutral-200 text-neutral-600 disabled:opacity-40"
-          >
-            <Phone size={18} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setLogOpen(true)}
-            className="flex h-[54px] flex-1 items-center justify-center gap-2 rounded-xl border border-neutral-200 text-[15px] font-semibold text-neutral-700"
-          >
-            <StickyNote size={17} /> Log
-          </button>
-          <button
-            type="button"
-            onClick={() => setMoreOpen((v) => !v)}
-            className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-xl border border-neutral-200 text-neutral-600"
-          >
-            {moreOpen ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setMoreOpen((v) => !v)}
+          className="mt-4 flex w-full items-center justify-center gap-1 text-[14px] font-medium text-neutral-500"
+        >
+          More actions <ChevronDown size={16} className={cn("transition-transform", moreOpen && "rotate-180")} />
+        </button>
         {moreOpen && (
-          <div className="mt-2.5">
+          <div className="mt-2">
             <QuickActions contactId={contact.id} contactName={name} phone={contact.phone} email={contact.email} />
           </div>
         )}
@@ -236,7 +211,21 @@ export function ContactRecordMobile({
         contactCreatedAt={contact.created_at}
         representing={contact.representing}
       />
-      <LogSheet open={logOpen} onClose={() => setLogOpen(false)} ownerId={ownerId} contactId={contact.id} contactName={name} />
+      <LogSheet
+        open={logOpen}
+        onClose={() => setLogOpen(false)}
+        ownerId={ownerId}
+        contactId={contact.id}
+        contactName={name}
+        initialType={logType}
+      />
+      {taskOpen && (
+        <QuickAddMenu
+          initialMode="task"
+          initialContactId={contact.id}
+          onClose={() => setTaskOpen(false)}
+        />
+      )}
     </div>
   );
 }

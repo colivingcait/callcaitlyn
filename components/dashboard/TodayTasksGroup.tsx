@@ -3,10 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2, Check, Plus } from "lucide-react";
+import { Pencil, Trash2, Check, Plus, Clock, Phone, MessageSquareText } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { formatLocal } from "@/lib/format-time";
+import { formatLocal, dateInputToAppIso, isoToDateInput } from "@/lib/format-time";
 import { cn } from "@/lib/utils";
+import { snoozeTask } from "@/app/(app)/today-actions";
+import { SnoozeMenu } from "@/components/contacts/SnoozeMenu";
+import { openQuoCall, openQuoText } from "@/lib/quo/call-link";
 import type { WorklistTask } from "@/lib/data/today";
 import type { MergeCandidate } from "@/lib/data/contacts";
 
@@ -27,10 +30,12 @@ export function TodayTasksGroup({ tasks, ownerId, contacts }: { tasks: WorklistT
   const [dueAt, setDueAt] = useState("");
   const [contactId, setContactId] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDueAt, setEditDueAt] = useState("");
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const [snoozeId, setSnoozeId] = useState<string | null>(null);
 
   const visible = showAll ? tasks : tasks.slice(0, CAP);
 
@@ -38,13 +43,19 @@ export function TodayTasksGroup({ tasks, ownerId, contacts }: { tasks: WorklistT
     e.preventDefault();
     if (!title.trim()) return;
     setSaving(true);
+    setError("");
     const supabase = createClient();
-    await supabase.from("tasks").insert({
+    const { error: insertError } = await supabase.from("tasks").insert({
       owner_id: ownerId,
       contact_id: contactId || null,
       title: title.trim(),
-      due_at: dueAt ? new Date(dueAt).toISOString() : null,
+      due_at: dueAt ? dateInputToAppIso(dueAt) : null,
     });
+    if (insertError) {
+      setError(insertError.message);
+      setSaving(false);
+      return;
+    }
     setTitle("");
     setDueAt("");
     setContactId("");
@@ -55,36 +66,59 @@ export function TodayTasksGroup({ tasks, ownerId, contacts }: { tasks: WorklistT
 
   async function toggleComplete(task: WorklistTask) {
     const supabase = createClient();
-    await supabase.from("tasks").update({ completed_at: new Date().toISOString() }).eq("id", task.id);
+    const { error: updateError } = await supabase.from("tasks").update({ completed_at: new Date().toISOString() }).eq("id", task.id);
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
     router.refresh();
   }
 
   function startEdit(task: WorklistTask) {
     setEditingId(task.id);
     setEditTitle(task.title);
-    setEditDueAt(task.dueAt ? task.dueAt.slice(0, 10) : "");
+    setEditDueAt(isoToDateInput(task.dueAt));
   }
 
   async function saveEdit(taskId: string) {
     if (!editTitle.trim()) return;
     const supabase = createClient();
-    await supabase
+    const { error: updateError } = await supabase
       .from("tasks")
-      .update({ title: editTitle.trim(), due_at: editDueAt ? new Date(editDueAt).toISOString() : null })
+      .update({ title: editTitle.trim(), due_at: editDueAt ? dateInputToAppIso(editDueAt) : null })
       .eq("id", taskId);
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
     setEditingId(null);
+    router.refresh();
+  }
+
+  async function snooze(taskId: string, days: number) {
+    setSnoozeId(null);
+    const res = await snoozeTask(taskId, days);
+    if (!res.ok) {
+      setError(res.error);
+      return;
+    }
     router.refresh();
   }
 
   async function deleteTask(taskId: string) {
     const supabase = createClient();
-    await supabase.from("tasks").delete().eq("id", taskId);
+    const { error: deleteError } = await supabase.from("tasks").delete().eq("id", taskId);
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
     setConfirmingDeleteId(null);
     router.refresh();
   }
 
   return (
     <div>
+      {error && <p className="px-4 pt-3 text-sm text-red-600">{error}</p>}
       {tasks.length === 0 && !adding && <p className="px-4 py-6 text-[15px] text-neutral-400">No open tasks.</p>}
 
       {visible.map((task) => (
@@ -121,11 +155,12 @@ export function TodayTasksGroup({ tasks, ownerId, contacts }: { tasks: WorklistT
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-3.5">
+            <div className="flex items-start gap-3.5">
               <button
                 type="button"
                 onClick={() => toggleComplete(task)}
-                className="flex h-[21px] w-[21px] shrink-0 items-center justify-center rounded-full border border-neutral-300"
+                className="mt-0.5 flex h-[21px] w-[21px] shrink-0 items-center justify-center rounded-full border border-neutral-300"
+                aria-label="Complete task"
               >
                 <Check size={13} className="opacity-0" />
               </button>
@@ -145,13 +180,43 @@ export function TodayTasksGroup({ tasks, ownerId, contacts }: { tasks: WorklistT
                     .filter(Boolean)
                     .reduce<React.ReactNode[]>((acc, node, i) => (i === 0 ? [node as React.ReactNode] : [...acc, " · ", node as React.ReactNode]), [])}
                 </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setSnoozeId(snoozeId === task.id ? null : task.id)}
+                      className="flex items-center gap-1.5 rounded-[10px] border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-800"
+                    >
+                      <Clock size={15} className="text-neutral-500" /> Snooze
+                    </button>
+                    {snoozeId === task.id && <SnoozeMenu onPick={(days) => snooze(task.id, days)} align="left" />}
+                  </div>
+                  {task.phone && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => openQuoCall(task.phone!)}
+                        className="flex items-center gap-1.5 rounded-[10px] border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-800"
+                      >
+                        <Phone size={15} className="text-neutral-500" /> Call
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openQuoText(task.phone!)}
+                        className="flex items-center gap-1.5 rounded-[10px] border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-800"
+                      >
+                        <MessageSquareText size={15} className="text-neutral-500" /> Text
+                      </button>
+                    </>
+                  )}
+                  <button onClick={() => startEdit(task)} className="shrink-0 rounded-[10px] border border-neutral-200 bg-white p-2 text-neutral-500">
+                    <Pencil size={14} />
+                  </button>
+                  <button onClick={() => setConfirmingDeleteId(task.id)} className="shrink-0 rounded-[10px] border border-neutral-200 bg-white p-2 text-red-600">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
-              <button onClick={() => startEdit(task)} className="shrink-0 rounded-[10px] border border-neutral-200 bg-white p-2 text-neutral-500">
-                <Pencil size={14} />
-              </button>
-              <button onClick={() => setConfirmingDeleteId(task.id)} className="shrink-0 rounded-[10px] border border-neutral-200 bg-white p-2 text-red-600">
-                <Trash2 size={14} />
-              </button>
             </div>
           )}
         </div>

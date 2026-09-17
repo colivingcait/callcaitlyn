@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Check, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useApplyStageChange } from "@/lib/hooks/useApplyStageChange";
@@ -52,6 +53,7 @@ export function StageTagsSheet({
   contactCreatedAt: string;
   representing: Representing | null;
 }) {
+  const router = useRouter();
   const { move, busy, dealModal, pendingCleanup, clearDealModal, clearPendingCleanup } = useApplyStageChange(ownerId);
   const [stageId, setStageId] = useState(currentStageId);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(currentTagIds);
@@ -60,6 +62,19 @@ export function StageTagsSheet({
   const [followUpDays, setFollowUpDays] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const wasOpen = useRef(false);
+
+  useEffect(() => {
+    if (open && !wasOpen.current) {
+      setStageId(currentStageId);
+      setSelectedTagIds(currentTagIds);
+      setAddingTag(false);
+      setNewTagName("");
+      setFollowUpDays(null);
+      setSaveError(null);
+    }
+    wasOpen.current = open;
+  }, [open, currentStageId, currentTagIds]);
 
   function toggleTag(id: string) {
     setSelectedTagIds((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
@@ -112,6 +127,7 @@ export function StageTagsSheet({
 
     setSaving(false);
     onClose();
+    router.refresh();
   }
 
   return (

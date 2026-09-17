@@ -17,7 +17,6 @@ import { ContactFilters } from "@/components/contacts/ContactFilters";
 import { SegmentBar } from "@/components/contacts/SegmentBar";
 import { BulkImportContactsButton } from "@/components/contacts/BulkImportContactsButton";
 import { PeopleMobile } from "@/components/contacts/mobile/PeopleMobile";
-import { Button } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function ContactsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
@@ -59,11 +58,12 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
         stages={stages}
         tags={tags}
         leadSources={leadSources}
-        eventNames={registeredEventNames}
+        eventNames={eventNames}
+        registeredEventNames={registeredEventNames}
         segments={segments}
         sequences={sequences.map((s) => ({ id: s.id, name: s.name, type: s.type }))}
         ownerId={user?.id ?? ""}
-        lastActivityLabels={lastActivityLabels}
+        lastActivityLabels={Object.fromEntries(lastActivityLabels)}
       />
       {/* Now that <main> itself (app/(app)/layout.tsx) is the page's one
           scroll container, this header/filters/segment-bar block just
@@ -76,20 +76,26 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
           <div>
             <h1 className="font-serif text-2xl font-semibold leading-9 text-neutral-900 sm:text-[28px]">Contacts</h1>
             <p className="mt-1.5 text-[15px] leading-[22px] text-neutral-600">
-              {contacts.length} people · {withPhoneCount} have a phone number you can text
+              {contacts.length} people · {withPhoneCount} have a phone number you can text. Lists are the chips below. Deal board:{" "}
+              <Link href="/pipeline" className="font-medium text-brand-700 hover:underline">
+                Pipeline
+              </Link>
+              .
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <a href={`/api/contacts/export?${usp.toString()}`}>
-              <Button variant="secondary" size="sm">
-                <Download size={14} /> Export
-              </Button>
+            <a
+              href={`/api/contacts/export?${usp.toString()}`}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
+            >
+              <Download size={14} /> Export
             </a>
             {user && <BulkImportContactsButton tags={tags} ownerId={user.id} />}
-            <Link href="/contacts/new">
-              <Button size="sm">
-                <Plus size={15} /> New contact
-              </Button>
+            <Link
+              href="/contacts/new"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
+            >
+              <Plus size={15} /> New contact
             </Link>
           </div>
         </div>
@@ -120,7 +126,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
           ownerId={user?.id ?? ""}
           sequences={sequences.map((s) => ({ id: s.id, name: s.name, type: s.type }))}
           groupBy={groupBy}
-          lastActivityLabels={lastActivityLabels}
+          lastActivityLabels={Object.fromEntries(lastActivityLabels)}
         />
       </div>
       </div>

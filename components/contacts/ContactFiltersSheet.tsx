@@ -7,6 +7,7 @@ import { Button, Input, Select, Label } from "@/components/ui";
 import { CONTACT_TYPE_LABELS, TIMELINE_LABELS, REPRESENTING_LABELS, cn } from "@/lib/utils";
 import type { PipelineStage, Tag } from "@/types/database";
 import type { ContactGroupBy } from "@/lib/crm/contact-filter-params";
+import { SHEET_PARAM_KEYS } from "@/components/contacts/ContactFilters";
 
 const LEAD_DATE_PRESETS = [
   { label: "Last 7 days", days: 7 },
@@ -41,12 +42,14 @@ export function ContactFiltersSheet({
   tags,
   leadSources,
   eventNames,
+  registeredEventNames = [],
   onClose,
 }: {
   stages: PipelineStage[];
   tags: Tag[];
   leadSources: string[];
   eventNames: string[];
+  registeredEventNames?: string[];
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -79,7 +82,13 @@ export function ContactFiltersSheet({
   }
 
   function apply() {
-    const params = new URLSearchParams(draft);
+    const params = new URLSearchParams(searchParams.toString());
+    for (const key of SHEET_PARAM_KEYS) {
+      if (key === "tags") continue;
+      const value = draft[key];
+      if (value) params.set(key, value);
+      else params.delete(key);
+    }
     if (selectedTags.length) params.set("tags", selectedTags.join(","));
     else params.delete("tags");
     router.push(`${pathname}?${params.toString()}`);
@@ -87,7 +96,9 @@ export function ContactFiltersSheet({
   }
 
   function clearAll() {
-    router.push(pathname);
+    const params = new URLSearchParams(searchParams.toString());
+    for (const key of SHEET_PARAM_KEYS) params.delete(key);
+    router.push(params.toString() ? `${pathname}?${params.toString()}` : pathname);
     onClose();
   }
 
@@ -103,7 +114,7 @@ export function ContactFiltersSheet({
 
         <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
           <Section title="Group by">
-            <Select value={draft.group ?? "none"} onChange={(e) => set("group", e.target.value)}>
+            <Select value={draft.group ?? "stage"} onChange={(e) => set("group", e.target.value)}>
               {GROUP_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
@@ -265,10 +276,20 @@ export function ContactFiltersSheet({
               <option value="">Any / no event attended</option>
               {eventNames.map((e) => (
                 <option key={e} value={e}>
-                  {e}
+                  Attended: {e}
                 </option>
               ))}
             </Select>
+            {registeredEventNames.length > 0 && (
+              <Select value={draft.regEvent ?? ""} onChange={(e) => set("regEvent", e.target.value)}>
+                <option value="">Registered for: any event</option>
+                {registeredEventNames.map((e) => (
+                  <option key={e} value={e}>
+                    Registered for: {e}
+                  </option>
+                ))}
+              </Select>
+            )}
           </Section>
 
           <Section title="Personal details">

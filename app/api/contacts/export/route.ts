@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { listContacts } from "@/lib/data/contacts";
 import { parseContactFilterParams } from "@/lib/crm/contact-filter-params";
 import { formatPhone } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/server";
 
 // One field per column, in order - kept deliberately narrow to what an
 // email/mailing tool (Eventbrite's own contact list import, Mailchimp,
@@ -19,6 +20,12 @@ function csvRow(values: string[]): string {
 }
 
 export async function GET(request: NextRequest) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+
   // Same query params the Contacts page's filters/segments/working queues
   // already use (parsed by the one shared function both places call) -
   // exporting respects whatever's currently filtered/searched/grouped on

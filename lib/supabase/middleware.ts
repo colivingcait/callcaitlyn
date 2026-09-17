@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { AUTH_NEXT_COOKIE, safeInternalPath } from "@/lib/auth/safe-path";
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -28,6 +29,15 @@ export async function updateSession(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // Tools and old docs sometimes guess /auth/login. The branded magic-link
+  // page is /login; /auth/* is otherwise a session bypass (confirm callback).
+  if (request.nextUrl.pathname === "/auth/login") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.search = request.nextUrl.search;
+    return NextResponse.redirect(url);
+  }
 
   const isAuthRoute = request.nextUrl.pathname.startsWith("/login");
   const isAuthCallback = request.nextUrl.pathname.startsWith("/auth");
@@ -73,7 +83,9 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/manifest.json") ||
     request.nextUrl.pathname.startsWith("/_next") ||
     request.nextUrl.pathname.startsWith("/favicon") ||
-    request.nextUrl.pathname.startsWith("/sw.js");
+    request.nextUrl.pathname.startsWith("/sw.js") ||
+    request.nextUrl.pathname === "/robots.txt" ||
+    request.nextUrl.pathname === "/sitemap.xml";
 
   if (isAuthCallback || isWebhook || isCheckIn || isPublicQuote || isPublicBooking || isPublicConfirm || isPublicListing) {
     return response;
@@ -81,13 +93,31 @@ export async function updateSession(request: NextRequest) {
 
   if (!user && !isAuthRoute && !isPublicAsset) {
     const url = request.nextUrl.clone();
+    const next = `${request.nextUrl.pathname}${request.nextUrl.search}`;
     url.pathname = "/login";
-    return NextResponse.redirect(url);
+    url.search = "";
+    const response = NextResponse.redirect(url);
+    if (next && next !== "/" && !next.startsWith("/login")) {
+      response.cookies.set(AUTH_NEXT_COOKIE, safeInternalPath(next), {
+        path: "/",
+        maxAge: 10 * 60,
+        sameSite: "lax",
+        httpOnly: true,
+      });
+    }
+    return response;
   }
 
   if (user && isAuthRoute) {
+    // A failed magic link redirects here with ?error=auth. If we bounce a
+    // still-signed-in user straight to Today, that error never appears and
+    // it looks like the link "did nothing." Let the login page show it.
+    if (request.nextUrl.searchParams.get("error") === "auth") {
+      return response;
+    }
     const url = request.nextUrl.clone();
     url.pathname = "/";
+    url.search = "";
     return NextResponse.redirect(url);
   }
 

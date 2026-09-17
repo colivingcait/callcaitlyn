@@ -8,6 +8,7 @@ import { logActivityWithOutcome } from "@/app/(app)/contacts/actions";
 import { BottomSheet } from "@/components/mobile/BottomSheet";
 import { Button, Select, Textarea, Input } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { dateInputToAppIso } from "@/lib/format-time";
 import type { ActivityType } from "@/types/database";
 
 type ContactOption = { id: string; first_name: string; last_name: string };
@@ -40,17 +41,19 @@ export function LogSheet({
   ownerId,
   contactId: prefilledContactId,
   contactName: prefilledContactName,
+  initialType = "call",
 }: {
   open: boolean;
   onClose: () => void;
   ownerId: string;
   contactId?: string;
   contactName?: string;
+  initialType?: ActivityType;
 }) {
   const router = useRouter();
   const [contacts, setContacts] = useState<ContactOption[] | null>(null);
   const [contactId, setContactId] = useState(prefilledContactId ?? "");
-  const [type, setType] = useState<ActivityType>("call");
+  const [type, setType] = useState<ActivityType>(initialType);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [body, setBody] = useState("");
   const [followUpDays, setFollowUpDays] = useState<number | null>(null);
@@ -71,11 +74,12 @@ export function LogSheet({
   useEffect(() => {
     if (open) {
       setContactId(prefilledContactId ?? "");
+      setType(initialType);
       setOutcome(null);
       setFollowUpDays(null);
       setFollowUpDate("");
     }
-  }, [open, prefilledContactId]);
+  }, [open, prefilledContactId, initialType]);
 
   const showsOutcome = type === "call" || type === "text";
 
@@ -83,7 +87,7 @@ export function LogSheet({
     if (!contactId) return;
     setSaving(true);
     const nextFollowUpAt = followUpDate
-      ? new Date(followUpDate).toISOString()
+      ? dateInputToAppIso(followUpDate)
       : followUpDays
         ? new Date(Date.now() + followUpDays * 24 * 60 * 60 * 1000).toISOString()
         : undefined;

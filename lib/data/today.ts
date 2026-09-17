@@ -1,12 +1,13 @@
 import { isPast } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
-import { relativeTime, isTodayLocal } from "@/lib/format-time";
+import { relativeTime, isTodayLocal, endOfLocalDayIso } from "@/lib/format-time";
 import { filterByQueue } from "@/lib/crm/contact-queue-filter";
 import { listContacts } from "@/lib/data/contacts";
 import { listNewLeadsQueue } from "@/lib/data/new-leads";
 import { listWonDeals, listPendingDeals } from "@/lib/data/commissions";
 import { listPendingBookingRequests } from "@/lib/data/scheduling";
 import { computeDeals, summarizeDeals, capYearKey, capYearStart, KW_CAP } from "@/lib/crm/commission";
+import { conversationOwedFromHistory } from "@/lib/crm/message-owed";
 import type { PipelineStage } from "@/types/database";
 
 export type WorklistPerson = { id: string; name: string; phone: string | null; email?: string | null; meta: string; late: boolean; activityId?: string };
@@ -23,6 +24,7 @@ async function getCallsGroup(): Promise<WorklistPerson[]> {
     .eq("archived", false)
     .eq("known_personally", false)
     .not("next_follow_up_at", "is", null)
+    .lte("next_follow_up_at", endOfLocalDayIso())
     .order("next_follow_up_at", { ascending: true })
     .limit(30);
 
@@ -50,48 +52,65 @@ async function getRepliesOwedGroup(): Promise<WorklistPerson[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("activities")
-    .select("id, contact_id, direction, occurred_at, body, needs_reply, reply_dismissed_at, contacts!inner(id, first_name, last_name, phone, archived, known_personally)")
-    .eq("type", "text")
+    .select("id, contact_id, type, direction, occurred_at, body, needs_reply, reply_dismissed_at, metadata, contacts!inner(id, first_name, last_name, phone, archived, known_personally)")
+    .in("type", ["text", "call"])
     .eq("contacts.archived", false)
     .eq("contacts.known_personally", false)
     .order("occurred_at", { ascending: false })
     .limit(1000);
 
-  const seen = new Set<string>();
-  const owed: WorklistPerson[] = [];
+  const grouped = new Map<string, { contact: { id: string; first_name: string; last_name: string; phone: string | null }; rows: NonNullable<typeof data> }>();
   for (const row of data ?? []) {
     const contact = row.contacts as unknown as { id: string; first_name: string; last_name: string; phone: string | null } | null;
-    if (!contact || seen.has(contact.id)) continue;
-    seen.add(contact.id);
-    if (row.direction !== "inbound") continue;
-    if (row.needs_reply === false) continue;
-    if (row.reply_dismissed_at) continue;
-    const preview = row.body ? `"${row.body.slice(0, 60)}${row.body.length > 60 ? "…" : ""}"` : "Texted you";
+    if (!contact) continue;
+    const entry = grouped.get(contact.id);
+    if (entry) entry.rows.push(row);
+    else grouped.set(contact.id, { contact, rows: [row] });
+  }
+
+  const owed: WorklistPerson[] = [];
+  for (const { contact, rows } of grouped.values()) {
+    const { owed: isOwed, activity } = conversationOwedFromHistory(rows);
+    if (!isOwed || !activity) continue;
+    const preview =
+      activity.type === "call"
+        ? "Missed call"
+        : activity.body
+          ? `"${activity.body.slice(0, 60)}${activity.body.length > 60 ? "…" : ""}"`
+          : "Texted you";
     owed.push({
       id: contact.id,
       name: `${contact.first_name} ${contact.last_name}`.trim(),
       phone: contact.phone,
-      meta: `${preview} · ${relativeTime(row.occurred_at)}`,
+      meta: `${preview} · ${relativeTime(activity.occurred_at)}`,
       late: false,
-      activityId: row.id,
+      activityId: activity.id,
     });
   }
   return owed;
 }
 
-export type WorklistTask = { id: string; title: string; dueAt: string | null; contactId: string | null; contactName: string | null; late: boolean };
+export type WorklistTask = {
+  id: string;
+  title: string;
+  dueAt: string | null;
+  contactId: string | null;
+  contactName: string | null;
+  phone: string | null;
+  late: boolean;
+};
 
 async function getMyTasksGroup(): Promise<WorklistTask[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("tasks")
-    .select("id, title, due_at, contact_id, contacts(first_name, last_name)")
+    .select("id, title, due_at, contact_id, contacts(first_name, last_name, phone)")
     .is("completed_at", null)
     .order("due_at", { ascending: true, nullsFirst: false })
     .limit(30);
 
   return (data ?? []).map((t) => {
-    const contact = t.contacts as unknown as { first_name: string; last_name: string } | null;
+    const contact = t.contacts as unknown as { first_name: string; last_name: string; phone: string | null } | null;
     const late = t.due_at ? isPast(new Date(t.due_at)) && !isTodayLocal(t.due_at) : false;
     return {
       id: t.id,
@@ -99,6 +118,7 @@ async function getMyTasksGroup(): Promise<WorklistTask[]> {
       dueAt: t.due_at,
       contactId: t.contact_id,
       contactName: contact ? `${contact.first_name} ${contact.last_name}`.trim() : null,
+      phone: contact?.phone ?? null,
       late,
     };
   });
@@ -115,6 +135,39 @@ async function getRegisteredNoFollowUpGroup(stages: PipelineStage[]): Promise<Wo
     meta: c.last_event_name ? `Registered · ${c.last_event_name}` : "Registered, no follow-up yet",
     late: false,
   }));
+}
+
+async function getQuietLeadsGroup(): Promise<WorklistPerson[]> {
+  const supabase = await createClient();
+  const cutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
+  const { data } = await supabase
+    .from("activities")
+    .select("contact_id, type, occurred_at, contacts!inner(id, first_name, last_name, phone, archived, known_personally, spam)")
+    .in("type", ["call", "text", "email"])
+    .eq("contacts.archived", false)
+    .eq("contacts.known_personally", false)
+    .eq("contacts.spam", false)
+    .order("occurred_at", { ascending: false })
+    .limit(3000);
+
+  const seen = new Set<string>();
+  const quiet: WorklistPerson[] = [];
+  for (const row of data ?? []) {
+    const contact = row.contacts as unknown as { id: string; first_name: string; last_name: string; phone: string | null } | null;
+    if (!contact || seen.has(contact.id)) continue;
+    seen.add(contact.id);
+    if (new Date(row.occurred_at as string).getTime() >= cutoff) continue;
+    const verb = row.type === "call" ? "called" : row.type === "email" ? "emailed" : "texted";
+    quiet.push({
+      id: contact.id,
+      name: `${contact.first_name} ${contact.last_name}`.trim(),
+      phone: contact.phone,
+      meta: `${verb} ${relativeTime(row.occurred_at as string)}`,
+      late: false,
+    });
+    if (quiet.length >= 30) break;
+  }
+  return quiet;
 }
 
 function daysAgo(n: number) {
@@ -174,7 +227,7 @@ export async function getTodayData() {
   const { data: stagesData } = await supabase.from("pipeline_stages").select("*").order("sort_order", { ascending: true });
   const stages = (stagesData ?? []) as PipelineStage[];
 
-  const [calls, repliesOwed, myTasks, registeredNoFollowUp, statStrip, commissionYear, newLeads, bookingRequests] =
+  const [calls, repliesOwed, myTasks, registeredNoFollowUp, statStrip, commissionYear, newLeads, bookingRequests, quietLeads] =
     await Promise.all([
       getCallsGroup(),
       getRepliesOwedGroup(),
@@ -188,6 +241,7 @@ export async function getTodayData() {
       // (not folded into WorklistPerson) so the row keeps its own
       // Approve/Decline actions instead of just linking out.
       listPendingBookingRequests(),
+      getQuietLeadsGroup(),
     ]);
 
   return {
@@ -199,6 +253,8 @@ export async function getTodayData() {
     statStrip,
     commissionYear,
     newLeads: newLeads.contacts,
+    newLeadsError: newLeads.error,
     bookingRequests,
+    quietLeads,
   };
 }

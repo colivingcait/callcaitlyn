@@ -12,6 +12,7 @@ import { groupContacts } from "@/lib/crm/contact-grouping";
 import { useToast } from "@/lib/hooks/useToast";
 import { Toast } from "@/components/mobile/Toast";
 import { CONTACT_TYPE_LABELS, formatPhone } from "@/lib/utils";
+import type { ContactGroupBy } from "@/lib/crm/contact-filter-params";
 import type { ContactWithRelations, PipelineStage } from "@/types/database";
 
 // Mirrors desktop ContactRow's meta line (type · phone · last activity) and
@@ -33,21 +34,22 @@ export function PeopleList({
   contacts,
   stages,
   ownerId,
-  grouped,
+  groupBy = "none",
   lastActivityLabels,
 }: {
   contacts: ContactWithRelations[];
   stages: PipelineStage[];
   ownerId: string;
-  grouped: boolean;
-  lastActivityLabels: Map<string, string>;
+  groupBy?: ContactGroupBy;
+  lastActivityLabels: Record<string, string>;
 }) {
   const router = useRouter();
   const { toast, showToast } = useToast();
   const [openRowId, setOpenRowId] = useState<string | null>(null);
   const [logContact, setLogContact] = useState<{ id: string; name: string } | null>(null);
 
-  const groups = groupContacts(contacts, grouped ? "stage" : "none", stages);
+  const groups = groupContacts(contacts, groupBy, stages);
+  const collapsible = groupBy !== "none";
 
   async function snooze(contactId: string) {
     const res = await snoozeFollowUp(contactId);
@@ -57,13 +59,16 @@ export function PeopleList({
 
   return (
     <div className="rounded-[16px] border border-[#ebe9e7] bg-white">
-      {groups.map((group) => (
+      {contacts.length === 0 ? (
+        <p className="px-4 py-10 text-center text-[15px] text-neutral-400">No contacts match. Try clearing filters or add a new contact.</p>
+      ) : (
+        groups.map((group) => (
         <StickyGroupHeader
           key={group.key}
           label={group.label || "All"}
           count={group.contacts.length}
-          collapsible={grouped}
-          sectionKey={`people:stage:${group.key}`}
+          collapsible={collapsible}
+          sectionKey={`people:${groupBy}:${group.key}`}
           defaultOpen
         >
           <div className="divide-y divide-neutral-100">
@@ -82,7 +87,7 @@ export function PeopleList({
                     href={`/contacts/${contact.id}`}
                     avatar={{ firstName: contact.first_name, lastName: contact.last_name }}
                     name={name}
-                    secondaryText={rowMeta(contact, lastActivityLabels.get(contact.id))}
+                    secondaryText={rowMeta(contact, lastActivityLabels[contact.id])}
                   />
                 </SwipeActions>
               );
@@ -90,7 +95,8 @@ export function PeopleList({
             {group.contacts.length === 0 && <p className="px-4 py-4 text-center text-sm text-neutral-400">Nobody here.</p>}
           </div>
         </StickyGroupHeader>
-      ))}
+        ))
+      )}
       {logContact && <LogSheet open onClose={() => setLogContact(null)} ownerId={ownerId} contactId={logContact.id} contactName={logContact.name} />}
       <Toast toast={toast} />
     </div>

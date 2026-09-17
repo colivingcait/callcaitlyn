@@ -14,6 +14,14 @@ export function fullName(c: { first_name: string; last_name?: string | null }) {
   return [c.first_name, c.last_name].filter(Boolean).join(" ").trim();
 }
 
+export function firstNameFromEmail(email: string | null | undefined): string {
+  if (!email) return "";
+  const local = email.split("@")[0] ?? "";
+  const token = local.split(/[._+-]/)[0] ?? "";
+  if (!token) return "";
+  return token.charAt(0).toUpperCase() + token.slice(1).toLowerCase();
+}
+
 // Stable per-person color (same contact always lands on the same color,
 // across every avatar anywhere in the app) instead of one flat brand color
 // for everyone - makes a conversation list scannable at a glance the way
@@ -73,6 +81,7 @@ export const CONTACT_TYPE_LABELS: Record<string, string> = {
   past_client: "Past Client",
   sphere: "Sphere",
   attendee: "Attendee",
+  agent: "Agent",
   other: "Other",
 };
 

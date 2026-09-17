@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { isConversationOwed } from "@/lib/crm/message-owed";
+import { conversationOwedFromHistory } from "@/lib/crm/message-owed";
 import type { Activity, ContactWithRelations } from "@/types/database";
 
 type ContactSummary = Pick<
@@ -11,6 +11,7 @@ export type Conversation = {
   contact: ContactSummary;
   lastActivity: Activity;
   owed: boolean;
+  owedActivity: Activity | null;
 };
 
 // Supabase's JS client can't easily express "latest row per group" in one
@@ -50,22 +51,26 @@ export async function listConversations(opts?: { hidden?: boolean; spam?: boolea
 
   const { data } = await query;
 
-  const seen = new Set<string>();
-  const conversations: Conversation[] = [];
-
+  const byContact = new Map<string, { contact: ContactSummary; activities: Activity[] }>();
   for (const row of data ?? []) {
     const contact = row.contacts as unknown as ContactSummary | null;
-    if (!contact || seen.has(contact.id)) continue;
-    seen.add(contact.id);
+    if (!contact) continue;
     const { contacts: _contacts, ...activity } = row as Activity & { contacts: unknown };
-    const lastActivity = activity as Activity;
+    const entry = byContact.get(contact.id);
+    if (entry) {
+      entry.activities.push(activity as Activity);
+    } else {
+      byContact.set(contact.id, { contact, activities: [activity as Activity] });
+    }
+  }
 
+  const conversations: Conversation[] = [];
+  for (const { contact, activities } of byContact.values()) {
+    const lastActivity = activities[0];
     if (opts?.filter === "calls" && lastActivity.type !== "call") continue;
-
-    const owed = isConversationOwed(lastActivity);
+    const { owed, activity } = conversationOwedFromHistory(activities);
     if (opts?.filter === "owed" && !owed) continue;
-
-    conversations.push({ contact, lastActivity, owed });
+    conversations.push({ contact, lastActivity, owed, owedActivity: owed ? activity : null });
   }
 
   return conversations;

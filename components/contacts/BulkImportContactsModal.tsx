@@ -196,7 +196,7 @@ export function BulkImportContactsModal({
               />
               <p className="mt-1 text-xs text-neutral-400">
                 Only applied to brand-new contacts — anyone already on file keeps their original lead source. Anyone
-                imported with a phone number shows up in the Dialer automatically.
+                imported with a phone number shows up in Event calls automatically.
               </p>
             </div>
 

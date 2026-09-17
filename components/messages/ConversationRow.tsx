@@ -8,28 +8,38 @@ import { openQuoCall } from "@/lib/quo/call-link";
 import { isMissedCall } from "@/lib/crm/message-owed";
 import { ConversationActions } from "@/components/messages/ConversationActions";
 import { Avatar } from "@/components/ui";
+import { threadHref } from "@/lib/crm/inbox-href";
 import type { Conversation } from "@/lib/data/messages";
 
 const REPRESENTING_LABEL: Record<string, string> = { buyer: "buyer", seller: "seller", both: "buyer & seller" };
 
-export function ConversationRow({ conversation }: { conversation: Conversation }) {
-  const { contact, lastActivity, owed } = conversation;
+export function ConversationRow({
+  conversation,
+  filter,
+  hidden,
+}: {
+  conversation: Conversation;
+  filter?: string | null;
+  hidden?: boolean;
+}) {
+  const { contact, lastActivity, owed, owedActivity } = conversation;
+  const displayActivity = owed && owedActivity ? owedActivity : lastActivity;
   const stage = contact.pipeline_stages;
-  const missedCall = isMissedCall(lastActivity);
+  const missedCall = isMissedCall(displayActivity);
 
   // Whether Quo actually attached a recording, not just "was this call
   // missed" - a missed call whose status happens to be "voicemail" means
   // one was left, and saying "no voicemail" on it was flatly wrong.
-  const hasVoicemail = typeof lastActivity.metadata?.recording_url === "string" && !!lastActivity.metadata.recording_url;
+  const hasVoicemail = typeof displayActivity.metadata?.recording_url === "string" && !!displayActivity.metadata.recording_url;
 
-  let preview = lastActivity.body ?? (lastActivity.type === "call" ? "Call" : "");
+  let preview = displayActivity.body ?? (displayActivity.type === "call" ? "Call" : "");
   if (missedCall) {
     preview = hasVoicemail ? "Missed call · left a voicemail" : "Missed call · no voicemail";
-  } else if (lastActivity.type === "call" && lastActivity.body) {
-    preview = `Call · ${lastActivity.body.split(" · ")[0] ?? lastActivity.body}`;
-  } else if (lastActivity.type === "text" && lastActivity.direction === "outbound") {
+  } else if (displayActivity.type === "call" && displayActivity.body) {
+    preview = `Call · ${displayActivity.body.split(" · ")[0] ?? displayActivity.body}`;
+  } else if (displayActivity.type === "text" && displayActivity.direction === "outbound") {
     preview = `You sent: ${preview}`;
-  } else if (lastActivity.type === "text") {
+  } else if (displayActivity.type === "text") {
     preview = `"${preview}"`;
   }
 
@@ -48,7 +58,7 @@ export function ConversationRow({ conversation }: { conversation: Conversation }
         owed ? "border-[#ebe9e7] bg-white" : "border-[#f0efee] bg-[#fcfbfa]",
       )}
     >
-      <Link href={`/messages/${contact.id}`} className="flex min-w-0 flex-1 items-center gap-3.5">
+      <Link href={threadHref(contact.id, { filter, hidden })} className="flex min-w-0 flex-1 items-center gap-3.5">
         <Avatar
           firstName={contact.first_name}
           lastName={contact.last_name}
@@ -58,13 +68,13 @@ export function ConversationRow({ conversation }: { conversation: Conversation }
           <p className="flex items-baseline gap-2.5 text-[17px] font-semibold leading-6 text-neutral-900">
             <span className="truncate">{fullName(contact)}</span>
             <span className="shrink-0 text-sm font-medium text-neutral-500">
-              {formatDistanceToNow(new Date(lastActivity.occurred_at), { addSuffix: true })}
+              {formatDistanceToNow(new Date(displayActivity.occurred_at), { addSuffix: true })}
             </span>
           </p>
           <p className={cn("mt-0.5 truncate text-[15px] leading-[22px]", missedCall ? "font-semibold text-red-700" : owed ? "text-neutral-700" : "text-neutral-600")}>
             {preview || "—"}
           </p>
-          {owed && contextLine && <p className="mt-0.5 text-sm text-neutral-500">{contextLine}</p>}
+          {owed && contextLine && <p className="mt-0.5 truncate text-sm text-neutral-500">{contextLine}</p>}
         </div>
       </Link>
       <div className="flex shrink-0 items-center gap-2">
@@ -80,7 +90,7 @@ export function ConversationRow({ conversation }: { conversation: Conversation }
             </button>
           ) : (
             <Link
-              href={`/messages/${contact.id}`}
+              href={threadHref(contact.id, { filter, hidden })}
               className="inline-flex items-center gap-1.5 rounded-[10px] border-0 bg-brand-600 px-3.5 py-2.5 text-sm font-semibold text-white"
             >
               <MessageSquare size={15} /> Reply
@@ -96,7 +106,13 @@ export function ConversationRow({ conversation }: { conversation: Conversation }
             <Phone size={15} />
           </button>
         )}
-        <ConversationActions contactId={contact.id} hidden={contact.archived} activityId={lastActivity.id} owed={owed} missedCall={missedCall} />
+        <ConversationActions
+          contactId={contact.id}
+          hidden={contact.archived}
+          activityId={owedActivity?.id ?? lastActivity.id}
+          owed={owed}
+          missedCall={missedCall}
+        />
       </div>
     </div>
   );

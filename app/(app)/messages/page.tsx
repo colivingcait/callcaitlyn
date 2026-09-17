@@ -12,6 +12,9 @@ import { SpamBucket } from "@/components/messages/SpamBucket";
 import { InboxMobile } from "@/components/messages/mobile/InboxMobile";
 import { Section } from "@/components/ui/Section";
 import { ShieldAlert, ChevronRight } from "lucide-react";
+import { inboxHref } from "@/lib/crm/inbox-href";
+import { getUnansweredAgentMessageCount } from "@/lib/data/listings";
+import { ListingRepliesBanner } from "@/components/messages/ListingRepliesBanner";
 
 export default async function MessagesPage({ searchParams }: { searchParams: Promise<{ hidden?: string; filter?: string; spam?: string }> }) {
   const { hidden: hiddenParam, filter: filterParam, spam: spamParam } = await searchParams;
@@ -23,12 +26,13 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const [conversations, spamConversations, contacts, instagramThreads, mergeCandidates] = await Promise.all([
+  const [conversations, spamConversations, contacts, instagramThreads, mergeCandidates, listingRepliesCount] = await Promise.all([
     listConversations({ hidden }),
     hidden ? Promise.resolve([]) : listConversations({ spam: true }),
     listTextableContacts(),
     hidden ? Promise.resolve([]) : getUnmatchedInstagramThreads(),
     hidden ? Promise.resolve([]) : listMergeCandidates(),
+    hidden ? Promise.resolve(0) : getUnansweredAgentMessageCount(),
   ]);
 
   const owedCount = conversations.filter((c) => c.owed).length;
@@ -59,6 +63,8 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
           instagramThreads={instagramThreads}
           mergeCandidates={mergeCandidates}
           ownerId={user?.id ?? ""}
+          filter={filter}
+          listingRepliesCount={listingRepliesCount}
         />
       )}
       <div className={hidden ? "mx-auto max-w-2xl overflow-x-hidden" : "mx-auto hidden max-w-2xl overflow-x-hidden md:block"}>
@@ -78,12 +84,18 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
 
       {hidden ? (
         <div className="px-4 pb-4">
-          <Link href="/messages" className="text-sm font-medium text-brand-600 hover:underline">
+          <Link href={inboxHref()} className="text-sm font-medium text-brand-600 hover:underline">
             ← Back to inbox
           </Link>
         </div>
       ) : (
         <MessageFilters activeFilter={filter} owedCount={owedCount} spamCount={spamConversations.length} />
+      )}
+
+      {!hidden && listingRepliesCount > 0 && (
+        <div className="px-4 pt-3">
+          <ListingRepliesBanner count={listingRepliesCount} />
+        </div>
       )}
 
       {instagramThreads.length > 0 && (
@@ -108,10 +120,10 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
         ) : (
           <>
             {owedVisible.map((c) => (
-              <ConversationRow key={c.contact.id} conversation={c} />
+              <ConversationRow key={c.contact.id} conversation={c} filter={filter} hidden={hidden} />
             ))}
             {notOwedVisible.length > 0 && <p className="px-0.5 pb-1 pt-2 text-base font-semibold text-neutral-900">Nothing owed</p>}
-            <NotOwedList conversations={notOwedVisible} />
+            <NotOwedList conversations={notOwedVisible} filter={filter} hidden={hidden} />
           </>
         )}
       </div>
@@ -119,7 +131,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
       {!hidden && filter === "all" && spamConversations.length > 0 && (
         <div className="px-4 pb-4">
           <Link
-            href="/messages?spam=1"
+            href={inboxHref({ spam: true })}
             className="flex items-center gap-3 rounded-2xl border border-dashed border-neutral-300 bg-[#fcfbfa] px-4 py-3.5"
           >
             <ShieldAlert size={18} className="shrink-0 text-neutral-400" />

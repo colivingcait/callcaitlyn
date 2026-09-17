@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { inboxHref } from "@/lib/crm/inbox-href";
 
 const FILTERS: { key: "owed" | "all" | "calls"; label: string }[] = [
   { key: "owed", label: "Needs a reply" },
@@ -22,7 +23,7 @@ export function MessageFilters({
       {FILTERS.map((f) => (
         <Link
           key={f.key}
-          href={f.key === "all" ? "/messages" : `/messages?filter=${f.key}`}
+          href={inboxHref({ filter: f.key })}
           className={cn(
             "shrink-0 whitespace-nowrap rounded-[10px] px-3.5 py-2 text-sm font-medium",
             activeFilter === f.key ? "bg-neutral-900 font-semibold text-white" : "border border-neutral-200 bg-white text-neutral-600",
@@ -33,13 +34,13 @@ export function MessageFilters({
         </Link>
       ))}
       <Link
-        href="/messages?spam=1"
+        href={inboxHref({ spam: true })}
         className="ml-auto flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[10px] border border-neutral-200 bg-white px-3.5 py-2 text-sm font-medium text-neutral-600"
       >
         <ShieldAlert size={14} className="text-neutral-400" /> Spam <span className="text-neutral-400">{spamCount}</span>
       </Link>
       <Link
-        href="/messages?hidden=1"
+        href={inboxHref({ hidden: true })}
         className="shrink-0 whitespace-nowrap rounded-[10px] border border-neutral-200 bg-white px-3.5 py-2 text-sm font-medium text-neutral-600"
       >
         Hidden

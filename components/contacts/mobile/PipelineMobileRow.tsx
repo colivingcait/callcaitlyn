@@ -23,30 +23,34 @@ export function PipelineMobileRow({
 }) {
   const router = useRouter();
   const context = getPipelineCardContext(contact, stage, extras, dealOverride);
-  const deal = stage?.is_under_contract ? (dealOverride ?? extras.pendingDealByContact.get(contact.id)?.[0]) : undefined;
+  const deal = stage?.is_under_contract ? (dealOverride ?? extras.pendingDealByContact[contact.id]?.[0]) : undefined;
 
   function goToThread(e: React.MouseEvent) {
     e.preventDefault();
+    e.stopPropagation();
     router.push(`/messages/${contact.id}`);
   }
 
   function call(e: React.MouseEvent) {
     e.preventDefault();
+    e.stopPropagation();
     if (contact.phone) openQuoCall(contact.phone);
   }
 
   return (
-    <Link href={`/contacts/${contact.id}`} className="flex items-center gap-3 bg-white px-4 py-3">
-      <Avatar firstName={contact.first_name} lastName={contact.last_name} size={44} />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[16px] font-semibold text-neutral-900">{fullName(contact)}</p>
-        {context.line && (
-          <p className={`mt-0.5 truncate text-[14px] ${context.quiet ? "font-semibold text-[#b91c1c]" : "text-neutral-500"}`}>{context.line}</p>
+    <div className="flex items-center gap-3 bg-white px-4 py-3">
+      <Link href={`/contacts/${contact.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+        <Avatar firstName={contact.first_name} lastName={contact.last_name} size={44} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[16px] font-semibold text-neutral-900">{fullName(contact)}</p>
+          {context.line && (
+            <p className={`mt-0.5 truncate text-[14px] ${context.quiet ? "font-semibold text-[#b91c1c]" : "text-neutral-500"}`}>{context.line}</p>
+          )}
+        </div>
+        {deal && deal.netCommission > 0 && (
+          <span className="shrink-0 text-[17px] font-semibold text-neutral-900">{formatCurrency(deal.netCommission)}</span>
         )}
-      </div>
-      {deal && deal.netCommission > 0 && (
-        <span className="shrink-0 text-[17px] font-semibold text-neutral-900">{formatCurrency(deal.netCommission)}</span>
-      )}
+      </Link>
       {contact.phone && (
         <button
           type="button"
@@ -57,6 +61,6 @@ export function PipelineMobileRow({
           {stage?.is_under_contract ? <Phone size={18} /> : <MessageSquare size={18} />}
         </button>
       )}
-    </Link>
+    </div>
   );
 }

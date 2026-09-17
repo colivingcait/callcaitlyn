@@ -58,28 +58,31 @@ export async function applyStageChange(
       .maybeSingle();
 
     if (pending) {
-      await supabase
+      const { error: dealError } = await supabase
         .from("deals")
         .update({ status: "won", stage_id: newStage!.id, closed_at: new Date().toISOString() })
         .eq("id", pending.id);
+      if (dealError) return { error: dealError, dealId: null, dealMode: null as DealModalMode, pendingAtRisk: null };
       dealId = pending.id;
     } else {
-      const { data } = await supabase
+      const { data, error: dealError } = await supabase
         .from("deals")
         .insert({ owner_id: ownerId, contact_id: contactId, stage_id: newStage!.id, status: "won" })
         .select("id")
         .single();
+      if (dealError) return { error: dealError, dealId: null, dealMode: null as DealModalMode, pendingAtRisk: null };
       dealId = data?.id ?? null;
     }
-    dealMode = "celebrate";
+    dealMode = dealId ? "celebrate" : null;
   } else if (enteringUnderContract) {
-    const { data } = await supabase
+    const { data, error: dealError } = await supabase
       .from("deals")
       .insert({ owner_id: ownerId, contact_id: contactId, stage_id: newStage!.id, status: "pending" })
       .select("id")
       .single();
+    if (dealError) return { error: dealError, dealId: null, dealMode: null as DealModalMode, pendingAtRisk: null };
     dealId = data?.id ?? null;
-    dealMode = "under_contract";
+    dealMode = dealId ? "under_contract" : null;
   } else if (oldStage?.is_under_contract && !newStage?.is_under_contract) {
     // Left an Under Contract stage without closing - never auto-delete,
     // since a contact can have more than one deal in flight at once (a

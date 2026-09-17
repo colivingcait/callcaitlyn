@@ -10,9 +10,8 @@ export function countFor(counts: NavCounts): Record<string, { value: number; wai
     "/messages": counts.messages !== undefined ? { value: counts.messages, waiting: counts.messages > 0 } : undefined,
     "/notes": counts.notes !== undefined && counts.notes > 0 ? { value: counts.notes, waiting: true } : undefined,
     "/insights": counts.insights !== undefined && counts.insights > 0 ? { value: counts.insights, waiting: true } : undefined,
-    // Unanswered agent replies - deliberately surfaced here, not on
-    // /messages, since agent traffic is excluded from the inbox badge and
-    // every other metric (README part 2 §3).
+    // Unanswered agent replies stay off the Messages badge (README part 2
+    // §3) but Listings still shows a waiting count, and Messages links over.
     "/listings": counts.listings !== undefined && counts.listings > 0 ? { value: counts.listings, waiting: true } : undefined,
   };
 }

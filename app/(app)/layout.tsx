@@ -1,11 +1,10 @@
-import Link from "next/link";
-import { Settings, DollarSign } from "lucide-react";
+import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/nav/Sidebar";
 import { BottomNav } from "@/components/nav/BottomNav";
 import { QuickAddButton } from "@/components/nav/QuickAddButton";
 import { LogPill } from "@/components/nav/LogPill";
-import { SignOutButton } from "@/components/nav/SignOutButton";
 import { listConversations } from "@/lib/data/messages";
 import { listEventFollowupQueue, listConfirmationQueue } from "@/lib/data/dialer";
 import { getUnmatchedNotesCount } from "@/lib/data/notes-inbox";
@@ -17,6 +16,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
   const [{ count: contactsCount }, conversations, { contacts: followups }, { items: confirmations }, unmatchedNotes, suggestionQueue, unansweredAgents] =
     await Promise.all([
@@ -32,7 +32,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const navCounts = {
     contacts: contactsCount ?? 0,
     // New leads now live on Today, not the Dialer - this badge reflects
-    // what's actually left to do in the Dialer itself (post-event
+    // what's actually left to do in Event calls (post-event
     // follow-ups + pre-event confirmations).
     dialer: followups.length + confirmations.length,
     messages: waitingOnReply,
@@ -51,25 +51,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // keeps its plain min-h-dvh document scroll (BottomNav is already
     // fixed, independent of this either way).
     <div className="flex min-h-dvh md:h-dvh md:overflow-hidden">
-      <Sidebar userEmail={user?.email} counts={navCounts} />
+      <Suspense fallback={<aside className="hidden w-[220px] shrink-0 border-r border-neutral-100 bg-[#fcfbfa] md:flex" />}>
+        <Sidebar userEmail={user?.email} counts={navCounts} />
+      </Suspense>
       <div className="flex min-h-dvh min-w-0 flex-1 flex-col md:h-dvh md:overflow-hidden">
-        <header className="flex items-center justify-between border-b border-neutral-200 bg-white px-4 py-3 md:hidden">
-          <h1 className="font-serif text-lg font-semibold text-neutral-900">CallCaitlyn</h1>
-          <div className="flex items-center gap-4">
-            <Link href="/commissions" aria-label="Commissions" className="text-neutral-500">
-              <DollarSign size={20} />
-            </Link>
-            <Link href="/settings" aria-label="Settings" className="text-neutral-500">
-              <Settings size={20} />
-            </Link>
-            <SignOutButton />
-          </div>
-        </header>
-        <main className="flex-1 bg-neutral-50/60 pb-28 md:min-h-0 md:overflow-y-auto md:pb-8">{children}</main>
+        <main className="flex-1 bg-neutral-50/60 pb-[calc(var(--app-bottom-nav)+12px)] md:min-h-0 md:overflow-y-auto md:pb-8">{children}</main>
       </div>
       {/* Mobile's FAB slot is Today-only-Log now (LogPill below); New
-          contact/New task move to People's header button (Phase 3) and
-          the More sheet respectively, so QuickAddButton stays desktop-only. */}
+          contact lives on the Contacts header, New task in the More sheet,
+          so QuickAddButton stays desktop-only. Commissions and Settings
+          are More-only — no duplicate mobile header icons. */}
       <div className="hidden md:block">
         <QuickAddButton />
       </div>

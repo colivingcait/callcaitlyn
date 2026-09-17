@@ -199,7 +199,7 @@ export function RosterView({ event }: { event: EventEntry }) {
             </button>
           )}
           <Link href="/dialer" className="rounded-[10px] border border-neutral-200 bg-white px-3.5 py-2 text-sm font-semibold text-neutral-800">
-            Add all {people.length} to the dialer
+            Add all {people.length} to Event calls
           </Link>
         </div>
       )}

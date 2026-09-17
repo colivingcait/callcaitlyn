@@ -29,6 +29,50 @@ export type AvailabilitySettings = {
   weeklyHours: WeeklyHours;
 };
 
+export type BusyInterval = { start: number; end: number };
+
+export async function collectBusyIntervals(
+  admin: SupabaseClient,
+  ownerId: string,
+  timeMin: string,
+  timeMax: string,
+  bufferMinutes: number,
+  excludeRequestId?: string,
+): Promise<BusyInterval[]> {
+  const bufferMs = bufferMinutes * 60_000;
+  const [events, { data: heldSlots }] = await Promise.all([
+    listUpcomingEvents(admin, ownerId, timeMin, timeMax),
+    admin
+      .from("booking_requests")
+      .select("id, starts_at, ends_at, proposed_starts_at, proposed_ends_at, stage")
+      .eq("owner_id", ownerId)
+      .in("stage", ["time_selected", "pending", "approved", "time_proposed"]),
+  ]);
+
+  const busy: BusyInterval[] = events.map((e) => ({
+    start: new Date(e.startAt).getTime() - bufferMs,
+    end: new Date(e.endAt).getTime() + bufferMs,
+  }));
+  for (const b of heldSlots ?? []) {
+    if (excludeRequestId && b.id === excludeRequestId) continue;
+    // A proposed-new-time request no longer occupies the original slot
+    // (that time was released when she offered a different one) - hold
+    // the proposed wall-clock instead, or two visitors can both land on
+    // the time still sitting in the confirm-this-time? text.
+    const start = b.stage === "time_proposed" ? b.proposed_starts_at : b.starts_at;
+    const end = b.stage === "time_proposed" ? b.proposed_ends_at : b.ends_at;
+    if (!start || !end) continue;
+    busy.push({ start: new Date(start).getTime() - bufferMs, end: new Date(end).getTime() + bufferMs });
+  }
+  return busy;
+}
+
+export function intervalOverlapsBusy(startIso: string, endIso: string, busy: BusyInterval[]): boolean {
+  const start = new Date(startIso).getTime();
+  const end = new Date(endIso).getTime();
+  return busy.some((b) => start < b.end && end > b.start);
+}
+
 // Real Google Calendar busy time, plus any of her own in-progress or
 // approved booking requests that already have a time attached (so two
 // visitors can't both land on the same not-yet-synced-to-Google slot -
@@ -40,31 +84,7 @@ export async function computeAvailableSlots(admin: SupabaseClient, ownerId: stri
   const now = new Date();
   const timeMin = now.toISOString();
   const timeMax = new Date(now.getTime() + settings.daysOut * 24 * 60 * 60 * 1000).toISOString();
-
-  const [events, { data: pendingOrApproved }] = await Promise.all([
-    listUpcomingEvents(admin, ownerId, timeMin, timeMax),
-    admin
-      .from("booking_requests")
-      .select("starts_at, ends_at")
-      .eq("owner_id", ownerId)
-      .in("stage", ["time_selected", "pending", "approved"])
-      .not("starts_at", "is", null)
-      .gte("starts_at", timeMin)
-      .lte("starts_at", timeMax),
-  ]);
-
-  // Buffer pads every busy interval on both sides before the overlap
-  // check - the slot grid itself still only ever starts on :00/:30
-  // (below), the padding just makes a slot too close to an existing
-  // commitment un-selectable rather than shifting the grid around.
-  const bufferMs = settings.bufferMinutes * 60_000;
-  const busy: { start: number; end: number }[] = events.map((e) => ({
-    start: new Date(e.startAt).getTime() - bufferMs,
-    end: new Date(e.endAt).getTime() + bufferMs,
-  }));
-  for (const b of pendingOrApproved ?? []) {
-    busy.push({ start: new Date(b.starts_at).getTime() - bufferMs, end: new Date(b.ends_at).getTime() + bufferMs });
-  }
+  const busy = await collectBusyIntervals(admin, ownerId, timeMin, timeMax, settings.bufferMinutes);
 
   const durationMs = settings.durationMinutes * 60_000;
   const slots: Slot[] = [];

@@ -10,7 +10,7 @@ import {
   listTags,
 } from "@/lib/data/contacts";
 import { fullName, formatPhone, initials, CONTACT_TYPE_LABELS } from "@/lib/utils";
-import { formatLocal } from "@/lib/format-time";
+import { formatLocal, isFollowUpOverdue } from "@/lib/format-time";
 import { Section } from "@/components/ui/Section";
 import { QuickActions } from "@/components/contacts/QuickActions";
 import { SendMessageCard } from "@/components/contacts/SendMessageCard";
@@ -33,6 +33,7 @@ import { listTextTemplates } from "@/lib/data/text-templates";
 import { countRecentTexts } from "@/lib/crm/engagement";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ContactRecordMobile } from "@/components/contacts/mobile/ContactRecordMobile";
+import { ContactEngageBlock } from "@/components/contacts/ContactEngageBlock";
 
 export default async function ContactDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -60,7 +61,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
   const doneTasks = tasks.filter((t) => t.completed_at);
   const likelihood = computeLikelihood(contact, stages);
 
-  const isOverdue = !!contact.next_follow_up_at && new Date(contact.next_follow_up_at).getTime() < Date.now();
+  const isOverdue = isFollowUpOverdue(contact.next_follow_up_at);
   const daysLate = isOverdue
     ? Math.max(1, Math.floor((Date.now() - new Date(contact.next_follow_up_at!).getTime()) / (24 * 60 * 60 * 1000)))
     : 0;
@@ -111,6 +112,10 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
             </p>
           )}
         </div>
+      </div>
+
+      <div className="mt-4">
+        <ContactEngageBlock contact={contact} stages={stages} tags={tags} ownerId={contact.owner_id} />
       </div>
 
       <div className="mt-4">

@@ -142,7 +142,7 @@ export function WeeklyReviewCard({ id, payload }: { id: string; payload: WeeklyR
               ))}
             </ol>
             <Link href="/dialer" className="mt-2 inline-block text-sm font-semibold text-brand-700">
-              Send all {payload.mondaysCalls.length} to the dialer
+              Send all {payload.mondaysCalls.length} to Event calls
             </Link>
           </div>
         )}

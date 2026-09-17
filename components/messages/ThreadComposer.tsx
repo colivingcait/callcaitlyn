@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { sendTextToContact } from "@/app/(app)/contacts/actions";
 import { applyMergeFields } from "@/lib/crm/merge-fields";
+import { useVisualViewportBox } from "@/lib/hooks/useVisualViewportBox";
 import { Send } from "lucide-react";
 import type { TextTemplate } from "@/types/database";
 
@@ -20,19 +21,25 @@ export function ThreadComposer({
   firstName?: string;
   lastName?: string;
   textTemplates?: TextTemplate[];
-  // Prefills the composer - used by Today's "Never texted" flow to hand
-  // off the Dialer's own welcome/welcome-back draft (via a ?draft= link)
-  // instead of opening to a blank box.
   initialBody?: string;
 }) {
   const router = useRouter();
+  const { keyboardInset } = useVisualViewportBox();
   const [body, setBody] = useState(initialBody ?? "");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const keyboardOpen = keyboardInset > 40;
+  const bottom = keyboardOpen ? `max(${keyboardInset}px, var(--app-bottom-nav))` : undefined;
+
+  const chrome =
+    "fixed inset-x-0 z-50 border-t border-neutral-200 bg-white/95 px-3 py-2.5 backdrop-blur md:sticky md:bottom-0 md:bg-white/95";
 
   if (!phone) {
     return (
-      <div className="sticky bottom-16 border-t border-neutral-200 bg-white px-4 py-3 text-center text-xs text-neutral-400 md:bottom-0">
+      <div
+        className={`${chrome} bottom-[var(--app-bottom-nav)] px-4 py-3 text-center text-xs text-neutral-400 md:relative md:bottom-0`}
+        style={bottom != null ? { bottom } : undefined}
+      >
         This contact has no phone number on file.
       </div>
     );
@@ -62,7 +69,10 @@ export function ThreadComposer({
   }
 
   return (
-    <div className="sticky bottom-16 border-t border-neutral-200 bg-white/95 px-3 py-2.5 backdrop-blur md:bottom-0">
+    <div
+      className={`${chrome} bottom-[var(--app-bottom-nav)]`}
+      style={bottom != null ? { bottom } : undefined}
+    >
       {textTemplates && textTemplates.length > 0 && (
         <div className="mb-2 flex gap-1.5 overflow-x-auto md:hidden">
           {textTemplates.slice(0, 3).map((t) => (

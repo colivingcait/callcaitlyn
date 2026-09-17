@@ -1,4 +1,4 @@
-// Hand-written types matching supabase/migrations/0001_init.sql.
+// Hand-written types matching supabase/migrations (through 0074).
 // If you use the Supabase CLI later, you can replace this with
 // `supabase gen types typescript` output.
 
@@ -13,6 +13,7 @@ export type ContactType =
   | "past_client"
   | "sphere"
   | "attendee"
+  | "agent"
   | "other";
 
 // null (on Contact.recruit_stage) = top of funnel, "Potential" - every

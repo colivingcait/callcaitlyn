@@ -60,6 +60,22 @@ opens full-screen like a native app.
 3. Add the same two environment variables (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`) in the Vercel project settings — plus the Quo-related ones from the section below once you're setting that up.
 4. Deploy. Then go back to Supabase **Authentication → URL Configuration** and add `https://your-app.vercel.app/auth/confirm` to the redirect URLs (and your custom domain's `/auth/confirm` once that's live).
 
+Canonical public URL is **`https://crm.callcaitlyn.com/login`**. The branded magic-link page is `/login` (there is no `/auth/login` route; that path redirects to `/login`). Unauthenticated `/` also redirects to `/login`.
+
+`vercel.json` in this repo only schedules cron jobs. It does **not** turn on Vercel Deployment Protection or the Firewall. Those live in the Vercel dashboard. If a visitor (or a review bot) sees **“This request was blocked” / HTTP 403** with a diagnostic ID instead of the CallCaitlyn login page, the request never reached this app — fix it here:
+
+1. Open the **CRM** Vercel project (the one whose domains include `crm.callcaitlyn.com` and `callcaitlyn.vercel.app` — not the separate marketing-site project).
+2. **Settings → Deployment Protection**
+   - Keep protection on **Preview** if you want (Standard Protection).
+   - Production / the `.vercel.app` alias used for login, `/book`, `/listing`, webhooks, and magic links must stay **public**. “All Deployments” would lock those URLs behind Vercel auth and break sign-in + public pages.
+3. **Settings → Firewall** (WAF / Attack Challenge / bot rules)
+   - A 403 whose HTML is “This request was blocked” (not our login UI) is a Firewall hit. Open **Firewall → Logs** or **Observability** and search the diagnostic / `x-vercel-id`.
+   - Turn **Attack Challenge Mode** off for production unless you are actively under attack. Challenge/bot rules often 403 datacenter IPs (UI reviewers, some crawlers) while a normal phone browser still loads `/login`.
+   - Do not enable a blanket “block AI crawlers” rule if `/book` and `/listing` should stay publicly shareable.
+4. Share **`https://crm.callcaitlyn.com/login`**, not a unique `*-projects.vercel.app` deployment URL — those preview hosts are protected by default on Standard Protection.
+
+Do not put protection-bypass tokens in this repo.
+
 ## What's in phase 1
 
 - **Dashboard** — active lead count (only stages not marked closed — see below), hot/ready count, follow-ups due today/overdue, recent activity, pipeline snapshot, and an accountability section (see below).
@@ -193,7 +209,7 @@ Same shape as Quo: a webhook logs bookings straight onto the matching contact.
      -H "Authorization: Bearer YOUR_TOKEN" \
      -H "Content-Type: application/json" \
      -d '{
-       "url": "https://www.callcaitlyn.com/api/webhooks/calendly",
+       "url": "https://crm.callcaitlyn.com/api/webhooks/calendly",
        "events": ["invitee.created", "invitee.canceled"],
        "organization": "YOUR_ORGANIZATION_URI",
        "scope": "organization"
@@ -210,7 +226,7 @@ Eventbrite webhooks only send a link to the changed resource, not the data itsel
 
 1. Pick any long random string — this is `EVENTBRITE_WEBHOOK_SECRET`.
 2. Eventbrite → **Account Settings → Developer Links → Webhooks → Add Webhook**:
-   - **Payload URL**: `https://www.callcaitlyn.com/api/webhooks/eventbrite?secret=YOUR_SECRET` (using the string from step 1)
+   - **Payload URL**: `https://crm.callcaitlyn.com/api/webhooks/eventbrite?secret=YOUR_SECRET` (using the string from step 1)
    - **Event**: All Events
    - **Actions**: check only `order.placed`
    - Save.
@@ -223,7 +239,7 @@ Eventbrite webhooks only send a link to the changed resource, not the data itsel
 1. In the **Women's REI account's own** Account Settings → Developer Links → API Keys, copy its Private Token → this is `EVENTBRITE_WOMENS_REI_API_TOKEN`.
 2. In that same account's Account Settings → Developer Links → Webhooks → Add Webhook, same as step 2 above, but the Payload URL gets an extra `&account=womens_rei`:
    ```
-   https://www.callcaitlyn.com/api/webhooks/eventbrite?secret=YOUR_SECRET&account=womens_rei
+   https://crm.callcaitlyn.com/api/webhooks/eventbrite?secret=YOUR_SECRET&account=womens_rei
    ```
    (same secret as the House Hacking account's webhook — only the `account` param differs)
 3. Add `EVENTBRITE_WOMENS_REI_API_TOKEN` to Vercel, redeploy.
@@ -239,7 +255,7 @@ For the iPad kiosk form: matches by email/phone against existing contacts (so pe
 2. Pick any long random string — this is `JOTFORM_WEBHOOK_SECRET`.
 3. In your Jotform form's builder: **Settings → Integrations → Webhooks** → add:
    ```
-   https://www.callcaitlyn.com/api/webhooks/jotform?secret=YOUR_SECRET
+   https://crm.callcaitlyn.com/api/webhooks/jotform?secret=YOUR_SECRET
    ```
 4. Add `JOTFORM_WEBHOOK_SECRET` to Vercel, redeploy.
 5. Submit a test entry on the kiosk form and confirm it shows up on the right contact.
@@ -342,7 +358,7 @@ Leave `BLINQ_WEBHOOK_SECRET` unset and just the Business path stays dormant — 
 2. Nothing else is required to deploy - `HOUSE_HACKING_SITE_ORIGINS` only needs setting in Vercel if the site's domain ever changes from the default baked into the code.
 3. On the site's side, each form component's Kit `fetch()` call gets replaced with:
    ```
-   POST https://www.callcaitlyn.com/api/webhooks/house-hacking-site
+   POST https://crm.callcaitlyn.com/api/webhooks/house-hacking-site
    Content-Type: application/json
 
    {

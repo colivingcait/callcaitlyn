@@ -70,7 +70,7 @@ export function FinancialGate({
 
   if (!unlocked) {
     return (
-      <div id="unlock" style={{ marginTop: 26, border: "1px solid #211c19", background: "#fffdfa" }}>
+      <div style={{ marginTop: 26, border: "1px solid #211c19", background: "#fffdfa" }}>
         <div style={{ position: "relative" }}>
           <div style={{ filter: "blur(5px)", opacity: 0.5, userSelect: "none", pointerEvents: "none", padding: "26px 30px" }}>
             {TEASER_ROWS.map((row, i) => (
@@ -104,7 +104,7 @@ export function FinancialGate({
         </div>
 
         <form onSubmit={handleSubmit} style={{ borderTop: "1px solid #211c19", background: "#211c19", padding: "28px 30px" }}>
-          <div style={{ display: "grid", gap: 26, gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", alignItems: "start" }}>
+          <div style={{ display: "grid", gap: 26, gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))", alignItems: "start" }}>
             <div style={{ maxWidth: "46ch" }}>
               <p style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontSize: 22, color: "#f4f1ec" }}>Open the numbers</p>
               <p style={{ margin: "8px 0 0", fontSize: 14, lineHeight: 1.65, color: "#cdc4ba" }}>
@@ -155,8 +155,9 @@ export function FinancialGate({
   if (!financials) {
     return (
       <div style={{ marginTop: 32 }}>
-        <p style={{ margin: 0, fontSize: 14, color: "#574f47" }}>
-          Unlocked, but the underwriting detail isn&apos;t set up on this listing yet — the T12 and earnings statement are on their way by text and email.
+        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.7, color: "#574f47", maxWidth: "62ch" }}>
+          Unlocked — and Caitlyn has your info. Line-item underwriting isn&apos;t published on this listing yet, so the T12 and earnings statement will come by
+          text and email instead of on this page.
         </p>
       </div>
     );
@@ -254,6 +255,7 @@ export function FinancialGate({
               <div
                 key={item.item + i}
                 style={{ display: "grid", gridTemplateColumns: "1fr auto 110px", gap: 18, alignItems: "baseline", padding: "14px 0", borderBottom: "1px solid #e6e0d7" }}
+                className="om-capex-row"
               >
                 <span style={{ fontSize: 15, color: "#211c19" }}>{item.item}</span>
                 <span style={{ fontSize: 13, letterSpacing: "0.06em", color: "#6b6259" }}>{item.year}</span>

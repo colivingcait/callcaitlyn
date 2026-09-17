@@ -24,9 +24,9 @@ export default async function SpherePage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6">
-      <h1 className="font-serif text-2xl font-semibold text-neutral-900 sm:text-[28px]">Sphere</h1>
+      <h1 className="font-serif text-2xl font-semibold text-neutral-900 sm:text-[28px]">Past clients</h1>
       <p className="mt-1 text-[15px] text-neutral-500">
-        {totalPastClients} past clients and {totalReferrers} people who have sent you business.
+        {totalPastClients} past clients and {totalReferrers} people who have sent you business. Daily calls and texts live on Today.
       </p>
 
       <div className="mt-5 space-y-3">

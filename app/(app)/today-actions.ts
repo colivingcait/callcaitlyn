@@ -60,17 +60,34 @@ export async function dismissReplyOwed(activityId: string) {
 // (a replies-owed item uses dismissReplyOwed instead, which already
 // exists and does the right thing for that case). Pushes the follow-up
 // a day out rather than clearing it - "not now" not "never."
-export async function snoozeFollowUp(contactId: string) {
+export async function snoozeFollowUp(contactId: string, days = 1) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in" };
 
-  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-  const { error } = await supabase.from("contacts").update({ next_follow_up_at: tomorrow }).eq("id", contactId).eq("owner_id", user.id);
+  const next = new Date(Date.now() + Math.max(1, days) * 24 * 60 * 60 * 1000).toISOString();
+  const { error } = await supabase.from("contacts").update({ next_follow_up_at: next }).eq("id", contactId).eq("owner_id", user.id);
   if (error) return { ok: false as const, error: error.message };
   revalidatePath("/");
+  revalidatePath(`/contacts/${contactId}`);
+  revalidatePath(`/messages/${contactId}`);
+  return { ok: true as const };
+}
+
+export async function snoozeTask(taskId: string, days: number) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const next = new Date(Date.now() + Math.max(1, days) * 24 * 60 * 60 * 1000).toISOString();
+  const { error } = await supabase.from("tasks").update({ due_at: next }).eq("id", taskId).eq("owner_id", user.id);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath("/");
+  revalidatePath("/contacts");
   return { ok: true as const };
 }
 
@@ -89,6 +106,8 @@ export async function clearFollowUp(contactId: string) {
   const { error } = await supabase.from("contacts").update({ next_follow_up_at: null }).eq("id", contactId).eq("owner_id", user.id);
   if (error) return { ok: false as const, error: error.message };
   revalidatePath("/");
+  revalidatePath(`/contacts/${contactId}`);
+  revalidatePath(`/messages/${contactId}`);
   return { ok: true as const };
 }
 

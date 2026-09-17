@@ -16,7 +16,7 @@ import type { WorklistPerson, WorklistTask } from "@/lib/data/today";
 import type { BookingRequestWithContact } from "@/lib/data/scheduling";
 import type { MergeCandidate } from "@/lib/data/contacts";
 
-export type TodayChipKey = "late" | "dueToday" | "owed" | "tasks" | "registered" | "meetings";
+export type TodayChipKey = "late" | "dueToday" | "owed" | "tasks" | "registered" | "meetings" | "newUncontacted" | "quiet";
 
 export function TodayWorklist({
   groups,
@@ -24,34 +24,39 @@ export function TodayWorklist({
   ownerId,
   contacts,
   bookingRequests,
+  initialChip,
 }: {
-  groups: Record<"late" | "dueToday" | "owed" | "registered", WorklistPerson[]>;
+  groups: Record<"late" | "dueToday" | "owed" | "registered" | "newUncontacted" | "quiet", WorklistPerson[]>;
   tasks: WorklistTask[];
   ownerId: string;
   contacts: MergeCandidate[];
   bookingRequests: BookingRequestWithContact[];
+  initialChip?: TodayChipKey;
 }) {
   const router = useRouter();
   const { toast, showToast } = useToast();
   const [openRowId, setOpenRowId] = useState<string | null>(null);
   const [cleared, setCleared] = useState<Set<string>>(new Set());
   const chips: { key: TodayChipKey; label: string }[] = [
-    { key: "late", label: `Late ${groups.late.length}` },
-    { key: "dueToday", label: `Due today ${groups.dueToday.length}` },
+    { key: "late", label: `Overdue ${groups.late.length}` },
+    { key: "dueToday", label: `Call today ${groups.dueToday.length}` },
+    { key: "newUncontacted", label: `New ${groups.newUncontacted.length}` },
+    { key: "quiet", label: `Quiet ${groups.quiet.length}` },
     { key: "owed", label: `Owed a reply ${groups.owed.length}` },
-    { key: "tasks", label: `Tasks ${tasks.length}` },
+    { key: "tasks", label: `My tasks ${tasks.length}` },
     { key: "registered", label: `Registered ${groups.registered.length}` },
     { key: "meetings", label: `Meetings ${bookingRequests.length}` },
   ];
   const isNonEmpty = (key: TodayChipKey) =>
     key === "tasks" ? tasks.length > 0 : key === "meetings" ? bookingRequests.length > 0 : groups[key].length > 0;
   const firstNonEmpty = chips.find((c) => isNonEmpty(c.key))?.key ?? "late";
-  const [active, setActive] = useState<TodayChipKey>(firstNonEmpty);
+  const [active, setActive] = useState<TodayChipKey>(initialChip ?? firstNonEmpty);
 
   // Late/due-today both come from today.calls - the only groups where "I
   // don't need to call this person" (clearing next_follow_up_at) applies.
   const isCallGroup = active === "late" || active === "dueToday";
-  const isPersonGroup = active === "late" || active === "dueToday" || active === "owed" || active === "registered";
+  const isPersonGroup =
+    active === "late" || active === "dueToday" || active === "owed" || active === "registered" || active === "newUncontacted" || active === "quiet";
   const people = isPersonGroup ? groups[active].filter((p) => !cleared.has(p.id)) : [];
 
   async function handleClear(contactId: string) {

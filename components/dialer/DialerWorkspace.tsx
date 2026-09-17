@@ -66,8 +66,15 @@ export function DialerWorkspace({
     <>
       {/* Mobile */}
       <div className="px-4 pb-8 pt-5 md:hidden">
-        <p className="font-serif text-2xl font-semibold text-neutral-900">Dialer</p>
+        <p className="font-serif text-2xl font-semibold text-neutral-900">Event calls</p>
         <p className="mt-0.5 text-[15px] text-neutral-500">{subtitle}</p>
+        <p className="mt-1 text-[13px] text-neutral-400">
+          Daily follow-up calls live on{" "}
+          <Link href="/" className="font-medium text-brand-700">
+            Today
+          </Link>
+          . This is meetup follow-up and confirmations.
+        </p>
 
         <div className="mt-3 flex gap-1.5">
           {tabs.map((t) => (
@@ -137,8 +144,15 @@ export function DialerWorkspace({
       <div className="mx-auto hidden max-w-[900px] px-4 py-6 md:block">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="font-serif text-2xl font-semibold text-neutral-900">Dialer</h1>
+            <h1 className="font-serif text-2xl font-semibold text-neutral-900">Event calls</h1>
             <p className="mt-0.5 whitespace-nowrap text-[15px] text-neutral-500">{subtitle}</p>
+            <p className="mt-1 text-[13px] text-neutral-400">
+              Daily follow-up calls live on{" "}
+              <Link href="/" className="font-medium text-brand-700 hover:underline">
+                Today
+              </Link>
+              . This is meetup follow-up and confirmations.
+            </p>
           </div>
           <div className="flex shrink-0 gap-1.5">
             {tabs.map((t) => (

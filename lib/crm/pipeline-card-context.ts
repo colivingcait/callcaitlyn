@@ -5,12 +5,26 @@ import type { PipelineExtras, PipelinePendingDeal } from "@/lib/data/pipeline";
 
 export type PipelineCardContext = { line: string; quiet: boolean };
 
+function timeInStageLabel(iso: string | undefined): string | null {
+  if (!iso) return null;
+  const days = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000));
+  if (days === 0) return "in stage today";
+  return `${days}d in stage`;
+}
+
+function withTimeInStage(line: string, extras: PipelineExtras, contactId: string): string {
+  const label = timeInStageLabel(extras.stageEnteredAt[contactId]);
+  if (!label) return line;
+  return line ? `${line} · ${label}` : label;
+}
+
 // The one fact that matters for this stage, per the design brief: an
 // address and closing date under contract, recency and timeline when
 // hot, the most recent communication on any channel for everything else
 // - not call status specifically, since calling isn't how she primarily
 // reaches people (texts, emails, and Instagram DMs all count the same
-// here - see getLastActivityLabels).
+// here - see getLastActivityLabels). Time-in-stage is appended on every
+// card so a lead sitting in Hot for 40 days is obvious without opening it.
 export function getPipelineCardContext(
   contact: ContactWithRelations,
   stage: PipelineStage | undefined,
@@ -23,7 +37,7 @@ export function getPipelineCardContext(
   dealOverride?: PipelinePendingDeal,
 ): PipelineCardContext {
   if (stage?.is_under_contract) {
-    const deal = dealOverride ?? extras.pendingDealByContact.get(contact.id)?.[0];
+    const deal = dealOverride ?? extras.pendingDealByContact[contact.id]?.[0];
     if (deal) {
       // A deal whose expected closing date has already passed with no
       // status change looks identical to one closing next week otherwise -
@@ -38,23 +52,23 @@ export function getPipelineCardContext(
           : `closing ${formatLocal(deal.expectedClosingDate, "MMM d")}`
         : null;
       const parts = [deal.address, closingLabel].filter(Boolean);
-      if (parts.length > 0) return { line: parts.join(" · "), quiet: overdue };
+      if (parts.length > 0) return { line: withTimeInStage(parts.join(" · "), extras, contact.id), quiet: overdue };
     }
-    return { line: CONTACT_TYPE_LABELS[contact.contact_type] ?? "", quiet: false };
+    return { line: withTimeInStage(CONTACT_TYPE_LABELS[contact.contact_type] ?? "", extras, contact.id), quiet: false };
   }
 
   const contactType = CONTACT_TYPE_LABELS[contact.contact_type];
   const timelineLabel = contact.timeline ? TIMELINE_LABELS[contact.timeline] : null;
-  const lastActivity = extras.lastActivityLabels.get(contact.id);
+  const lastActivity = extras.lastActivityLabels[contact.id];
 
-  if (extras.coldFromHotIds.has(contact.id)) {
-    return { line: lastActivity ? `Last ${lastActivity}` : "No outreach yet", quiet: true };
+  if (extras.coldFromHotIds[contact.id]) {
+    return { line: withTimeInStage(lastActivity ? `Last ${lastActivity}` : "No outreach yet", extras, contact.id), quiet: true };
   }
 
   if (!lastActivity) {
-    return { line: [contactType, "no contact yet"].filter(Boolean).join(" · "), quiet: false };
+    return { line: withTimeInStage([contactType, "no contact yet"].filter(Boolean).join(" · "), extras, contact.id), quiet: false };
   }
 
   const line = [lastActivity, timelineLabel].filter(Boolean).join(" · ") || contactType;
-  return { line: line ?? "", quiet: false };
+  return { line: withTimeInStage(line ?? "", extras, contact.id), quiet: false };
 }

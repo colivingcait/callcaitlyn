@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { MOBILE_NAV_ITEMS, type NavCounts } from "./nav-items";
+import { MOBILE_NAV_ITEMS, isMorePath, type NavCounts } from "./nav-items";
 import { MoreSheet } from "./MoreSheet";
 import { countFor as countForCounts } from "@/lib/nav/countFor";
 import { cn } from "@/lib/utils";
@@ -19,14 +19,18 @@ export function BottomNav({ counts = {}, userEmail }: { counts?: NavCounts; user
         <ul className="flex items-stretch justify-around">
           {MOBILE_NAV_ITEMS.map((item) => {
             if (item.kind === "more") {
+              const moreActive = isMorePath(pathname);
               return (
                 <li key="more" className="flex-1">
                   <button
                     type="button"
                     onClick={() => setMoreOpen(true)}
-                    className="flex h-full min-h-[66px] w-full flex-col items-center justify-center gap-[5px] py-3 text-[12.5px] font-medium text-neutral-400 active:bg-neutral-50"
+                    className={cn(
+                      "flex h-full min-h-[66px] w-full flex-col items-center justify-center gap-[5px] py-3 text-[12.5px] font-medium active:bg-neutral-50",
+                      moreActive ? "text-brand-600 font-semibold" : "text-neutral-400",
+                    )}
                   >
-                    <item.icon size={25} strokeWidth={2} />
+                    <item.icon size={25} strokeWidth={moreActive ? 2.4 : 2} />
                     {item.label}
                   </button>
                 </li>

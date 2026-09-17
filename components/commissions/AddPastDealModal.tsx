@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui";
 import { PROPERTY_TYPE_LABELS } from "@/lib/utils";
+import { dateInputToAppIso, todayLocalDateInput } from "@/lib/format-time";
 import { X } from "lucide-react";
 import type { DealSide, PropertyType } from "@/types/database";
 
@@ -17,7 +18,7 @@ export function AddPastDealModal({ onClose }: { onClose: () => void }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [clientName, setClientName] = useState("");
-  const [closedAt, setClosedAt] = useState(new Date().toISOString().slice(0, 10));
+  const [closedAt, setClosedAt] = useState(todayLocalDateInput());
   const [address, setAddress] = useState("");
   const [propertyType, setPropertyType] = useState<PropertyType | "">("");
   const [side, setSide] = useState<DealSide | "">("");
@@ -54,7 +55,7 @@ export function AddPastDealModal({ onClose }: { onClose: () => void }) {
       contact_id: null,
       client_name: clientName || null,
       status: "won",
-      closed_at: new Date(closedAt).toISOString(),
+      closed_at: dateInputToAppIso(closedAt),
       address: address || null,
       property_type: propertyType || null,
       side: side || null,

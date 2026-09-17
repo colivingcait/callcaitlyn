@@ -21,6 +21,7 @@ export function ConversationActions({
   contactId,
   hidden,
   afterDelete,
+  afterDeleteHref,
   activityId,
   owed,
   missedCall,
@@ -28,6 +29,7 @@ export function ConversationActions({
   contactId: string;
   hidden: boolean;
   afterDelete?: "back-to-messages";
+  afterDeleteHref?: string;
   activityId?: string;
   owed?: boolean;
   missedCall?: boolean;
@@ -89,7 +91,7 @@ export function ConversationActions({
       return;
     }
     close();
-    if (afterDelete === "back-to-messages") router.push("/messages");
+    if (afterDelete === "back-to-messages") router.push(afterDeleteHref ?? "/messages");
     router.refresh();
   }
 

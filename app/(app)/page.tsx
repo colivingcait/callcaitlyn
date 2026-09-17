@@ -5,23 +5,26 @@ import { getDefaultDraftTemplate } from "@/lib/data/text-templates";
 import { createClient } from "@/lib/supabase/server";
 import { TodayMobile } from "@/components/dashboard/mobile/TodayMobile";
 import { UpNextCard } from "@/components/dashboard/mobile/UpNextCard";
-import { formatLocal } from "@/lib/format-time";
+import { formatLocal, timeOfDayGreeting } from "@/lib/format-time";
+import { firstNameFromEmail } from "@/lib/utils";
 import { Section } from "@/components/ui/Section";
 import { TodayWorklistDesktop } from "@/components/dashboard/TodayWorklistDesktop";
 import { TodayTasksGroup } from "@/components/dashboard/TodayTasksGroup";
 import { TodayStatStrip } from "@/components/dashboard/TodayStatStrip";
 import { PipelineMiniCard } from "@/components/dashboard/PipelineMiniCard";
 import { CommissionMiniCard } from "@/components/dashboard/CommissionMiniCard";
-import { NewLeadsSection } from "@/components/dashboard/NewLeadsSection";
 import { WeeklyReviewCard } from "@/components/dashboard/WeeklyReviewCard";
 import { PrepSheetCard } from "@/components/dashboard/PrepSheetCard";
+import { TodayQueues } from "@/components/dashboard/TodayQueues";
 import { Sparkles, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { pickUpNext, countDistinctPeople } from "@/lib/crm/today-priority";
+import { pickUpNext, countTodayOpenItems } from "@/lib/crm/today-priority";
 import { filterResolvedWeeklyReviewItems, type WeeklyReviewPayload } from "@/lib/data/weekly-review";
 import type { PrepSheetPayload } from "@/lib/data/prep-sheet";
+import type { WorklistPerson } from "@/lib/data/today";
 
-export default async function TodayPage() {
+export default async function TodayPage({ searchParams }: { searchParams: Promise<{ focus?: string }> }) {
+  const { focus } = await searchParams;
   const supabase = await createClient();
   const [
     {
@@ -49,30 +52,40 @@ export default async function TodayPage() {
   const activePrepSheets = (pinnedPrepSheets ?? []).filter((p) => new Date((p.payload as unknown as PrepSheetPayload).startAt).getTime() > Date.now());
 
   const ownerId = user?.id ?? "";
+  const ownerFirstName = firstNameFromEmail(user?.email);
+
+  const newUncontacted: WorklistPerson[] = today.newLeads.map((c) => ({
+    id: c.id,
+    name: `${c.first_name} ${c.last_name}`.trim(),
+    phone: c.phone,
+    meta: c.lead_source ? `New · ${c.lead_source}` : "New / uncontacted",
+    late: false,
+  }));
 
   const desktopGroups = {
     late: today.calls.filter((c) => c.late),
     dueToday: today.calls.filter((c) => !c.late),
     owed: today.repliesOwed,
     registered: today.registeredNoFollowUp,
+    newUncontacted,
+    quiet: today.quietLeads,
   };
   const { item: upNext, reason: upNextReason } = pickUpNext(desktopGroups);
   const upNextMoreCount = Math.max(
-    countDistinctPeople(
-      desktopGroups.late.map((c) => c.id),
-      desktopGroups.dueToday.map((c) => c.id),
-      desktopGroups.owed.map((c) => c.id),
-    ) - (upNext ? 1 : 0),
+    countTodayOpenItems({
+      calls: [...desktopGroups.late, ...desktopGroups.dueToday],
+      repliesOwed: desktopGroups.owed,
+      myTasks: [],
+      newLeads: [],
+      registeredNoFollowUp: [],
+      bookingRequests: [],
+    }) - (upNext ? 1 : 0),
     0,
   );
 
-  const openItems = countDistinctPeople(
-    today.calls.map((c) => c.id),
-    today.repliesOwed.map((c) => c.id),
-    today.newLeads.map((c) => c.id),
-    today.registeredNoFollowUp.map((c) => c.id),
-    today.bookingRequests.map((r) => r.contact_id),
-  );
+  const openItems = countTodayOpenItems(today);
+  const greeting = timeOfDayGreeting();
+  const headline = ownerFirstName ? `${greeting}, ${ownerFirstName}` : greeting;
 
   // The stored payload is a snapshot from whenever the weekly-review cron
   // last ran - it never gets rewritten just because a row was fixed, so
@@ -88,13 +101,19 @@ export default async function TodayPage() {
         today={today}
         contacts={contacts}
         ownerId={ownerId}
+        ownerFirstName={ownerFirstName}
         activePrepSheets={activePrepSheets}
         pinnedWeeklyReview={resolvedWeeklyReview}
         defaultDraftTemplate={defaultDraftTemplate}
+        focus={focus}
       />
       <div className="mx-auto hidden max-w-3xl px-4 py-6 md:block">
-      <h1 className="font-serif text-2xl font-semibold text-neutral-900 sm:text-[28px]">{formatLocal(new Date(), "EEEE, MMMM d")}</h1>
-      <p className="mt-1 text-[15px] text-neutral-500">{openItems} people to work today</p>
+      <h1 className="font-serif text-2xl font-semibold text-neutral-900 sm:text-[28px]">{headline}</h1>
+      <p className="mt-1 text-[15px] text-neutral-500">
+        {formatLocal(new Date(), "EEEE, MMMM d")}
+        {openItems > 0 ? ` · ${openItems} to work` : ""}
+      </p>
+      <p className="mt-0.5 text-[13px] text-neutral-400">Morning loop: Today · Contacts · Messages · Pipeline.</p>
 
       {activePrepSheets.length > 0 && (
         <div className="mt-4 space-y-3">
@@ -120,11 +139,24 @@ export default async function TodayPage() {
         />
       </div>
 
-      {today.newLeads.length > 0 && (
-        <div className="mt-4">
-          <NewLeadsSection contacts={today.newLeads} layout="desktop" defaultDraftTemplate={defaultDraftTemplate} />
-        </div>
+      {today.newLeadsError && (
+        <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          Couldn&apos;t load new leads: {today.newLeadsError}
+        </p>
       )}
+
+      <div className="mt-5">
+        <TodayQueues
+          overdueCount={desktopGroups.late.length}
+          callTodayCount={desktopGroups.dueToday.length}
+          newUncontactedCount={desktopGroups.newUncontacted.length}
+          quietCount={desktopGroups.quiet.length}
+          messages={desktopGroups.owed}
+          underContractCount={today.statStrip.underContractCount}
+          taskCount={today.myTasks.length}
+          focus={focus}
+        />
+      </div>
 
       <div className="mt-5">
         <UpNextCard item={upNext} reason={upNextReason} draftTemplate={defaultDraftTemplate} moreCount={upNextMoreCount} />
