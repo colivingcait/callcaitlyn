@@ -12,6 +12,11 @@ import {
   listingTextBucket,
   neverOutboundTexted,
 } from "@/lib/crm/listing-text-recency";
+import {
+  dedupeListingTextRecipients,
+  isListingTextPhoneQueued,
+  queuedListingTextPhoneKeys,
+} from "@/lib/crm/listing-text-dedupe";
 import { relativeTime } from "@/lib/format-time";
 import type { ListingAgent } from "@/types/database";
 
@@ -63,6 +68,7 @@ export function AgentComposer({
 
   const lastOutbound = lastOutboundAtByAgentId ?? {};
   const queued = useMemo(() => new Set([...(queuedOnThisListing ?? []), ...localQueued]), [queuedOnThisListing, localQueued]);
+  const queuedPhoneKeys = useMemo(() => queuedListingTextPhoneKeys(agents, queued), [agents, queued]);
 
   const eligible = agents.filter((a) => a.state !== "opted_out" && (channel === "email" ? !!a.email : !!a.phone));
   const audienceEligible = eligible.filter((a) => {
@@ -71,9 +77,14 @@ export function AgentComposer({
     return true;
   });
 
-  const sendable = audienceEligible.filter((a) => !queued.has(a.id));
-  const freshAgents = sendable.filter((a) => listingTextBucket(lastOutbound[a.id] ?? null, recentDays) === "fresh");
-  const recentAgents = sendable.filter((a) => listingTextBucket(lastOutbound[a.id] ?? null, recentDays) === "recent");
+  const sendable = audienceEligible.filter((a) => {
+    if (queued.has(a.id)) return false;
+    if (channel === "text" && isListingTextPhoneQueued(a.phone, queuedPhoneKeys)) return false;
+    return true;
+  });
+  const uniqueSendable = channel === "text" ? dedupeListingTextRecipients(sendable) : sendable;
+  const freshAgents = uniqueSendable.filter((a) => listingTextBucket(lastOutbound[a.id] ?? null, recentDays) === "fresh");
+  const recentAgents = uniqueSendable.filter((a) => listingTextBucket(lastOutbound[a.id] ?? null, recentDays) === "recent");
   const neverTextedCount = freshAgents.filter((a) => neverOutboundTexted(lastOutbound[a.id] ?? null)).length;
   const earlierCount = freshAgents.length - neverTextedCount;
   const queuedCount = audienceEligible.length - sendable.length;

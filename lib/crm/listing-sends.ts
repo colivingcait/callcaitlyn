@@ -3,6 +3,7 @@ import { sendQuoText } from "@/lib/quo/send-message";
 import { sendGmailMessage } from "@/lib/google/send-email";
 import { draftToHtml } from "@/lib/crm/merge-fields";
 import { isWithinQuietHours } from "@/lib/crm/text-blast-timing";
+import { listingTextPhoneKey } from "@/lib/crm/listing-text-dedupe";
 
 // Agent sends deliberately don't reuse text_blasts/email_sequences end to
 // end - those two resolve recipients from `contacts` (merge fields,
@@ -60,6 +61,21 @@ export async function processPendingListingSends(admin: SupabaseClient, ownerId:
       .eq("status", "pending")
       .limit(remaining);
 
+    const sentPhones = new Set<string>();
+    if (send.channel === "text") {
+      const { data: alreadySent } = await admin
+        .from("listing_send_recipients")
+        .select("listing_agents(phone)")
+        .eq("send_id", send.id)
+        .eq("status", "sent");
+      for (const row of alreadySent ?? []) {
+        const joined = row.listing_agents as { phone: string | null } | { phone: string | null }[] | null;
+        const phone = Array.isArray(joined) ? joined[0]?.phone : joined?.phone;
+        const key = listingTextPhoneKey(phone);
+        if (key) sentPhones.add(key);
+      }
+    }
+
     for (const recipient of (pending ?? []) as unknown as PendingRecipient[]) {
       const agent = recipient.listing_agents;
       if (!agent) {
@@ -75,8 +91,14 @@ export async function processPendingListingSends(admin: SupabaseClient, ownerId:
           await admin.from("listing_send_recipients").update({ status: "skipped", error: "No phone number" }).eq("id", recipient.id);
           continue;
         }
+        const phoneKey = listingTextPhoneKey(agent.phone);
+        if (phoneKey && sentPhones.has(phoneKey)) {
+          await admin.from("listing_send_recipients").update({ status: "skipped", error: "Duplicate phone" }).eq("id", recipient.id);
+          continue;
+        }
         const sendResult = await sendQuoText(agent.phone, body);
         result = sendResult.ok ? { ok: true } : { ok: false, error: sendResult.error };
+        if (result.ok && phoneKey) sentPhones.add(phoneKey);
       } else {
         if (!agent.email) {
           await admin.from("listing_send_recipients").update({ status: "skipped", error: "No email on file" }).eq("id", recipient.id);
