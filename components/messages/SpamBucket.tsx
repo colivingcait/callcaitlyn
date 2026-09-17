@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Archive } from "lucide-react";
 import { archiveAllSpam } from "@/app/(app)/messages/spam-actions";
 import { SpamRow } from "@/components/messages/SpamRow";
+import { inboxHref } from "@/lib/crm/inbox-href";
 import type { Conversation } from "@/lib/data/messages";
 
 // Desktop's dedicated view for ?spam=1. Mobile handles spam differently -
@@ -49,7 +50,7 @@ export function SpamBucket({ conversations }: { conversations: Conversation[] })
       </div>
 
       <div className="flex items-center justify-between px-4 pb-4">
-        <Link href="/messages" className="flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:underline">
+        <Link href={inboxHref()} className="flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:underline">
           <ArrowLeft size={14} /> Back to inbox
         </Link>
         <Link href="/settings" className="text-sm text-neutral-500 hover:underline">

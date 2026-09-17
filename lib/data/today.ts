@@ -7,7 +7,7 @@ import { listNewLeadsQueue } from "@/lib/data/new-leads";
 import { listWonDeals, listPendingDeals } from "@/lib/data/commissions";
 import { listPendingBookingRequests } from "@/lib/data/scheduling";
 import { computeDeals, summarizeDeals, capYearKey, capYearStart, KW_CAP } from "@/lib/crm/commission";
-import { isConversationOwed } from "@/lib/crm/message-owed";
+import { conversationOwedFromHistory } from "@/lib/crm/message-owed";
 import type { PipelineStage } from "@/types/database";
 
 export type WorklistPerson = { id: string; name: string; phone: string | null; email?: string | null; meta: string; late: boolean; activityId?: string };
@@ -59,26 +59,32 @@ async function getRepliesOwedGroup(): Promise<WorklistPerson[]> {
     .order("occurred_at", { ascending: false })
     .limit(1000);
 
-  const seen = new Set<string>();
-  const owed: WorklistPerson[] = [];
+  const grouped = new Map<string, { contact: { id: string; first_name: string; last_name: string; phone: string | null }; rows: typeof data }>();
   for (const row of data ?? []) {
     const contact = row.contacts as unknown as { id: string; first_name: string; last_name: string; phone: string | null } | null;
-    if (!contact || seen.has(contact.id)) continue;
-    seen.add(contact.id);
-    if (!isConversationOwed(row)) continue;
+    if (!contact) continue;
+    const entry = grouped.get(contact.id);
+    if (entry) entry.rows.push(row);
+    else grouped.set(contact.id, { contact, rows: [row] });
+  }
+
+  const owed: WorklistPerson[] = [];
+  for (const { contact, rows } of grouped.values()) {
+    const { owed: isOwed, activity } = conversationOwedFromHistory(rows);
+    if (!isOwed || !activity) continue;
     const preview =
-      row.type === "call"
+      activity.type === "call"
         ? "Missed call"
-        : row.body
-          ? `"${row.body.slice(0, 60)}${row.body.length > 60 ? "…" : ""}"`
+        : activity.body
+          ? `"${activity.body.slice(0, 60)}${activity.body.length > 60 ? "…" : ""}"`
           : "Texted you";
     owed.push({
       id: contact.id,
       name: `${contact.first_name} ${contact.last_name}`.trim(),
       phone: contact.phone,
-      meta: `${preview} · ${relativeTime(row.occurred_at)}`,
+      meta: `${preview} · ${relativeTime(activity.occurred_at)}`,
       late: false,
-      activityId: row.id,
+      activityId: activity.id,
     });
   }
   return owed;

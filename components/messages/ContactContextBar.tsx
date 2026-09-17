@@ -8,7 +8,7 @@ import { LikelihoodBadge } from "@/components/contacts/LikelihoodBadge";
 import { SnoozeMenu } from "@/components/contacts/SnoozeMenu";
 import { computeLikelihood } from "@/lib/crm/likelihood";
 import { formatCurrency, TIMELINE_LABELS } from "@/lib/utils";
-import { formatLocal, isTodayLocal } from "@/lib/format-time";
+import { formatLocal, isFollowUpOverdue } from "@/lib/format-time";
 import { clearFollowUp, snoozeFollowUp } from "@/app/(app)/today-actions";
 import { CalendarClock, Check, Bell, Plus } from "lucide-react";
 import type { ContactWithRelations, PipelineStage } from "@/types/database";
@@ -22,7 +22,7 @@ export function ContactContextBar({ contact, stages }: { contact: ContactWithRel
   const router = useRouter();
   const stage = contact.pipeline_stages;
   const likelihood = computeLikelihood(contact, stages);
-  const isOverdue = !!contact.next_follow_up_at && new Date(contact.next_follow_up_at) < new Date() && !isTodayLocal(contact.next_follow_up_at);
+  const isOverdue = isFollowUpOverdue(contact.next_follow_up_at);
   const hasBudget = contact.budget_min || contact.budget_max;
   const [menuOpen, setMenuOpen] = useState(false);
   const [busy, setBusy] = useState(false);

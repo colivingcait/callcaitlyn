@@ -62,7 +62,11 @@ export function PeopleMobile({
     view === "everyone" ? "none" : GROUP_VALUES.includes(urlGroup as ContactGroupBy) ? (urlGroup as ContactGroupBy) : "stage";
   const activeQueue = searchParams.get("queue");
 
-  const activeFilterCount = Array.from(searchParams.keys()).filter((k) => !["view", "list", "sort", "q"].includes(k)).length;
+  const activeFilterCount = Array.from(searchParams.keys()).filter((k) => {
+    if (["view", "list", "sort", "q", "queue"].includes(k)) return false;
+    if (view === "everyone" && k === "group") return false;
+    return true;
+  }).length;
   const currentSort = searchParams.get("sort") ?? "updated_desc";
 
   function pushParams(mutate: (params: URLSearchParams) => void) {
@@ -76,6 +80,7 @@ export function PeopleMobile({
     pushParams((params) => {
       params.set("view", next);
       if (next !== "my-lists") params.delete("list");
+      if (next === "everyone") params.delete("group");
     });
   }
 
@@ -97,6 +102,12 @@ export function PeopleMobile({
     setSearch(searchParams.get("q") ?? "");
   }, [searchParams]);
 
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
   function onSearchChange(value: string) {
     setSearch(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -109,7 +120,7 @@ export function PeopleMobile({
   }
 
   const searched = search.trim() ? contacts.filter((c) => matchesQuery(c, search)) : contacts;
-  const textableCount = contacts.filter((c) => c.phone).length;
+  const textableCount = searched.filter((c) => c.phone).length;
   const dripSequences = sequences.filter((s) => s.type === "drip");
 
   const groupLabel =
@@ -180,7 +191,12 @@ export function PeopleMobile({
                   <button
                     type="button"
                     onClick={() => setFiltersOpen(true)}
-                    className="flex h-10 items-center gap-1.5 rounded-full border border-brand-300 bg-brand-50 px-3 text-[13px] font-semibold text-brand-700"
+                    className={cn(
+                      "flex h-10 items-center gap-1.5 rounded-full border px-3 text-[13px] font-semibold",
+                      activeFilterCount > 0
+                        ? "border-brand-300 bg-brand-50 text-brand-700"
+                        : "border-neutral-200 bg-white text-neutral-700",
+                    )}
                   >
                     <SlidersHorizontal size={14} /> Filters{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ""}
                   </button>

@@ -176,7 +176,7 @@ export function ContactRow({
               <MoreHorizontal size={15} />
             </button>
             {moreOpen && (
-              <div className="absolute right-0 top-full z-10 mt-1 w-40 rounded-xl border border-neutral-200 bg-white p-1 shadow-lg">
+              <div className="absolute right-0 top-full z-30 mt-1 w-40 rounded-xl border border-neutral-200 bg-white p-1 shadow-lg">
                 {contact.archived ? (
                   <button
                     onClick={toggleArchive}

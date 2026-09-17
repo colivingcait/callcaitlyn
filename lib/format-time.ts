@@ -19,6 +19,11 @@ export function isTodayLocal(date: string | Date): boolean {
   return formatLocal(date, "yyyy-MM-dd") === formatLocal(new Date(), "yyyy-MM-dd");
 }
 
+export function isFollowUpOverdue(iso: string | null | undefined): boolean {
+  if (!iso) return false;
+  return new Date(iso).getTime() < Date.now() && !isTodayLocal(iso);
+}
+
 // "2 hours ago" / "3 days ago" - for a row's meta line ("called 2 hours
 // ago"), where a relative sense of recency reads faster than a date.
 export function relativeTime(date: string | Date): string {

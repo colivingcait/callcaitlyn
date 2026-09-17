@@ -1,15 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui";
 import { X, Search } from "lucide-react";
 import { fullName, formatPhone, initials } from "@/lib/utils";
 import { useVisualViewportBox } from "@/lib/hooks/useVisualViewportBox";
+import { threadHref } from "@/lib/crm/inbox-href";
 import type { TextableContact } from "@/lib/data/messages";
 
 export function NewMessageModal({ contacts, onClose }: { contacts: TextableContact[]; onClose: () => void }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
   const { height, top } = useVisualViewportBox();
 
@@ -20,7 +22,13 @@ export function NewMessageModal({ contacts, onClose }: { contacts: TextableConta
   });
 
   function pick(id: string) {
-    router.push(`/messages/${id}`);
+    router.push(
+      threadHref(id, {
+        filter: searchParams.get("filter"),
+        hidden: searchParams.get("hidden") === "1",
+        spam: searchParams.get("spam") === "1",
+      }),
+    );
     onClose();
   }
 

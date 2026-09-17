@@ -32,3 +32,15 @@ export function isConversationOwed(activity: Pick<Activity, "type" | "direction"
   }
   return false;
 }
+
+// Newest-first history: an outbound text closes the loop; a still-owed
+// inbound text or missed call behind a later (non-reply) call still counts.
+export function conversationOwedFromHistory<T extends Pick<Activity, "type" | "direction" | "needs_reply" | "metadata" | "reply_dismissed_at">>(
+  activitiesNewestFirst: T[],
+): { owed: boolean; activity: T | null } {
+  for (const activity of activitiesNewestFirst) {
+    if (activity.type === "text" && activity.direction === "outbound") return { owed: false, activity: null };
+    if (isConversationOwed(activity)) return { owed: true, activity };
+  }
+  return { owed: false, activity: null };
+}

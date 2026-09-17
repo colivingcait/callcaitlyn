@@ -10,7 +10,7 @@ import {
   listTags,
 } from "@/lib/data/contacts";
 import { fullName, formatPhone, initials, CONTACT_TYPE_LABELS } from "@/lib/utils";
-import { formatLocal } from "@/lib/format-time";
+import { formatLocal, isFollowUpOverdue } from "@/lib/format-time";
 import { Section } from "@/components/ui/Section";
 import { QuickActions } from "@/components/contacts/QuickActions";
 import { SendMessageCard } from "@/components/contacts/SendMessageCard";
@@ -61,7 +61,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
   const doneTasks = tasks.filter((t) => t.completed_at);
   const likelihood = computeLikelihood(contact, stages);
 
-  const isOverdue = !!contact.next_follow_up_at && new Date(contact.next_follow_up_at).getTime() < Date.now();
+  const isOverdue = isFollowUpOverdue(contact.next_follow_up_at);
   const daysLate = isOverdue
     ? Math.max(1, Math.floor((Date.now() - new Date(contact.next_follow_up_at!).getTime()) / (24 * 60 * 60 * 1000)))
     : 0;

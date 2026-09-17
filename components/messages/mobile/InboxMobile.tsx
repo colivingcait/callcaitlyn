@@ -13,6 +13,7 @@ import { Toast } from "@/components/mobile/Toast";
 import { useToast } from "@/lib/hooks/useToast";
 import { useSectionOpen } from "@/lib/hooks/useSectionOpen";
 import { archiveAllSpam, unarchiveContacts } from "@/app/(app)/messages/spam-actions";
+import { inboxHref } from "@/lib/crm/inbox-href";
 import { cn } from "@/lib/utils";
 import type { Conversation, TextableContact } from "@/lib/data/messages";
 import type { InstagramThread } from "@/lib/data/instagram";
@@ -81,7 +82,7 @@ export function InboxMobile({
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <Link href="/messages?hidden=1" aria-label="Hidden threads" className="flex h-12 w-12 items-center justify-center rounded-full border border-neutral-200 text-neutral-500">
+          <Link href={inboxHref({ hidden: true })} aria-label="Hidden threads" className="flex h-12 w-12 items-center justify-center rounded-full border border-neutral-200 text-neutral-500">
             <Archive size={18} />
           </Link>
           <NewMessageButton contacts={contacts} />
@@ -97,7 +98,7 @@ export function InboxMobile({
           <button
             key={chip.value}
             type="button"
-            onClick={() => router.push(chip.value === "all" ? "/messages" : `/messages?filter=${chip.value}`)}
+            onClick={() => router.push(inboxHref({ filter: chip.value }))}
             className={`h-11 shrink-0 whitespace-nowrap rounded-full px-3.5 text-[14px] font-medium ${filter === chip.value ? "bg-neutral-900 text-white" : "border border-neutral-200 text-neutral-600"}`}
           >
             {chip.label}
@@ -140,7 +141,7 @@ export function InboxMobile({
               <StickyGroupHeader label="Waiting on you" count={owedVisible.length}>
                 <div className="divide-y divide-neutral-100">
                   {owedVisible.map((c) => (
-                    <InboxRow key={c.contact.id} conversation={c} ownerId={ownerId} openRowId={openRowId} onOpenChange={setOpenRowId} />
+                    <InboxRow key={c.contact.id} conversation={c} ownerId={ownerId} openRowId={openRowId} onOpenChange={setOpenRowId} filter={filter} />
                   ))}
                 </div>
               </StickyGroupHeader>
@@ -149,7 +150,7 @@ export function InboxMobile({
               <StickyGroupHeader label="Nothing owed" count={notOwedVisible.length}>
                 <div className="divide-y divide-neutral-100">
                   {notOwedVisible.map((c) => (
-                    <InboxRow key={c.contact.id} conversation={c} ownerId={ownerId} openRowId={openRowId} onOpenChange={setOpenRowId} />
+                    <InboxRow key={c.contact.id} conversation={c} ownerId={ownerId} openRowId={openRowId} onOpenChange={setOpenRowId} filter={filter} />
                   ))}
                 </div>
               </StickyGroupHeader>

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Calendar, Check, Bell } from "lucide-react";
 import { clearFollowUp, snoozeFollowUp } from "@/app/(app)/today-actions";
-import { formatLocal, isTodayLocal } from "@/lib/format-time";
+import { formatLocal, isTodayLocal, isFollowUpOverdue } from "@/lib/format-time";
 import { SnoozeMenu } from "@/components/contacts/SnoozeMenu";
 import { useToast } from "@/lib/hooks/useToast";
 import { Toast } from "@/components/mobile/Toast";
@@ -24,7 +24,7 @@ export function FollowUpBar({ contactId, nextFollowUpAt }: { contactId: string; 
 
   if (!nextFollowUpAt) return null;
 
-  const overdue = new Date(nextFollowUpAt).getTime() < Date.now() && !isTodayLocal(nextFollowUpAt);
+  const overdue = isFollowUpOverdue(nextFollowUpAt);
 
   async function complete() {
     setBusy(true);

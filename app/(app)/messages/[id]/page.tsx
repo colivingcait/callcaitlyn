@@ -15,16 +15,18 @@ import { ConversationActions } from "@/components/messages/ConversationActions";
 import { SuggestedRow } from "@/components/contacts/SuggestedRow";
 import { createClient } from "@/lib/supabase/server";
 import { listTextTemplates } from "@/lib/data/text-templates";
+import { inboxHref } from "@/lib/crm/inbox-href";
 
 export default async function MessageThreadPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ draft?: string }>;
+  searchParams: Promise<{ draft?: string; from?: string; hidden?: string; spam?: string }>;
 }) {
   const { id } = await params;
-  const { draft } = await searchParams;
+  const { draft, from, hidden, spam } = await searchParams;
+  const backHref = inboxHref({ filter: from, hidden: hidden === "1", spam: spam === "1" });
   const supabase = await createClient();
   const {
     data: { user },
@@ -44,7 +46,7 @@ export default async function MessageThreadPage({
     <div className="mx-auto flex min-w-0 max-w-2xl flex-col">
       <div className="sticky top-0 z-10 bg-white/95 backdrop-blur">
         <div className="flex items-center gap-3 border-b border-neutral-200 px-3 py-2.5">
-          <Link href="/messages" aria-label="Back to messages" className="text-neutral-500">
+          <Link href={backHref} aria-label="Back to messages" className="text-neutral-500">
             <ArrowLeft size={20} />
           </Link>
           <Link href={`/contacts/${contact.id}`} className="flex min-w-0 flex-1 items-center gap-2.5">
@@ -60,12 +62,17 @@ export default async function MessageThreadPage({
               <Mail size={18} />
             </a>
           )}
-          <ConversationActions contactId={contact.id} hidden={contact.archived} afterDelete="back-to-messages" />
+          <ConversationActions
+            contactId={contact.id}
+            hidden={contact.archived}
+            afterDelete="back-to-messages"
+            afterDeleteHref={backHref}
+          />
         </div>
         <ContactContextBar contact={contact} stages={stages} />
       </div>
 
-      <div className="flex-1 space-y-3 px-3 py-4 pb-[calc(var(--app-bottom-nav)+7.5rem)] md:pb-4">
+      <div className="flex-1 space-y-3 px-3 py-4 pb-[7.5rem] md:pb-4">
         {insights.length > 0 && (
           <div className="overflow-hidden rounded-2xl border border-[#ebe9e7] bg-white">
             {insights.map((insight) => (

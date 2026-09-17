@@ -29,10 +29,10 @@ export function ThreadComposer({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const keyboardOpen = keyboardInset > 40;
-  const bottom = keyboardOpen ? keyboardInset : undefined;
+  const bottom = keyboardOpen ? `max(${keyboardInset}px, var(--app-bottom-nav))` : undefined;
 
   const chrome =
-    "fixed inset-x-0 z-30 border-t border-neutral-200 bg-white/95 px-3 py-2.5 backdrop-blur md:sticky md:bottom-0 md:bg-white/95";
+    "fixed inset-x-0 z-50 border-t border-neutral-200 bg-white/95 px-3 py-2.5 backdrop-blur md:sticky md:bottom-0 md:bg-white/95";
 
   if (!phone) {
     return (

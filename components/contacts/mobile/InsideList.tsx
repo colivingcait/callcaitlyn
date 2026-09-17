@@ -58,7 +58,7 @@ export function InsideList({
   const selectedContacts = contacts.filter((c) => selected.has(c.id));
 
   return (
-    <div>
+    <div className="pb-8">
       <button type="button" onClick={() => router.push(backHref)} className="mb-2 flex items-center gap-1.5 text-[15px] font-medium text-neutral-600">
         <ChevronLeft size={17} /> My lists
       </button>

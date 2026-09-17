@@ -7,6 +7,7 @@ import { Button, Input, Select, Label } from "@/components/ui";
 import { CONTACT_TYPE_LABELS, TIMELINE_LABELS, REPRESENTING_LABELS, cn } from "@/lib/utils";
 import type { PipelineStage, Tag } from "@/types/database";
 import type { ContactGroupBy } from "@/lib/crm/contact-filter-params";
+import { SHEET_PARAM_KEYS } from "@/components/contacts/ContactFilters";
 
 const LEAD_DATE_PRESETS = [
   { label: "Last 7 days", days: 7 },
@@ -80,25 +81,23 @@ export function ContactFiltersSheet({
     set("leadTo", "");
   }
 
-  function preserveChrome(params: URLSearchParams) {
-    const view = searchParams.get("view");
-    const list = searchParams.get("list");
-    if (view) params.set("view", view);
-    if (list) params.set("list", list);
-  }
-
   function apply() {
-    const params = new URLSearchParams(draft);
+    const params = new URLSearchParams(searchParams.toString());
+    for (const key of SHEET_PARAM_KEYS) {
+      if (key === "tags") continue;
+      const value = draft[key];
+      if (value) params.set(key, value);
+      else params.delete(key);
+    }
     if (selectedTags.length) params.set("tags", selectedTags.join(","));
     else params.delete("tags");
-    preserveChrome(params);
     router.push(`${pathname}?${params.toString()}`);
     onClose();
   }
 
   function clearAll() {
-    const params = new URLSearchParams();
-    preserveChrome(params);
+    const params = new URLSearchParams(searchParams.toString());
+    for (const key of SHEET_PARAM_KEYS) params.delete(key);
     router.push(params.toString() ? `${pathname}?${params.toString()}` : pathname);
     onClose();
   }
@@ -115,7 +114,7 @@ export function ContactFiltersSheet({
 
         <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
           <Section title="Group by">
-            <Select value={draft.group ?? "none"} onChange={(e) => set("group", e.target.value)}>
+            <Select value={draft.group ?? "stage"} onChange={(e) => set("group", e.target.value)}>
               {GROUP_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect, useRef } from "react";
 import { Search, SlidersHorizontal, MessageSquare, X, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { QUEUES } from "@/lib/crm/contact-queues";
@@ -25,13 +25,14 @@ export const SORT_OPTIONS: { value: string; label: string }[] = [
   { value: "tag_asc", label: "Tag (A-Z)" },
 ];
 
-// Params the Filters sheet owns - anything else in the URL (q, sort, phone)
+// Params the Filters sheet owns - anything else in the URL (q, sort, queue)
 // has its own always-visible control, so it's excluded from the "how many
-// filters are active" badge on the Filters button.
-const SHEET_PARAM_KEYS = [
+// filters are active" badge on the Filters button. `phone` is in both the
+// sheet and the toolbar chip so applying either actually persists.
+export const SHEET_PARAM_KEYS = [
   "stage", "type", "tags", "source", "timeline", "representing", "likelihood",
-  "email", "followup", "notes", "newSince", "leadFrom", "leadTo",
-  "event", "regEvent", "city", "state", "birthdayMonth", "minBudget", "archived", "quoSync", "group", "queue",
+  "phone", "email", "followup", "notes", "newSince", "leadFrom", "leadTo",
+  "event", "regEvent", "city", "state", "birthdayMonth", "minBudget", "archived", "quoSync", "group",
 ];
 
 export function ContactFilters({
@@ -54,6 +55,17 @@ export function ContactFilters({
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const [, startTransition] = useTransition();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setQ(searchParams.get("q") ?? "");
+  }, [searchParams]);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   function updateParam(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -94,8 +106,10 @@ export function ContactFilters({
           <input
             value={q}
             onChange={(e) => {
-              setQ(e.target.value);
-              updateParam("q", e.target.value);
+              const value = e.target.value;
+              setQ(value);
+              if (debounceRef.current) clearTimeout(debounceRef.current);
+              debounceRef.current = setTimeout(() => updateParam("q", value.trim()), 300);
             }}
             placeholder="Search name, email, phone"
             className="w-full rounded-[11px] border border-neutral-200 bg-neutral-50 py-3 pl-10 pr-3 text-[15px] text-neutral-900"

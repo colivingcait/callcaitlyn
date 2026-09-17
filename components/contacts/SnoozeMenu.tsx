@@ -11,7 +11,7 @@ export function SnoozeMenu({
 }) {
   return (
     <div
-      className={`absolute top-full z-20 mt-1 w-36 overflow-hidden rounded-xl border border-neutral-200 bg-white py-1 shadow-lg ${align === "left" ? "left-0" : "right-0"}`}
+      className={`absolute top-full z-30 mt-1 w-36 overflow-hidden rounded-xl border border-neutral-200 bg-white py-1 shadow-lg ${align === "left" ? "left-0" : "right-0"}`}
     >
       {SNOOZE_OPTIONS.map((option) => (
         <button

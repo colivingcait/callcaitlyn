@@ -34,6 +34,7 @@ export function ContactEngageBlock({
         onNote={() => setLogOpen(true)}
         onTask={() => setTaskOpen(true)}
         onStage={() => setStageOpen(true)}
+        sticky={false}
       />
       <FollowUpBar contactId={contact.id} nextFollowUpAt={contact.next_follow_up_at} />
       <StageTagsSheet
