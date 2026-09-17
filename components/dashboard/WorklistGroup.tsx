@@ -128,7 +128,11 @@ export function WorklistGroup({
                       <span className="hidden sm:inline">Call</span>
                     </button>
                     <Link
-                      href={`/messages/${person.id}`}
+                      href={
+                        person.smsDraft
+                          ? `/messages/${person.id}?draft=${encodeURIComponent(person.smsDraft)}`
+                          : `/messages/${person.id}`
+                      }
                       aria-label={`Text ${person.name}`}
                       data-today-control={`text-${person.id}`}
                       className={`${actionBtn} w-10 sm:w-auto sm:px-3`}

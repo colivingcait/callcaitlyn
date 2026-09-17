@@ -15,6 +15,8 @@ import { ConversationActions } from "@/components/messages/ConversationActions";
 import { SuggestedRow } from "@/components/contacts/SuggestedRow";
 import { createClient } from "@/lib/supabase/server";
 import { listTextTemplates } from "@/lib/data/text-templates";
+import { applyMergeFields } from "@/lib/crm/merge-fields";
+import { firstTouchTemplate, resolveFirstTouchMeetup, shouldPrefillFirstTouchSms } from "@/lib/crm/new-lead-text-templates";
 import { inboxHref } from "@/lib/crm/inbox-href";
 
 export default async function MessageThreadPage({
@@ -41,6 +43,15 @@ export default async function MessageThreadPage({
   ]);
 
   if (!contact) notFound();
+
+  const tagNames = contact.contact_tags.map((ct) => ct.tags?.name).filter((name): name is string => !!name);
+  const firstTouchSignals = { leadSource: contact.lead_source, lastEventName: contact.last_event_name, tagNames };
+  const meetup = resolveFirstTouchMeetup(firstTouchSignals);
+  const hasOutboundText = thread.some((a) => a.type === "text" && a.direction === "outbound");
+  const hasPriorOutreach = thread.some((a) => a.direction === "outbound");
+  const firstTouchBody = shouldPrefillFirstTouchSms({ hasOutboundText, hasPriorOutreach, meetup })
+    ? applyMergeFields(firstTouchTemplate(firstTouchSignals), contact)
+    : undefined;
 
   return (
     <div className="mx-auto flex min-w-0 max-w-3xl flex-col">
@@ -113,7 +124,7 @@ export default async function MessageThreadPage({
         firstName={contact.first_name}
         lastName={contact.last_name}
         textTemplates={textTemplates}
-        initialBody={draft}
+        initialBody={draft || firstTouchBody}
       />
     </div>
   );

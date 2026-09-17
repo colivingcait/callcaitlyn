@@ -30,6 +30,7 @@ export function ThreadComposer({
   const [error, setError] = useState("");
   const keyboardOpen = keyboardInset > 40;
   const bottom = keyboardOpen ? `max(${keyboardInset}px, var(--app-bottom-nav))` : undefined;
+  const prefilled = !!initialBody?.trim();
 
   const chrome =
     "fixed inset-x-0 z-50 border-t border-[#eadfd6] bg-[#fffbf8]/95 px-3 py-2.5 backdrop-blur lg:sticky lg:bottom-0 lg:bg-[#fffbf8]/95";
@@ -92,8 +93,8 @@ export function ThreadComposer({
           value={body}
           onChange={(e) => setBody(e.target.value)}
           placeholder="Text message"
-          rows={1}
-          className="max-h-28 flex-1 resize-none rounded-full border border-neutral-200 bg-neutral-50 px-4 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
+          rows={prefilled ? 3 : 1}
+          className={`max-h-28 flex-1 resize-none border border-neutral-200 bg-neutral-50 px-4 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 ${prefilled ? "rounded-[16px]" : "rounded-full"}`}
         />
         <button
           type="submit"

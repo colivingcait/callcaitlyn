@@ -39,7 +39,13 @@ export function NewLeadCard({
   const source = resolveNewLeadSource(contact.lead_source);
 
   const templates: { label: string; body: string }[] = [
-    { label: "Suggested", body: buildNewLeadDraft(contact.first_name, contact.lead_source) },
+    {
+      label: "Suggested",
+      body: buildNewLeadDraft(contact.first_name, contact.lead_source, {
+        lastEventName: contact.last_event_name,
+        tagNames: contact.tagNames,
+      }),
+    },
     {
       label: defaultDraftTemplate?.label ?? "Quick text",
       body: defaultDraftTemplate ? applyMergeFields(defaultDraftTemplate.body, contact) : "",

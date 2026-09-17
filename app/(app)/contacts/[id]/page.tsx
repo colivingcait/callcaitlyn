@@ -31,6 +31,8 @@ import { getContactEventHistory } from "@/lib/data/contact-events";
 import { ContactEventHistory } from "@/components/contacts/ContactEventHistory";
 import { listTextTemplates } from "@/lib/data/text-templates";
 import { countRecentTexts } from "@/lib/crm/engagement";
+import { applyMergeFields } from "@/lib/crm/merge-fields";
+import { firstTouchTemplate, resolveFirstTouchMeetup, shouldPrefillFirstTouchSms } from "@/lib/crm/new-lead-text-templates";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ContactRecordMobile } from "@/components/contacts/mobile/ContactRecordMobile";
 import { ContactEngageBlock } from "@/components/contacts/ContactEngageBlock";
@@ -62,6 +64,14 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
   const openTasks = tasks.filter((t) => !t.completed_at);
   const doneTasks = tasks.filter((t) => t.completed_at);
   const likelihood = computeLikelihood(contact, stages);
+  const tagNames = contact.contact_tags.map((ct) => ct.tags?.name).filter((name): name is string => !!name);
+  const firstTouchSignals = { leadSource: contact.lead_source, lastEventName: contact.last_event_name, tagNames };
+  const meetup = resolveFirstTouchMeetup(firstTouchSignals);
+  const hasOutboundText = activities.some((a) => a.type === "text" && a.direction === "outbound");
+  const hasPriorOutreach = activities.some((a) => a.direction === "outbound" && (a.type === "call" || a.type === "text" || a.type === "email"));
+  const firstTouchBody = shouldPrefillFirstTouchSms({ hasOutboundText, hasPriorOutreach, meetup })
+    ? applyMergeFields(firstTouchTemplate(firstTouchSignals), contact)
+    : undefined;
 
   const isOverdue = isFollowUpOverdue(contact.next_follow_up_at);
   const daysLate = isOverdue
@@ -197,6 +207,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
               email={contact.email}
               firstName={contact.first_name}
               lastName={contact.last_name}
+              initialBody={firstTouchBody}
             />
           </Section>
 

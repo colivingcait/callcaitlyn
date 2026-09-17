@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "prove-today": "npx tsx lib/crm/today-controls.proof.ts && npx tsx lib/crm/desktop-shell.proof.ts",
+    "prove-today": "npx tsx lib/crm/today-controls.proof.ts && npx tsx lib/crm/desktop-shell.proof.ts && npx tsx lib/crm/new-lead-text-templates.proof.ts",
     "prove-listing-text": "npx tsx lib/crm/listing-text-recency.proof.ts"
   },
   "dependencies": {

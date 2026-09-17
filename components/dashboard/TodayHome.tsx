@@ -3,7 +3,7 @@ import { Bell, CalendarHeart, ChevronRight, DollarSign, KanbanSquare, ListTodo, 
 import { BrandWordmark } from "@/components/brand/BrandWordmark";
 import { TodaySearch } from "@/components/dashboard/mobile/TodaySearch";
 import { TodayPipelineOverview } from "@/components/dashboard/TodayPipelineOverview";
-import { TodayQueues } from "@/components/dashboard/TodayQueues";
+import { NewUncontactedSpotlight, TodayQueues } from "@/components/dashboard/TodayQueues";
 import { formatLocal, isTodayLocal, timeOfDayGreeting } from "@/lib/format-time";
 import { todayFocusHref } from "@/lib/crm/today-focus";
 import { cn } from "@/lib/utils";
@@ -154,6 +154,11 @@ export function TodayHome({
     />
   );
 
+  const newSpotlight =
+    groups.newUncontacted.length > 0 ? (
+      <NewUncontactedSpotlight count={groups.newUncontacted.length} previewName={groups.newUncontacted[0]?.name} />
+    ) : null;
+
   if (wide) {
     return (
       <div className="space-y-8">
@@ -161,6 +166,7 @@ export function TodayHome({
           {greetingBlock}
           <TodaySearch contacts={contacts} variant="desktop" />
         </div>
+        {newSpotlight}
         <div className="grid grid-cols-12 gap-6">
           <div className="col-span-7">
             <TodayPipelineOverview stages={today.stages} counts={today.statStrip.stageCounts} size="desktop" />
@@ -192,6 +198,7 @@ export function TodayHome({
         </div>
       </div>
       {greetingBlock}
+      {newSpotlight}
       <TodayPipelineOverview stages={today.stages} counts={today.statStrip.stageCounts} />
       {quickLinks}
       <UpcomingEvents items={today.calendar} pendingCount={today.bookingRequests.length} />
