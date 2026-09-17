@@ -50,7 +50,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <Sidebar userEmail={user?.email} counts={navCounts} />
       </Suspense>
       <div className="flex min-h-dvh min-w-0 flex-1 flex-col lg:h-dvh lg:overflow-hidden">
-        <main className="min-w-0 flex-1 bg-[#f7f1ea] pb-[calc(var(--app-bottom-nav)+12px)] lg:min-h-0 lg:overflow-y-auto lg:overflow-x-hidden lg:pb-8">{children}</main>
+        <main className="flex-1 bg-[#f7f1ea] pb-[calc(var(--app-bottom-nav)+12px)] lg:min-h-0 lg:overflow-y-auto lg:pb-8">{children}</main>
       </div>
       {/* Mobile's FAB slot is Today-only-Log now (LogPill below); New
           contact lives on the Contacts header, New task in the More sheet,

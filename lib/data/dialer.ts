@@ -48,7 +48,6 @@ export async function listEventFollowupQueue(): Promise<{ contacts: DialerContac
     )
     .eq("archived", false)
     .eq("known_personally", false)
-    .eq("spam", false)
     .not("last_event_at", "is", null)
     .not("phone", "is", null);
 
@@ -186,7 +185,6 @@ export async function listConfirmationQueue(): Promise<{ items: ConfirmationQueu
     .in("id", [...allContactIds])
     .eq("archived", false)
     .eq("known_personally", false)
-    .eq("spam", false)
     .is("opted_out_at", null)
     .not("phone", "is", null);
   if (contactsError) return { items: [], events, error: contactsError.message };

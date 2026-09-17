@@ -40,12 +40,17 @@ export default async function InsightsPage() {
     data.registeredNoFollowUp.length === 0;
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-[1400px] px-5 py-6 lg:px-8 lg:py-8">
-      <h1 className="font-display text-[32px] font-semibold tracking-[-0.03em] text-neutral-900">Insights</h1>
+    <div className="mx-auto max-w-3xl px-4 py-6">
+      <h1 className="font-serif text-2xl font-semibold text-neutral-900 sm:text-[28px]">Insights</h1>
       <p className="mt-1 text-[15px] text-neutral-500">What changed on its own - Today is what you decided to do.</p>
 
-      <div className="mt-5 grid min-w-0 grid-cols-12 gap-6">
-        <div className="col-span-12 min-w-0 space-y-3 lg:col-span-8">
+      <div className="mt-5 space-y-3">
+        <div className="md:hidden">
+          <SuggestionQueueCard queue={suggestionQueue} ownerId={ownerId} stages={stages} tags={tags} mobile />
+        </div>
+        <div className="hidden md:block">
+          <SuggestionQueueCard queue={suggestionQueue} ownerId={ownerId} stages={stages} tags={tags} />
+        </div>
 
         {data.leases.length > 0 && (
           <InsightCard
@@ -183,17 +188,6 @@ export default async function InsightsPage() {
         )}
 
         {nothingToFlag && <p className="text-[15px] text-neutral-400">Nothing worth flagging right now.</p>}
-        </div>
-        <aside className="col-span-12 min-w-0 lg:col-span-4">
-          <div className="lg:sticky lg:top-6">
-            <div className="lg:hidden">
-              <SuggestionQueueCard queue={suggestionQueue} ownerId={ownerId} stages={stages} tags={tags} mobile />
-            </div>
-            <div className="hidden lg:block">
-              <SuggestionQueueCard queue={suggestionQueue} ownerId={ownerId} stages={stages} tags={tags} />
-            </div>
-          </div>
-        </aside>
       </div>
     </div>
   );

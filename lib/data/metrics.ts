@@ -34,7 +34,6 @@ async function speedToLeadFor(
     .from("contacts")
     .select("id, created_at")
     .eq("archived", false)
-    .eq("spam", false)
     .gte("created_at", start)
     .lt("created_at", end);
 
@@ -72,7 +71,7 @@ async function contactedPctFor(
   start: string,
   end: string,
 ): Promise<number | null> {
-  const { data: contacts } = await supabase.from("contacts").select("id, stage_id").eq("archived", false).eq("spam", false);
+  const { data: contacts } = await supabase.from("contacts").select("id, stage_id").eq("archived", false);
   const activeContactIds = (contacts ?? []).filter((c) => c.stage_id && activeStageIds.has(c.stage_id)).map((c) => c.id);
   if (activeContactIds.length === 0) return null;
 
@@ -123,7 +122,6 @@ async function conversionRateFor(
     .from("contacts")
     .select("id")
     .eq("archived", false)
-    .eq("spam", false)
     .gte("created_at", start)
     .lt("created_at", end);
 

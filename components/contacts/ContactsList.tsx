@@ -11,9 +11,8 @@ import { BulkStageModal } from "@/components/contacts/BulkStageModal";
 import { BulkLeadSourceModal } from "@/components/contacts/BulkLeadSourceModal";
 import { BulkTypeModal } from "@/components/contacts/BulkTypeModal";
 import { TextBlastModal } from "@/components/contacts/TextBlastModal";
-import { ShowMoreList } from "@/components/ui/ShowMoreList";
 import { useSectionOpen } from "@/lib/hooks/useSectionOpen";
-import { groupContacts, defaultContactsGroupOpen } from "@/lib/crm/contact-grouping";
+import { groupContacts } from "@/lib/crm/contact-grouping";
 import type { ContactGroupBy } from "@/lib/crm/contact-filter-params";
 import type { ContactWithRelations, PipelineStage, Tag } from "@/types/database";
 
@@ -130,7 +129,7 @@ export function ContactsList({
         <p className="px-4 py-10 text-center text-[15px] text-neutral-400">No contacts match. Try clearing filters or add a new contact.</p>
       ) : (
         <div className="space-y-3 px-4 pb-6 sm:px-0">
-          {groups.map((group, index) => (
+          {groups.map((group) => (
             <ContactGroup
               key={group.key}
               groupKey={group.key}
@@ -142,7 +141,6 @@ export function ContactsList({
               selected={selected}
               onToggle={toggle}
               lastActivityLabels={lastActivityLabels}
-              defaultOpen={defaultContactsGroupOpen(group.key, group.contacts.length, stages, index, groupBy)}
               onTextGroup={(ids) => {
                 setSelected(new Set(ids));
                 setModal("text");
@@ -265,7 +263,6 @@ function ContactGroup({
   onToggle,
   lastActivityLabels,
   onTextGroup,
-  defaultOpen,
 }: {
   groupKey: string;
   label: string | null;
@@ -277,17 +274,16 @@ function ContactGroup({
   onToggle: (id: string) => void;
   lastActivityLabels: Record<string, string>;
   onTextGroup: (ids: string[]) => void;
-  defaultOpen: boolean;
 }) {
-  const [open, setOpen] = useSectionOpen(`contacts-group-v2:${groupKey}`, defaultOpen);
+  const [open, setOpen] = useSectionOpen(`contacts-group:${groupKey}`, true);
   const withPhone = contacts.filter((c) => c.phone);
 
-  const rows = (
-    <div className="divide-y divide-[#eadfd6]/80">
-      <ShowMoreList
-        items={contacts}
-        initial={8}
-        renderItem={(c) => (
+  if (!label) {
+    // Ungrouped ("none") - just the rows, one shared card with dividers
+    // between them (DESIGN_SPEC.md §2/§6), no collapsible header.
+    return (
+      <div className="divide-y divide-neutral-100 overflow-hidden rounded-2xl border border-[#ebe9e7] bg-white">
+        {contacts.map((c) => (
           <ContactRow
             key={c.id}
             contact={c}
@@ -298,17 +294,13 @@ function ContactGroup({
             onToggle={() => onToggle(c.id)}
             lastActivityLabel={lastActivityLabels[c.id]}
           />
-        )}
-      />
-    </div>
-  );
-
-  if (!label) {
-    return <div className="overflow-hidden rounded-2xl border border-[#eadfd6] bg-[#fffbf8] shadow-card">{rows}</div>;
+        ))}
+      </div>
+    );
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[#eadfd6] bg-[#fffbf8] shadow-card">
+    <div className="overflow-hidden rounded-2xl border border-[#ebe9e7] bg-white">
       <div className="flex w-full items-center gap-2.5 px-[18px] py-4 text-left">
         <button type="button" onClick={() => setOpen(!open)} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
           {open ? <ChevronDown size={17} className="text-neutral-400" /> : <ChevronRight size={17} className="text-neutral-400" />}
@@ -325,7 +317,20 @@ function ContactGroup({
           </button>
         )}
       </div>
-      {open && <div className="border-t border-[#eadfd6]/80">{rows}</div>}
+      {open && <div className="divide-y divide-neutral-100 border-t border-neutral-100">
+          {contacts.map((c) => (
+            <ContactRow
+              key={c.id}
+              contact={c}
+              stages={stages}
+              ownerId={ownerId}
+              selecting={selecting}
+              selected={selected.has(c.id)}
+              onToggle={() => onToggle(c.id)}
+              lastActivityLabel={lastActivityLabels[c.id]}
+            />
+          ))}
+        </div>}
     </div>
   );
 }

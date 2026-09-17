@@ -21,7 +21,7 @@ export function PipelineCard({
   const context = getPipelineCardContext(contact, stage, extras, dealOverride);
 
   return (
-    <div className="flex items-center gap-3.5 rounded-xl border border-[#eadfd6] bg-[#fffbf8] p-3.5">
+    <div className="flex items-center gap-3.5 rounded-xl border border-[#ebe9e7] bg-white p-3.5">
       <Link href={`/contacts/${contact.id}`} data-contact-open={contact.id} className="flex min-w-0 flex-1 items-center gap-3.5">
         <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-neutral-100 text-sm font-semibold text-neutral-600">
           {initials(contact.first_name, contact.last_name)}

@@ -37,7 +37,7 @@ export async function buildWeeklyReview(admin: SupabaseClient, ownerId: string):
 
   const [{ data: newLeads }, { data: calls }, { data: texts }, { data: showingsThis }, { data: showingsPrev }, { data: dealsThisWeek }] =
     await Promise.all([
-      admin.from("contacts").select("id, lead_source").eq("owner_id", ownerId).eq("archived", false).eq("spam", false).gte("lead_date", weekAgo),
+      admin.from("contacts").select("id, lead_source").eq("owner_id", ownerId).eq("archived", false).gte("lead_date", weekAgo),
       admin.from("activities").select("id").eq("owner_id", ownerId).eq("type", "call").gte("occurred_at", weekAgo),
       admin.from("activities").select("id").eq("owner_id", ownerId).eq("type", "text").gte("occurred_at", weekAgo),
       admin.from("activities").select("id").eq("owner_id", ownerId).eq("type", "showing").gte("occurred_at", weekAgo),
@@ -49,7 +49,7 @@ export async function buildWeeklyReview(admin: SupabaseClient, ownerId: string):
         .gte("closed_at", weekAgo),
     ]);
   const [{ data: prevNewLeads }, { data: prevCalls }] = await Promise.all([
-    admin.from("contacts").select("id").eq("owner_id", ownerId).eq("archived", false).eq("spam", false).gte("lead_date", twoWeeksAgo).lt("lead_date", weekAgo),
+    admin.from("contacts").select("id").eq("owner_id", ownerId).eq("archived", false).gte("lead_date", twoWeeksAgo).lt("lead_date", weekAgo),
     admin.from("activities").select("id").eq("owner_id", ownerId).eq("type", "call").gte("occurred_at", twoWeeksAgo).lt("occurred_at", weekAgo),
   ]);
 
@@ -82,7 +82,6 @@ export async function buildWeeklyReview(admin: SupabaseClient, ownerId: string):
       .select("id", { count: "exact", head: true })
       .eq("owner_id", ownerId)
       .eq("archived", false)
-      .eq("spam", false)
       .in("stage_id", underContractStageIds);
     underContractNow = count ?? 0;
   }
@@ -93,7 +92,6 @@ export async function buildWeeklyReview(admin: SupabaseClient, ownerId: string):
     .select("id, first_name, last_name, next_follow_up_at, known_personally")
     .eq("owner_id", ownerId)
     .eq("archived", false)
-    .eq("spam", false)
     .not("next_follow_up_at", "is", null)
     .order("next_follow_up_at", { ascending: true })
     .limit(20);
@@ -140,7 +138,6 @@ export async function buildWeeklyReview(admin: SupabaseClient, ownerId: string):
     .select("id, first_name, last_name, phone")
     .eq("owner_id", ownerId)
     .eq("archived", false)
-    .eq("spam", false)
     .not("phone", "is", null);
   const duplicatePhonePairs: WeeklyReviewPayload["duplicatePhonePairs"] = [];
   const contacts = allContacts ?? [];
@@ -158,7 +155,6 @@ export async function buildWeeklyReview(admin: SupabaseClient, ownerId: string):
     .select("id", { count: "exact", head: true })
     .eq("owner_id", ownerId)
     .eq("archived", false)
-    .eq("spam", false)
     .is("phone", null)
     .gte("lead_date", weekAgo);
 
@@ -168,14 +164,12 @@ export async function buildWeeklyReview(admin: SupabaseClient, ownerId: string):
     .select("id, first_name, last_name, phone, known_personally")
     .eq("owner_id", ownerId)
     .eq("archived", false)
-    .eq("spam", false)
     .gte("lead_date", weekAgo);
   const { data: sphereContacts } = await admin
     .from("contacts")
     .select("id, first_name, last_name, phone, pipeline_stages(is_closed_won)")
     .eq("owner_id", ownerId)
-    .eq("archived", false)
-    .eq("spam", false);
+    .eq("archived", false);
   const possiblyKnownPersonally: WeeklyReviewPayload["possiblyKnownPersonally"] = [];
   for (const c of recentContacts ?? []) {
     if (c.known_personally) continue;

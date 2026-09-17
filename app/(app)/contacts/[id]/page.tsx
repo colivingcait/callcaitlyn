@@ -146,8 +146,8 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
         <ContactEngageBlock contact={contact} stages={stages} tags={tags} ownerId={contact.owner_id} />
       </div>
 
-      <div className="mt-6 grid min-w-0 grid-cols-12 gap-6">
-        <div className="col-span-12 min-w-0 space-y-3 xl:col-span-7">
+      <div className="mt-6 grid grid-cols-12 gap-6">
+        <div className="col-span-7 space-y-3">
           {readyTranscript && (
             <ApprovePanel
               transcript={readyTranscript.transcript}
@@ -189,7 +189,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
           </Section>
         </div>
 
-        <div className="col-span-12 min-w-0 space-y-3 xl:col-span-5">
+        <div className="col-span-5 space-y-3">
           <Section sectionKey="contact-detail:message" title="Send a message" meta="text or email" defaultOpen={false}>
             <SendMessageCard
               contactId={contact.id}
