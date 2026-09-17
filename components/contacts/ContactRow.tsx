@@ -11,6 +11,7 @@ import { StageSelector } from "@/components/contacts/StageSelector";
 import { SendTextForm } from "@/components/contacts/SendTextForm";
 import { SendEmailForm } from "@/components/contacts/SendEmailForm";
 import { Select } from "@/components/ui";
+import { dateInputToAppIso, isoToDateInput } from "@/lib/format-time";
 import type { ContactWithRelations, PipelineStage } from "@/types/database";
 
 export function ContactRow({
@@ -36,7 +37,7 @@ export function ContactRow({
   const [quickEmailOpen, setQuickEmailOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [confirmingArchive, setConfirmingArchive] = useState(false);
-  const [followUpAt, setFollowUpAt] = useState(contact.next_follow_up_at ? contact.next_follow_up_at.slice(0, 10) : "");
+  const [followUpAt, setFollowUpAt] = useState(isoToDateInput(contact.next_follow_up_at));
   const [timeline, setTimeline] = useState(contact.timeline);
   const [phoneDraft, setPhoneDraft] = useState(contact.phone ?? "");
   const [savingPhone, setSavingPhone] = useState(false);
@@ -68,7 +69,7 @@ export function ContactRow({
   async function saveFollowUp(value: string) {
     setRowError(null);
     const supabase = createClient();
-    const { error } = await supabase.from("contacts").update({ next_follow_up_at: value ? new Date(value).toISOString() : null }).eq("id", contact.id);
+    const { error } = await supabase.from("contacts").update({ next_follow_up_at: value ? dateInputToAppIso(value) : null }).eq("id", contact.id);
     if (error) {
       setRowError(error.message);
       return;

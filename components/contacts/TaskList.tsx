@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { formatLocal } from "@/lib/format-time";
+import { formatLocal, dateInputToAppIso, isoToDateInput } from "@/lib/format-time";
 import { Pencil, Trash2, Check, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/types/database";
@@ -14,6 +14,7 @@ export function TaskList({ contactId, ownerId, tasks }: { contactId: string; own
   const [title, setTitle] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDueAt, setEditDueAt] = useState("");
@@ -23,13 +24,19 @@ export function TaskList({ contactId, ownerId, tasks }: { contactId: string; own
     e.preventDefault();
     if (!title.trim()) return;
     setSaving(true);
+    setError("");
     const supabase = createClient();
-    await supabase.from("tasks").insert({
+    const { error: insertError } = await supabase.from("tasks").insert({
       owner_id: ownerId,
       contact_id: contactId,
       title: title.trim(),
-      due_at: dueAt ? new Date(dueAt).toISOString() : null,
+      due_at: dueAt ? dateInputToAppIso(dueAt) : null,
     });
+    if (insertError) {
+      setError(insertError.message);
+      setSaving(false);
+      return;
+    }
     setTitle("");
     setDueAt("");
     setSaving(false);
@@ -39,36 +46,49 @@ export function TaskList({ contactId, ownerId, tasks }: { contactId: string; own
 
   async function toggleComplete(task: Task) {
     const supabase = createClient();
-    await supabase.from("tasks").update({ completed_at: task.completed_at ? null : new Date().toISOString() }).eq("id", task.id);
+    const { error: updateError } = await supabase.from("tasks").update({ completed_at: task.completed_at ? null : new Date().toISOString() }).eq("id", task.id);
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
     router.refresh();
   }
 
   function startEdit(task: Task) {
     setEditingId(task.id);
     setEditTitle(task.title);
-    setEditDueAt(task.due_at ? task.due_at.slice(0, 10) : "");
+    setEditDueAt(isoToDateInput(task.due_at));
   }
 
   async function saveEdit(taskId: string) {
     if (!editTitle.trim()) return;
     const supabase = createClient();
-    await supabase
+    const { error: updateError } = await supabase
       .from("tasks")
-      .update({ title: editTitle.trim(), due_at: editDueAt ? new Date(editDueAt).toISOString() : null })
+      .update({ title: editTitle.trim(), due_at: editDueAt ? dateInputToAppIso(editDueAt) : null })
       .eq("id", taskId);
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
     setEditingId(null);
     router.refresh();
   }
 
   async function deleteTask(taskId: string) {
     const supabase = createClient();
-    await supabase.from("tasks").delete().eq("id", taskId);
+    const { error: deleteError } = await supabase.from("tasks").delete().eq("id", taskId);
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
     setConfirmingDeleteId(null);
     router.refresh();
   }
 
   return (
     <div>
+      {error && <p className="px-[18px] pt-3 text-sm text-red-600">{error}</p>}
       {tasks.map((task) => (
         <div key={task.id} className="border-b border-neutral-100 px-[18px] py-3.5 last:border-b-0">
           {editingId === task.id ? (

@@ -6,7 +6,7 @@ import { ChevronRight, ListTodo } from "lucide-react";
 import { BottomSheet } from "@/components/mobile/BottomSheet";
 import { QuickAddMenu } from "@/components/nav/QuickAddMenu";
 import { SignOutButton } from "@/components/nav/SignOutButton";
-import { NAV_GROUPS, type NavCounts } from "@/components/nav/nav-items";
+import { NAV_GROUPS, MOBILE_NAV_ITEMS, type NavCounts } from "@/components/nav/nav-items";
 import { countFor as countForCounts } from "@/lib/nav/countFor";
 
 // Everything not on the 5-tab bar, grouped exactly like the desktop
@@ -14,16 +14,20 @@ import { countFor as countForCounts } from "@/lib/nav/countFor";
 export function MoreSheet({ open, onClose, userEmail, counts }: { open: boolean; onClose: () => void; userEmail?: string | null; counts: NavCounts }) {
   const [newTaskOpen, setNewTaskOpen] = useState(false);
   const countFor = countForCounts(counts);
+  const bottomHrefs = new Set(MOBILE_NAV_ITEMS.filter((item) => item.kind === "link").map((item) => item.href));
 
   return (
     <>
       <BottomSheet open={open} onClose={onClose} title="Everything else">
         <div className="pb-4">
           {userEmail && <p className="mb-2 truncate text-[14px] text-neutral-400">{userEmail}</p>}
-          {NAV_GROUPS.map((group) => (
+          {NAV_GROUPS.map((group) => {
+            const items = group.items.filter((item) => !bottomHrefs.has(item.href));
+            if (items.length === 0 && group.label !== "Work") return null;
+            return (
             <div key={group.label} className="border-t border-neutral-100 py-1 first:border-t-0">
               <p className="px-1 pb-1 pt-2 text-[13px] font-semibold uppercase tracking-[.05em] text-neutral-400">{group.label}</p>
-              {group.items.map(({ href, label, icon: Icon }) => {
+              {items.map(({ href, label, icon: Icon }) => {
                 const count = countFor[href];
                 return (
                   <Link key={href} href={href} onClick={onClose} className="flex min-h-[50px] items-center gap-3 px-1 py-2 active:bg-neutral-50">
@@ -44,7 +48,8 @@ export function MoreSheet({ open, onClose, userEmail, counts }: { open: boolean;
                 </button>
               )}
             </div>
-          ))}
+            );
+          })}
           <div className="border-t border-neutral-100 pt-3">
             <SignOutButton className="rounded-xl border border-neutral-200 bg-white px-4 py-2.5 font-semibold" />
           </div>

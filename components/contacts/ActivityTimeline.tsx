@@ -38,6 +38,7 @@ const SOURCE_LABELS: Record<string, string> = {
   eventbrite: "Eventbrite",
   jotform: "Jotform",
   granola: "Granola",
+  listing_page: "Listing",
   ai: "AI",
   system: "System",
 };
@@ -47,7 +48,8 @@ const FILTERS = [
   { value: "call", label: "Calls" },
   { value: "text", label: "Texts" },
   { value: "email", label: "Emails" },
-  { value: "meeting", label: "Notes" },
+  { value: "meeting", label: "Meetings" },
+  { value: "note", label: "Notes" },
 ] as const;
 
 function asString(v: unknown): string | null {

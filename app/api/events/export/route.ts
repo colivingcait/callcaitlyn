@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getEventsData, type RosterPerson } from "@/lib/data/events";
 import { formatPhone } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/server";
 
 const HEADERS = ["Event", "Date", "Name", "Email", "Phone", "Registered", "Checked in", "Status", "First time or returning"];
 
@@ -29,6 +30,12 @@ function matchesFilter(p: RosterPerson, filter: StatusFilter): boolean {
 }
 
 export async function GET(request: NextRequest) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+
   const eventKey = request.nextUrl.searchParams.get("event");
   const filter = (request.nextUrl.searchParams.get("status") ?? "all") as StatusFilter;
 

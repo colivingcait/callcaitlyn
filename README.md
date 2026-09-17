@@ -193,7 +193,7 @@ Same shape as Quo: a webhook logs bookings straight onto the matching contact.
      -H "Authorization: Bearer YOUR_TOKEN" \
      -H "Content-Type: application/json" \
      -d '{
-       "url": "https://www.callcaitlyn.com/api/webhooks/calendly",
+       "url": "https://crm.callcaitlyn.com/api/webhooks/calendly",
        "events": ["invitee.created", "invitee.canceled"],
        "organization": "YOUR_ORGANIZATION_URI",
        "scope": "organization"
@@ -210,7 +210,7 @@ Eventbrite webhooks only send a link to the changed resource, not the data itsel
 
 1. Pick any long random string — this is `EVENTBRITE_WEBHOOK_SECRET`.
 2. Eventbrite → **Account Settings → Developer Links → Webhooks → Add Webhook**:
-   - **Payload URL**: `https://www.callcaitlyn.com/api/webhooks/eventbrite?secret=YOUR_SECRET` (using the string from step 1)
+   - **Payload URL**: `https://crm.callcaitlyn.com/api/webhooks/eventbrite?secret=YOUR_SECRET` (using the string from step 1)
    - **Event**: All Events
    - **Actions**: check only `order.placed`
    - Save.
@@ -223,7 +223,7 @@ Eventbrite webhooks only send a link to the changed resource, not the data itsel
 1. In the **Women's REI account's own** Account Settings → Developer Links → API Keys, copy its Private Token → this is `EVENTBRITE_WOMENS_REI_API_TOKEN`.
 2. In that same account's Account Settings → Developer Links → Webhooks → Add Webhook, same as step 2 above, but the Payload URL gets an extra `&account=womens_rei`:
    ```
-   https://www.callcaitlyn.com/api/webhooks/eventbrite?secret=YOUR_SECRET&account=womens_rei
+   https://crm.callcaitlyn.com/api/webhooks/eventbrite?secret=YOUR_SECRET&account=womens_rei
    ```
    (same secret as the House Hacking account's webhook — only the `account` param differs)
 3. Add `EVENTBRITE_WOMENS_REI_API_TOKEN` to Vercel, redeploy.
@@ -239,7 +239,7 @@ For the iPad kiosk form: matches by email/phone against existing contacts (so pe
 2. Pick any long random string — this is `JOTFORM_WEBHOOK_SECRET`.
 3. In your Jotform form's builder: **Settings → Integrations → Webhooks** → add:
    ```
-   https://www.callcaitlyn.com/api/webhooks/jotform?secret=YOUR_SECRET
+   https://crm.callcaitlyn.com/api/webhooks/jotform?secret=YOUR_SECRET
    ```
 4. Add `JOTFORM_WEBHOOK_SECRET` to Vercel, redeploy.
 5. Submit a test entry on the kiosk form and confirm it shows up on the right contact.
@@ -342,7 +342,7 @@ Leave `BLINQ_WEBHOOK_SECRET` unset and just the Business path stays dormant — 
 2. Nothing else is required to deploy - `HOUSE_HACKING_SITE_ORIGINS` only needs setting in Vercel if the site's domain ever changes from the default baked into the code.
 3. On the site's side, each form component's Kit `fetch()` call gets replaced with:
    ```
-   POST https://www.callcaitlyn.com/api/webhooks/house-hacking-site
+   POST https://crm.callcaitlyn.com/api/webhooks/house-hacking-site
    Content-Type: application/json
 
    {

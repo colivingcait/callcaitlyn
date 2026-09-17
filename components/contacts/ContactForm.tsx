@@ -8,10 +8,12 @@ import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { syncContactToQuoAction } from "@/app/(app)/contacts/actions";
+import { applyStageChange } from "@/lib/crm/stage-transition";
 import { contactSchema, type ContactFormValues } from "@/lib/validation/contact";
 import { Button, Input, Label, Select, Textarea, Card } from "@/components/ui";
 import { CONTACT_TYPE_LABELS, TIMELINE_LABELS, REPRESENTING_LABELS, LEAD_SOURCES, cn, fullName } from "@/lib/utils";
 import { phonesMatch } from "@/lib/phone";
+import { dateInputToAppIso, isoToDateInput } from "@/lib/format-time";
 import type { ContactWithRelations, PipelineStage, Tag } from "@/types/database";
 import type { MergeCandidate } from "@/lib/data/contacts";
 
@@ -57,13 +59,13 @@ export function ContactForm({
           listing_timeline: contact.listing_timeline,
           stage_id: contact.stage_id,
           lead_source: contact.lead_source ?? "",
-          lead_date: contact.lead_date ? contact.lead_date.slice(0, 10) : "",
+          lead_date: isoToDateInput(contact.lead_date),
           budget_min: contact.budget_min ?? undefined,
           budget_max: contact.budget_max ?? undefined,
           referral_fee: contact.referral_fee ?? undefined,
           areas_of_interest: (contact.areas_of_interest ?? []).join(", "),
           timeline: contact.timeline,
-          next_follow_up_at: contact.next_follow_up_at ? contact.next_follow_up_at.slice(0, 10) : "",
+          next_follow_up_at: isoToDateInput(contact.next_follow_up_at),
           birthday: contact.birthday ?? "",
           address_line1: contact.address_line1 ?? "",
           address_line2: contact.address_line2 ?? "",
@@ -115,6 +117,10 @@ export function ContactForm({
       return;
     }
 
+    const oldStage = contact ? stages.find((s) => s.id === contact.stage_id) : undefined;
+    const newStage = stages.find((s) => s.id === (values.stage_id || null));
+    const stageChanged = (oldStage?.id ?? null) !== (newStage?.id ?? null);
+
     const payload = {
       owner_id: user.id,
       first_name: values.first_name,
@@ -126,19 +132,18 @@ export function ContactForm({
       representing: values.representing || null,
       listing_address: values.listing_address || null,
       listing_timeline: values.listing_timeline || null,
-      stage_id: values.stage_id || null,
       lead_source: values.lead_source || null,
       // Never sent as null - the column is not-null (defaults to
       // created_at/now()). Omitting it on create lets the DB default apply;
       // on edit it just leaves whatever was already there untouched.
-      ...(values.lead_date ? { lead_date: new Date(values.lead_date).toISOString() } : {}),
+      ...(values.lead_date ? { lead_date: dateInputToAppIso(values.lead_date) } : {}),
       budget_min: values.budget_min && !Number.isNaN(values.budget_min) ? values.budget_min : null,
       budget_max: values.budget_max && !Number.isNaN(values.budget_max) ? values.budget_max : null,
       areas_of_interest: values.areas_of_interest
         ? values.areas_of_interest.split(",").map((s) => s.trim()).filter(Boolean)
         : [],
       timeline: values.timeline,
-      next_follow_up_at: values.next_follow_up_at ? new Date(values.next_follow_up_at).toISOString() : null,
+      next_follow_up_at: values.next_follow_up_at ? dateInputToAppIso(values.next_follow_up_at) : null,
       birthday: values.birthday || null,
       address_line1: values.address_line1 || null,
       address_line2: values.address_line2 || null,
@@ -147,6 +152,11 @@ export function ContactForm({
       postal_code: values.postal_code || null,
       notes: values.notes || null,
       referral_fee: values.referral_fee && !Number.isNaN(values.referral_fee) ? values.referral_fee : null,
+      // Stage moves go through applyStageChange so Trash archives, Under
+      // Contract / Won open a deal, and the timeline gets a status_change.
+      // Create still sends stage_id on insert so a brand-new contact lands
+      // in the chosen column; side effects run after the row exists.
+      ...((!contact || !stageChanged) ? { stage_id: values.stage_id || null } : {}),
     };
 
     let contactId = contact?.id;
@@ -168,12 +178,41 @@ export function ContactForm({
       contactId = data.id;
     }
 
+    if (contactId && ((contact && stageChanged) || (!contact && (newStage?.is_trash || newStage?.is_closed_won || newStage?.is_under_contract)))) {
+      const { error: stageError } = await applyStageChange(supabase, user.id, contactId, oldStage, newStage);
+      if (stageError) {
+        setServerError(`Contact saved, but the stage change didn't finish: ${stageError.message}`);
+        setSubmitting(false);
+        return;
+      }
+      if (contact && stageChanged) {
+        await supabase.from("activities").insert({
+          owner_id: user.id,
+          contact_id: contactId,
+          type: "status_change",
+          direction: "none",
+          source: "manual",
+          body: `Stage changed from ${oldStage?.name ?? "None"} to ${newStage?.name ?? "None"}`,
+        });
+      }
+    }
+
     if (contactId) {
-      await supabase.from("contact_tags").delete().eq("contact_id", contactId);
+      const { error: tagDeleteError } = await supabase.from("contact_tags").delete().eq("contact_id", contactId);
+      if (tagDeleteError) {
+        setServerError(`Contact saved, but tags couldn't update: ${tagDeleteError.message}`);
+        setSubmitting(false);
+        return;
+      }
       if (selectedTagIds.length > 0) {
-        await supabase
+        const { error: tagInsertError } = await supabase
           .from("contact_tags")
           .insert(selectedTagIds.map((tagId) => ({ contact_id: contactId, tag_id: tagId })));
+        if (tagInsertError) {
+          setServerError(`Contact saved, but tags couldn't update: ${tagInsertError.message}`);
+          setSubmitting(false);
+          return;
+        }
       }
     }
 

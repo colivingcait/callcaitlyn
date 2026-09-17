@@ -17,7 +17,7 @@ import { WeeklyReviewCard } from "@/components/dashboard/WeeklyReviewCard";
 import { PrepSheetCard } from "@/components/dashboard/PrepSheetCard";
 import { Sparkles, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { pickUpNext, countDistinctPeople } from "@/lib/crm/today-priority";
+import { pickUpNext, countTodayOpenItems } from "@/lib/crm/today-priority";
 import { filterResolvedWeeklyReviewItems, type WeeklyReviewPayload } from "@/lib/data/weekly-review";
 import type { PrepSheetPayload } from "@/lib/data/prep-sheet";
 
@@ -58,21 +58,18 @@ export default async function TodayPage() {
   };
   const { item: upNext, reason: upNextReason } = pickUpNext(desktopGroups);
   const upNextMoreCount = Math.max(
-    countDistinctPeople(
-      desktopGroups.late.map((c) => c.id),
-      desktopGroups.dueToday.map((c) => c.id),
-      desktopGroups.owed.map((c) => c.id),
-    ) - (upNext ? 1 : 0),
+    countTodayOpenItems({
+      calls: [...desktopGroups.late, ...desktopGroups.dueToday],
+      repliesOwed: desktopGroups.owed,
+      myTasks: [],
+      newLeads: [],
+      registeredNoFollowUp: [],
+      bookingRequests: [],
+    }) - (upNext ? 1 : 0),
     0,
   );
 
-  const openItems = countDistinctPeople(
-    today.calls.map((c) => c.id),
-    today.repliesOwed.map((c) => c.id),
-    today.newLeads.map((c) => c.id),
-    today.registeredNoFollowUp.map((c) => c.id),
-    today.bookingRequests.map((r) => r.contact_id),
-  );
+  const openItems = countTodayOpenItems(today);
 
   // The stored payload is a snapshot from whenever the weekly-review cron
   // last ran - it never gets rewritten just because a row was fixed, so
@@ -120,6 +117,11 @@ export default async function TodayPage() {
         />
       </div>
 
+      {today.newLeadsError && (
+        <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          Couldn&apos;t load new leads: {today.newLeadsError}
+        </p>
+      )}
       {today.newLeads.length > 0 && (
         <div className="mt-4">
           <NewLeadsSection contacts={today.newLeads} layout="desktop" defaultDraftTemplate={defaultDraftTemplate} />

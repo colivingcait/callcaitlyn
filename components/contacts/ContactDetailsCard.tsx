@@ -9,7 +9,11 @@ import { createClient } from "@/lib/supabase/client";
 import { syncContactToQuoAction } from "@/app/(app)/contacts/actions";
 import { contactSchema, type ContactFormValues } from "@/lib/validation/contact";
 import { CONTACT_TYPE_LABELS, TIMELINE_LABELS, REPRESENTING_LABELS, LEAD_SOURCES, cn } from "@/lib/utils";
-import type { ContactWithRelations, PipelineStage, Tag } from "@/types/database";
+import { dateInputToAppIso, isoToDateInput } from "@/lib/format-time";
+import { useApplyStageChange } from "@/lib/hooks/useApplyStageChange";
+import { DealCelebrationModal } from "@/components/contacts/DealCelebrationModal";
+import { PendingDealCleanupModal } from "@/components/contacts/PendingDealCleanupModal";
+import type { ContactWithRelations, DealSide, PipelineStage, Tag } from "@/types/database";
 import type { MergeCandidate } from "@/lib/data/contacts";
 
 const fieldClass = "mt-1.5 w-full rounded-[10px] border border-neutral-200 bg-white px-3 py-2.5 text-[15px] text-neutral-900";
@@ -40,6 +44,7 @@ export function ContactDetailsCard({
   const [serverError, setServerError] = useState("");
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(contact.contact_tags.filter((ct) => ct.tags).map((ct) => ct.tags!.id));
   const [addingTag, setAddingTag] = useState(false);
+  const { move: applyMove, dealModal, pendingCleanup, clearDealModal, clearPendingCleanup } = useApplyStageChange(contact.owner_id);
 
   const {
     register,
@@ -59,15 +64,15 @@ export function ContactDetailsCard({
       listing_timeline: contact.listing_timeline,
       stage_id: contact.stage_id,
       lead_source: contact.lead_source ?? "",
-      lead_date: contact.lead_date ? contact.lead_date.slice(0, 10) : "",
+      lead_date: isoToDateInput(contact.lead_date),
       budget_min: contact.budget_min ?? undefined,
       budget_max: contact.budget_max ?? undefined,
       areas_of_interest: (contact.areas_of_interest ?? []).join(", "),
       timeline: contact.timeline,
-      next_follow_up_at: contact.next_follow_up_at ? contact.next_follow_up_at.slice(0, 10) : "",
+      next_follow_up_at: isoToDateInput(contact.next_follow_up_at),
       birthday: contact.birthday ?? "",
       referred_by: contact.referred_by ?? "",
-      lease_ends_at: contact.lease_ends_at ? contact.lease_ends_at.slice(0, 10) : "",
+      lease_ends_at: isoToDateInput(contact.lease_ends_at),
       address_line1: contact.address_line1 ?? "",
       address_line2: contact.address_line2 ?? "",
       city: contact.city ?? "",
@@ -94,6 +99,10 @@ export function ContactDetailsCard({
       return;
     }
 
+    const oldStage = stages.find((s) => s.id === contact.stage_id);
+    const newStage = stages.find((s) => s.id === (values.stage_id || null));
+    const stageChanged = (oldStage?.id ?? null) !== (newStage?.id ?? null);
+
     const payload = {
       owner_id: user.id,
       first_name: values.first_name,
@@ -105,14 +114,13 @@ export function ContactDetailsCard({
       representing: values.representing || null,
       listing_address: values.listing_address || null,
       listing_timeline: values.listing_timeline || null,
-      stage_id: values.stage_id || null,
       lead_source: values.lead_source || null,
-      ...(values.lead_date ? { lead_date: new Date(values.lead_date).toISOString() } : {}),
+      ...(values.lead_date ? { lead_date: dateInputToAppIso(values.lead_date) } : {}),
       budget_min: values.budget_min && !Number.isNaN(values.budget_min) ? values.budget_min : null,
       budget_max: values.budget_max && !Number.isNaN(values.budget_max) ? values.budget_max : null,
       areas_of_interest: values.areas_of_interest ? values.areas_of_interest.split(",").map((s) => s.trim()).filter(Boolean) : [],
       timeline: values.timeline,
-      next_follow_up_at: values.next_follow_up_at ? new Date(values.next_follow_up_at).toISOString() : null,
+      next_follow_up_at: values.next_follow_up_at ? dateInputToAppIso(values.next_follow_up_at) : null,
       birthday: values.birthday || null,
       referred_by: values.referred_by || null,
       lease_ends_at: values.lease_ends_at || null,
@@ -122,6 +130,7 @@ export function ContactDetailsCard({
       state: values.state || null,
       postal_code: values.postal_code || null,
       notes: values.notes || null,
+      ...(!stageChanged ? { stage_id: values.stage_id || null } : {}),
     };
 
     const { error } = await supabase.from("contacts").update(payload).eq("id", contact.id);
@@ -129,6 +138,15 @@ export function ContactDetailsCard({
       setServerError(error.message);
       setSubmitting(false);
       return;
+    }
+
+    if (stageChanged) {
+      const ok = await applyMove(contact.id, oldStage, newStage);
+      if (!ok) {
+        setServerError("Contact info saved, but the stage change didn't finish. Try Move to… on Pipeline or the Stage sheet.");
+        setSubmitting(false);
+        return;
+      }
     }
 
     const { error: tagDeleteError } = await supabase.from("contact_tags").delete().eq("contact_id", contact.id);
@@ -349,6 +367,18 @@ export function ContactDetailsCard({
         </button>
         <span className="text-sm text-neutral-400">{saved ? "Saved." : "Edits happen here - no separate edit page."}</span>
       </div>
+
+      {dealModal && (
+        <DealCelebrationModal
+          dealId={dealModal.id}
+          contactName={`${contact.first_name} ${contact.last_name}`.trim()}
+          defaultLeadStartedAt={contact.created_at}
+          defaultSide={(contact.representing === "buyer" || contact.representing === "seller" ? contact.representing : null) as DealSide | null}
+          mode={dealModal.mode ?? "celebrate"}
+          onClose={clearDealModal}
+        />
+      )}
+      {pendingCleanup && <PendingDealCleanupModal deals={pendingCleanup} onClose={clearPendingCleanup} />}
     </form>
   );
 }

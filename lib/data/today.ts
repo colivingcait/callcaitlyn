@@ -1,12 +1,13 @@
 import { isPast } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
-import { relativeTime, isTodayLocal } from "@/lib/format-time";
+import { relativeTime, isTodayLocal, endOfLocalDayIso } from "@/lib/format-time";
 import { filterByQueue } from "@/lib/crm/contact-queue-filter";
 import { listContacts } from "@/lib/data/contacts";
 import { listNewLeadsQueue } from "@/lib/data/new-leads";
 import { listWonDeals, listPendingDeals } from "@/lib/data/commissions";
 import { listPendingBookingRequests } from "@/lib/data/scheduling";
 import { computeDeals, summarizeDeals, capYearKey, capYearStart, KW_CAP } from "@/lib/crm/commission";
+import { isConversationOwed } from "@/lib/crm/message-owed";
 import type { PipelineStage } from "@/types/database";
 
 export type WorklistPerson = { id: string; name: string; phone: string | null; email?: string | null; meta: string; late: boolean; activityId?: string };
@@ -23,6 +24,7 @@ async function getCallsGroup(): Promise<WorklistPerson[]> {
     .eq("archived", false)
     .eq("known_personally", false)
     .not("next_follow_up_at", "is", null)
+    .lte("next_follow_up_at", endOfLocalDayIso())
     .order("next_follow_up_at", { ascending: true })
     .limit(30);
 
@@ -50,8 +52,8 @@ async function getRepliesOwedGroup(): Promise<WorklistPerson[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("activities")
-    .select("id, contact_id, direction, occurred_at, body, needs_reply, reply_dismissed_at, contacts!inner(id, first_name, last_name, phone, archived, known_personally)")
-    .eq("type", "text")
+    .select("id, contact_id, type, direction, occurred_at, body, needs_reply, reply_dismissed_at, metadata, contacts!inner(id, first_name, last_name, phone, archived, known_personally)")
+    .in("type", ["text", "call"])
     .eq("contacts.archived", false)
     .eq("contacts.known_personally", false)
     .order("occurred_at", { ascending: false })
@@ -63,10 +65,13 @@ async function getRepliesOwedGroup(): Promise<WorklistPerson[]> {
     const contact = row.contacts as unknown as { id: string; first_name: string; last_name: string; phone: string | null } | null;
     if (!contact || seen.has(contact.id)) continue;
     seen.add(contact.id);
-    if (row.direction !== "inbound") continue;
-    if (row.needs_reply === false) continue;
-    if (row.reply_dismissed_at) continue;
-    const preview = row.body ? `"${row.body.slice(0, 60)}${row.body.length > 60 ? "…" : ""}"` : "Texted you";
+    if (!isConversationOwed(row)) continue;
+    const preview =
+      row.type === "call"
+        ? "Missed call"
+        : row.body
+          ? `"${row.body.slice(0, 60)}${row.body.length > 60 ? "…" : ""}"`
+          : "Texted you";
     owed.push({
       id: contact.id,
       name: `${contact.first_name} ${contact.last_name}`.trim(),
@@ -199,6 +204,7 @@ export async function getTodayData() {
     statStrip,
     commissionYear,
     newLeads: newLeads.contacts,
+    newLeadsError: newLeads.error,
     bookingRequests,
   };
 }

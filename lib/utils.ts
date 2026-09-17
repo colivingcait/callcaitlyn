@@ -73,6 +73,7 @@ export const CONTACT_TYPE_LABELS: Record<string, string> = {
   past_client: "Past Client",
   sphere: "Sphere",
   attendee: "Attendee",
+  agent: "Agent",
   other: "Other",
 };
 

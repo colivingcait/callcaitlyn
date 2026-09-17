@@ -8,6 +8,7 @@ import { logActivityWithOutcome } from "@/app/(app)/contacts/actions";
 import { BottomSheet } from "@/components/mobile/BottomSheet";
 import { Button, Select, Textarea, Input } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { dateInputToAppIso } from "@/lib/format-time";
 import type { ActivityType } from "@/types/database";
 
 type ContactOption = { id: string; first_name: string; last_name: string };
@@ -83,7 +84,7 @@ export function LogSheet({
     if (!contactId) return;
     setSaving(true);
     const nextFollowUpAt = followUpDate
-      ? new Date(followUpDate).toISOString()
+      ? dateInputToAppIso(followUpDate)
       : followUpDays
         ? new Date(Date.now() + followUpDays * 24 * 60 * 60 * 1000).toISOString()
         : undefined;

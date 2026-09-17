@@ -29,3 +29,21 @@ export function countDistinctPeople(...idLists: (string | null | undefined)[][])
   }
   return ids.size;
 }
+
+export function countTodayOpenItems(today: {
+  calls: { id: string }[];
+  repliesOwed: { id: string }[];
+  myTasks: { contactId: string | null }[];
+  newLeads: { id: string }[];
+  registeredNoFollowUp: { id: string }[];
+  bookingRequests: { contact_id: string | null }[];
+}): number {
+  return countDistinctPeople(
+    today.calls.map((c) => c.id),
+    today.repliesOwed.map((c) => c.id),
+    today.myTasks.map((t) => t.contactId),
+    today.newLeads.map((c) => c.id),
+    today.registeredNoFollowUp.map((c) => c.id),
+    today.bookingRequests.map((r) => r.contact_id),
+  );
+}

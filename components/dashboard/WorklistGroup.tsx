@@ -50,25 +50,31 @@ export function WorklistGroup({
   async function handleDismiss(activityId: string) {
     if (!onDismiss) return;
     setDismissing(activityId);
-    await onDismiss(activityId);
+    const result = await onDismiss(activityId);
     setDismissing(null);
-    setDismissed((prev) => new Set(prev).add(activityId));
+    if (result?.ok) {
+      setDismissed((prev) => new Set(prev).add(activityId));
+    }
   }
 
   async function handleDismissContact(contactId: string) {
     if (!onDismissContact) return;
     setDismissing(contactId);
-    await onDismissContact(contactId);
+    const result = await onDismissContact(contactId);
     setDismissing(null);
-    setDismissed((prev) => new Set(prev).add(contactId));
+    if (result?.ok) {
+      setDismissed((prev) => new Set(prev).add(contactId));
+    }
   }
 
   async function handleNeverQueue(contactId: string) {
     if (!onNeverQueue) return;
     setDismissing(contactId);
-    await onNeverQueue(contactId);
+    const result = await onNeverQueue(contactId);
     setDismissing(null);
-    setDismissed((prev) => new Set(prev).add(contactId));
+    if (result?.ok) {
+      setDismissed((prev) => new Set(prev).add(contactId));
+    }
   }
 
   if (remaining.length === 0) {

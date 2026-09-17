@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui";
 import { PROPERTY_TYPE_LABELS } from "@/lib/utils";
+import { dateInputToAppIso, isoToDateInput, todayLocalDateInput } from "@/lib/format-time";
 import { X, PartyPopper, Handshake, Plus } from "lucide-react";
 import type { Deal, DealSide, DealStatus, PropertyType } from "@/types/database";
 
 function toDateInputValue(value: string | null | undefined) {
-  return value ? value.slice(0, 10) : "";
+  return isoToDateInput(value);
 }
 
 // Handles both UPDATE (dealId provided - the under-contract capture, the
@@ -47,7 +48,7 @@ export function DealCelebrationModal({
   // real close date - the closing-date field and commission fields only
   // make sense once the deal is actually (or about to be marked) won.
   const isPendingContext = mode === "under_contract" || ((mode === "create" || mode === "edit") && status === "pending");
-  const [closedAt, setClosedAt] = useState(toDateInputValue(initial?.closed_at) || new Date().toISOString().slice(0, 10));
+  const [closedAt, setClosedAt] = useState(toDateInputValue(initial?.closed_at) || todayLocalDateInput());
   const [expectedClosingDate, setExpectedClosingDate] = useState(toDateInputValue(initial?.expected_closing_date));
   const [address, setAddress] = useState(initial?.address ?? "");
   const [propertyType, setPropertyType] = useState<PropertyType | "">(initial?.property_type ?? "");
@@ -63,9 +64,7 @@ export function DealCelebrationModal({
   const [kwriFee, setKwriFee] = useState(initial?.kwri_fee?.toString() ?? "");
   const [manualFmlsFee, setManualFmlsFee] = useState(initial?.fmls_fee?.toString() ?? "");
   const [tcFee, setTcFee] = useState(initial?.tc_fee?.toString() ?? "");
-  const [leadStartedAt, setLeadStartedAt] = useState(
-    (initial?.lead_started_at ?? defaultLeadStartedAt)?.slice(0, 10) ?? "",
-  );
+  const [leadStartedAt, setLeadStartedAt] = useState(isoToDateInput(initial?.lead_started_at ?? defaultLeadStartedAt));
   const [notes, setNotes] = useState(initial?.notes ?? "");
 
   async function handleSave() {
@@ -84,7 +83,7 @@ export function DealCelebrationModal({
       // Referral is always a percentage of gross, independent of manual_split
       // (which only covers KW/KWRI/FMLS/TC).
       referral_pct: referralPct ? Number(referralPct) : null,
-      lead_started_at: leadStartedAt ? new Date(leadStartedAt).toISOString() : null,
+      lead_started_at: leadStartedAt ? dateInputToAppIso(leadStartedAt) : null,
       notes: notes || null,
     };
     if (manualSplit) {
@@ -95,7 +94,7 @@ export function DealCelebrationModal({
     } else {
       fields.on_fmls = onFmls;
     }
-    if (!isPendingContext) fields.closed_at = new Date(closedAt).toISOString();
+    if (!isPendingContext) fields.closed_at = dateInputToAppIso(closedAt);
     fields.expected_closing_date = expectedClosingDate || null;
     if (isStandaloneEdit) fields.client_name = clientName || null;
 

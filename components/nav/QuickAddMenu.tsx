@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { X, UserPlus, ListTodo } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Input, Select } from "@/components/ui";
+import { dateInputToAppIso } from "@/lib/format-time";
 
 type ContactOption = { id: string; first_name: string; last_name: string };
 
@@ -21,6 +22,7 @@ export function QuickAddMenu({ onClose, initialMode = "pick" }: { onClose: () =>
   const [contactId, setContactId] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (mode !== "task" || contacts) return;
@@ -42,17 +44,26 @@ export function QuickAddMenu({ onClose, initialMode = "pick" }: { onClose: () =>
     e.preventDefault();
     if (!title.trim()) return;
     setSaving(true);
+    setError("");
     const supabase = createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from("tasks").insert({
-        owner_id: user.id,
-        contact_id: contactId || null,
-        title: title.trim(),
-        due_at: dueAt ? new Date(dueAt).toISOString() : null,
-      });
+    if (!user) {
+      setError("Your session expired. Please sign in again.");
+      setSaving(false);
+      return;
+    }
+    const { error: insertError } = await supabase.from("tasks").insert({
+      owner_id: user.id,
+      contact_id: contactId || null,
+      title: title.trim(),
+      due_at: dueAt ? dateInputToAppIso(dueAt) : null,
+    });
+    if (insertError) {
+      setError(insertError.message);
+      setSaving(false);
+      return;
     }
     setSaving(false);
     router.refresh();
@@ -106,6 +117,7 @@ export function QuickAddMenu({ onClose, initialMode = "pick" }: { onClose: () =>
               </Select>
               <Input type="date" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
             </div>
+            {error && <p className="text-sm text-red-600">{error}</p>}
             <div className="flex gap-2">
               <Button type="submit" disabled={saving || !title.trim()} className="flex-1">
                 {saving ? "Adding…" : "Add task"}

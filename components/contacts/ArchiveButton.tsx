@@ -15,20 +15,30 @@ export function ArchiveButton({ contactId, archived }: { contactId: string; arch
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleToggle() {
     setSaving(true);
+    setError("");
     const supabase = createClient();
-    await supabase.from("contacts").update({ archived: !archived }).eq("id", contactId);
+    const { error: updateError } = await supabase.from("contacts").update({ archived: !archived }).eq("id", contactId);
+    if (updateError) {
+      setError(updateError.message);
+      setSaving(false);
+      return;
+    }
     if (!archived) router.push("/contacts");
     router.refresh();
   }
 
   if (archived) {
     return (
-      <Button variant="ghost" size="sm" onClick={handleToggle} disabled={saving}>
-        <ArchiveRestore size={15} /> {saving ? "Restoring…" : "Restore"}
-      </Button>
+      <div>
+        <Button variant="ghost" size="sm" onClick={handleToggle} disabled={saving}>
+          <ArchiveRestore size={15} /> {saving ? "Restoring…" : "Restore"}
+        </Button>
+        {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      </div>
     );
   }
 
@@ -42,6 +52,7 @@ export function ArchiveButton({ contactId, archived }: { contactId: string; arch
         <Button variant="ghost" size="sm" onClick={() => setConfirming(false)}>
           Cancel
         </Button>
+        {error && <p className="text-xs text-red-600">{error}</p>}
       </div>
     );
   }

@@ -23,14 +23,16 @@ export function AddActivityForm({ contactId, ownerId }: { contactId: string; own
   const [direction, setDirection] = useState<ActivityDirection>("none");
   const [body, setBody] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!body.trim() && type === "note") return;
     setSaving(true);
+    setError("");
 
     const supabase = createClient();
-    await supabase.from("activities").insert({
+    const { error: insertError } = await supabase.from("activities").insert({
       owner_id: ownerId,
       contact_id: contactId,
       type,
@@ -38,6 +40,11 @@ export function AddActivityForm({ contactId, ownerId }: { contactId: string; own
       body: body.trim() || null,
       source: "manual",
     });
+    if (insertError) {
+      setError(insertError.message);
+      setSaving(false);
+      return;
+    }
 
     setBody("");
     setSaving(false);
@@ -77,6 +84,7 @@ export function AddActivityForm({ contactId, ownerId }: { contactId: string; own
         onChange={(e) => setBody(e.target.value)}
         autoFocus
       />
+      {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={saving} className="flex-1">
           {saving ? "Saving…" : "Save"}

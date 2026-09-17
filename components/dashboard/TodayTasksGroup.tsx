@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2, Check, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { formatLocal } from "@/lib/format-time";
+import { formatLocal, dateInputToAppIso, isoToDateInput } from "@/lib/format-time";
 import { cn } from "@/lib/utils";
 import type { WorklistTask } from "@/lib/data/today";
 import type { MergeCandidate } from "@/lib/data/contacts";
@@ -27,6 +27,7 @@ export function TodayTasksGroup({ tasks, ownerId, contacts }: { tasks: WorklistT
   const [dueAt, setDueAt] = useState("");
   const [contactId, setContactId] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDueAt, setEditDueAt] = useState("");
@@ -38,13 +39,19 @@ export function TodayTasksGroup({ tasks, ownerId, contacts }: { tasks: WorklistT
     e.preventDefault();
     if (!title.trim()) return;
     setSaving(true);
+    setError("");
     const supabase = createClient();
-    await supabase.from("tasks").insert({
+    const { error: insertError } = await supabase.from("tasks").insert({
       owner_id: ownerId,
       contact_id: contactId || null,
       title: title.trim(),
-      due_at: dueAt ? new Date(dueAt).toISOString() : null,
+      due_at: dueAt ? dateInputToAppIso(dueAt) : null,
     });
+    if (insertError) {
+      setError(insertError.message);
+      setSaving(false);
+      return;
+    }
     setTitle("");
     setDueAt("");
     setContactId("");
@@ -55,36 +62,49 @@ export function TodayTasksGroup({ tasks, ownerId, contacts }: { tasks: WorklistT
 
   async function toggleComplete(task: WorklistTask) {
     const supabase = createClient();
-    await supabase.from("tasks").update({ completed_at: new Date().toISOString() }).eq("id", task.id);
+    const { error: updateError } = await supabase.from("tasks").update({ completed_at: new Date().toISOString() }).eq("id", task.id);
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
     router.refresh();
   }
 
   function startEdit(task: WorklistTask) {
     setEditingId(task.id);
     setEditTitle(task.title);
-    setEditDueAt(task.dueAt ? task.dueAt.slice(0, 10) : "");
+    setEditDueAt(isoToDateInput(task.dueAt));
   }
 
   async function saveEdit(taskId: string) {
     if (!editTitle.trim()) return;
     const supabase = createClient();
-    await supabase
+    const { error: updateError } = await supabase
       .from("tasks")
-      .update({ title: editTitle.trim(), due_at: editDueAt ? new Date(editDueAt).toISOString() : null })
+      .update({ title: editTitle.trim(), due_at: editDueAt ? dateInputToAppIso(editDueAt) : null })
       .eq("id", taskId);
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
     setEditingId(null);
     router.refresh();
   }
 
   async function deleteTask(taskId: string) {
     const supabase = createClient();
-    await supabase.from("tasks").delete().eq("id", taskId);
+    const { error: deleteError } = await supabase.from("tasks").delete().eq("id", taskId);
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
     setConfirmingDeleteId(null);
     router.refresh();
   }
 
   return (
     <div>
+      {error && <p className="px-4 pt-3 text-sm text-red-600">{error}</p>}
       {tasks.length === 0 && !adding && <p className="px-4 py-6 text-[15px] text-neutral-400">No open tasks.</p>}
 
       {visible.map((task) => (

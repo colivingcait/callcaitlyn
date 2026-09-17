@@ -6,7 +6,7 @@ import { TodayWorklist } from "@/components/dashboard/mobile/TodayWorklist";
 import { TodayFooterLine } from "@/components/dashboard/mobile/TodayFooterLine";
 import { TodaySearch } from "@/components/dashboard/mobile/TodaySearch";
 import { NewLeadsSection } from "@/components/dashboard/NewLeadsSection";
-import { pickUpNext, countDistinctPeople } from "@/lib/crm/today-priority";
+import { pickUpNext, countTodayOpenItems } from "@/lib/crm/today-priority";
 import type { getTodayData, WorklistPerson } from "@/lib/data/today";
 import type { WeeklyReviewPayload } from "@/lib/data/weekly-review";
 import type { PrepSheetPayload } from "@/lib/data/prep-sheet";
@@ -37,14 +37,7 @@ export function TodayMobile({
     registered: today.registeredNoFollowUp,
   };
 
-  const openItems = countDistinctPeople(
-    today.calls.map((c) => c.id),
-    today.repliesOwed.map((c) => c.id),
-    today.myTasks.map((t) => t.contactId),
-    today.newLeads.map((c) => c.id),
-    today.registeredNoFollowUp.map((c) => c.id),
-    today.bookingRequests.map((r) => r.contact_id),
-  );
+  const openItems = countTodayOpenItems(today);
 
   // Priority: overdue > due today > owed reply - the highest-priority
   // non-empty group's first person becomes Up next. New Leads has its own
@@ -75,6 +68,11 @@ export function TodayMobile({
         </div>
       )}
 
+      {today.newLeadsError && (
+        <p className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          Couldn&apos;t load new leads: {today.newLeadsError}
+        </p>
+      )}
       {today.newLeads.length > 0 && (
         <div className="mb-3">
           <NewLeadsSection contacts={today.newLeads} layout="mobile" defaultDraftTemplate={defaultDraftTemplate} />

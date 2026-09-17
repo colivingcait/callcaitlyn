@@ -24,10 +24,9 @@ export type NavItem = { href: string; label: string; icon: LucideIcon };
 export type NavGroup = { label: string; items: NavItem[] };
 export type NavCounts = { contacts?: number; dialer?: number; messages?: number; notes?: number; insights?: number; listings?: number };
 
-// Thirteen items in three groups - about the ceiling before a sidebar
-// becomes a list you scan instead of a map you know. Insights, Sphere,
-// Events, and Numbers are new destinations (Phase 2+) that route to a
-// placeholder for now so the nav isn't lying about what exists yet.
+// Thirteen items in three groups. Insights, Sphere, Events, and Numbers
+// are live destinations (not placeholders) - keep them here so the
+// sidebar matches what she can actually open.
 export const WORK_ITEMS: NavItem[] = [
   { href: "/", label: "Today", icon: Sunrise },
   { href: "/insights", label: "Insights", icon: Lightbulb },

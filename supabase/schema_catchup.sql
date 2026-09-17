@@ -1,17 +1,14 @@
 -- ============================================================================
--- SCHEMA CATCH-UP SCRIPT
+-- SCHEMA CATCH-UP SCRIPT (LEGACY — STOPPED AT MIGRATION 0026)
 -- ============================================================================
--- Run this ONCE in the Supabase SQL Editor. It re-applies everything from
--- migrations 0001 through 0026 in an idempotent, safe-to-rerun form, so it
--- doesn't matter which individual migration files were or weren't run
--- historically - anything already present is left untouched, anything
--- missing gets added. Safe to run multiple times.
+-- Do NOT run this on a new project. It only covers migrations 0001–0026.
+-- The live CRM is now through 0074 (listings, scheduling, spam, OM pages,
+-- listing_page activity source, etc.). A fresh database must apply
+-- supabase/migrations/0001_init.sql through 0074_*.sql in order.
 --
--- Why this exists: several columns/tables have turned out to be missing on
--- the live database even though their migration files existed in the repo
--- (0002's last_event_name, 0014's expected_closing_date, and others) -
--- guessing which single migration is missing one error at a time doesn't
--- scale. Run this once and that whole class of bug goes away.
+-- This file still exists so an older drifted database that never got
+-- 0002–0026 can be repaired without guessing which file is missing.
+-- It is idempotent for that range only. Anything after 0026 is NOT here.
 -- ============================================================================
 
 create extension if not exists "pgcrypto";

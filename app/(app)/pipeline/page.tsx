@@ -4,7 +4,8 @@ import { PipelineBoard } from "@/components/contacts/PipelineBoard";
 export default async function PipelinePage({ searchParams }: { searchParams: Promise<{ stage?: string }> }) {
   const params = await searchParams;
   const [contacts, stages] = await Promise.all([listContacts({}), listStages()]);
-  const activeCount = contacts.filter((c) => c.stage_id).length;
+  const activeStageIds = new Set(stages.filter((s) => !s.is_closed_won && !s.is_closed_lost && !s.is_trash).map((s) => s.id));
+  const activeCount = contacts.filter((c) => c.stage_id && activeStageIds.has(c.stage_id)).length;
 
   return (
     <div>

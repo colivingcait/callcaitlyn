@@ -7,6 +7,7 @@ import { upsertActivity } from "@/lib/crm/activities";
 import { updateEngagementTag } from "@/lib/crm/engagement";
 import { notifyNewLead } from "@/lib/push/send-push";
 import { buildBookingConfirmedMessage } from "@/lib/crm/booking-message";
+import { collectBusyIntervals, intervalOverlapsBusy } from "@/lib/crm/booking-availability";
 
 // Public, unauthenticated by design - she texted this link to the
 // visitor, not the logged-in agent. Same pattern as app/n/[slug]/actions.ts
@@ -40,6 +41,19 @@ export async function confirmProposedTime(token: string): Promise<{ ok: true } |
   const { data: request } = await admin.from("booking_requests").select("*").eq("owner_id", OWNER_ID).eq("propose_token", token).maybeSingle();
   if (!request || request.stage !== "time_proposed" || !request.proposed_starts_at || !request.proposed_ends_at) {
     return { ok: false, error: "This link isn't active anymore." };
+  }
+
+  const { data: settings } = await admin.from("scheduling_settings").select("buffer_minutes").eq("owner_id", OWNER_ID).maybeSingle();
+  const busy = await collectBusyIntervals(
+    admin,
+    OWNER_ID,
+    request.proposed_starts_at,
+    request.proposed_ends_at,
+    settings?.buffer_minutes ?? 15,
+    request.id,
+  );
+  if (intervalOverlapsBusy(request.proposed_starts_at, request.proposed_ends_at, busy)) {
+    return { ok: false, error: "That time was just taken. Ask Caitlyn for a new one." };
   }
 
   const durationMinutes = Math.round((new Date(request.proposed_ends_at).getTime() - new Date(request.proposed_starts_at).getTime()) / 60_000);

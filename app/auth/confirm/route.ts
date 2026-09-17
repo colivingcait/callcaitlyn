@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { type NextRequest } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
+import { AUTH_NEXT_COOKIE, safeInternalPath } from "@/lib/auth/safe-path";
 
 // Verifies the magic-link token directly against Supabase (token_hash),
 // instead of exchanging a PKCE `code`. The PKCE code exchange requires a
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
-  const next = searchParams.get("next") ?? "/";
+  const next = safeInternalPath(searchParams.get("next") || request.cookies.get(AUTH_NEXT_COOKIE)?.value);
 
   if (token_hash && type) {
     const supabase = await createClient();

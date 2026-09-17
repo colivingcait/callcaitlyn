@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Settings, DollarSign } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/nav/Sidebar";
@@ -17,6 +18,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
   const [{ count: contactsCount }, conversations, { contacts: followups }, { items: confirmations }, unmatchedNotes, suggestionQueue, unansweredAgents] =
     await Promise.all([
