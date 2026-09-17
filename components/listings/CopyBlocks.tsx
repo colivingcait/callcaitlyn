@@ -22,7 +22,7 @@ export function CopyBlocks({
   const teaser = story ? story.split(/\.\s/)[0] : `${specs}.`;
   // Same wording the composer's "Just listed" template sends, so pasting
   // this somewhere and sending the actual text read the same way.
-  const agentText = buildAgentTemplates(address, price, zillowUrl).find((t) => t.label === "Just listed")!.body;
+  const agentText = buildAgentTemplates(address, price, zillowUrl).find((t) => t.label === "Just listed")?.body ?? "";
 
   const blocks = [
     { key: "fb", label: "Facebook post", body: `Just listed — ${address}, ${price}. ${teaser}. DM me for the numbers.` },

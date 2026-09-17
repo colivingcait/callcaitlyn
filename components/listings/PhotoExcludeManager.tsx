@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateExcludedPhotos } from "@/app/(app)/listings/actions";
+import { asPhotoList, asUrlList } from "@/lib/listings/crm-marketing-fields";
 import type { PadsplitPhoto } from "@/types/database";
 
 const EXTERIOR = /exterior|front|back|yard|street|curb|driveway|porch|roof|outside/i;
@@ -12,9 +13,10 @@ const EXTERIOR = /exterior|front|back|yard|street|curb|driveway|porch|roof|outsi
 // override on top, per the client's explicit requirement. Every scraped
 // photo is shown here with its auto-filter result, so she can see what got
 // dropped and why, and override any individual one either direction.
-export function PhotoExcludeManager({ listingId, photos, excludedUrls }: { listingId: string; photos: PadsplitPhoto[]; excludedUrls: string[] }) {
+export function PhotoExcludeManager({ listingId, photos, excludedUrls }: { listingId: string; photos: PadsplitPhoto[] | null; excludedUrls: string[] | null }) {
   const router = useRouter();
-  const [excluded, setExcluded] = useState(new Set(excludedUrls));
+  const safePhotos = asPhotoList(photos);
+  const [excluded, setExcluded] = useState(new Set(asUrlList(excludedUrls)));
   const [saving, setSaving] = useState(false);
 
   async function toggle(url: string) {
@@ -28,13 +30,13 @@ export function PhotoExcludeManager({ listingId, photos, excludedUrls }: { listi
     router.refresh();
   }
 
-  if (photos.length === 0) return <p className="text-xs text-neutral-400">No PadSplit photos scraped yet.</p>;
+  if (safePhotos.length === 0) return <p className="text-xs text-neutral-400">No PadSplit photos scraped yet.</p>;
 
   return (
     <div>
       <p className="mb-2 text-xs text-neutral-500">{saving ? "Saving…" : "Uncheck a photo to keep it off the public page."}</p>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {photos.map((photo) => {
+        {safePhotos.map((photo) => {
           const autoFiltered = EXTERIOR.test(photo.category ?? "");
           const isExcluded = excluded.has(photo.url) || autoFiltered;
           return (

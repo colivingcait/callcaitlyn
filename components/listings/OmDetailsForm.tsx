@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateListingOmFields } from "@/app/(app)/listings/actions";
+import { DEFAULT_DD_DAYS, DEFAULT_SELLER_SUPPORT_DAYS, daysInputValue } from "@/lib/listings/crm-marketing-fields";
 import type { Listing } from "@/types/database";
 
 const inputClass = "w-full rounded-xl border border-neutral-200 px-3 py-2 text-[15px]";
@@ -33,9 +34,12 @@ export function OmDetailsForm({ listing }: { listing: Listing }) {
   const [coAgentBrokerage, setCoAgentBrokerage] = useState(listing.co_agent_brokerage ?? "");
   const [coAgentPhone, setCoAgentPhone] = useState(listing.co_agent_phone ?? "");
   const [coAgentEmail, setCoAgentEmail] = useState(listing.co_agent_email ?? "");
-  const [ddDays, setDdDays] = useState(listing.dd_days.toString());
-  const [sellerSupportDays, setSellerSupportDays] = useState(listing.seller_support_days.toString());
-  const [showSellerSection, setShowSellerSection] = useState(listing.show_seller_section);
+  // Production listing rows can omit due-diligence integers (the public OM
+  // page already guards this). Calling .toString() here white-screened the
+  // CRM Marketing tab.
+  const [ddDays, setDdDays] = useState(daysInputValue(listing.dd_days, DEFAULT_DD_DAYS));
+  const [sellerSupportDays, setSellerSupportDays] = useState(daysInputValue(listing.seller_support_days, DEFAULT_SELLER_SUPPORT_DAYS));
+  const [showSellerSection, setShowSellerSection] = useState(listing.show_seller_section ?? true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 

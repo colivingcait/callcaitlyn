@@ -25,6 +25,7 @@ import { MarketingGraphics } from "@/components/listings/MarketingGraphics";
 import { CopyBlocks } from "@/components/listings/CopyBlocks";
 import { ActivityTab } from "@/components/listings/ActivityTab";
 import { Section } from "@/components/ui/Section";
+import { asPhotoList, asUrlList } from "@/lib/listings/crm-marketing-fields";
 import type { ListingAgentMessage } from "@/types/database";
 
 type Tab = "rp" | "marketing" | "activity";
@@ -50,10 +51,11 @@ export default async function ListingDetailPage({ params, searchParams }: { para
     .filter(Boolean)
     .join(" · ");
 
+  const photoPaths = asUrlList(listing.photo_paths);
   let photoUrls: string[] = [];
-  if (activeTab === "marketing" && listing.photo_paths.length > 0) {
+  if (activeTab === "marketing" && photoPaths.length > 0) {
     const supabase = await createClient();
-    photoUrls = listing.photo_paths.map((p) => supabase.storage.from("listing-photos").getPublicUrl(p).data.publicUrl);
+    photoUrls = photoPaths.map((p) => supabase.storage.from("listing-photos").getPublicUrl(p).data.publicUrl);
   }
 
   let enrichedMessages: EnrichedMessage[] = [];
@@ -162,7 +164,7 @@ export default async function ListingDetailPage({ params, searchParams }: { para
             <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
               <BasicsForm listing={listing} />
               <div className="mt-4">
-                <PhotoUploader listingId={listing.id} photoUrls={photoUrls} photoPaths={listing.photo_paths} />
+                <PhotoUploader listingId={listing.id} photoUrls={photoUrls} photoPaths={photoPaths} />
               </div>
             </div>
             <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px] space-y-4">
@@ -190,7 +192,7 @@ export default async function ListingDetailPage({ params, searchParams }: { para
             </div>
             <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
               <h2 className="mb-3 text-base font-semibold text-neutral-900">PadSplit photos</h2>
-              <PhotoExcludeManager listingId={listing.id} photos={listing.padsplit_photos ?? []} excludedUrls={listing.excluded_photo_urls} />
+              <PhotoExcludeManager listingId={listing.id} photos={asPhotoList(listing.padsplit_photos)} excludedUrls={asUrlList(listing.excluded_photo_urls)} />
             </div>
             <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
               <div className="mb-3 flex items-center justify-between">
