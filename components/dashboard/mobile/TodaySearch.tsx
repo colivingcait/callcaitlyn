@@ -25,7 +25,7 @@ export function TodaySearch({ contacts }: { contacts: ContactOption[] }) {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Search"
-        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-neutral-200 text-neutral-500"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-400"
       >
         <Search size={19} />
       </button>

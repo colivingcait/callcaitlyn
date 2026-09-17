@@ -23,6 +23,7 @@ async function getCallsGroup(): Promise<WorklistPerson[]> {
     .select("id, first_name, last_name, phone, next_follow_up_at")
     .eq("archived", false)
     .eq("known_personally", false)
+    .eq("spam", false)
     .not("next_follow_up_at", "is", null)
     .lte("next_follow_up_at", endOfLocalDayIso())
     .order("next_follow_up_at", { ascending: true })
@@ -52,10 +53,11 @@ async function getRepliesOwedGroup(): Promise<WorklistPerson[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("activities")
-    .select("id, contact_id, type, direction, occurred_at, body, needs_reply, reply_dismissed_at, metadata, contacts!inner(id, first_name, last_name, phone, archived, known_personally)")
+    .select("id, contact_id, type, direction, occurred_at, body, needs_reply, reply_dismissed_at, metadata, contacts!inner(id, first_name, last_name, phone, archived, known_personally, spam)")
     .in("type", ["text", "call"])
     .eq("contacts.archived", false)
     .eq("contacts.known_personally", false)
+    .eq("contacts.spam", false)
     .order("occurred_at", { ascending: false })
     .limit(1000);
 

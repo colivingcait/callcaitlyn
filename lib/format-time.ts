@@ -7,6 +7,7 @@ import { formatDistanceToNowStrict } from "date-fns";
 // (rather than per-viewer detection, which needs client-side rendering and
 // causes SSR/hydration mismatches) is the simplest correct fix.
 export const APP_TIMEZONE = "America/New_York";
+export const APP_MARKET = "Atlanta";
 
 export function formatLocal(date: string | Date, pattern: string): string {
   return formatInTimeZone(date, APP_TIMEZONE, pattern);
