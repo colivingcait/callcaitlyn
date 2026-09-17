@@ -72,6 +72,7 @@ export async function snoozeFollowUp(contactId: string, days = 1) {
   if (error) return { ok: false as const, error: error.message };
   revalidatePath("/");
   revalidatePath(`/contacts/${contactId}`);
+  revalidatePath(`/messages/${contactId}`);
   return { ok: true as const };
 }
 
@@ -106,6 +107,7 @@ export async function clearFollowUp(contactId: string) {
   if (error) return { ok: false as const, error: error.message };
   revalidatePath("/");
   revalidatePath(`/contacts/${contactId}`);
+  revalidatePath(`/messages/${contactId}`);
   return { ok: true as const };
 }
 

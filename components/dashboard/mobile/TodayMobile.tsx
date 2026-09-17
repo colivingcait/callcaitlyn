@@ -108,6 +108,7 @@ export function TodayMobile({
         newUncontactedCount={groups.newUncontacted.length}
         quietCount={groups.quiet.length}
         messages={groups.owed}
+        underContractCount={today.statStrip.underContractCount}
         focus={focus}
       />
 

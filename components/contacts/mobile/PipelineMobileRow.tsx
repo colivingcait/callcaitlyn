@@ -23,7 +23,7 @@ export function PipelineMobileRow({
 }) {
   const router = useRouter();
   const context = getPipelineCardContext(contact, stage, extras, dealOverride);
-  const deal = stage?.is_under_contract ? (dealOverride ?? extras.pendingDealByContact.get(contact.id)?.[0]) : undefined;
+  const deal = stage?.is_under_contract ? (dealOverride ?? extras.pendingDealByContact[contact.id]?.[0]) : undefined;
 
   function goToThread(e: React.MouseEvent) {
     e.preventDefault();

@@ -84,19 +84,27 @@ async function getRepliesOwedGroup(): Promise<WorklistPerson[]> {
   return owed;
 }
 
-export type WorklistTask = { id: string; title: string; dueAt: string | null; contactId: string | null; contactName: string | null; late: boolean };
+export type WorklistTask = {
+  id: string;
+  title: string;
+  dueAt: string | null;
+  contactId: string | null;
+  contactName: string | null;
+  phone: string | null;
+  late: boolean;
+};
 
 async function getMyTasksGroup(): Promise<WorklistTask[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("tasks")
-    .select("id, title, due_at, contact_id, contacts(first_name, last_name)")
+    .select("id, title, due_at, contact_id, contacts(first_name, last_name, phone)")
     .is("completed_at", null)
     .order("due_at", { ascending: true, nullsFirst: false })
     .limit(30);
 
   return (data ?? []).map((t) => {
-    const contact = t.contacts as unknown as { first_name: string; last_name: string } | null;
+    const contact = t.contacts as unknown as { first_name: string; last_name: string; phone: string | null } | null;
     const late = t.due_at ? isPast(new Date(t.due_at)) && !isTodayLocal(t.due_at) : false;
     return {
       id: t.id,
@@ -104,6 +112,7 @@ async function getMyTasksGroup(): Promise<WorklistTask[]> {
       dueAt: t.due_at,
       contactId: t.contact_id,
       contactName: contact ? `${contact.first_name} ${contact.last_name}`.trim() : null,
+      phone: contact?.phone ?? null,
       late,
     };
   });

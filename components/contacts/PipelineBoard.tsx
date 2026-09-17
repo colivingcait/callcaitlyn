@@ -16,7 +16,7 @@ import type { PipelinePendingDeal, PipelineExtras } from "@/lib/data/pipeline";
 function rowsForStage(stage: PipelineStage, items: ContactWithRelations[], extras: PipelineExtras) {
   if (!stage.is_under_contract) return items.map((contact) => ({ contact, deal: undefined as PipelinePendingDeal | undefined }));
   const rows = items.flatMap((contact) => {
-    const deals = extras.pendingDealByContact.get(contact.id) ?? [];
+    const deals = extras.pendingDealByContact[contact.id] ?? [];
     if (deals.length === 0) return [{ contact, deal: undefined as PipelinePendingDeal | undefined }];
     return deals.map((deal) => ({ contact, deal }));
   });
@@ -69,15 +69,15 @@ export async function PipelineBoard({
 
   function summaryFor(stage: PipelineStage, items: ContactWithRelations[]): { text: string; quiet: boolean } | null {
     if (stage.is_under_contract) {
-      const total = items.reduce((sum, c) => sum + (extras.pendingDealByContact.get(c.id) ?? []).reduce((s, d) => s + d.netCommission, 0), 0);
+      const total = items.reduce((sum, c) => sum + (extras.pendingDealByContact[c.id] ?? []).reduce((s, d) => s + d.netCommission, 0), 0);
       return total > 0 ? { text: `${formatCurrency(total)} projected`, quiet: false } : null;
     }
     if (stage.id === hotStage?.id) {
-      const goneQuiet = items.filter((c) => extras.coldFromHotIds.has(c.id)).length;
+      const goneQuiet = items.filter((c) => extras.coldFromHotIds[c.id]).length;
       return goneQuiet > 0 ? { text: `${goneQuiet} gone quiet 30+ days`, quiet: true } : null;
     }
     if (stage.id === newLeadStage?.id) {
-      const noContact = items.filter((c) => extras.noContactIds.has(c.id)).length;
+      const noContact = items.filter((c) => extras.noContactIds[c.id]).length;
       return noContact > 0 ? { text: `${noContact} not yet contacted`, quiet: false } : null;
     }
     return null;
@@ -85,13 +85,13 @@ export async function PipelineBoard({
 
   const underContractItems = underContractStage ? byStage.get(underContractStage.id) ?? [] : [];
   const underContractTotal = underContractItems.reduce(
-    (sum, c) => sum + (extras.pendingDealByContact.get(c.id) ?? []).reduce((s, d) => s + d.netCommission, 0),
+    (sum, c) => sum + (extras.pendingDealByContact[c.id] ?? []).reduce((s, d) => s + d.netCommission, 0),
     0,
   );
   const hotItems = hotStage ? byStage.get(hotStage.id) ?? [] : [];
-  const goneQuietCount = hotItems.filter((c) => extras.coldFromHotIds.has(c.id)).length;
+  const goneQuietCount = hotItems.filter((c) => extras.coldFromHotIds[c.id]).length;
   const newLeadItems = newLeadStage ? byStage.get(newLeadStage.id) ?? [] : [];
-  const noContactCount = newLeadItems.filter((c) => extras.noContactIds.has(c.id)).length;
+  const noContactCount = newLeadItems.filter((c) => extras.noContactIds[c.id]).length;
 
   return (
     <div>

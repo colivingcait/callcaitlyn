@@ -151,6 +151,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
           newUncontactedCount={desktopGroups.newUncontacted.length}
           quietCount={desktopGroups.quiet.length}
           messages={desktopGroups.owed}
+          underContractCount={today.statStrip.underContractCount}
           focus={focus}
         />
       </div>

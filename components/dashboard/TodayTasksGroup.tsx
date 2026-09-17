@@ -3,12 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2, Check, Plus, Clock } from "lucide-react";
+import { Pencil, Trash2, Check, Plus, Clock, Phone, MessageSquareText } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatLocal, dateInputToAppIso, isoToDateInput } from "@/lib/format-time";
 import { cn } from "@/lib/utils";
 import { snoozeTask } from "@/app/(app)/today-actions";
 import { SnoozeMenu } from "@/components/contacts/SnoozeMenu";
+import { openQuoCall, openQuoText } from "@/lib/quo/call-link";
 import type { WorklistTask } from "@/lib/data/today";
 import type { MergeCandidate } from "@/lib/data/contacts";
 
@@ -154,11 +155,12 @@ export function TodayTasksGroup({ tasks, ownerId, contacts }: { tasks: WorklistT
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-3.5">
+            <div className="flex items-start gap-3.5">
               <button
                 type="button"
                 onClick={() => toggleComplete(task)}
-                className="flex h-[21px] w-[21px] shrink-0 items-center justify-center rounded-full border border-neutral-300"
+                className="mt-0.5 flex h-[21px] w-[21px] shrink-0 items-center justify-center rounded-full border border-neutral-300"
+                aria-label="Complete task"
               >
                 <Check size={13} className="opacity-0" />
               </button>
@@ -178,24 +180,43 @@ export function TodayTasksGroup({ tasks, ownerId, contacts }: { tasks: WorklistT
                     .filter(Boolean)
                     .reduce<React.ReactNode[]>((acc, node, i) => (i === 0 ? [node as React.ReactNode] : [...acc, " · ", node as React.ReactNode]), [])}
                 </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setSnoozeId(snoozeId === task.id ? null : task.id)}
+                      className="flex items-center gap-1.5 rounded-[10px] border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-800"
+                    >
+                      <Clock size={15} className="text-neutral-500" /> Snooze
+                    </button>
+                    {snoozeId === task.id && <SnoozeMenu onPick={(days) => snooze(task.id, days)} align="left" />}
+                  </div>
+                  {task.phone && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => openQuoCall(task.phone!)}
+                        className="flex items-center gap-1.5 rounded-[10px] border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-800"
+                      >
+                        <Phone size={15} className="text-neutral-500" /> Call
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openQuoText(task.phone!)}
+                        className="flex items-center gap-1.5 rounded-[10px] border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-800"
+                      >
+                        <MessageSquareText size={15} className="text-neutral-500" /> Text
+                      </button>
+                    </>
+                  )}
+                  <button onClick={() => startEdit(task)} className="shrink-0 rounded-[10px] border border-neutral-200 bg-white p-2 text-neutral-500">
+                    <Pencil size={14} />
+                  </button>
+                  <button onClick={() => setConfirmingDeleteId(task.id)} className="shrink-0 rounded-[10px] border border-neutral-200 bg-white p-2 text-red-600">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setSnoozeId(snoozeId === task.id ? null : task.id)}
-                  className="shrink-0 rounded-[10px] border border-neutral-200 bg-white p-2 text-neutral-500"
-                  aria-label="Snooze task"
-                >
-                  <Clock size={14} />
-                </button>
-                {snoozeId === task.id && <SnoozeMenu onPick={(days) => snooze(task.id, days)} />}
-              </div>
-              <button onClick={() => startEdit(task)} className="shrink-0 rounded-[10px] border border-neutral-200 bg-white p-2 text-neutral-500">
-                <Pencil size={14} />
-              </button>
-              <button onClick={() => setConfirmingDeleteId(task.id)} className="shrink-0 rounded-[10px] border border-neutral-200 bg-white p-2 text-red-600">
-                <Trash2 size={14} />
-              </button>
             </div>
           )}
         </div>
