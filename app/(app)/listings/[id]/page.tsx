@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { getListingDetail, getSendProgress } from "@/lib/data/listings";
+import { collapseListingAgents } from "@/lib/crm/agent-identity";
 import { fetchListingAgentTextRecency } from "@/lib/data/listing-outbound-texts";
 import { createClient } from "@/lib/supabase/server";
 import { formatCurrency, cn } from "@/lib/utils";
@@ -38,13 +39,17 @@ export default async function ListingDetailPage({ params, searchParams }: { para
 
   const detail = await getListingDetail(id);
   if (!detail) notFound();
-  const { listing, agents, sends, priceChanges, messages, documents } = detail;
+  const { listing, agents: agentsRaw, sends, priceChanges, messages, documents } = detail;
+  // Collapse buyer-ref duplicates for every RP list Caitlyn sees. Activity
+  // still uses the raw rows so a message tied to a non-canonical listing_agent
+  // id keeps its name.
+  const agents = collapseListingAgents(agentsRaw);
 
   const sendProgressMap = activeTab === "rp" ? await getSendProgress(sends.map((s) => s.id)) : new Map();
   const sendProgress = Object.fromEntries(sendProgressMap);
   const textRecency =
     activeTab === "rp"
-      ? await fetchListingAgentTextRecency(listing.id, agents)
+      ? await fetchListingAgentTextRecency(listing.id, agentsRaw)
       : { lastOutboundAtByAgentId: {}, queuedOnThisListing: [] };
 
   const specs = [listing.beds != null && listing.baths != null ? `${listing.beds} bd / ${listing.baths} ba` : null, listing.property_type, listing.sqft ? `${listing.sqft.toLocaleString()} sqft` : null]
@@ -60,7 +65,7 @@ export default async function ListingDetailPage({ params, searchParams }: { para
 
   let enrichedMessages: EnrichedMessage[] = [];
   if (activeTab === "activity") {
-    const agentById = new Map(agents.map((a) => [a.id, a]));
+    const agentById = new Map(agentsRaw.map((a) => [a.id, a]));
     enrichedMessages = messages.map((m) => {
       const la = m.listing_agent_id ? agentById.get(m.listing_agent_id) : null;
       const meta = (m.metadata ?? {}) as { name?: string; brokerage?: string };

@@ -110,8 +110,11 @@ export async function loadListingAgentTextRecency(
     if (!send || send.channel !== "text" || send.status === "canceled") continue;
     const at = row.sent_at ?? send.created_at;
     if (!at) continue;
-    if (send.listing_id === listingId && row.status === "pending" && targetIds.includes(row.listing_agent_id)) {
+    if (send.listing_id === listingId && row.status === "pending") {
       queuedOnThisListing.add(row.listing_agent_id);
+      for (const targetId of relatedIdToTargets.get(row.listing_agent_id) ?? []) {
+        queuedOnThisListing.add(targetId);
+      }
     }
     for (const targetId of relatedIdToTargets.get(row.listing_agent_id) ?? []) {
       takeMax(lastByTarget, targetId, at);

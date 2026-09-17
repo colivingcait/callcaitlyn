@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Mail, MessageSquareText, Phone } from "lucide-react";
 import { openQuoCall, openQuoText } from "@/lib/quo/call-link";
 import { formatPhone, cn } from "@/lib/utils";
 import { AGENT_STATE_LABEL, AGENT_STATE_COLORS } from "@/lib/listings/agent-state";
+import { collapseListingAgents } from "@/lib/crm/agent-identity";
 import type { ListingAgent, ListingAgentState } from "@/types/database";
 
 type Filter = "all" | ListingAgentState;
@@ -14,18 +15,19 @@ type Filter = "all" | ListingAgentState;
 // portal's RosterView for the same call).
 export function AgentsList({ agents }: { agents: ListingAgent[] }) {
   const [filter, setFilter] = useState<Filter>("all");
+  const people = useMemo(() => collapseListingAgents(agents), [agents]);
 
   const counts: Record<Filter, number> = {
-    all: agents.length,
-    not_contacted: agents.filter((a) => a.state === "not_contacted").length,
-    emailed: agents.filter((a) => a.state === "emailed").length,
-    texted: agents.filter((a) => a.state === "texted").length,
-    replied: agents.filter((a) => a.state === "replied").length,
-    opted_out: agents.filter((a) => a.state === "opted_out").length,
+    all: people.length,
+    not_contacted: people.filter((a) => a.state === "not_contacted").length,
+    emailed: people.filter((a) => a.state === "emailed").length,
+    texted: people.filter((a) => a.state === "texted").length,
+    replied: people.filter((a) => a.state === "replied").length,
+    opted_out: people.filter((a) => a.state === "opted_out").length,
   };
-  const noEmailCount = agents.filter((a) => !a.email).length;
+  const noEmailCount = people.filter((a) => !a.email).length;
 
-  const filtered = filter === "all" ? agents : agents.filter((a) => a.state === filter);
+  const filtered = filter === "all" ? people : people.filter((a) => a.state === filter);
 
   const FILTERS: { key: Filter; label: string }[] = [
     { key: "all", label: `All ${counts.all}` },

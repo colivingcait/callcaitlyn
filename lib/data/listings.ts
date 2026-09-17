@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { clusterAgentsByIdentity, collapseListingAgents, dedupeAgentsByIdentity, normalizeAgentEmail } from "@/lib/crm/agent-identity";
 import type { Listing, ListingAgent, ListingPriceChange, ListingSend, ListingDocument, Agent, ListingStatus } from "@/types/database";
 
 export type ListingWithSummary = Listing & {
@@ -17,23 +18,23 @@ export async function getListingsIndex(): Promise<ListingsIndexData> {
   const supabase = await createClient();
   const [{ data: listings }, { data: agents }] = await Promise.all([
     supabase.from("listings").select("*").order("created_at", { ascending: false }),
-    supabase.from("listing_agents").select("listing_id, state, email"),
+    supabase.from("listing_agents").select("listing_id, name, state, email, phone"),
   ]);
 
-  const agentsByListing = new Map<string, { state: string; email: string | null }[]>();
+  const agentsByListing = new Map<string, { name: string; state: ListingAgent["state"]; email: string | null; phone: string | null }[]>();
   for (const a of agents ?? []) {
     if (!agentsByListing.has(a.listing_id)) agentsByListing.set(a.listing_id, []);
     agentsByListing.get(a.listing_id)!.push(a);
   }
 
   const withSummary: ListingWithSummary[] = (listings ?? []).map((l) => {
-    const rows = agentsByListing.get(l.id) ?? [];
+    const rows = collapseListingAgents(agentsByListing.get(l.id) ?? []);
     return {
       ...l,
       agentCount: rows.length,
       emailedCount: rows.filter((r) => r.state === "emailed" || r.state === "texted" || r.state === "replied").length,
       repliedCount: rows.filter((r) => r.state === "replied").length,
-      noEmailCount: rows.filter((r) => !r.email).length,
+      noEmailCount: rows.filter((r) => !normalizeAgentEmail(r.email)).length,
     };
   });
 
@@ -104,7 +105,34 @@ export async function getAgentDirectory(): Promise<AgentWithStats[]> {
     listingsByAgent.get(la.agent_id)!.add(la.listing_id);
   }
 
-  return (agents ?? []).map((a) => ({ ...a, listingCount: listingsByAgent.get(a.id)?.size ?? 0, sources: [a.source] }));
+  const withStats: AgentWithStats[] = (agents ?? []).map((a) => ({
+    ...a,
+    listingCount: listingsByAgent.get(a.id)?.size ?? 0,
+    sources: [a.source],
+  }));
+
+  return clusterAgentsByIdentity(withStats)
+    .map((cluster) => {
+      const filled = dedupeAgentsByIdentity(cluster)[0]!;
+      const listingIds = new Set<string>();
+      const sources = new Set<string>();
+      let lastEmailed: string | null = null;
+      let optedOut: string | null = null;
+      for (const row of cluster) {
+        for (const listingId of listingsByAgent.get(row.id) ?? []) listingIds.add(listingId);
+        sources.add(row.source);
+        if (row.last_emailed_at && (!lastEmailed || row.last_emailed_at > lastEmailed)) lastEmailed = row.last_emailed_at;
+        if (row.opted_out_at && (!optedOut || row.opted_out_at < optedOut)) optedOut = row.opted_out_at;
+      }
+      return {
+        ...filled,
+        listingCount: listingIds.size,
+        sources: [...sources],
+        last_emailed_at: lastEmailed,
+        opted_out_at: optedOut,
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 // For the "agent replies" line on the Listings nav item / Today - inbound

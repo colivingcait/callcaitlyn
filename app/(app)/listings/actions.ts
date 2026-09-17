@@ -6,12 +6,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { parseRpExport, type ParsedRpRow } from "@/lib/listings/parse-rp-csv";
 import { isAgentOptedOut, recordAgentOptOut } from "@/lib/listings/agent-lookup";
 import { applyAgentMergeFields } from "@/lib/crm/listing-sends";
+import { selectListingSendRecipients } from "@/lib/crm/agent-identity";
 import { dedupeListingTextRecipients } from "@/lib/crm/listing-text-dedupe";
 import { sendQuoText } from "@/lib/quo/send-message";
 import { sendGmailMessage } from "@/lib/google/send-email";
 import { draftToHtml } from "@/lib/crm/merge-fields";
 import { baseUrl } from "@/lib/crm/sequences";
 import { generateUniqueListingSlug } from "@/lib/listings/public-slug";
+import { phonesMatch } from "@/lib/phone";
 import type { ListingStatus, ListingDocumentType, ListingFinancials, ListingImprovement } from "@/types/database";
 
 const PREVIEW_AGENT = { name: "Jamie Agent" };
@@ -195,13 +197,28 @@ async function upsertDirectoryAgent(
   row: { name: string; brokerage: string | null; email: string | null; phone: string | null },
   source: "fmls" | "gamls" | "manual",
 ): Promise<string | null> {
-  if (!row.email) return null;
-  const email = row.email.toLowerCase();
+  const email = row.email?.trim().toLowerCase() || null;
+  const phone = row.phone || null;
+  if (!email && !phone) return null;
 
-  const { data: existing } = await admin.from("agents").select("id").eq("owner_id", ownerId).ilike("email", email).maybeSingle();
-  if (existing) {
-    await admin.from("agents").update({ name: row.name, brokerage: row.brokerage, phone: row.phone }).eq("id", existing.id);
-    return existing.id as string;
+  if (email) {
+    const { data: existing } = await admin.from("agents").select("id").eq("owner_id", ownerId).ilike("email", email).maybeSingle();
+    if (existing) {
+      await admin.from("agents").update({ name: row.name, brokerage: row.brokerage, phone: row.phone }).eq("id", existing.id);
+      return existing.id as string;
+    }
+  }
+
+  if (phone) {
+    const { data: candidates } = await admin.from("agents").select("id, phone").eq("owner_id", ownerId).not("phone", "is", null);
+    const existing = (candidates ?? []).find((a) => phonesMatch(a.phone, phone));
+    if (existing) {
+      await admin
+        .from("agents")
+        .update({ name: row.name, brokerage: row.brokerage, ...(email ? { email } : {}), phone: row.phone })
+        .eq("id", existing.id);
+      return existing.id as string;
+    }
   }
 
   const { data: created } = await admin
@@ -220,12 +237,25 @@ export async function addAgentManually(input: { name: string; brokerage?: string
   if (!user) return { ok: false, error: "Not signed in" };
   if (!input.name.trim()) return { ok: false, error: "Enter a name" };
 
+  const email = input.email?.trim().toLowerCase() || null;
+  const phone = input.phone?.trim() || null;
+  const agentId = await upsertDirectoryAgent(createAdminClient(), user.id, {
+    name: input.name.trim(),
+    brokerage: input.brokerage || null,
+    email,
+    phone,
+  }, "manual");
+  if (agentId) {
+    revalidatePath("/listings/directory");
+    return { ok: true };
+  }
+
   const { error } = await supabase.from("agents").insert({
     owner_id: user.id,
     name: input.name.trim(),
     brokerage: input.brokerage || null,
-    email: input.email?.toLowerCase() || null,
-    phone: input.phone || null,
+    email,
+    phone,
     source: "manual",
   });
   if (error) return { ok: false, error: error.message };
@@ -283,9 +313,9 @@ export async function createListingSend(input: {
   message: string;
   audience: "all" | "not_contacted" | "non_repliers";
   sendImmediately: boolean;
-  // Text path: the composer splits Fresh vs Recent and sends one bucket
-  // per confirm. IDs must belong to this listing; opted-out / no-phone
-  // rows are still dropped here so a stale client list can't sneak them in.
+  // Composer-selected people (Fresh/Recent bucket for text, the unique
+  // audience for email). IDs may be a canonical row; send selection expands
+  // to the identity cluster and still drops opted-out / no-contact rows.
   listingAgentIds?: string[];
 }): Promise<ActionResult<{ sendId: string; recipientCount: number }>> {
   const supabase = await createClient();
@@ -299,15 +329,14 @@ export async function createListingSend(input: {
   const { data: agents } = await supabase.from("listing_agents").select("id, name, state, email, phone").eq("listing_id", input.listingId);
   const filter = AUDIENCE_FILTER[input.audience];
   const allowedIds = input.listingAgentIds ? new Set(input.listingAgentIds) : null;
-  let recipients = (agents ?? []).filter((a) => {
-    if (a.state === "opted_out") return false;
-    if (input.channel === "email" ? !a.email : !a.phone) return false;
-    if (allowedIds) return allowedIds.has(a.id);
-    return filter(a.state);
+  // One person per send, matching phone / email / (name with no contact).
+  // Text still phone-dedupes after this so a stale client list cannot
+  // queue two outbounds to the same number.
+  let recipients = selectListingSendRecipients(agents ?? [], {
+    channel: input.channel,
+    audienceFilter: filter,
+    allowedIds,
   });
-  // Text: one outbound per number, even if the RP list has three buyer-ref
-  // rows (or the same digits with different punctuation). Email still sends
-  // per row — that path does not share this blast.
   if (input.channel === "text") recipients = dedupeListingTextRecipients(recipients);
 
   if (recipients.length === 0) return { ok: false, error: "No one in this audience can receive that channel" };

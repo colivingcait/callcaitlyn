@@ -75,11 +75,11 @@ assert.deepEqual(listingTextOutboundE164s(stillSendable), []);
 const composer = read("components/listings/AgentComposer.tsx");
 assert.ok(composer.includes("dedupeListingTextRecipients"), "Fresh/Recent lists collapse duplicate phones");
 assert.ok(composer.includes("queuedListingTextPhoneKeys"), "a queued row holds every copy of that number");
-assert.ok(composer.includes("listingAgentIds: channel === \"text\" ? bucketAgents.map((a) => a.id) : undefined"));
+assert.ok(composer.includes("listingAgentIds: (channel === \"text\" ? bucketAgents : uniqueSendable).map((a) => a.id)"));
 
 const actions = read("app/(app)/listings/actions.ts");
 assert.ok(actions.includes("dedupeListingTextRecipients"), "createListingSend collapses before insert");
-assert.ok(actions.includes("if (input.channel === \"text\")"), "text path is the one that dedupes by phone");
+assert.ok(actions.includes("if (input.channel === \"text\") recipients = dedupeListingTextRecipients(recipients)"), "text path still phone-dedupes after identity collapse");
 
 const sends = read("lib/crm/listing-sends.ts");
 assert.ok(sends.includes("Duplicate phone"), "worker skips a second outbound to the same number on one send");
