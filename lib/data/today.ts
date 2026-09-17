@@ -59,7 +59,7 @@ async function getRepliesOwedGroup(): Promise<WorklistPerson[]> {
     .order("occurred_at", { ascending: false })
     .limit(1000);
 
-  const grouped = new Map<string, { contact: { id: string; first_name: string; last_name: string; phone: string | null }; rows: typeof data }>();
+  const grouped = new Map<string, { contact: { id: string; first_name: string; last_name: string; phone: string | null }; rows: NonNullable<typeof data> }>();
   for (const row of data ?? []) {
     const contact = row.contacts as unknown as { id: string; first_name: string; last_name: string; phone: string | null } | null;
     if (!contact) continue;
