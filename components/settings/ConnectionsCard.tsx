@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export type ConnectionRow = {
   key: string;
@@ -14,12 +14,8 @@ export type ConnectionRow = {
 function ConnectionRowItem({ row }: { row: ConnectionRow }) {
   const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.location.hash === `#${row.key}`) setOpen(true);
-  }, [row.key]);
-
   return (
-    <div id={row.key} className="scroll-mt-24 border-b border-neutral-100 py-3.5 first:pt-0 last:border-b-0 last:pb-0">
+    <div className="border-b border-neutral-100 py-3.5 first:pt-0 last:border-b-0 last:pb-0">
       <div className="flex items-center gap-3.5">
         <div className="min-w-0 flex-1">
           <p className="text-[16px] font-medium text-neutral-900">{row.name}</p>
@@ -41,7 +37,7 @@ function ConnectionRowItem({ row }: { row: ConnectionRow }) {
 
 export function ConnectionsCard({ rows }: { rows: ConnectionRow[] }) {
   return (
-    <div className="rounded-2xl border border-[#eadfd6] bg-[#fffbf8] p-[18px] shadow-card">
+    <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
       <p className="text-base font-semibold text-neutral-900">Connections</p>
       <div className="mt-3.5">
         {rows.map((row) => (

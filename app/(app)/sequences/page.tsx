@@ -23,10 +23,10 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
   ]);
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-[1400px] space-y-5 px-5 py-6 lg:px-8 lg:py-8">
+    <div className="mx-auto max-w-3xl space-y-5 px-4 py-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-[32px] font-semibold tracking-[-0.03em] text-neutral-900">Campaigns</h1>
+          <h1 className="font-serif text-2xl font-semibold text-neutral-900">Campaigns</h1>
           <p className="mt-0.5 text-sm text-neutral-500">Scheduled sequences, drips, one-off emails and texts to your meetup community.</p>
         </div>
         <div className="flex shrink-0 gap-2">

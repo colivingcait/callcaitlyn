@@ -9,7 +9,7 @@ import { WorklistRowMenu, type WorklistMenuItem } from "@/components/dashboard/W
 import { SendEmailForm } from "@/components/contacts/SendEmailForm";
 import type { WorklistPerson } from "@/lib/data/today";
 
-const CAP = 6;
+const CAP = 10;
 
 const actionBtn =
   "flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-[10px] border border-neutral-200 bg-white text-sm font-semibold text-neutral-800";

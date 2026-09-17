@@ -21,7 +21,7 @@ export function TodaySearch({ contacts, variant = "mobile" }: { contacts: Contac
 
   if (variant === "desktop") {
     return (
-      <div className="relative w-full min-w-0 max-w-sm">
+      <div className="relative w-full max-w-sm">
         <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
         <input
           value={query}
