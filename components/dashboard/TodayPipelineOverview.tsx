@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { TODAY_CARD } from "@/components/dashboard/today-home-layout";
 import type { PipelineStage } from "@/types/database";
 
 const RING = ["#c45c4a", "#d4a08c", "#8a4a3c", "#e8cfc4", "#ac3826"];
@@ -8,10 +9,12 @@ export function TodayPipelineOverview({
   stages,
   counts,
   size = "phone",
+  className,
 }: {
   stages: PipelineStage[];
   counts: Map<string, number>;
   size?: "phone" | "desktop";
+  className?: string;
 }) {
   const slices = stages
     .filter((s) => !s.is_closed_lost && !s.is_trash)
@@ -49,7 +52,7 @@ export function TodayPipelineOverview({
   return (
     <section
       data-today-home="pipeline"
-      className="rounded-[20px] border border-[#eadfd6]/90 bg-[#fffbf8] p-4 shadow-card sm:p-5"
+      className={cn("h-full p-4 sm:p-5", TODAY_CARD, className)}
     >
       <p className="text-[13px] font-semibold text-neutral-800">Pipeline Overview</p>
       <div className={cn("mt-3 flex items-center gap-5", size === "desktop" && "gap-8")}>

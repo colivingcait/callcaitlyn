@@ -1,13 +1,13 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { Clock, Phone, UserPlus, Bell, ChevronRight, MessageCircle, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { todayFocusHref } from "@/lib/crm/today-focus";
 import { inboxHref } from "@/lib/crm/inbox-href";
+import { TODAY_CARD, TODAY_GRID, TODAY_LABEL, TODAY_SECTION } from "@/components/dashboard/today-home-layout";
 import type { WorklistPerson } from "@/lib/data/today";
 
-const CARD = "border border-[#eadfd6]/90 bg-[#fffbf8] shadow-card";
 const BADGE = "flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-[13px] font-semibold";
-const LABEL = "mb-2.5 px-0.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7a5c50]";
 
 function QueueRow({
   href,
@@ -28,7 +28,7 @@ function QueueRow({
     <Link
       href={href}
       data-today-control={control}
-      className={cn("flex min-h-[58px] items-center gap-3 rounded-[16px] px-3.5 py-3.5", CARD)}
+      className={cn("flex h-full min-h-[58px] min-w-0 items-center gap-3 px-3.5 py-3.5", TODAY_CARD)}
     >
       <Icon size={20} strokeWidth={1.7} className={cn("shrink-0", accent || count > 0 ? "text-[#c45c4a]" : "text-neutral-500")} />
       <p className="min-w-0 flex-1 truncate text-[16px] text-neutral-900">
@@ -49,6 +49,7 @@ export function TodayQueues({
   messages,
   spamFilteredCount = 0,
   wide = false,
+  afterDoNext,
 }: {
   overdueCount: number;
   callTodayCount: number;
@@ -57,13 +58,14 @@ export function TodayQueues({
   messages: WorklistPerson[];
   spamFilteredCount?: number;
   wide?: boolean;
+  afterDoNext?: ReactNode;
 }) {
   const owedCount = messages.length;
 
   const doNext = (
-    <section>
-      <p className={LABEL}>Do next</p>
-      <div className={wide ? "grid grid-cols-3 gap-3" : "space-y-2"}>
+    <section className={TODAY_SECTION} data-today-home="do-next">
+      <p className={TODAY_LABEL}>Do next</p>
+      <div className={wide ? "grid grid-cols-3 gap-6" : "grid grid-cols-1 gap-2.5"}>
         <QueueRow href={todayFocusHref("overdue")} icon={Clock} label="Overdue" count={overdueCount} accent control="queue-overdue" />
         <QueueRow href={todayFocusHref("call-today")} icon={Phone} label="Call today" count={callTodayCount} control="queue-call-today" />
         <QueueRow href={todayFocusHref("new")} icon={UserPlus} label="New / uncontacted" count={newUncontactedCount} control="queue-new" />
@@ -72,19 +74,19 @@ export function TodayQueues({
   );
 
   const quiet = (
-    <section>
-      <p className={LABEL}>Quiet leads</p>
+    <section className={cn(TODAY_SECTION, wide && "h-full")}>
+      <p className={TODAY_LABEL}>Quiet leads</p>
       <QueueRow href={todayFocusHref("quiet")} icon={Bell} label="No touch 14+ days" count={quietCount} control="queue-quiet" />
     </section>
   );
 
   const inbox = (
-    <section>
-      <p className={LABEL}>Messages</p>
+    <section className={cn(TODAY_SECTION, wide && "h-full")}>
+      <p className={TODAY_LABEL}>Messages</p>
       <Link
         href="/messages"
         data-today-control="messages"
-        className="block rounded-[16px] border border-[#f0e4df] bg-[#fdf6f3] px-3.5 py-3.5 shadow-card"
+        className={cn("block h-full px-3.5 py-3.5", TODAY_CARD)}
       >
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#c45c4a] text-white shadow-[0_4px_10px_rgb(196_92_74_/_0.28)]">
@@ -106,7 +108,7 @@ export function TodayQueues({
         <Link
           href={inboxHref({ spam: true })}
           data-today-control="spam-filtered"
-          className="mt-2 flex min-h-11 items-center gap-2 px-1 text-[13px] text-neutral-400"
+          className="flex min-h-11 items-center gap-2 px-1 text-[13px] text-neutral-400"
         >
           <ShieldAlert size={14} className="shrink-0" />
           Spam filtered · {spamFilteredCount}
@@ -118,21 +120,23 @@ export function TodayQueues({
 
   if (wide) {
     return (
-      <div className="relative space-y-8">
+      <>
         {doNext}
-        <div className="grid grid-cols-2 gap-8">
-          {quiet}
-          {inbox}
+        {afterDoNext}
+        <div className={TODAY_GRID}>
+          <div className="col-span-12 min-w-0 xl:col-span-6">{quiet}</div>
+          <div className="col-span-12 min-w-0 xl:col-span-6">{inbox}</div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="relative space-y-6">
+    <>
       {doNext}
+      {afterDoNext}
       {quiet}
       {inbox}
-    </div>
+    </>
   );
 }
