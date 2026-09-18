@@ -16,11 +16,12 @@ export function LeadSourceReport({ rows }: { rows: LeadSourceReportRow[] }) {
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatTile label="Total contacts" value={totalContacts} />
+        <StatTile label="Non-archived contacts" value={totalContacts} />
         <StatTile label="Converted to clients" value={totalConverted} tone="good" />
         <StatTile label="Overall conversion" value={formatPercent(overallRate)} />
         <StatTile label="Gross commission" value={formatCurrency(totalGross)} />
       </div>
+      <p className="text-xs text-neutral-400">Non-archived contacts by lead source — not the Contacts filtered list, and not Pipeline&apos;s active-stage count.</p>
 
       <div>
         <h2 className="mb-3 text-sm font-semibold text-neutral-700">By lead source</h2>

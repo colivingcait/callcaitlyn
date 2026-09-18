@@ -2,6 +2,14 @@ import type { Activity } from "@/types/database";
 
 export const MISSED_CALL_STATUSES = new Set(["missed", "no-answer", "no_answer", "busy", "voicemail"]);
 
+// Unread / needs-reply / sidebar badge — one contract:
+// A conversation counts iff conversationOwedFromHistory says owed
+// (inbound text with needs_reply !== false, or a missed inbound call;
+// later outbound text closes it; reply_dismissed_at clears it) AND
+// listConversations included it (not archived, not spam-flagged, not a
+// spam-like missed-call stub). Today "Messages N need a reply", the nav badge,
+// and /messages "waiting on you" / Needs a reply all use that count.
+
 export function isMissedCall(activity: Pick<Activity, "type" | "direction" | "metadata">): boolean {
   if (activity.type !== "call" || activity.direction !== "inbound") return false;
   const status = typeof activity.metadata?.status === "string" ? activity.metadata.status.toLowerCase() : null;
@@ -43,4 +51,8 @@ export function conversationOwedFromHistory<T extends Pick<Activity, "type" | "d
     if (isConversationOwed(activity)) return { owed: true, activity };
   }
   return { owed: false, activity: null };
+}
+
+export function inboxOwedCount(conversations: { owed: boolean }[]): number {
+  return conversations.filter((c) => c.owed).length;
 }

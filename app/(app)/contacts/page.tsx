@@ -76,7 +76,10 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
           <div>
             <h1 className="font-display text-[32px] font-semibold leading-9 tracking-[-0.03em] text-neutral-900">Contacts</h1>
             <p className="mt-1.5 text-[15px] leading-[22px] text-neutral-600">
-              {contacts.length} people · {withPhoneCount} have a phone number you can text. Lists are the chips below. Deal board:{" "}
+              {contacts.length} in this list
+              {filters.registeredEventName ? " (registered for an event" : " (current filters"}
+              , not archived, not spam). Pipeline counts active stages only; Reports counts all non-archived.{" "}
+              {withPhoneCount} have a phone number you can text. Deal board:{" "}
               <Link href="/pipeline" className="font-medium text-brand-700 hover:underline">
                 Pipeline
               </Link>

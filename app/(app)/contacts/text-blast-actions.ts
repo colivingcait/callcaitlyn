@@ -7,6 +7,7 @@ import { sendQuoText } from "@/lib/quo/send-message";
 import { applyMergeFields, PREVIEW_CONTACT, hasPlaceholderName } from "@/lib/crm/merge-fields";
 import { withProgress, tagBlastLabel, type TextBlastWithProgress } from "@/lib/crm/text-blasts";
 import { fetchRecentTextsByContact, type TextThreadMessage } from "@/lib/crm/recent-texts";
+import { eventHasEnded, eventNoShowCount, eventWalkInCount } from "@/lib/crm/event-ended";
 
 type AudienceContact = { id: string; first_name: string; last_name: string; phone: string; email: string | null };
 type AudienceResolution = { eligible: AudienceContact[]; optedOutCount: number };
@@ -223,19 +224,21 @@ export type EventAttendanceCounts = { registered: number; attended: number; noSh
 
 export async function getEventAttendanceCounts(eventId: string): Promise<EventAttendanceCounts> {
   const supabase = await createClient();
-  const [{ data: registrations }, { data: checkins }] = await Promise.all([
+  const [{ data: registrations }, { data: checkins }, { data: eventRow }] = await Promise.all([
     supabase.from("activities").select("contact_id").eq("source", "eventbrite").eq("metadata->>event_id", eventId),
     supabase.from("activities").select("contact_id").in("source", ["checkin", "jotform"]).eq("metadata->>event_id", eventId),
+    supabase.from("events").select("starts_at, ends_at").eq("eventbrite_event_id", eventId).maybeSingle(),
   ]);
 
   const registeredIds = new Set((registrations ?? []).map((r) => r.contact_id as string));
   const attendedIds = new Set((checkins ?? []).map((r) => r.contact_id as string));
+  const hasEnded = eventHasEnded({ startsAt: eventRow?.starts_at, endsAt: eventRow?.ends_at });
 
   return {
     registered: registeredIds.size,
     attended: attendedIds.size,
-    noShow: [...registeredIds].filter((id) => !attendedIds.has(id)).length,
-    walkIn: [...attendedIds].filter((id) => !registeredIds.has(id)).length,
+    noShow: eventNoShowCount(hasEnded, registeredIds, attendedIds),
+    walkIn: eventWalkInCount(registeredIds, attendedIds),
   };
 }
 

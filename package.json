@@ -11,7 +11,8 @@
     "prove-today": "npx tsx lib/crm/today-controls.proof.ts && npx tsx lib/crm/desktop-shell.proof.ts && npx tsx lib/crm/new-lead-text-templates.proof.ts",
     "prove-listing-text": "npx tsx lib/crm/listing-text-recency.proof.ts && npx tsx lib/crm/listing-text-dedupe.proof.ts && npx tsx lib/crm/agent-identity.proof.ts",
     "prove-listing-marketing": "npx tsx lib/listings/crm-marketing-fields.proof.ts",
-    "prove-contact-filters": "npx tsx lib/crm/contact-filter-predicates.proof.ts"
+    "prove-contact-filters": "npx tsx lib/crm/contact-filter-predicates.proof.ts",
+    "prove-ux-p1": "npx tsx lib/crm/inbox-owed.proof.ts && npx tsx lib/crm/event-ended.proof.ts && npx tsx lib/crm/commission-year.proof.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",

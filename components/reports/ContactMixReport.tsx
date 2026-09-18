@@ -9,7 +9,7 @@ export function ContactMixReport({ rows }: { rows: ContactTypeBreakdownRow[] }) 
     <div className="space-y-3">
       <div className="flex items-baseline justify-between">
         <h2 className="text-sm font-semibold text-neutral-700">Contact mix</h2>
-        <span className="text-xs text-neutral-400">{total} contacts</span>
+        <span className="text-xs text-neutral-400">{total} non-archived (every type)</span>
       </div>
       {rows.length === 0 ? (
         <p className="text-sm text-neutral-500">No contacts yet.</p>

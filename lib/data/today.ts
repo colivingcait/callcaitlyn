@@ -7,9 +7,7 @@ import { listNewLeadsQueue } from "@/lib/data/new-leads";
 import { listWonDeals, listPendingDeals } from "@/lib/data/commissions";
 import { listPendingBookingRequests, listUpcomingApprovedBookingRequests } from "@/lib/data/scheduling";
 import { computeDeals, summarizeDeals, capYearKey, capYearStart, KW_CAP } from "@/lib/crm/commission";
-import { conversationOwedFromHistory } from "@/lib/crm/message-owed";
-import { isSpamLikeMissedCall, isTodayWorkContact } from "@/lib/crm/today-eligible";
-import { listAllowlistedPhoneKeys } from "@/lib/crm/spam-signals";
+import { isTodayWorkContact } from "@/lib/crm/today-eligible";
 import { listConversations } from "@/lib/data/messages";
 import type { PipelineStage } from "@/types/database";
 
@@ -53,74 +51,28 @@ async function getCallsGroup(): Promise<WorklistPerson[]> {
   });
 }
 
-// "Replies owed" - last inbound text on a thread with no outbound after
-// it. Nothing in the app reads activities.direction in bulk today; this
-// is a new aggregation, same shape as contact-queue-filter's
-// fetchActivityAggregates (one unscoped-ish select, reduce in JS).
-//
-// needs_reply === false (the AI classifier's positive read that this was
-// just a conversational close - "have a good night!", "ok that works")
-// is the only thing that hides a row; null (not evaluated - AI off, the
-// call failed, or the row predates this column) still shows, same
-// fail-open posture as everywhere else uncertain signal gets surfaced
-// rather than silently dropped.
-async function getRepliesOwedGroup(): Promise<{ people: WorklistPerson[]; hiddenSpamLikeCount: number }> {
-  const supabase = await createClient();
-  const allowlisted = await listAllowlistedPhoneKeys(supabase);
-  const { data } = await supabase
-    .from("activities")
-    .select("id, contact_id, type, direction, occurred_at, body, needs_reply, reply_dismissed_at, metadata, contacts!inner(id, first_name, last_name, phone, email, lead_source, archived, known_personally, spam)")
-    .in("type", ["text", "call"])
-    .eq("contacts.archived", false)
-    .eq("contacts.known_personally", false)
-    .eq("contacts.spam", false)
-    .order("occurred_at", { ascending: false })
-    .limit(1000);
-
-  type ContactRow = {
-    id: string;
-    first_name: string;
-    last_name: string;
-    phone: string | null;
-    email: string | null;
-    lead_source: string | null;
-    spam: boolean;
-  };
-
-  const grouped = new Map<string, { contact: ContactRow; rows: NonNullable<typeof data> }>();
-  for (const row of data ?? []) {
-    const contact = row.contacts as unknown as ContactRow | null;
-    if (!contact) continue;
-    const entry = grouped.get(contact.id);
-    if (entry) entry.rows.push(row);
-    else grouped.set(contact.id, { contact, rows: [row] });
-  }
-
-  const owed: WorklistPerson[] = [];
-  let hiddenSpamLikeCount = 0;
-  for (const { contact, rows } of grouped.values()) {
-    const { owed: isOwed, activity } = conversationOwedFromHistory(rows);
-    if (!isOwed || !activity) continue;
-    if (isSpamLikeMissedCall(contact, activity, allowlisted)) {
-      hiddenSpamLikeCount += 1;
-      continue;
-    }
+// Same listConversations owed set as the sidebar badge and /messages —
+// not a second query with a different window/filter. Preview copy stays
+// Today-shaped (WorklistPerson).
+async function getRepliesOwedGroup(): Promise<WorklistPerson[]> {
+  const conversations = await listConversations({ filter: "owed" });
+  return conversations.map((c) => {
+    const activity = c.owedActivity ?? c.lastActivity;
     const preview =
       activity.type === "call"
         ? "Missed call"
         : activity.body
           ? `"${activity.body.slice(0, 60)}${activity.body.length > 60 ? "…" : ""}"`
           : "Texted you";
-    owed.push({
-      id: contact.id,
-      name: `${contact.first_name} ${contact.last_name}`.trim(),
-      phone: contact.phone,
+    return {
+      id: c.contact.id,
+      name: `${c.contact.first_name} ${c.contact.last_name}`.trim(),
+      phone: c.contact.phone,
       meta: `${preview} · ${relativeTime(activity.occurred_at)}`,
       late: false,
       activityId: activity.id,
-    });
-  }
-  return { people: owed, hiddenSpamLikeCount };
+    };
+  });
 }
 
 export type WorklistTask = {
@@ -320,7 +272,7 @@ export async function getTodayData() {
   return {
     stages,
     calls,
-    repliesOwed: repliesOwedResult.people,
+    repliesOwed: repliesOwedResult,
     myTasks,
     registeredNoFollowUp,
     statStrip,

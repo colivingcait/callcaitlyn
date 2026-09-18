@@ -1,5 +1,5 @@
 import { listWonDeals, listPendingDeals } from "@/lib/data/commissions";
-import { computeDeals, summarizeDeals, listCapYears, capYearKey } from "@/lib/crm/commission";
+import { computeDeals, summarizeDeals, listCapYears, resolveCapYearQuery } from "@/lib/crm/commission";
 import { CommissionTable } from "@/components/commissions/CommissionTable";
 import { CommissionStats } from "@/components/commissions/CommissionStats";
 import { CapYearToggle } from "@/components/commissions/CapYearToggle";
@@ -21,7 +21,7 @@ export default async function CommissionsPage({
   const computed = computeDeals([...wonDeals, ...pendingDeals]);
 
   const years = listCapYears([...wonDeals, ...pendingDeals]);
-  const currentYear = params.year && years.includes(params.year) ? params.year : capYearKey(new Date());
+  const currentYear = resolveCapYearQuery(params.year, years);
   const visible = computed.filter((d) => d.capYear === currentYear);
   const won = visible.filter((d) => d.status === "won");
   const pending = visible.filter((d) => d.status === "pending");

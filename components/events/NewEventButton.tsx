@@ -25,7 +25,7 @@ export function NewEventButton() {
     if (!name.trim() || !startsAt || !endsAt) return;
     setSaving(true);
     setError("");
-    const result = await createEvent({ series, name: name.trim(), startsAt: new Date(startsAt).toISOString(), endsAt: new Date(endsAt).toISOString() });
+    const result = await createEvent({ series, name: name.trim(), startsAt, endsAt });
     setSaving(false);
     if (!result.ok) {
       setError(result.error);

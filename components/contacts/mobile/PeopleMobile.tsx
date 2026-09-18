@@ -144,7 +144,7 @@ export function PeopleMobile({
             <div className="min-w-0">
               <p className="font-display text-[28px] font-semibold tracking-[-0.02em] text-neutral-900">Contacts</p>
               <p className="mt-0.5 text-[13px] text-neutral-400">
-                People and lists. Deal board is the{" "}
+                This list follows current filters. Pipeline is active stages; Reports is all non-archived. Deal board is the{" "}
                 <Link href="/pipeline" className="font-medium text-brand-700">
                   Pipeline
                 </Link>{" "}

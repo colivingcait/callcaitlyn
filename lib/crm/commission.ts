@@ -34,19 +34,34 @@ export function capYearKey(date: Date): string {
   // year, same as every clean year after it) even though it technically
   // starts in Dec 2025 - deliberate, so the year toggle reads plainly.
   if (start.getTime() === EXTENDED_YEAR_START.getTime()) return "2026";
-  return `${start.getUTCFullYear()}`;
+  const startYear = start.getUTCFullYear();
+  // Pre-2026 windows run Dec Y – Nov Y+1. The key is Y+1 (the calendar
+  // year that holds 11 of 12 months) so the UI label, ?year= query, and
+  // deal.capYear are the same number: tab "2025" fetches year=2025.
+  if (startYear < 2026) return `${startYear + 1}`;
+  return `${startYear}`;
 }
 
-// Displayed as a single calendar year, not the literal Dec-Nov span - a
-// pre-2026 cap year keyed "2024" (running Dec 2024 - Nov 2025) shows as
-// "2025" since that's where 11 of its 12 months actually fall, matching
-// how she thinks of "my 2025 numbers" day to day. The 2026 extended
-// transition year (and everything after) already keys off its dominant
-// calendar year, so it needs no adjustment.
+// Key is already the display year (see capYearKey). Kept so reports and
+// the year toggle don't each invent a second mapping.
 export function capYearLabel(key: string): string {
-  const year = Number(key);
-  if (year >= 2026) return `${year}`;
-  return `${year + 1}`;
+  return key;
+}
+
+// ?year= on /commissions. Accepts the display year, and still maps the
+// old Dec-start keys (year=2024 → 2025) so bookmarks don't fall through
+// to "current year".
+export function resolveCapYearQuery(param: string | undefined, years: string[]): string {
+  const current = capYearKey(new Date());
+  const fallback = years.includes(current) ? current : years[0];
+  if (!param) return fallback;
+  if (years.includes(param)) return param;
+  const n = Number(param);
+  if (Number.isFinite(n) && n < 2026) {
+    const mapped = `${n + 1}`;
+    if (years.includes(mapped)) return mapped;
+  }
+  return fallback;
 }
 
 export interface DealComputedFields {
