@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui";
 import { StatTile } from "@/components/dashboard/StatTile";
 import { formatCurrency, formatPercent, cn } from "@/lib/utils";
+import { COUNT_SCOPE } from "@/lib/crm/count-scopes";
 import type { LeadSourceReportRow } from "@/lib/data/reports";
 
 export function LeadSourceReport({ rows }: { rows: LeadSourceReportRow[] }) {
@@ -21,7 +22,7 @@ export function LeadSourceReport({ rows }: { rows: LeadSourceReportRow[] }) {
         <StatTile label="Overall conversion" value={formatPercent(overallRate)} />
         <StatTile label="Gross commission" value={formatCurrency(totalGross)} />
       </div>
-      <p className="text-xs text-neutral-400">Non-archived contacts by lead source — not the Contacts filtered list, and not Pipeline&apos;s active-stage count.</p>
+      <p className="text-xs text-neutral-400">{COUNT_SCOPE.reports}</p>
 
       <div>
         <h2 className="mb-3 text-sm font-semibold text-neutral-700">By lead source</h2>

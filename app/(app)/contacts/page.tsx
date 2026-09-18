@@ -18,6 +18,7 @@ import { ContactFilters } from "@/components/contacts/ContactFilters";
 import { SegmentBar } from "@/components/contacts/SegmentBar";
 import { BulkImportContactsButton } from "@/components/contacts/BulkImportContactsButton";
 import { PeopleMobile } from "@/components/contacts/mobile/PeopleMobile";
+import { CountScopeNote } from "@/components/CountScopeNote";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function ContactsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
@@ -76,15 +77,13 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
           <div>
             <h1 className="font-display text-[32px] font-semibold leading-9 tracking-[-0.03em] text-neutral-900">Contacts</h1>
             <p className="mt-1.5 text-[15px] leading-[22px] text-neutral-600">
-              {contacts.length} in this list
-              {filters.registeredEventName ? " (registered for an event" : " (current filters"}
-              , not archived, not spam). Pipeline counts active stages only; Reports counts all non-archived.{" "}
-              {withPhoneCount} have a phone number you can text. Deal board:{" "}
+              {contacts.length} in this list · {withPhoneCount} have a phone you can text. Deal board:{" "}
               <Link href="/pipeline" className="font-medium text-brand-700 hover:underline">
                 Pipeline
               </Link>
               .
             </p>
+            <CountScopeNote current="contacts" />
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <a

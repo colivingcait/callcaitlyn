@@ -55,6 +55,7 @@ export function TodayPipelineOverview({
       className={cn("h-full p-4 sm:p-5", TODAY_CARD, className)}
     >
       <p className="text-[13px] font-semibold text-neutral-800">Pipeline Overview</p>
+      <p className="mt-0.5 text-[12px] text-neutral-400">Largest stages — not the Contacts list, not Reports.</p>
       <div className={cn("mt-3 flex items-center gap-5", size === "desktop" && "gap-8")}>
         <Link href="/pipeline" aria-label={`${total} in pipeline`} className="relative shrink-0">
           <div className={cn("rounded-full", donut)} style={{ background: gradient }} />
@@ -62,7 +63,7 @@ export function TodayPipelineOverview({
             <p className={cn("font-serif font-semibold leading-none text-neutral-900", size === "desktop" ? "text-[32px]" : "text-[22px]")}>
               {total}
             </p>
-            <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-neutral-400">Total</p>
+            <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-neutral-400">Stages</p>
           </div>
         </Link>
         <ul className="min-w-0 flex-1 space-y-2">

@@ -11,6 +11,7 @@ import { InsideList } from "@/components/contacts/mobile/InsideList";
 import { ContactFiltersSheet } from "@/components/contacts/ContactFiltersSheet";
 import { SORT_OPTIONS } from "@/components/contacts/ContactFilters";
 import { QUEUES } from "@/lib/crm/contact-queues";
+import { CountScopeNote } from "@/components/CountScopeNote";
 import { cn } from "@/lib/utils";
 import type { ContactGroupBy } from "@/lib/crm/contact-filter-params";
 import type { ContactWithRelations, PipelineStage, Tag, ContactSegment } from "@/types/database";
@@ -144,12 +145,13 @@ export function PeopleMobile({
             <div className="min-w-0">
               <p className="font-display text-[28px] font-semibold tracking-[-0.02em] text-neutral-900">Contacts</p>
               <p className="mt-0.5 text-[13px] text-neutral-400">
-                This list follows current filters. Pipeline is active stages; Reports is all non-archived. Deal board is the{" "}
+                {contacts.length} in this list. Deal board is the{" "}
                 <Link href="/pipeline" className="font-medium text-brand-700">
                   Pipeline
                 </Link>{" "}
                 tab.
               </p>
+              <CountScopeNote current="contacts" />
             </div>
             <div className="flex items-center gap-2">
               <Link href="/contacts/new" aria-label="New contact" className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-600 text-white">

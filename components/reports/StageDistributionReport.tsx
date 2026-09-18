@@ -9,7 +9,7 @@ export function StageDistributionReport({ rows }: { rows: StageDistributionRow[]
     <div className="space-y-3">
       <div className="flex items-baseline justify-between">
         <h2 className="text-sm font-semibold text-neutral-700">Contacts by stage</h2>
-        <span className="text-xs text-neutral-400">{total} non-archived (all stages, including closed)</span>
+        <span className="text-xs text-neutral-400">{total} non-archived (all stages, including closed — not Pipeline active-only)</span>
       </div>
       <Card className="space-y-2.5">
         {rows.map((r) => (

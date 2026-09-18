@@ -64,7 +64,7 @@ export function InsideList({
       </button>
       <p className="font-serif text-[19px] font-semibold text-neutral-900">{listName}</p>
       <p className="mt-0.5 text-[14px] text-neutral-500">
-        {contacts.length} people · {textable.length} textable
+        {contacts.length} in this saved list · {textable.length} textable
       </p>
 
       <div className="mt-3 flex gap-2">
