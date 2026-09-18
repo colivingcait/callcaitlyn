@@ -17,17 +17,19 @@ export function SendMessageCard({
   email,
   firstName,
   lastName,
+  initialBody,
 }: {
   contactId: string;
   phone: string | null;
   email: string | null;
   firstName?: string;
   lastName?: string;
+  initialBody?: string;
 }) {
   const router = useRouter();
   const [channel, setChannel] = useState<"text" | "email">(phone ? "text" : "email");
   const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
+  const [body, setBody] = useState(initialBody ?? "");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
 
@@ -93,7 +95,7 @@ export function SendMessageCard({
             value={body}
             onChange={(e) => setBody(e.target.value)}
             placeholder={channel === "text" ? "Write a text…" : "Write an email…"}
-            rows={channel === "text" ? 2 : 3}
+            rows={channel === "text" ? (initialBody ? 3 : 2) : 3}
             className="min-w-0 flex-1 rounded-[11px] border border-neutral-200 bg-neutral-50 px-3.5 py-3 text-[15px] text-neutral-900"
           />
           <button

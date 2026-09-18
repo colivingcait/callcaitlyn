@@ -35,6 +35,7 @@ export function ContactRecordMobile({
   ownerId,
   textsThisWeek,
   openTasks,
+  smsDraft,
 }: {
   contact: ContactWithRelations;
   stages: PipelineStage[];
@@ -47,6 +48,7 @@ export function ContactRecordMobile({
   ownerId: string;
   textsThisWeek: number;
   openTasks: { id: string; title: string; due_at: string | null }[];
+  smsDraft?: string;
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>(activities.length > 0 ? "activity" : "overview");
@@ -136,6 +138,7 @@ export function ContactRecordMobile({
             contactId={contact.id}
             phone={contact.phone}
             email={contact.email}
+            smsDraft={smsDraft}
             onNote={() => {
               setLogType("note");
               setLogOpen(true);

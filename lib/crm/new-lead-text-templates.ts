@@ -1,10 +1,10 @@
 // Pure string logic, no imports - same style as event-text-templates.ts.
-// Keys off Contact.lead_source (free text, set once at creation by
-// whichever webhook/form created the contact - see the real values at
-// app/api/webhooks/site-form/route.ts, lib/eventbrite/process-order.ts,
-// etc.), NOT the ActivitySource enum: lead_source is already human-
-// readable and needs no extra activities join to resolve, unlike the
-// Dialer's old per-registration event-name/account lookup.
+//
+// First-touch SMS for New/uncontacted. Caitlyn's locked copy, 2026-09-17:
+// five source-routed templates, {{first_name}} merged at compose.
+// Eventbrite stores lead_source as the event *name* (see process-order.ts),
+// so routing also reads last_event_name, Meetup tags, and eventbrite_account.
+
 export type NewLeadSourceBucket =
   | "site_form"
   | "instagram"
@@ -18,6 +18,126 @@ export type NewLeadSourceBucket =
   | "other";
 
 export type NewLeadSourceInfo = { bucket: NewLeadSourceBucket; label: string };
+
+export type FirstTouchSource = "womens_rei" | "house_hacking" | "blinq" | "listing" | "webform" | "other";
+
+/** @deprecated use FirstTouchSource */
+export type FirstTouchMeetup = FirstTouchSource;
+
+export type FirstTouchSignals = {
+  leadSource?: string | null;
+  lastEventName?: string | null;
+  tagNames?: readonly string[] | null;
+  eventbriteAccount?: string | null;
+};
+
+// Caitlyn's exact strings. Do not rewrite.
+export const FIRST_TOUCH_WOMENS_REI =
+  "Hi {{first_name}}, this is Caitlyn Verdugo, one of the organizers for the Women's Real Estate Meetup. Just wanted to introduce myself and welcome you to the group! Any questions I can answer for you? 🙂";
+
+export const FIRST_TOUCH_HOUSE_HACKING =
+  "Hi {{first_name}}, this is Caitlyn Verdugo, the organizer of the House Hacking Atlanta Meetup. Just wanted to introduce myself and welcome you to the group! Any questions I can answer for you? 🙂";
+
+export const FIRST_TOUCH_BLINQ = "Hi {{first_name}}, this is Caitlyn! It was great meeting you! 🙂";
+
+export const FIRST_TOUCH_LISTING =
+  "Hi {{first_name}}, this is Caitlyn Verdugo with KW Metro Atlanta. I saw you checked out the offering on one of my listings - what questions I can answer for you? 🙂";
+
+export const FIRST_TOUCH_WEBFORM =
+  "Hi {{first_name}}, this is Caitlyn Verdugo with KW Metro Atlanta. Thanks for reaching out through my site — just wanted to introduce myself and see what you’re looking for! Any questions I can answer for you? 🙂";
+
+// Last resort only when none of the five sources match.
+export const FIRST_TOUCH_FALLBACK = "Hi {{first_name}}, this is Caitlyn Verdugo…";
+
+const WOMENS_TEXT = /women'?s?\s*(rei|r\.?e\.?i\.?|real estate|investors?)/i;
+const HOUSE_HACK_TEXT = /house\s*hack/i;
+const BLINQ_TEXT = /\bblinq\b/i;
+const LISTING_PAGE_TEXT = /^listing page\b/i;
+const CALLCAITLYN_WEBFORM_TEXT = /callcaitlyn\.com\b|^callcaitlyn\b/i;
+
+function blob(signals: FirstTouchSignals): string {
+  return [signals.leadSource, signals.lastEventName].filter(Boolean).join("\n");
+}
+
+function tagSet(signals: FirstTouchSignals): Set<string> {
+  return new Set((signals.tagNames ?? []).map((name) => name.trim().toLowerCase()).filter(Boolean));
+}
+
+export function resolveFirstTouchSource(signals: FirstTouchSignals): FirstTouchSource {
+  const tags = tagSet(signals);
+  const account = signals.eventbriteAccount?.trim();
+  const text = blob(signals);
+  const lead = signals.leadSource?.trim() ?? "";
+
+  // Women's REI tag/account wins even when the event name mentions house
+  // hacking (a real Eventbrite case — see process-order.ts).
+  if (account === "womens_rei" || tags.has("women's rei") || tags.has("womens rei")) return "womens_rei";
+  if (WOMENS_TEXT.test(text)) return "womens_rei";
+
+  if (account === "house_hacking" || tags.has("house hacking")) return "house_hacking";
+  if (HOUSE_HACK_TEXT.test(text)) return "house_hacking";
+
+  if (tags.has("blinq") || BLINQ_TEXT.test(lead) || BLINQ_TEXT.test(text)) return "blinq";
+
+  // Public OM unlock / offer / seller analysis — lead_source is
+  // "Listing page — {nickname}" (see app/listing/[slug]/actions.ts).
+  // Investor Lead is only applied on that unlock path.
+  if (LISTING_PAGE_TEXT.test(lead) || tags.has("investor lead")) return "listing";
+
+  if (CALLCAITLYN_WEBFORM_TEXT.test(lead)) return "webform";
+
+  return "other";
+}
+
+/** @deprecated use resolveFirstTouchSource */
+export function resolveFirstTouchMeetup(signals: FirstTouchSignals): FirstTouchSource {
+  return resolveFirstTouchSource(signals);
+}
+
+export function eventbriteAccountFromActivities(
+  activities: { metadata?: Record<string, unknown> | null }[],
+): string | null {
+  for (const a of activities) {
+    const account = a.metadata?.eventbrite_account;
+    if (account === "womens_rei" || account === "house_hacking") return account;
+  }
+  return null;
+}
+
+export function messageComposeHref(contactId: string, draft?: string | null): string {
+  const trimmed = draft?.trim();
+  if (!trimmed) return `/messages/${contactId}`;
+  return `/messages/${contactId}?draft=${encodeURIComponent(trimmed)}`;
+}
+
+export function firstTouchTemplate(signals: FirstTouchSignals): string {
+  switch (resolveFirstTouchSource(signals)) {
+    case "womens_rei":
+      return FIRST_TOUCH_WOMENS_REI;
+    case "house_hacking":
+      return FIRST_TOUCH_HOUSE_HACKING;
+    case "blinq":
+      return FIRST_TOUCH_BLINQ;
+    case "listing":
+      return FIRST_TOUCH_LISTING;
+    case "webform":
+      return FIRST_TOUCH_WEBFORM;
+    default:
+      return FIRST_TOUCH_FALLBACK;
+  }
+}
+
+// First SMS compose (no outbound text yet) always gets a draft — matched
+// source template, or the last-resort intro. Do not leave compose blank.
+export function shouldPrefillFirstTouchSms(opts: {
+  hasOutboundText: boolean;
+  hasPriorOutreach?: boolean;
+  source: FirstTouchSource;
+  /** @deprecated use source */
+  meetup?: FirstTouchSource;
+}): boolean {
+  return !opts.hasOutboundText;
+}
 
 // Order matters - first match wins. An Eventbrite lead_source is just the
 // raw event name (no reliable "Eventbrite" keyword in it - the same
@@ -41,41 +161,10 @@ export function resolveNewLeadSource(leadSource: string | null): NewLeadSourceIn
   if (!leadSource) return { bucket: "other", label: "New lead" };
   const hit = PATTERNS.find((p) => p.test.test(leadSource));
   if (hit) return { bucket: hit.bucket, label: hit.label };
-  // Already human-readable free text (a manual entry, a CSV import, a raw
-  // Eventbrite event name) - show it as-is rather than forcing a generic
-  // label onto something that's already specific.
   return { bucket: "other", label: leadSource };
 }
 
-const OPENERS: Record<NewLeadSourceBucket, (firstName: string) => string> = {
-  site_form: (n) => `Hi ${n}, this is Caitlyn Verdugo - thanks so much for reaching out!`,
-  instagram: (n) => `Hi ${n}, this is Caitlyn Verdugo - thanks for reaching out on Instagram!`,
-  referral: (n) => `Hi ${n}, this is Caitlyn Verdugo - I heard we should connect!`,
-  listing_page: (n) => `Hi ${n}, this is Caitlyn Verdugo - thanks for checking out the listing!`,
-  blinq: (n) => `Hi ${n}, this is Caitlyn Verdugo - it was great connecting!`,
-  scheduling: (n) => `Hi ${n}, this is Caitlyn Verdugo - looking forward to our call!`,
-  checkin: (n) => `Hi ${n}, this is Caitlyn Verdugo - thanks for stopping by!`,
-  house_hacking: (n) => `Hi ${n}, this is Caitlyn Verdugo with the House Hacking Meetup - thanks for signing up!`,
-  quo: (n) => `Hi ${n}, this is Caitlyn Verdugo - thanks for reaching out!`,
-  other: (n) => `Hi ${n}, this is Caitlyn Verdugo!`,
-};
-
-// Every closer is a genuine question (mirrors event-text-templates.ts's
-// FOLLOW_UP_OPENER + question pattern) so a reply is easy, not a broadcast.
-const ENGAGEMENT_QUESTIONS: Record<NewLeadSourceBucket, string> = {
-  site_form: "What made you reach out - are you actively looking to buy, sell, or just exploring for now?",
-  instagram: "What are you working on right now - anything real estate related I can help with?",
-  referral: "Excited to help - what's on your radar right now, buying, selling, or investing?",
-  listing_page: "Did you have any questions about the property, or want to set up a time to see it?",
-  blinq: "What are you working on right now that I could help with?",
-  scheduling: "Anything specific you'd like to cover on our call?",
-  checkin: "So glad you came by - are you actively looking right now, or still in the research phase?",
-  house_hacking: "Are you actively looking right now, or still in the research phase?",
-  quo: "What can I help you with?",
-  other: "What can I help you with?",
-};
-
-export function buildNewLeadDraft(firstName: string, leadSource: string | null): string {
-  const { bucket } = resolveNewLeadSource(leadSource);
-  return `${OPENERS[bucket](firstName)} ${ENGAGEMENT_QUESTIONS[bucket]}`;
+export function buildNewLeadDraft(firstName: string, leadSource: string | null, extra?: Omit<FirstTouchSignals, "leadSource">): string {
+  const template = firstTouchTemplate({ leadSource, ...extra });
+  return template.replace(/\{\{\s*first_name\s*\}\}/gi, firstName || "");
 }

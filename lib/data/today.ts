@@ -13,7 +13,17 @@ import { listAllowlistedPhoneKeys } from "@/lib/crm/spam-signals";
 import { listConversations } from "@/lib/data/messages";
 import type { PipelineStage } from "@/types/database";
 
-export type WorklistPerson = { id: string; name: string; phone: string | null; email?: string | null; meta: string; late: boolean; activityId?: string };
+export type WorklistPerson = {
+  id: string;
+  name: string;
+  phone: string | null;
+  email?: string | null;
+  meta: string;
+  late: boolean;
+  activityId?: string;
+  // Prefills /messages/[id]?draft= for New/uncontacted first-touch SMS.
+  smsDraft?: string;
+};
 
 // "Calls" - contacts.next_follow_up_at due or overdue. Spam-flagged
 // contacts are excluded here (same as Quiet/New) so realtor robocalls

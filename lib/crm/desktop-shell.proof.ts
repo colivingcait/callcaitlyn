@@ -25,6 +25,7 @@ assert.equal(todayDesktop.includes("max-w-lg"), false);
 
 const todayHome = read("components/dashboard/TodayHome.tsx");
 assert.ok(todayHome.includes("TodayPipelineOverview"), "Today home mounts the pipeline overview");
+assert.ok(todayHome.includes("NewUncontactedSpotlight"), "Today home promotes New/uncontacted above the chrome");
 assert.ok(todayHome.includes("My Tasks"), "Today home has My Tasks quick link");
 assert.ok(todayHome.includes("Upcoming Events"), "Today home has Upcoming Events");
 assert.ok(todayHome.includes("TODAY_GRID") || todayHome.includes("grid-cols-12"), "Desktop home is a wide grid, not a stacked phone");

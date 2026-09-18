@@ -1,3 +1,5 @@
+import { applyMergeFields } from "@/lib/crm/merge-fields";
+import { firstTouchTemplate } from "@/lib/crm/new-lead-text-templates";
 import type { WorklistPerson } from "@/lib/data/today";
 import type { getTodayData } from "@/lib/data/today";
 
@@ -88,6 +90,10 @@ export function buildTodayPersonGroups(today: TodayData): TodayPersonGroups {
     phone: c.phone,
     meta: c.lead_source ? `New · ${c.lead_source}` : "New / uncontacted",
     late: false,
+    smsDraft: applyMergeFields(firstTouchTemplate({ leadSource: c.lead_source, lastEventName: c.last_event_name, tagNames: c.tagNames }), {
+      first_name: c.first_name,
+      last_name: c.last_name,
+    }),
   }));
 
   return {

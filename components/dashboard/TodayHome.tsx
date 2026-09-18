@@ -1,10 +1,9 @@
-import type { ReactNode } from "react";
 import Link from "next/link";
 import { Bell, CalendarHeart, ChevronRight, DollarSign, KanbanSquare, ListTodo, MessageCircle, Settings } from "lucide-react";
 import { BrandWordmark } from "@/components/brand/BrandWordmark";
 import { TodaySearch } from "@/components/dashboard/mobile/TodaySearch";
 import { TodayPipelineOverview } from "@/components/dashboard/TodayPipelineOverview";
-import { TodayQueues } from "@/components/dashboard/TodayQueues";
+import { NewUncontactedSpotlight, TodayQueues } from "@/components/dashboard/TodayQueues";
 import { TODAY_CARD, TODAY_GRID, TODAY_STACK_DESKTOP, TODAY_STACK_MOBILE } from "@/components/dashboard/today-home-layout";
 import { formatLocal, isTodayLocal, timeOfDayGreeting } from "@/lib/format-time";
 import { todayFocusHref } from "@/lib/crm/today-focus";
@@ -167,9 +166,10 @@ export function TodayHome({
     />
   );
 
-  // PR #9 fills this with <NewUncontactedSpotlight /> when New/uncontacted is non-empty.
-  // Slot sits under the greeting and above Pipeline/Events — do not move it.
-  const newSpotlight: ReactNode = null;
+  const newSpotlight =
+    groups.newUncontacted.length > 0 ? (
+      <NewUncontactedSpotlight count={groups.newUncontacted.length} previewName={groups.newUncontacted[0]?.name} />
+    ) : null;
 
   if (wide) {
     return (

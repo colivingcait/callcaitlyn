@@ -7,6 +7,7 @@ import { openQuoCall } from "@/lib/quo/call-link";
 import { initials } from "@/lib/utils";
 import { WorklistRowMenu, type WorklistMenuItem } from "@/components/dashboard/WorklistRowMenu";
 import { SendEmailForm } from "@/components/contacts/SendEmailForm";
+import { messageComposeHref } from "@/lib/crm/new-lead-text-templates";
 import type { WorklistPerson } from "@/lib/data/today";
 
 const CAP = 10;
@@ -128,7 +129,7 @@ export function WorklistGroup({
                       <span className="hidden sm:inline">Call</span>
                     </button>
                     <Link
-                      href={`/messages/${person.id}`}
+                      href={messageComposeHref(person.id, person.smsDraft)}
                       aria-label={`Text ${person.name}`}
                       data-today-control={`text-${person.id}`}
                       className={`${actionBtn} w-10 sm:w-auto sm:px-3`}
