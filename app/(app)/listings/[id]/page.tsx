@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { getListingDetail, getSendProgress } from "@/lib/data/listings";
+import { collapseListingAgents } from "@/lib/crm/agent-identity";
 import { fetchListingAgentTextRecency } from "@/lib/data/listing-outbound-texts";
 import { createClient } from "@/lib/supabase/server";
 import { formatCurrency, cn } from "@/lib/utils";
@@ -25,6 +26,7 @@ import { MarketingGraphics } from "@/components/listings/MarketingGraphics";
 import { CopyBlocks } from "@/components/listings/CopyBlocks";
 import { ActivityTab } from "@/components/listings/ActivityTab";
 import { Section } from "@/components/ui/Section";
+import { asPhotoList, asUrlList } from "@/lib/listings/crm-marketing-fields";
 import type { ListingAgentMessage } from "@/types/database";
 
 type Tab = "rp" | "marketing" | "activity";
@@ -37,28 +39,33 @@ export default async function ListingDetailPage({ params, searchParams }: { para
 
   const detail = await getListingDetail(id);
   if (!detail) notFound();
-  const { listing, agents, sends, priceChanges, messages, documents } = detail;
+  const { listing, agents: agentsRaw, sends, priceChanges, messages, documents } = detail;
+  // Collapse buyer-ref duplicates for every RP list Caitlyn sees. Activity
+  // still uses the raw rows so a message tied to a non-canonical listing_agent
+  // id keeps its name.
+  const agents = collapseListingAgents(agentsRaw);
 
   const sendProgressMap = activeTab === "rp" ? await getSendProgress(sends.map((s) => s.id)) : new Map();
   const sendProgress = Object.fromEntries(sendProgressMap);
   const textRecency =
     activeTab === "rp"
-      ? await fetchListingAgentTextRecency(listing.id, agents)
+      ? await fetchListingAgentTextRecency(listing.id, agentsRaw)
       : { lastOutboundAtByAgentId: {}, queuedOnThisListing: [] };
 
   const specs = [listing.beds != null && listing.baths != null ? `${listing.beds} bd / ${listing.baths} ba` : null, listing.property_type, listing.sqft ? `${listing.sqft.toLocaleString()} sqft` : null]
     .filter(Boolean)
     .join(" · ");
 
+  const photoPaths = asUrlList(listing.photo_paths);
   let photoUrls: string[] = [];
-  if (activeTab === "marketing" && listing.photo_paths.length > 0) {
+  if (activeTab === "marketing" && photoPaths.length > 0) {
     const supabase = await createClient();
-    photoUrls = listing.photo_paths.map((p) => supabase.storage.from("listing-photos").getPublicUrl(p).data.publicUrl);
+    photoUrls = photoPaths.map((p) => supabase.storage.from("listing-photos").getPublicUrl(p).data.publicUrl);
   }
 
   let enrichedMessages: EnrichedMessage[] = [];
   if (activeTab === "activity") {
-    const agentById = new Map(agents.map((a) => [a.id, a]));
+    const agentById = new Map(agentsRaw.map((a) => [a.id, a]));
     enrichedMessages = messages.map((m) => {
       const la = m.listing_agent_id ? agentById.get(m.listing_agent_id) : null;
       const meta = (m.metadata ?? {}) as { name?: string; brokerage?: string };
@@ -162,7 +169,7 @@ export default async function ListingDetailPage({ params, searchParams }: { para
             <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
               <BasicsForm listing={listing} />
               <div className="mt-4">
-                <PhotoUploader listingId={listing.id} photoUrls={photoUrls} photoPaths={listing.photo_paths} />
+                <PhotoUploader listingId={listing.id} photoUrls={photoUrls} photoPaths={photoPaths} />
               </div>
             </div>
             <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px] space-y-4">
@@ -190,7 +197,7 @@ export default async function ListingDetailPage({ params, searchParams }: { para
             </div>
             <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
               <h2 className="mb-3 text-base font-semibold text-neutral-900">PadSplit photos</h2>
-              <PhotoExcludeManager listingId={listing.id} photos={listing.padsplit_photos ?? []} excludedUrls={listing.excluded_photo_urls} />
+              <PhotoExcludeManager listingId={listing.id} photos={asPhotoList(listing.padsplit_photos)} excludedUrls={asUrlList(listing.excluded_photo_urls)} />
             </div>
             <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
               <div className="mb-3 flex items-center justify-between">

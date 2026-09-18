@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
 import { updateListingImprovements } from "@/app/(app)/listings/actions";
+import { asImprovements } from "@/lib/listings/crm-marketing-fields";
 import type { ListingImprovement } from "@/types/database";
 
 const inputClass = "w-full rounded-lg border border-neutral-200 px-2.5 py-1.5 text-sm";
@@ -13,7 +14,7 @@ const inputClass = "w-full rounded-lg border border-neutral-200 px-2.5 py-1.5 te
 // showing a blank block.
 export function ImprovementsEditor({ listingId, improvements }: { listingId: string; improvements: ListingImprovement[] | null }) {
   const router = useRouter();
-  const [items, setItems] = useState<ListingImprovement[]>(improvements ?? []);
+  const [items, setItems] = useState<ListingImprovement[]>(() => asImprovements(improvements));
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -42,9 +43,9 @@ export function ImprovementsEditor({ listingId, improvements }: { listingId: str
       <div className="space-y-2">
         {items.map((row, i) => (
           <div key={i} className="flex items-center gap-2">
-            <input value={row.item} onChange={(e) => update(i, { item: e.target.value })} placeholder="Roof replacement" className={`${inputClass} flex-1`} />
-            <input value={row.year} onChange={(e) => update(i, { year: e.target.value })} placeholder="2022" className={`${inputClass} w-20`} />
-            <input value={row.cost} onChange={(e) => update(i, { cost: e.target.value })} placeholder="$11,400" className={`${inputClass} w-28`} />
+            <input value={row.item ?? ""} onChange={(e) => update(i, { item: e.target.value })} placeholder="Roof replacement" className={`${inputClass} flex-1`} />
+            <input value={row.year ?? ""} onChange={(e) => update(i, { year: e.target.value })} placeholder="2022" className={`${inputClass} w-20`} />
+            <input value={row.cost ?? ""} onChange={(e) => update(i, { cost: e.target.value })} placeholder="$11,400" className={`${inputClass} w-28`} />
             <button type="button" onClick={() => setItems((rows) => rows.filter((_, idx) => idx !== i))} className="shrink-0 text-neutral-400">
               <X size={15} />
             </button>
