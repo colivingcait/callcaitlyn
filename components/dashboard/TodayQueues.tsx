@@ -74,19 +74,19 @@ export function TodayQueues({
   );
 
   const quiet = (
-    <section className={cn(TODAY_SECTION, wide && "h-full")}>
+    <section className={TODAY_SECTION}>
       <p className={TODAY_LABEL}>Quiet leads</p>
       <QueueRow href={todayFocusHref("quiet")} icon={Bell} label="No touch 14+ days" count={quietCount} control="queue-quiet" />
     </section>
   );
 
   const inbox = (
-    <section className={cn(TODAY_SECTION, wide && "h-full")}>
+    <section className={TODAY_SECTION}>
       <p className={TODAY_LABEL}>Messages</p>
       <Link
         href="/messages"
         data-today-control="messages"
-        className={cn("block h-full px-3.5 py-3.5", TODAY_CARD)}
+        className={cn("block px-3.5 py-3.5", TODAY_CARD)}
       >
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#c45c4a] text-white shadow-[0_4px_10px_rgb(196_92_74_/_0.28)]">
@@ -123,7 +123,7 @@ export function TodayQueues({
       <>
         {doNext}
         {afterDoNext}
-        <div className={TODAY_GRID}>
+        <div className={cn(TODAY_GRID, "items-start")}>
           <div className="col-span-12 min-w-0 xl:col-span-6">{quiet}</div>
           <div className="col-span-12 min-w-0 xl:col-span-6">{inbox}</div>
         </div>
