@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { computeLikelihood } from "@/lib/crm/likelihood";
 import { getDuplicateRiskPairs } from "@/lib/data/reports";
+import { hasUsablePhone, isAnyOutreach, isOutboundOutreach } from "@/lib/crm/contact-filter-predicates";
 import type { ContactQueue } from "@/lib/crm/contact-queues";
 import type { ContactWithRelations, PipelineStage } from "@/types/database";
 
@@ -22,6 +23,7 @@ const NO_SHOW_GRACE_MS = 3 * 24 * 60 * 60 * 1000;
 
 type ActivityAgg = {
   lastOutreachAt: number | null;
+  lastOutboundAt: number | null;
   lastCallAt: number | null;
   lastEventbriteAt: number | null;
   jotformCheckinCount: number;
@@ -29,20 +31,24 @@ type ActivityAgg = {
 
 async function fetchActivityAggregates(): Promise<Map<string, ActivityAgg>> {
   const supabase = await createClient();
-  const { data } = await supabase.from("activities").select("contact_id, type, source, occurred_at");
+  const { data } = await supabase.from("activities").select("contact_id, type, source, direction, occurred_at");
 
   const map = new Map<string, ActivityAgg>();
   for (const row of data ?? []) {
     const entry = map.get(row.contact_id as string) ?? {
       lastOutreachAt: null,
+      lastOutboundAt: null,
       lastCallAt: null,
       lastEventbriteAt: null,
       jotformCheckinCount: 0,
     };
     const t = new Date(row.occurred_at as string).getTime();
 
-    if (row.type === "call" || row.type === "text" || row.type === "email") {
+    if (isAnyOutreach(row)) {
       if (entry.lastOutreachAt === null || t > entry.lastOutreachAt) entry.lastOutreachAt = t;
+    }
+    if (isOutboundOutreach(row)) {
+      if (entry.lastOutboundAt === null || t > entry.lastOutboundAt) entry.lastOutboundAt = t;
     }
     if (row.type === "call" && (entry.lastCallAt === null || t > entry.lastCallAt)) entry.lastCallAt = t;
     if (row.source === "eventbrite" && (entry.lastEventbriteAt === null || t > entry.lastEventbriteAt)) entry.lastEventbriteAt = t;
@@ -68,7 +74,7 @@ export async function filterByQueue(
   }
 
   if (queue === "no_phone") {
-    return contacts.filter((c) => !c.phone);
+    return contacts.filter((c) => !hasUsablePhone(c.phone));
   }
 
   if (queue === "duplicate_risk") {
@@ -100,7 +106,7 @@ export async function filterByQueue(
       if (!a?.lastEventbriteAt) return false;
       const dismissed = dismissedAt.get(c.id);
       if (dismissed !== undefined && dismissed >= a.lastEventbriteAt) return false;
-      return a.lastOutreachAt === null || a.lastOutreachAt < a.lastEventbriteAt;
+      return a.lastOutboundAt === null || a.lastOutboundAt < a.lastEventbriteAt;
     });
   }
 
@@ -117,9 +123,9 @@ export async function filterByQueue(
     return contacts.filter((c) => {
       if (NON_LEAD_CONTACT_TYPES.has(c.contact_type)) return false;
       if (!c.last_event_at) return false;
-      const lastOutreachAt = agg.get(c.id)?.lastOutreachAt ?? null;
+      const lastOutboundAt = agg.get(c.id)?.lastOutboundAt ?? null;
       const lastAttendedAt = new Date(c.last_event_at).getTime();
-      return lastOutreachAt === null || lastOutreachAt < lastAttendedAt;
+      return lastOutboundAt === null || lastOutboundAt < lastAttendedAt;
     });
   }
 
@@ -130,8 +136,8 @@ export async function filterByQueue(
       // a brand-new hot lead with no activity yet (normal, hasn't been
       // called back yet) would get miscategorized as "went cold".
       if (new Date(c.lead_date).getTime() > now - QUIET_THRESHOLD_MS) return false;
-      const lastOutreachAt = agg.get(c.id)?.lastOutreachAt ?? null;
-      return lastOutreachAt === null || lastOutreachAt < now - QUIET_THRESHOLD_MS;
+      const lastOutboundAt = agg.get(c.id)?.lastOutboundAt ?? null;
+      return lastOutboundAt === null || lastOutboundAt < now - QUIET_THRESHOLD_MS;
     });
   }
 

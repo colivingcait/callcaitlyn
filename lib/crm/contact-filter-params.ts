@@ -3,6 +3,35 @@ import type { ContactQueue } from "@/lib/crm/contact-queues";
 
 export type ContactGroupBy = "none" | "stage" | "tag" | "source" | "month";
 
+// URL sentinels for the registration dropdown. Production used to label
+// missing/empty regEvent as "Registered for: any event" while applying no
+// predicate (Tess: Austin Sizemore still in ?phone=1). Missing/empty now
+// MEANS any-event on the main Contacts browse. Explicit opt-out is __all__.
+export const REGISTERED_FOR_ANY_EVENT = "__any__";
+export const NOT_FILTERED_BY_REGISTRATION = "__all__";
+
+// Working-list / insight deep links that are not the Tess browse combo.
+// Those URLs omit regEvent on purpose and must not inherit the any-event default.
+const REGISTRATION_DEFAULT_OPT_OUT_KEYS = [
+  "queue", "event", "newSince", "leadFrom", "leadTo", "archived", "type", "tags", "source", "q", "likelihood", "followup", "email", "notes",
+] as const;
+
+export function resolveRegisteredEventName(sp: URLSearchParams): string | undefined {
+  const raw = sp.get("regEvent");
+  if (raw === NOT_FILTERED_BY_REGISTRATION) return undefined;
+  if (raw === REGISTERED_FOR_ANY_EVENT || raw === "") return REGISTERED_FOR_ANY_EVENT;
+  if (raw) return raw;
+  if (sp.get("phone") === "0") return undefined;
+  for (const key of REGISTRATION_DEFAULT_OPT_OUT_KEYS) {
+    if (sp.get(key)) return undefined;
+  }
+  return REGISTERED_FOR_ANY_EVENT;
+}
+
+export function registrationSelectValue(sp: URLSearchParams): string {
+  return resolveRegisteredEventName(sp) ?? NOT_FILTERED_BY_REGISTRATION;
+}
+
 export type ContactFilterParams = {
   q?: string;
   stageId?: string;
@@ -71,7 +100,7 @@ export function parseContactFilterParams(sp: URLSearchParams): ContactFilterPara
     minBudget: sp.get("minBudget") ? Number(sp.get("minBudget")) : undefined,
     notSyncedQuo: sp.get("quoSync") === "0",
     eventName: sp.get("event") ?? undefined,
-    registeredEventName: sp.get("regEvent") ?? undefined,
+    registeredEventName: resolveRegisteredEventName(sp),
     likelihood: (sp.get("likelihood") as ContactFilterParams["likelihood"]) ?? undefined,
     queue: (sp.get("queue") as ContactQueue) ?? undefined,
     leadDateWithinDays: sp.get("newSince") ? Number(sp.get("newSince")) : undefined,
