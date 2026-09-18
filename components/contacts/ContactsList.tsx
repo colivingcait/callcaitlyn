@@ -13,6 +13,7 @@ import { BulkTypeModal } from "@/components/contacts/BulkTypeModal";
 import { TextBlastModal } from "@/components/contacts/TextBlastModal";
 import { useSectionOpen } from "@/lib/hooks/useSectionOpen";
 import { groupContacts } from "@/lib/crm/contact-grouping";
+import { hasUsablePhone } from "@/lib/crm/contact-filter-predicates";
 import type { ContactGroupBy } from "@/lib/crm/contact-filter-params";
 import type { ContactWithRelations, PipelineStage, Tag } from "@/types/database";
 
@@ -105,7 +106,7 @@ export function ContactsList({
 
   const selectedIds = [...selected];
   const selectedContacts = contacts.filter((c) => selected.has(c.id));
-  const selectedWithPhone = selectedContacts.filter((c) => c.phone).length;
+  const selectedWithPhone = selectedContacts.filter((c) => hasUsablePhone(c.phone)).length;
   const dripSequences = sequences.filter((s) => s.type === "drip");
   const groups = groupContacts(contacts, groupBy, stages);
 
@@ -276,7 +277,10 @@ function ContactGroup({
   onTextGroup: (ids: string[]) => void;
 }) {
   const [open, setOpen] = useSectionOpen(`contacts-group:${groupKey}`, true);
-  const withPhone = contacts.filter((c) => c.phone);
+  // Blast IDs come only from this group's already-filtered rows. Registration
+  // + phone gating happens in listContacts; Austin-style call-only Other cannot
+  // appear here when that combo is on, so they cannot get a "Text the N" send.
+  const withPhone = contacts.filter((c) => hasUsablePhone(c.phone));
 
   if (!label) {
     // Ungrouped ("none") - just the rows, one shared card with dividers

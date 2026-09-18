@@ -6,7 +6,7 @@ import { X } from "lucide-react";
 import { Button, Input, Select, Label } from "@/components/ui";
 import { CONTACT_TYPE_LABELS, TIMELINE_LABELS, REPRESENTING_LABELS, cn } from "@/lib/utils";
 import type { PipelineStage, Tag } from "@/types/database";
-import { REGISTERED_FOR_ANY_EVENT, type ContactGroupBy } from "@/lib/crm/contact-filter-params";
+import { REGISTERED_FOR_ANY_EVENT, NOT_FILTERED_BY_REGISTRATION, registrationSelectValue, type ContactGroupBy } from "@/lib/crm/contact-filter-params";
 import { SHEET_PARAM_KEYS } from "@/components/contacts/ContactFilters";
 
 const LEAD_DATE_PRESETS = [
@@ -59,7 +59,11 @@ export function ContactFiltersSheet({
   // Local draft state, seeded from the URL - nothing is applied until
   // "Apply filters" so flipping through several fields doesn't trigger a
   // navigation (and a full contacts refetch) per click.
-  const [draft, setDraft] = useState(() => Object.fromEntries(searchParams.entries()));
+  const [draft, setDraft] = useState(() => {
+    const entries = Object.fromEntries(searchParams.entries());
+    entries.regEvent = registrationSelectValue(searchParams);
+    return entries;
+  });
   const [selectedTags, setSelectedTags] = useState<string[]>(() => (searchParams.get("tags")?.split(",").filter(Boolean) ?? []));
 
   function set(key: string, value: string) {
@@ -280,9 +284,9 @@ export function ContactFiltersSheet({
                 </option>
               ))}
             </Select>
-            <Select value={draft.regEvent ?? ""} onChange={(e) => set("regEvent", e.target.value)}>
-              <option value="">Anyone (not filtered by registration)</option>
+            <Select value={draft.regEvent ?? REGISTERED_FOR_ANY_EVENT} onChange={(e) => set("regEvent", e.target.value)}>
               <option value={REGISTERED_FOR_ANY_EVENT}>Registered for: any event</option>
+              <option value={NOT_FILTERED_BY_REGISTRATION}>Anyone (including not registered)</option>
               {registeredEventNames.map((e) => (
                 <option key={e} value={e}>
                   Registered for: {e}

@@ -3,8 +3,9 @@
 // proof script can import this without pulling the server graph.
 //
 // URL contract (see contact-filter-params.ts):
-//   regEvent missing/empty  → no registration filter
+//   regEvent missing/empty  → any-event on the main Contacts browse (Tess combo)
 //   regEvent=__any__        → registered for any event (Eventbrite / CRM signup)
+//   regEvent=__all__        → no registration filter (Anyone, including call-only)
 //   regEvent=<event name>   → registered for that specific event
 //
 // "Registered" is an activity, not a contact_type and not a call log.
@@ -66,6 +67,17 @@ export function registeredContactIds(registeredEventName: string, registrations:
     if (any || row.eventName === registeredEventName) ids.add(row.contactId);
   }
   return ids;
+}
+
+// Tess combo: Registered for any event + Has a phone number.
+// contact_type is a label, not this gate. Call-only Other (Austin Sizemore)
+// has a phone and no Eventbrite/CRM signup, so this is false.
+export function contactMatchesRegisteredAnyAndHasPhone(
+  contact: { id: string; phone?: string | null; contact_type?: string },
+  registrations: EventActivityRef[],
+): boolean {
+  if (!hasUsablePhone(contact.phone)) return false;
+  return registeredContactIds(REGISTERED_FOR_ANY_EVENT, registrations).has(contact.id);
 }
 
 // "Attended: {event}" must match anyone who checked in at that event, not

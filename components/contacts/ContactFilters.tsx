@@ -5,7 +5,7 @@ import { useState, useTransition, useEffect, useRef } from "react";
 import { Search, SlidersHorizontal, MessageSquare, X, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { QUEUES } from "@/lib/crm/contact-queues";
-import { REGISTERED_FOR_ANY_EVENT } from "@/lib/crm/contact-filter-params";
+import { REGISTERED_FOR_ANY_EVENT, NOT_FILTERED_BY_REGISTRATION, registrationSelectValue } from "@/lib/crm/contact-filter-params";
 import { ContactFiltersSheet } from "@/components/contacts/ContactFiltersSheet";
 import type { PipelineStage, Tag } from "@/types/database";
 
@@ -154,12 +154,12 @@ export function ContactFilters({
       </div>
 
       <select
-        value={searchParams.get("regEvent") ?? ""}
+        value={registrationSelectValue(searchParams)}
         onChange={(e) => updateParam("regEvent", e.target.value)}
         className="w-full rounded-[11px] border border-neutral-200 bg-white px-3 py-2.5 text-[15px] text-neutral-800"
       >
-        <option value="">Anyone (not filtered by registration)</option>
         <option value={REGISTERED_FOR_ANY_EVENT}>Registered for: any event</option>
+        <option value={NOT_FILTERED_BY_REGISTRATION}>Anyone (including not registered)</option>
         {registeredEventNames.map((name) => (
           <option key={name} value={name}>
             Registered for: {name}
