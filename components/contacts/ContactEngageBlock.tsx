@@ -14,11 +14,13 @@ export function ContactEngageBlock({
   stages,
   tags,
   ownerId,
+  smsDraft,
 }: {
   contact: ContactWithRelations;
   stages: PipelineStage[];
   tags: Tag[];
   ownerId: string;
+  smsDraft?: string;
 }) {
   const [logOpen, setLogOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
@@ -31,6 +33,7 @@ export function ContactEngageBlock({
         contactId={contact.id}
         phone={contact.phone}
         email={contact.email}
+        smsDraft={smsDraft}
         onNote={() => setLogOpen(true)}
         onTask={() => setTaskOpen(true)}
         onStage={() => setStageOpen(true)}

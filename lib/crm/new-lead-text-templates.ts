@@ -94,6 +94,22 @@ export function resolveFirstTouchMeetup(signals: FirstTouchSignals): FirstTouchS
   return resolveFirstTouchSource(signals);
 }
 
+export function eventbriteAccountFromActivities(
+  activities: { metadata?: Record<string, unknown> | null }[],
+): string | null {
+  for (const a of activities) {
+    const account = a.metadata?.eventbrite_account;
+    if (account === "womens_rei" || account === "house_hacking") return account;
+  }
+  return null;
+}
+
+export function messageComposeHref(contactId: string, draft?: string | null): string {
+  const trimmed = draft?.trim();
+  if (!trimmed) return `/messages/${contactId}`;
+  return `/messages/${contactId}?draft=${encodeURIComponent(trimmed)}`;
+}
+
 export function firstTouchTemplate(signals: FirstTouchSignals): string {
   switch (resolveFirstTouchSource(signals)) {
     case "womens_rei":
@@ -111,8 +127,8 @@ export function firstTouchTemplate(signals: FirstTouchSignals): string {
   }
 }
 
-// First SMS compose (no outbound text yet). A matched source still fills
-// after a call; the last-resort intro only fills when this is a true first touch.
+// First SMS compose (no outbound text yet) always gets a draft — matched
+// source template, or the last-resort intro. Do not leave compose blank.
 export function shouldPrefillFirstTouchSms(opts: {
   hasOutboundText: boolean;
   hasPriorOutreach?: boolean;
@@ -120,10 +136,7 @@ export function shouldPrefillFirstTouchSms(opts: {
   /** @deprecated use source */
   meetup?: FirstTouchSource;
 }): boolean {
-  if (opts.hasOutboundText) return false;
-  const source = opts.source ?? opts.meetup ?? "other";
-  if (source !== "other") return true;
-  return !opts.hasPriorOutreach;
+  return !opts.hasOutboundText;
 }
 
 // Order matters - first match wins. An Eventbrite lead_source is just the

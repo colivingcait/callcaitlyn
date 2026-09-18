@@ -9,7 +9,9 @@ import {
   FIRST_TOUCH_WEBFORM,
   FIRST_TOUCH_WOMENS_REI,
   buildNewLeadDraft,
+  eventbriteAccountFromActivities,
   firstTouchTemplate,
+  messageComposeHref,
   resolveFirstTouchSource,
   shouldPrefillFirstTouchSms,
 } from "./new-lead-text-templates";
@@ -104,8 +106,16 @@ assert.equal(firstTouchTemplate({ leadSource: "Instagram" }), FIRST_TOUCH_FALLBA
 
 assert.equal(shouldPrefillFirstTouchSms({ hasOutboundText: true, source: "womens_rei" }), false);
 assert.equal(shouldPrefillFirstTouchSms({ hasOutboundText: false, source: "blinq", hasPriorOutreach: true }), true);
-assert.equal(shouldPrefillFirstTouchSms({ hasOutboundText: false, source: "other", hasPriorOutreach: true }), false);
+assert.equal(shouldPrefillFirstTouchSms({ hasOutboundText: false, source: "other", hasPriorOutreach: true }), true);
 assert.equal(shouldPrefillFirstTouchSms({ hasOutboundText: false, source: "other", hasPriorOutreach: false }), true);
+
+assert.equal(eventbriteAccountFromActivities([{ metadata: { eventbrite_account: "womens_rei" } }]), "womens_rei");
+assert.equal(
+  resolveFirstTouchSource({ leadSource: "Inside the Making of a 250-Home Neighborhood", eventbriteAccount: "womens_rei" }),
+  "womens_rei",
+);
+assert.equal(messageComposeHref("abc"), "/messages/abc");
+assert.ok(messageComposeHref("abc", "Hi Leandra").includes("draft="));
 
 const root = join(process.cwd());
 function read(rel: string) {
@@ -119,7 +129,15 @@ assert.equal(messagesPage.includes("onAdvance="), false, "no server→client fun
 
 const worklist = read("components/dashboard/WorklistGroup.tsx");
 assert.ok(worklist.includes("smsDraft"), "New/uncontacted Text carries the draft into /messages");
-assert.ok(worklist.includes("draft="), "Text link uses ?draft= prefill");
+assert.ok(worklist.includes("messageComposeHref"), "Text link uses messageComposeHref prefill");
+
+const engage = read("components/contacts/EngageStrip.tsx");
+assert.ok(engage.includes("smsDraft"), "Contact → Text carries first-touch draft");
+assert.ok(engage.includes("messageComposeHref"), "Contact → Text opens compose with ?draft=");
+
+const contactPage = read("app/(app)/contacts/[id]/page.tsx");
+assert.ok(contactPage.includes("smsDraft={firstTouchBody}"), "contact record passes first-touch draft into Engage Text");
+assert.ok(contactPage.includes("eventbriteAccountFromActivities"), "contact record uses Eventbrite account for routing");
 
 const newLeads = read("lib/data/new-leads.ts");
 assert.ok(newLeads.includes('.eq("spam", false)'), "new-lead queue stays spam-filtered");

@@ -32,7 +32,7 @@ import { ContactEventHistory } from "@/components/contacts/ContactEventHistory";
 import { listTextTemplates } from "@/lib/data/text-templates";
 import { countRecentTexts } from "@/lib/crm/engagement";
 import { applyMergeFields } from "@/lib/crm/merge-fields";
-import { firstTouchTemplate, resolveFirstTouchSource, shouldPrefillFirstTouchSms } from "@/lib/crm/new-lead-text-templates";
+import { firstTouchTemplate, resolveFirstTouchSource, shouldPrefillFirstTouchSms, eventbriteAccountFromActivities } from "@/lib/crm/new-lead-text-templates";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ContactRecordMobile } from "@/components/contacts/mobile/ContactRecordMobile";
 import { ContactEngageBlock } from "@/components/contacts/ContactEngageBlock";
@@ -65,11 +65,15 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
   const doneTasks = tasks.filter((t) => t.completed_at);
   const likelihood = computeLikelihood(contact, stages);
   const tagNames = contact.contact_tags.map((ct) => ct.tags?.name).filter((name): name is string => !!name);
-  const firstTouchSignals = { leadSource: contact.lead_source, lastEventName: contact.last_event_name, tagNames };
+  const firstTouchSignals = {
+    leadSource: contact.lead_source,
+    lastEventName: contact.last_event_name,
+    tagNames,
+    eventbriteAccount: eventbriteAccountFromActivities(activities),
+  };
   const source = resolveFirstTouchSource(firstTouchSignals);
   const hasOutboundText = activities.some((a) => a.type === "text" && a.direction === "outbound");
-  const hasPriorOutreach = activities.some((a) => a.direction === "outbound" && (a.type === "call" || a.type === "text" || a.type === "email"));
-  const firstTouchBody = shouldPrefillFirstTouchSms({ hasOutboundText, hasPriorOutreach, source })
+  const firstTouchBody = shouldPrefillFirstTouchSms({ hasOutboundText, source })
     ? applyMergeFields(firstTouchTemplate(firstTouchSignals), contact)
     : undefined;
 
@@ -93,6 +97,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
         ownerId={contact.owner_id}
         textsThisWeek={textsThisWeek}
         openTasks={openTasks.map((t) => ({ id: t.id, title: t.title, due_at: t.due_at }))}
+        smsDraft={firstTouchBody}
       />
       <div className="mx-auto hidden w-full max-w-[1400px] px-8 py-8 lg:block">
       <Link href="/contacts" className="mb-4 inline-flex min-h-10 items-center gap-1.5 text-[15px] font-medium text-neutral-500 hover:text-neutral-800">
@@ -153,7 +158,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
       </div>
 
       <div className="mt-5">
-        <ContactEngageBlock contact={contact} stages={stages} tags={tags} ownerId={contact.owner_id} />
+        <ContactEngageBlock contact={contact} stages={stages} tags={tags} ownerId={contact.owner_id} smsDraft={firstTouchBody} />
       </div>
 
       <div className="mt-6 grid grid-cols-12 gap-6">

@@ -3,6 +3,7 @@
 import { Phone, MessageSquare, Mail, StickyNote, ListTodo, Flag } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { openQuoCall } from "@/lib/quo/call-link";
+import { messageComposeHref } from "@/lib/crm/new-lead-text-templates";
 import { cn } from "@/lib/utils";
 
 const itemClass =
@@ -12,6 +13,7 @@ export function EngageStrip({
   contactId,
   phone,
   email,
+  smsDraft,
   onNote,
   onTask,
   onStage,
@@ -20,6 +22,7 @@ export function EngageStrip({
   contactId: string;
   phone?: string | null;
   email?: string | null;
+  smsDraft?: string;
   onNote: () => void;
   onTask: () => void;
   onStage: () => void;
@@ -35,7 +38,12 @@ export function EngageStrip({
           <Phone size={18} strokeWidth={1.8} />
           Call
         </button>
-        <button type="button" onClick={() => router.push(`/messages/${contactId}`)} disabled={!phone} className={itemClass}>
+        <button
+          type="button"
+          onClick={() => phone && router.push(messageComposeHref(contactId, smsDraft))}
+          disabled={!phone}
+          className={itemClass}
+        >
           <MessageSquare size={18} strokeWidth={1.8} />
           Text
         </button>

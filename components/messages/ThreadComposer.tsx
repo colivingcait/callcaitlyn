@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { sendTextToContact } from "@/app/(app)/contacts/actions";
 import { applyMergeFields } from "@/lib/crm/merge-fields";
@@ -30,7 +30,11 @@ export function ThreadComposer({
   const [error, setError] = useState("");
   const keyboardOpen = keyboardInset > 40;
   const bottom = keyboardOpen ? `max(${keyboardInset}px, var(--app-bottom-nav))` : undefined;
-  const prefilled = !!initialBody?.trim();
+  const prefilled = !!(body || initialBody)?.trim();
+
+  useEffect(() => {
+    if (initialBody) setBody(initialBody);
+  }, [initialBody, contactId]);
 
   const chrome =
     "fixed inset-x-0 z-50 border-t border-[#eadfd6] bg-[#fffbf8]/95 px-3 py-2.5 backdrop-blur lg:sticky lg:bottom-0 lg:bg-[#fffbf8]/95";

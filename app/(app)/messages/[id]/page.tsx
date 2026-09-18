@@ -16,7 +16,7 @@ import { SuggestedRow } from "@/components/contacts/SuggestedRow";
 import { createClient } from "@/lib/supabase/server";
 import { listTextTemplates } from "@/lib/data/text-templates";
 import { applyMergeFields } from "@/lib/crm/merge-fields";
-import { firstTouchTemplate, resolveFirstTouchSource, shouldPrefillFirstTouchSms } from "@/lib/crm/new-lead-text-templates";
+import { firstTouchTemplate, resolveFirstTouchSource, shouldPrefillFirstTouchSms, eventbriteAccountFromActivities } from "@/lib/crm/new-lead-text-templates";
 import { inboxHref } from "@/lib/crm/inbox-href";
 
 export default async function MessageThreadPage({
@@ -33,23 +33,28 @@ export default async function MessageThreadPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const [contact, thread, stages, insights, textTemplates, tags] = await Promise.all([
+  const [contact, thread, stages, insights, textTemplates, tags, { data: eventbriteRows }] = await Promise.all([
     getContact(id),
     getContactThread(id),
     listStages(),
     getContactInsights(id),
     listTextTemplates(),
     listTags(),
+    supabase.from("activities").select("metadata").eq("contact_id", id).eq("source", "eventbrite").limit(5),
   ]);
 
   if (!contact) notFound();
 
   const tagNames = contact.contact_tags.map((ct) => ct.tags?.name).filter((name): name is string => !!name);
-  const firstTouchSignals = { leadSource: contact.lead_source, lastEventName: contact.last_event_name, tagNames };
+  const firstTouchSignals = {
+    leadSource: contact.lead_source,
+    lastEventName: contact.last_event_name,
+    tagNames,
+    eventbriteAccount: eventbriteAccountFromActivities(eventbriteRows ?? []),
+  };
   const source = resolveFirstTouchSource(firstTouchSignals);
   const hasOutboundText = thread.some((a) => a.type === "text" && a.direction === "outbound");
-  const hasPriorOutreach = thread.some((a) => a.direction === "outbound");
-  const firstTouchBody = shouldPrefillFirstTouchSms({ hasOutboundText, hasPriorOutreach, source })
+  const firstTouchBody = shouldPrefillFirstTouchSms({ hasOutboundText, source })
     ? applyMergeFields(firstTouchTemplate(firstTouchSignals), contact)
     : undefined;
 
@@ -119,6 +124,7 @@ export default async function MessageThreadPage({
       </div>
 
       <ThreadComposer
+        key={contact.id}
         contactId={contact.id}
         phone={contact.phone}
         firstName={contact.first_name}
