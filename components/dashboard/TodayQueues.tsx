@@ -137,7 +137,7 @@ export function TodayQueues({
             <MessageCircle size={18} strokeWidth={1.6} fill="currentColor" />
           </div>
           <p className={cn("min-w-0 flex-1 font-serif text-[18px] font-semibold", owedCount > 0 ? "text-[#c45c4a]" : "text-neutral-700")}>
-            {owedCount === 0 ? "Inbox is clear" : `${owedCount} unread thread${owedCount === 1 ? "" : "s"}`}
+            {owedCount === 0 ? "Inbox is clear" : `${owedCount} need${owedCount === 1 ? "s" : ""} a reply`}
           </p>
           <ChevronRight size={18} strokeWidth={1.75} className="shrink-0 text-neutral-300" />
         </div>

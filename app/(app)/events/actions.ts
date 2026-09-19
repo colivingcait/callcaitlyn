@@ -31,11 +31,22 @@ export async function createEvent(input: {
   } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in" };
   if (!input.name.trim()) return { ok: false as const, error: "Name this event" };
-  if (new Date(input.endsAt) <= new Date(input.startsAt)) return { ok: false as const, error: "End time has to be after the start time" };
+
+  function persistEventTime(value: string): string {
+    const trimmed = value.trim();
+    if (/[zZ]|[+-]\d{2}:\d{2}$/.test(trimmed)) return new Date(trimmed).toISOString();
+    const local = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(trimmed) ? `${trimmed}:00` : trimmed;
+    if (/^\d{4}-\d{2}-\d{2}T/.test(local)) return fromZonedTime(local, APP_TIMEZONE).toISOString();
+    return new Date(trimmed).toISOString();
+  }
+
+  const startsAt = persistEventTime(input.startsAt);
+  const endsAt = persistEventTime(input.endsAt);
+  if (new Date(endsAt) <= new Date(startsAt)) return { ok: false as const, error: "End time has to be after the start time" };
 
   const { data, error } = await supabase
     .from("events")
-    .insert({ owner_id: user.id, series: input.series, name: input.name.trim(), starts_at: input.startsAt, ends_at: input.endsAt })
+    .insert({ owner_id: user.id, series: input.series, name: input.name.trim(), starts_at: startsAt, ends_at: endsAt })
     .select("id")
     .single();
   if (error || !data) return { ok: false as const, error: error?.message ?? "Couldn't create the event" };

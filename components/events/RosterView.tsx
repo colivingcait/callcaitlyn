@@ -81,7 +81,8 @@ export function RosterView({ event }: { event: EventEntry }) {
   }
 
   const attendedIds = people.filter((p) => p.attended).map((p) => p.contactId);
-  const noShowIds = people.filter((p) => p.registered && !p.attended).map((p) => p.contactId);
+  const noShowIds = event.hasEnded ? people.filter((p) => p.registered && !p.attended).map((p) => p.contactId) : [];
+  const statusOptions = event.hasEnded ? STATUS_OPTIONS : STATUS_OPTIONS.filter((opt) => opt.value !== "no_show");
 
   const counts: Record<StatusFilter, number> = {
     all: people.length,
@@ -107,7 +108,7 @@ export function RosterView({ event }: { event: EventEntry }) {
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        {STATUS_OPTIONS.map((opt) => (
+        {statusOptions.map((opt) => (
           <button
             key={opt.value}
             type="button"
@@ -127,7 +128,8 @@ export function RosterView({ event }: { event: EventEntry }) {
           <p className="rounded-2xl border border-[#ebe9e7] bg-white px-4 py-6 text-center text-[15px] text-neutral-400">No one matches this filter.</p>
         ) : (
           filtered.map((p) => {
-            const statusLabel = p.registered && p.attended ? "Attended" : p.registered ? "No-show" : "Walk-in";
+            const statusLabel =
+              p.registered && p.attended ? "Attended" : p.attended ? "Walk-in" : p.registered ? (event.hasEnded ? "No-show" : "Registered") : "—";
             return (
               <div key={p.contactId} className="flex items-center gap-3 rounded-2xl border border-[#ebe9e7] bg-white px-4 py-3">
                 <div className="min-w-0 flex-1">
@@ -205,7 +207,11 @@ export function RosterView({ event }: { event: EventEntry }) {
       )}
 
       <div className="mt-3 flex items-center justify-between gap-3">
-        <p className="text-sm text-neutral-400">Registered but not checked in counts as a no-show until you mark them attended.</p>
+        <p className="text-sm text-neutral-400">
+          {event.hasEnded
+            ? "Registered but not checked in counts as a no-show until you mark them attended."
+            : "No-shows are counted after this event ends."}
+        </p>
         {confirmingDelete ? (
           <div className="flex shrink-0 items-center gap-2">
             <button

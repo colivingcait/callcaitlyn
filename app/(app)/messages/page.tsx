@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listConversations, listTextableContacts } from "@/lib/data/messages";
+import { inboxOwedCount, listConversations, listTextableContacts } from "@/lib/data/messages";
 import { listMergeCandidates } from "@/lib/data/contacts";
 import { getUnmatchedInstagramThreads } from "@/lib/data/instagram";
 import { createClient } from "@/lib/supabase/server";
@@ -35,7 +35,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
     hidden ? Promise.resolve(0) : getUnansweredAgentMessageCount(),
   ]);
 
-  const owedCount = conversations.filter((c) => c.owed).length;
+  const owedCount = inboxOwedCount(conversations);
   const visible =
     filter === "owed"
       ? conversations.filter((c) => c.owed)
@@ -67,8 +67,8 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
           listingRepliesCount={listingRepliesCount}
         />
       )}
-      <div className={hidden ? "mx-auto w-full max-w-[1400px] overflow-x-hidden px-8" : "mx-auto hidden w-full max-w-[1400px] overflow-x-hidden px-8 lg:block"}>
-      <div className="flex items-start justify-between gap-3 pt-8 pb-4">
+      <div className={hidden ? "mx-auto w-full max-w-[1400px] overflow-x-hidden px-4 lg:px-8" : "mx-auto hidden w-full max-w-[1400px] overflow-x-hidden px-8 lg:block"}>
+      <div className="flex items-start justify-between gap-3 pt-5 pb-4 lg:pt-8">
         <div>
           <h1 className="font-display text-[32px] font-semibold tracking-[-0.03em] text-neutral-900">{hidden ? "Hidden threads" : "Messages"}</h1>
           <p className="mt-0.5 text-[15px] leading-[22px] text-neutral-600">

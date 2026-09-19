@@ -108,7 +108,7 @@ export function TodayHome({
   const dueToday = tasksDueToday(today.myTasks);
   const unread = groups.owed.length;
   const taskSubtitle = dueToday > 0 ? `${dueToday} due today` : today.myTasks.length > 0 ? `${today.myTasks.length} open` : "Nothing due";
-  const messageSubtitle = unread > 0 ? `${unread} unread` : "Inbox is clear";
+  const messageSubtitle = unread > 0 ? `${unread} need${unread === 1 ? "s" : ""} a reply` : "Inbox is clear";
 
   const greetingBlock = (
     <div className="min-w-0">
