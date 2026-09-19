@@ -98,14 +98,14 @@ export default async function SettingsPage({
     {
       key: "gmail",
       name: "Gmail and Calendar",
-      description: "Email on each timeline, sending from a contact, Meet invites, sequences.",
+      description: "Email on each timeline, sending from a contact, Meet invites, campaigns.",
       status: gmailAccount ? "Connected" : "Not connected",
       connected: !!gmailAccount,
       manageContent: (
         <div className="space-y-3">
           <p className="text-[15px] leading-[22px] text-neutral-600">
             Syncs email to and from contacts already in your CRM to their timeline, lets you send email and schedule Google Meet
-            invites from a contact&apos;s profile, and powers scheduled email sequences.
+            invites from a contact&apos;s profile, and powers scheduled email campaigns.
           </p>
           {gmailAccount && (
             <p className="text-[13px] leading-5 text-amber-700">

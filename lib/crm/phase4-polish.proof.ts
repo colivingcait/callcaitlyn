@@ -91,6 +91,17 @@ const campaignsDash = read("components/sequences/SequencesDashboard.tsx");
 assert.ok(campaignsDash.includes("Active campaigns"));
 assert.equal(campaignsDash.includes("Active sequences"), false);
 
+const settingsPage = read("app/(app)/settings/page.tsx");
+assert.ok(settingsPage.includes("Manage campaigns"));
+assert.equal(settingsPage.includes("Manage sequences"), false);
+assert.equal(settingsPage.includes("email sequences"), false);
+assert.equal(settingsPage.includes("invites, sequences."), false);
+
+const qaChecks = read("lib/qa/checks.ts");
+assert.ok(qaChecks.includes('label: "Active campaigns"'));
+assert.equal(qaChecks.includes("Active email sequences"), false);
+assert.equal(qaChecks.includes("Not connected - sequences,"), false);
+
 const scheduling = read("app/(app)/scheduling/page.tsx");
 assert.ok(scheduling.includes(">Booking requests</h1>"));
 assert.equal(scheduling.includes(">Bookings</h1>"), false);
