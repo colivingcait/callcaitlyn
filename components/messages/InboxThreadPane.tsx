@@ -111,26 +111,24 @@ export function InboxThreadPane({
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[20px] border border-[#eadfd6] bg-white">
       <div className="shrink-0 border-b border-[#eadfd6] px-5 py-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex min-w-0 items-start gap-3">
-            <div
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold text-white"
-              style={{ backgroundColor: MESSAGES_TERRACOTTA }}
-            >
-              {(thread.firstName.trim()[0] ?? "?").toUpperCase()}
+        <div className="flex min-w-0 items-start gap-3">
+          <div
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold text-white"
+            style={{ backgroundColor: MESSAGES_TERRACOTTA }}
+          >
+            {(thread.firstName.trim()[0] ?? "?").toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <p className="truncate text-[16px] font-semibold text-neutral-900">{name}</p>
+              {unread && <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: MESSAGES_TERRACOTTA }} />}
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="truncate text-[16px] font-semibold text-neutral-900">{name}</p>
-                {unread && <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: MESSAGES_TERRACOTTA }} />}
-              </div>
-              {phoneLabel && <p className="mt-0.5 text-[13px] text-neutral-400">{phoneLabel}</p>}
-              <div className="mt-2">
-                <StageChips stageName={thread.stageName} representing={thread.representing} />
-              </div>
+            {phoneLabel && <p className="mt-0.5 text-[13px] text-neutral-400">{phoneLabel}</p>}
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+              <StageChips stageName={thread.stageName} representing={thread.representing} />
+              <ThreadActions phone={thread.phone} contactId={thread.contactId} />
             </div>
           </div>
-          <ThreadActions phone={thread.phone} contactId={thread.contactId} />
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">

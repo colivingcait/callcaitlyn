@@ -29,12 +29,14 @@ export function MessagesInbox({
   filter,
   selected,
   openThread,
+  autoSelectFirst = true,
 }: {
   threads: SmsInboxThread[];
   initialSeen: Record<string, string>;
   filter: MessagesFilter;
   selected?: string | null;
   openThread?: OpenSmsThread | null;
+  autoSelectFirst?: boolean;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -62,11 +64,11 @@ export function MessagesInbox({
   }, [threads, filter, seen, query, openThread]);
 
   useEffect(() => {
-    if (selected || openThread) return;
+    if (!autoSelectFirst || selected || openThread) return;
     if (typeof window === "undefined" || window.innerWidth < 1024) return;
     const first = visible[0];
     if (first) router.replace(threadHref(first.id, { filter }));
-  }, [selected, openThread, visible, filter, router]);
+  }, [autoSelectFirst, selected, openThread, visible, filter, router]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -187,6 +189,7 @@ function SearchField({
       <Search size={16} />
       <input
         id={id}
+        name="q"
         value={query}
         onChange={(e) => onQuery(e.target.value)}
         placeholder="Search threads"
