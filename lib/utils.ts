@@ -14,12 +14,67 @@ export function fullName(c: { first_name: string; last_name?: string | null }) {
   return [c.first_name, c.last_name].filter(Boolean).join(" ").trim();
 }
 
+function asMetaString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function titleCaseWord(word: string): string {
+  if (!word) return "";
+  return word
+    .split("-")
+    .map((part) => (part ? part.charAt(0).toUpperCase() + part.slice(1).toLowerCase() : part))
+    .join("-");
+}
+
+function lettersOnly(value: string): string {
+  return value.replace(/[^A-Za-z]/g, "");
+}
+
+function isUniformCasing(value: string): boolean {
+  const letters = lettersOnly(value);
+  if (!letters) return false;
+  return letters === letters.toLowerCase() || letters === letters.toUpperCase();
+}
+
+// Display-only: "barbara guillory" / "BARBARA GUILLORY" → "Barbara Guillory".
+// Mixed-case names (McDonald) stay as stored.
+export function displayPersonName(name: string): string {
+  const trimmed = name.trim().replace(/\s+/g, " ");
+  if (!trimmed) return "";
+  if (!isUniformCasing(trimmed)) return trimmed;
+  return trimmed.split(" ").map(titleCaseWord).join(" ");
+}
+
+export function displayFullName(c: { first_name: string; last_name?: string | null }): string {
+  return displayPersonName(fullName(c));
+}
+
+function firstNameToken(value: string): string {
+  return (value.trim().split(/\s+/)[0] ?? "").replace(/[.,]/g, "");
+}
+
+function looksLikeEmailInitials(token: string): boolean {
+  return /^[a-z]{1,2}$/i.test(token);
+}
+
 export function firstNameFromEmail(email: string | null | undefined): string {
   if (!email) return "";
   const local = email.split("@")[0] ?? "";
   const token = local.split(/[._+-]/)[0] ?? "";
-  if (!token) return "";
-  return token.charAt(0).toUpperCase() + token.slice(1).toLowerCase();
+  if (!token || looksLikeEmailInitials(token)) return "";
+  return titleCaseWord(token);
+}
+
+export function firstNameFromProfile(user: {
+  email?: string | null;
+  user_metadata?: Record<string, unknown> | null;
+} | null | undefined): string {
+  const meta = user?.user_metadata ?? {};
+  const fromProfile =
+    firstNameToken(asMetaString(meta.given_name) || asMetaString(meta.first_name)) ||
+    firstNameToken(asMetaString(meta.full_name) || asMetaString(meta.name));
+  if (fromProfile) return isUniformCasing(fromProfile) ? titleCaseWord(fromProfile) : fromProfile;
+  return firstNameFromEmail(user?.email);
 }
 
 // Stable per-person color (same contact always lands on the same color,

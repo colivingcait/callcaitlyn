@@ -24,7 +24,7 @@ export default async function SchedulingPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
-      <h1 className="font-serif text-2xl font-semibold text-neutral-900 sm:text-[28px]">Bookings</h1>
+      <h1 className="font-serif text-2xl font-semibold text-neutral-900 sm:text-[28px]">Booking requests</h1>
       <p className="mt-1 text-[15px] text-neutral-500">Requests need your approval before anything&apos;s booked. Calendar events for contacts still live on the person.</p>
 
       <div className="mt-4 space-y-3">

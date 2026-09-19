@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Phone, MessageSquareText } from "lucide-react";
 import { openQuoCall, openQuoText } from "@/lib/quo/call-link";
-import { formatCurrency, initials, fullName } from "@/lib/utils";
+import { formatCurrency, initials, displayFullName } from "@/lib/utils";
 import { relativeTime } from "@/lib/format-time";
 import { MoveRecruitStageMenu } from "@/components/recruiting/MoveRecruitStageMenu";
 import type { Contact } from "@/types/database";
@@ -21,7 +21,7 @@ export function RecruitCard({ contact }: { contact: Contact }) {
           {initials(contact.first_name, contact.last_name)}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[16px] font-semibold leading-6 text-neutral-900">{fullName(contact)}</p>
+          <p className="truncate text-[16px] font-semibold leading-6 text-neutral-900">{displayFullName(contact)}</p>
           <p className="truncate text-[14px] leading-5 text-neutral-500">{metaParts.join(" · ")}</p>
         </div>
       </Link>

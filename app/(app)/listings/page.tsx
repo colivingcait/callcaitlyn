@@ -3,6 +3,7 @@ import { Info } from "lucide-react";
 import { getListingsIndex } from "@/lib/data/listings";
 import { STATUS_LABEL, STATUS_COLORS } from "@/lib/listings/status";
 import { formatCurrency, cn } from "@/lib/utils";
+import { listingFieldCopy } from "@/lib/listings/public-copy";
 import { NewListingButton } from "@/components/listings/NewListingButton";
 import { ListingStatusMenu } from "@/components/listings/ListingStatusMenu";
 import type { ListingStatus } from "@/types/database";
@@ -67,7 +68,7 @@ export default async function ListingsPage({ searchParams }: { searchParams: Pro
         ) : (
           filtered.map((l) => {
             const colors = STATUS_COLORS[l.status];
-            const specs = [l.beds != null && l.baths != null ? `${l.beds} bd / ${l.baths} ba` : null, l.property_type, l.sqft ? `${l.sqft.toLocaleString()} sqft` : null]
+            const specs = [l.beds != null && l.baths != null ? `${l.beds} bd / ${l.baths} ba` : null, listingFieldCopy(l.property_type), l.sqft ? `${l.sqft.toLocaleString()} sqft` : null]
               .filter(Boolean)
               .join(" · ");
             return (

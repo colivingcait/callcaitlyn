@@ -27,7 +27,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-serif text-2xl font-semibold text-neutral-900">Campaigns</h1>
-          <p className="mt-0.5 text-sm text-neutral-500">Scheduled sequences, drips, one-off emails and texts to your meetup community.</p>
+          <p className="mt-0.5 text-sm text-neutral-500">Scheduled campaigns, drips, one-off emails and texts to your meetup community.</p>
         </div>
         <div className="flex shrink-0 gap-2">
           <NewTextButton eventNames={eventNames} tags={tags} autoOpenEvent={event} />
