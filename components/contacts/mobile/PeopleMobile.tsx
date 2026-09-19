@@ -221,14 +221,14 @@ export function PeopleMobile({
                   </button>
                 </div>
               </div>
-              <div className="mt-3 flex gap-1.5 overflow-x-auto pb-0.5">
+              <div className="mt-3 flex flex-wrap gap-1.5">
                 {QUEUES.map((queue) => (
                   <button
                     key={queue.value}
                     type="button"
                     onClick={() => toggleQueue(queue.value)}
                     className={cn(
-                      "h-9 shrink-0 whitespace-nowrap rounded-full border px-3 text-[13px] font-medium",
+                      "h-9 whitespace-nowrap rounded-full border px-3 text-[13px] font-medium",
                       activeQueue === queue.value ? "border-brand-500 bg-brand-50 text-brand-700" : "border-neutral-200 text-neutral-600",
                     )}
                   >

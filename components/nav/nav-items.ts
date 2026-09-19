@@ -54,8 +54,8 @@ export const MORE_NAV_GROUPS: NavGroup[] = [
     label: "Money & tools",
     items: [
       { href: "/commissions", label: "Commissions", icon: DollarSign, hint: "Deals and cap" },
-      { href: "/scheduling", label: "Bookings", icon: CalendarClock, hint: "Approve requests" },
-      { href: "/sequences", label: "Campaigns", icon: Mail, hint: "Email and text sequences" },
+      { href: "/scheduling", label: "Booking requests", icon: CalendarClock, hint: "Approve requests" },
+      { href: "/sequences", label: "Campaigns", icon: Mail, hint: "Email and text campaigns" },
       { href: "/numbers", label: "House hack", icon: Calculator, hint: "Calculator" },
       { href: "/listings", label: "Listings", icon: Home, hint: "Listing pages · agent replies live here" },
       { href: "/recruiting", label: "Agent recruiting", icon: UserPlus },

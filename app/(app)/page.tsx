@@ -2,7 +2,7 @@ import { getTodayData } from "@/lib/data/today";
 import { listMergeCandidates } from "@/lib/data/contacts";
 import { createClient } from "@/lib/supabase/server";
 import { TodayScreen } from "@/components/dashboard/TodayScreen";
-import { firstNameFromEmail } from "@/lib/utils";
+import { firstNameFromProfile } from "@/lib/utils";
 import { FOCUS_TO_CHIP, parseTodayFocus } from "@/lib/crm/today-focus";
 import { filterResolvedWeeklyReviewItems, type WeeklyReviewPayload } from "@/lib/data/weekly-review";
 import type { PrepSheetPayload } from "@/lib/data/prep-sheet";
@@ -31,7 +31,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   const activePrepSheets = (pinnedPrepSheets ?? []).filter((p) => new Date((p.payload as unknown as PrepSheetPayload).startAt).getTime() > Date.now());
 
   const ownerId = user?.id ?? "";
-  const ownerFirstName = firstNameFromEmail(user?.email);
+  const ownerFirstName = firstNameFromProfile(user);
 
   const resolvedWeeklyReview = pinnedWeeklyReview
     ? { id: pinnedWeeklyReview.id, payload: await filterResolvedWeeklyReviewItems(supabase, ownerId, pinnedWeeklyReview.payload as unknown as WeeklyReviewPayload) }

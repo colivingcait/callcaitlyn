@@ -92,7 +92,7 @@ export function InboxMobile({
         </div>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto px-4 pb-3">
+      <div className="flex flex-wrap gap-2 px-4 pb-3">
         {[
           { value: "owed" as Filter, label: `Needs a reply ${owedCount}` },
           { value: "all" as Filter, label: `All ${conversations.length}` },
@@ -102,13 +102,13 @@ export function InboxMobile({
             key={chip.value}
             type="button"
             onClick={() => router.push(inboxHref({ filter: chip.value }))}
-            className={`h-11 shrink-0 whitespace-nowrap rounded-full px-3.5 text-[14px] font-medium ${filter === chip.value ? "bg-neutral-900 text-white" : "border border-neutral-200 text-neutral-600"}`}
+            className={`h-11 whitespace-nowrap rounded-full px-3.5 text-[14px] font-medium ${filter === chip.value ? "bg-neutral-900 text-white" : "border border-neutral-200 text-neutral-600"}`}
           >
             {chip.label}
           </button>
         ))}
         {instagramThreads.length > 0 && (
-          <span className="flex h-11 shrink-0 items-center whitespace-nowrap rounded-full border border-neutral-200 px-3.5 text-[14px] font-medium text-neutral-600">
+          <span className="flex h-11 items-center whitespace-nowrap rounded-full border border-neutral-200 px-3.5 text-[14px] font-medium text-neutral-600">
             Instagram {instagramThreads.length}
           </span>
         )}
@@ -116,7 +116,7 @@ export function InboxMobile({
           <button
             type="button"
             onClick={() => setSpamOpen(true)}
-            className="flex h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-neutral-200 px-3.5 text-[14px] font-medium text-neutral-600"
+            className="flex h-11 items-center gap-1.5 whitespace-nowrap rounded-full border border-neutral-200 px-3.5 text-[14px] font-medium text-neutral-600"
           >
             <ShieldAlert size={14} className="text-neutral-400" /> Spam {spamConversations.length}
           </button>

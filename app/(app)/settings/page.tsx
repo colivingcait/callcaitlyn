@@ -115,7 +115,7 @@ export default async function SettingsPage({
           <GmailConnect connectedEmail={gmailAccount?.email_address ?? null} errorCode={params.gmail_error} />
           <Link href="/sequences" className="block md:hidden">
             <Button variant="secondary" size="sm">
-              Manage sequences
+              Manage campaigns
             </Button>
           </Link>
         </div>

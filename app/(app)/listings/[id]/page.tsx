@@ -27,6 +27,7 @@ import { CopyBlocks } from "@/components/listings/CopyBlocks";
 import { ActivityTab } from "@/components/listings/ActivityTab";
 import { Section } from "@/components/ui/Section";
 import { asPhotoList, asUrlList } from "@/lib/listings/crm-marketing-fields";
+import { listingFieldCopy } from "@/lib/listings/public-copy";
 import type { ListingAgentMessage } from "@/types/database";
 
 type Tab = "rp" | "marketing" | "activity";
@@ -52,7 +53,7 @@ export default async function ListingDetailPage({ params, searchParams }: { para
       ? await fetchListingAgentTextRecency(listing.id, agentsRaw)
       : { lastOutboundAtByAgentId: {}, queuedOnThisListing: [] };
 
-  const specs = [listing.beds != null && listing.baths != null ? `${listing.beds} bd / ${listing.baths} ba` : null, listing.property_type, listing.sqft ? `${listing.sqft.toLocaleString()} sqft` : null]
+  const specs = [listing.beds != null && listing.baths != null ? `${listing.beds} bd / ${listing.baths} ba` : null, listingFieldCopy(listing.property_type), listing.sqft ? `${listing.sqft.toLocaleString()} sqft` : null]
     .filter(Boolean)
     .join(" · ");
 
