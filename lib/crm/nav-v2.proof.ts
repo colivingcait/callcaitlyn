@@ -80,15 +80,17 @@ assert.ok(tabs.includes('"use client"'));
 const workspace = read("components/contacts/ContactsWorkspace.tsx");
 assert.ok(workspace.includes("ContactsListTabs"));
 assert.ok(workspace.includes("variant=\"panel\"") || workspace.includes('variant="panel"'));
-assert.ok(workspace.includes("Add to list") || read("components/contacts/ContactsList.tsx").includes("Add to list"));
+assert.ok(workspace.includes("Add to list") || read("components/contacts/ContactsBulkBar.tsx").includes("Add to list"));
 
 const list = read("components/contacts/ContactsList.tsx");
-assert.ok(list.includes("Change stage"));
-assert.ok(list.includes("Add to list"));
-assert.ok(list.includes("Add tags"));
-assert.ok(list.includes("Remove tags"));
-assert.ok(list.includes("TextBlastModal"));
-assert.ok(list.includes("kind: \"contacts\""));
+const bulk = read("components/contacts/ContactsBulkBar.tsx");
+assert.ok(bulk.includes("Change stage"));
+assert.ok(bulk.includes("Add to list"));
+assert.ok(bulk.includes("Add tags"));
+assert.ok(bulk.includes("Remove tags"));
+assert.ok(bulk.indexOf(">\n          Text\n        </Pill>") < bulk.indexOf("Change stage"), "desktop bulk Text is first");
+assert.equal(list.includes("TextBlastModal"), false, "bulk Text must not rebuild the Campaigns composer");
+assert.ok(list.includes("campaignsTextHref") || bulk.includes("campaignsTextHref"));
 assert.ok(list.includes("Source"));
 assert.ok(list.includes("Last touch"));
 assert.ok(list.includes("hasUsablePhone"));
@@ -98,6 +100,8 @@ const mobile = read("components/contacts/mobile/PeopleMobile.tsx");
 assert.ok(mobile.includes("ContactsListTabs"));
 assert.ok(mobile.includes("flex flex-wrap"));
 assert.equal(mobile.includes("overflow-x-auto"), false);
+assert.ok(mobile.includes("Cancel"));
+assert.ok(mobile.includes('variant="mobile"') || mobile.includes("variant=\"mobile\""));
 
 assert.equal(isEverAttendedFilter(EVER_ATTENDED_EVENT), true);
 const attended = attendedContactIds(

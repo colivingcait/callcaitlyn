@@ -9,7 +9,15 @@ import type { ContactSegment } from "@/types/database";
 
 const LIST_META_KEYS = new Set(["list", "view", "select"]);
 
-export function ContactsListTabs({ segments, ownerId }: { segments: ContactSegment[]; ownerId: string }) {
+export function ContactsListTabs({
+  segments,
+  ownerId,
+  variant = "tabs",
+}: {
+  segments: ContactSegment[];
+  ownerId: string;
+  variant?: "tabs" | "picker";
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -48,6 +56,64 @@ export function ContactsListTabs({ segments, ownerId }: { segments: ContactSegme
     params.set("list", data.id);
     go(params);
     router.refresh();
+  }
+
+  if (variant === "picker") {
+    return (
+      <div className="space-y-2">
+        <select
+          value={activeList ?? ""}
+          onChange={(e) => {
+            const id = e.target.value;
+            if (!id) {
+              openAll();
+              return;
+            }
+            const seg = segments.find((s) => s.id === id);
+            if (seg) openSegment(seg);
+          }}
+          className="w-full rounded-[11px] border border-neutral-200 bg-white px-3 py-2.5 text-[15px] text-neutral-800"
+        >
+          <option value="">All contacts</option>
+          {segments.map((seg) => (
+            <option key={seg.id} value={seg.id}>
+              {seg.name}
+            </option>
+          ))}
+        </select>
+        {saving ? (
+          <form
+            className="flex items-center gap-1.5"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void saveView();
+            }}
+          >
+            <input
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="List name"
+              className="h-8 flex-1 rounded-lg border border-neutral-200 px-2 text-[13px] text-neutral-900"
+            />
+            <button type="submit" disabled={!name.trim()} className="text-[13px] font-semibold text-[#c45c4a] disabled:opacity-40">
+              Save
+            </button>
+            <button type="button" onClick={() => setSaving(false)} className="text-[13px] text-neutral-400">
+              Cancel
+            </button>
+          </form>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setSaving(true)}
+            className="inline-flex items-center gap-1 text-[14px] font-medium text-[#c45c4a]"
+          >
+            <Plus size={14} /> Save view as list
+          </button>
+        )}
+      </div>
+    );
   }
 
   return (

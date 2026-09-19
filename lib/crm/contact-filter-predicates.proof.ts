@@ -122,7 +122,7 @@ assert.equal(
 
 const tessCombo = parseContactFilterParams(new URLSearchParams("phone=1"));
 assert.equal(tessCombo.hasPhone, true);
-assert.equal(tessCombo.registeredEventName, REGISTERED_FOR_ANY_EVENT, "Tess prod URL ?phone=1 (no regEvent) defaults to any-event");
+assert.equal(tessCombo.registeredEventName, undefined, "Contacts v2: ?phone=1 is has-phone only, not event-only");
 assert.equal(contactMatchesRegisteredAnyAndHasPhone(austin, registrations) && tessCombo.hasPhone, false);
 
 const parsedAny = parseContactFilterParams(new URLSearchParams(`regEvent=${REGISTERED_FOR_ANY_EVENT}&phone=1`));
@@ -136,16 +136,17 @@ assert.equal(parsedAll.hasPhone, true);
 const parsedNamed = parseContactFilterParams(new URLSearchParams("regEvent=House Hacking ATL"));
 assert.equal(parsedNamed.registeredEventName, "House Hacking ATL");
 
-assert.equal(parseContactFilterParams(new URLSearchParams("phone=1&group=stage")).registeredEventName, REGISTERED_FOR_ANY_EVENT, "stage grouping is still the Tess browse");
+assert.equal(parseContactFilterParams(new URLSearchParams("phone=1&group=stage")).registeredEventName, undefined, "grouping does not imply registration");
 const parsedQueue = parseContactFilterParams(new URLSearchParams("queue=duplicate_risk"));
 assert.equal(parsedQueue.registeredEventName, undefined, "queue deep links do not inherit any-event default");
 
 const parsedNoPhone = parseContactFilterParams(new URLSearchParams("phone=0"));
 assert.equal(parsedNoPhone.registeredEventName, undefined, "no-phone insight is not the Tess combo");
 
-assert.equal(resolveRegisteredEventName(new URLSearchParams()), REGISTERED_FOR_ANY_EVENT);
-assert.equal(registrationSelectValue(new URLSearchParams("phone=1")), REGISTERED_FOR_ANY_EVENT);
+assert.equal(resolveRegisteredEventName(new URLSearchParams()), undefined, "empty browse is everyone, not event-only");
+assert.equal(registrationSelectValue(new URLSearchParams("phone=1")), NOT_FILTERED_BY_REGISTRATION);
 assert.equal(registrationSelectValue(new URLSearchParams("queue=no_phone")), NOT_FILTERED_BY_REGISTRATION);
+assert.equal(resolveRegisteredEventName(new URLSearchParams(`regEvent=${REGISTERED_FOR_ANY_EVENT}`)), REGISTERED_FOR_ANY_EVENT);
 
 const list = read("lib/data/contacts.ts");
 assert.ok(list.includes("registeredContactIds("), "listContacts must use the shared registration predicate");
@@ -163,16 +164,14 @@ assert.ok(params.includes("resolveRegisteredEventName"), "parser uses the shared
 assert.ok(params.includes("registeredEventName: resolveRegisteredEventName(sp)"));
 
 const filtersUi = read("components/contacts/ContactFilters.tsx") + read("components/contacts/ContactFiltersSheet.tsx");
-assert.ok(filtersUi.includes("registrationSelectValue"), "toolbar select matches the parser");
-assert.ok(filtersUi.includes("REGISTERED_FOR_ANY_EVENT"), "any-event option uses the sentinel");
-assert.ok(filtersUi.includes("NOT_FILTERED_BY_REGISTRATION"), "Anyone is an explicit opt-out, not empty");
-assert.ok(filtersUi.includes("Registered for: any event"), "the labeled option still exists");
+assert.ok(filtersUi.includes("Ever attended"), "v2 panel keeps attendance as a toggle, not the default browse");
+assert.ok(filtersUi.includes("Has phone"), "v2 panel has phone toggle");
 assert.equal(filtersUi.includes('<option value="">Registered for: any event</option>'), false, "empty option must not claim any-event");
 assert.equal(filtersUi.includes("Anyone (not filtered by registration)"), false);
 
 const sheet = read("components/contacts/ContactFiltersSheet.tsx");
-assert.ok(sheet.includes("NOT_FILTERED_BY_REGISTRATION"));
-assert.ok(sheet.includes("REGISTERED_FOR_ANY_EVENT"));
+assert.ok(sheet.includes("EVER_ATTENDED_EVENT"));
+assert.ok(sheet.includes("CONTACT_SOURCE_FILTERS"));
 assert.equal(sheet.includes('<option value="">Registered for: any event</option>'), false);
 
 const mobile = read("components/contacts/mobile/MyLists.tsx");

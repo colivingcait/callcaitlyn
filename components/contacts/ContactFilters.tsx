@@ -4,12 +4,7 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useState, useTransition, useEffect, useRef, type ReactNode } from "react";
 import { Search, SlidersHorizontal, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  REGISTERED_FOR_ANY_EVENT,
-  NOT_FILTERED_BY_REGISTRATION,
-  registrationSelectValue,
-  SHEET_PARAM_KEYS,
-} from "@/lib/crm/contact-filter-params";
+import { SHEET_PARAM_KEYS } from "@/lib/crm/contact-filter-params";
 import { ActiveFilterTags } from "@/components/contacts/ActiveFilterTags";
 import { ContactFiltersSheet } from "@/components/contacts/ContactFiltersSheet";
 import type { PipelineStage, Tag } from "@/types/database";
@@ -83,11 +78,14 @@ export function ContactFilters({
     startTransition(() => router.push(`${pathname}?${params.toString()}`));
   }
 
-  const activeFilterCount = SHEET_PARAM_KEYS.filter((k) => !!searchParams.get(k)).length;
+  const activeFilterCount = SHEET_PARAM_KEYS.filter((k) => {
+    const raw = searchParams.get(k);
+    if (!raw) return false;
+    if (k === "group" && raw === "none") return false;
+    if (k === "archived" && raw === "active") return false;
+    return true;
+  }).length;
   const currentSort = SORT_OPTIONS.find((o) => o.value === (searchParams.get("sort") ?? "updated_desc"));
-  const registration = registrationSelectValue(searchParams);
-  const registrationIsAny = registration === REGISTERED_FOR_ANY_EVENT;
-  const registrationIsAnyone = registration === NOT_FILTERED_BY_REGISTRATION;
 
   return (
     <div className="space-y-2.5">
@@ -117,38 +115,36 @@ export function ContactFilters({
           <SlidersHorizontal size={16} className="text-neutral-500" /> Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
         </button>
         {selectSlot}
-        <div className="relative shrink-0">
-          <button
-            type="button"
-            onClick={() => setSortOpen((v) => !v)}
-            className="flex items-center gap-2 rounded-[11px] border border-neutral-200 bg-white px-3.5 py-3 text-[15px] font-medium text-neutral-800"
-          >
-            {currentSort?.label ?? "Recent"} <ChevronDown size={15} className="text-neutral-400" />
-          </button>
-          {sortOpen && (
-            <div className="absolute right-0 top-full z-10 mt-1 max-h-72 w-56 overflow-y-auto rounded-xl border border-neutral-200 bg-white p-1 shadow-lg">
-              {SORT_OPTIONS.map((o) => (
-                <button
-                  key={o.value}
-                  onClick={() => {
-                    updateParam("sort", o.value);
-                    setSortOpen(false);
-                  }}
-                  className="block w-full rounded-lg px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50"
-                >
-                  {o.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        {!panel && (
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setSortOpen((v) => !v)}
+              className="flex items-center gap-2 rounded-[11px] border border-neutral-200 bg-white px-3.5 py-3 text-[15px] font-medium text-neutral-800"
+            >
+              {currentSort?.label ?? "Recent"} <ChevronDown size={15} className="text-neutral-400" />
+            </button>
+            {sortOpen && (
+              <div className="absolute right-0 top-full z-10 mt-1 max-h-72 w-56 overflow-y-auto rounded-xl border border-neutral-200 bg-white p-1 shadow-lg">
+                {SORT_OPTIONS.map((o) => (
+                  <button
+                    key={o.value}
+                    onClick={() => {
+                      updateParam("sort", o.value);
+                      setSortOpen(false);
+                    }}
+                    className="block w-full rounded-lg px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50"
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <ActiveFilterTags stages={stages} tags={tags} />
-
-      {/* Registration sentinels stay wired here so the toolbar and sheet
-          cannot drift: Registered for: any event vs Anyone. */}
-      {registrationIsAny || registrationIsAnyone ? null : null}
 
       {sheetOpen && !panel && (
         <ContactFiltersSheet

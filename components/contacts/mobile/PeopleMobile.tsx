@@ -8,8 +8,9 @@ import { PeopleList } from "@/components/contacts/mobile/PeopleList";
 import { ContactFiltersSheet } from "@/components/contacts/ContactFiltersSheet";
 import { ContactsListTabs } from "@/components/contacts/ContactsListTabs";
 import { ActiveFilterTags } from "@/components/contacts/ActiveFilterTags";
-import { SORT_OPTIONS } from "@/components/contacts/ContactFilters";
+import { ContactsBulkBar } from "@/components/contacts/ContactsBulkBar";
 import { CountScopeNote } from "@/components/CountScopeNote";
+import { SHEET_PARAM_KEYS } from "@/lib/crm/contact-filter-params";
 import { cn } from "@/lib/utils";
 import type { ContactGroupBy } from "@/lib/crm/contact-filter-params";
 import type { ContactWithRelations, PipelineStage, Tag, ContactSegment } from "@/types/database";
@@ -48,30 +49,27 @@ export function PeopleMobile({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState(searchParams.get("q") ?? "");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const urlGroup = searchParams.get("group");
   const groupBy: ContactGroupBy = GROUP_VALUES.includes(urlGroup as ContactGroupBy) ? (urlGroup as ContactGroupBy) : "none";
 
-  const activeFilterCount = Array.from(searchParams.keys()).filter((k) => {
-    if (["view", "list", "listName", "sort", "q"].includes(k)) return false;
+  const activeFilterCount = SHEET_PARAM_KEYS.filter((k) => {
+    const raw = searchParams.get(k);
+    if (!raw) return false;
+    if (k === "group" && raw === "none") return false;
+    if (k === "archived" && raw === "active") return false;
     return true;
   }).length;
-  const currentSort = searchParams.get("sort") ?? "updated_desc";
 
   function pushParams(mutate: (params: URLSearchParams) => void) {
     const params = new URLSearchParams(searchParams.toString());
     mutate(params);
     const qs = params.toString();
     router.push(qs ? `/contacts?${qs}` : "/contacts");
-  }
-
-  function setSort(value: string) {
-    pushParams((params) => {
-      if (value === "updated_desc") params.delete("sort");
-      else params.set("sort", value);
-    });
   }
 
   useEffect(() => {
@@ -95,81 +93,138 @@ export function PeopleMobile({
     }, 300);
   }
 
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   const searched = search.trim() ? contacts.filter((c) => matchesQuery(c, search)) : contacts;
-  const textableCount = searched.filter((c) => c.phone).length;
-  const groupLabel =
-    groupBy === "none" ? "Everyone" : groupBy === "stage" ? "Grouped by stage" : groupBy === "tag" ? "Grouped by tag" : groupBy === "source" ? "Grouped by source" : "Grouped by month";
+  const selectedIds = [...selected];
+  const selectedContacts = searched.filter((c) => selected.has(c.id));
+
+  if (selecting) {
+    return (
+      <div className="px-4 py-4 lg:hidden">
+        <div className="mb-3 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => {
+              setSelecting(false);
+              setSelected(new Set());
+            }}
+            className="text-[16px] font-semibold text-[#c45c4a]"
+          >
+            Cancel
+          </button>
+          <p className="text-[16px] font-semibold text-[#c45c4a]">{selected.size} selected</p>
+        </div>
+        <div className="mb-4">
+          <ContactsBulkBar
+            selectedIds={selectedIds}
+            selectedContacts={selectedContacts}
+            tags={tags}
+            stages={stages}
+            segments={segments}
+            ownerId={ownerId}
+            variant="mobile"
+            onClear={() => {
+              setSelecting(false);
+              setSelected(new Set());
+            }}
+          />
+        </div>
+        <PeopleList
+          contacts={searched}
+          stages={stages}
+          ownerId={ownerId}
+          groupBy={groupBy}
+          lastActivityLabels={lastActivityLabels}
+          selecting
+          selected={selected}
+          onToggle={toggle}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 py-5 lg:hidden">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <p className="font-display text-[28px] font-semibold tracking-[-0.02em] text-neutral-900">Contacts</p>
-              <p className="mt-0.5 text-[13px] text-neutral-400">
-                {contacts.length} people · lists live here, not in More.{" "}
-                <Link href="/pipeline" className="font-medium text-brand-700">
-                  Pipeline
-                </Link>
-              </p>
-              <CountScopeNote current="contacts" />
-            </div>
-            <div className="flex items-center gap-2">
-              <Link href="/contacts/new" aria-label="New contact" className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-600 text-white">
-                <Plus size={20} />
-              </Link>
-            </div>
-          </div>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="font-display text-[28px] font-semibold tracking-[-0.02em] text-neutral-900">Contacts</p>
+          <p className="mt-0.5 text-[13px] text-neutral-400">
+            {contacts.length} people · leads from Zillow, referrals, events, and more
+          </p>
+          <CountScopeNote current="contacts" />
+        </div>
+        <div className="flex items-center gap-2">
+          <Link href="/contacts/new" aria-label="New contact" className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-600 text-white">
+            <Plus size={20} />
+          </Link>
+        </div>
+      </div>
 
-          <ContactsListTabs segments={segments} ownerId={ownerId} />
+      <div className="relative mb-3">
+        <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+        <input
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder="Search name, email, phone"
+          className="h-[50px] w-full rounded-[14px] border border-neutral-200 bg-white pl-10 pr-3.5 text-[16px] text-neutral-900"
+        />
+      </div>
 
-          <div className="relative mt-3 mb-3">
-            <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
-            <input
-              value={search}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Search name, email, phone"
-              className="h-[50px] w-full rounded-[14px] border border-neutral-200 pl-10 pr-3.5 text-[16px] text-neutral-900"
-            />
-          </div>
+      <button
+        type="button"
+        onClick={() => setFiltersOpen(true)}
+        className={cn(
+          "mb-3 flex h-11 w-full items-center justify-center gap-2 rounded-[11px] text-[15px] font-semibold",
+          activeFilterCount > 0 ? "bg-[#c45c4a] text-white" : "border border-neutral-200 bg-white text-neutral-800",
+        )}
+      >
+        <SlidersHorizontal size={16} />
+        Filters
+        {activeFilterCount > 0 && (
+          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white/20 px-1.5 text-[12px]">{activeFilterCount}</span>
+        )}
+      </button>
 
-          <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-[14px] text-neutral-500">
-                  {groupLabel} · {textableCount} textable
-                </p>
-                <div className="flex shrink-0 items-center gap-2">
-                  <select
-                    value={currentSort}
-                    onChange={(e) => setSort(e.target.value)}
-                    aria-label="Sort"
-                    className="h-10 rounded-full border border-neutral-200 bg-white px-3 text-[13px] font-semibold text-neutral-700"
-                  >
-                    {SORT_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => setFiltersOpen(true)}
-                    className={cn(
-                      "flex h-10 items-center gap-1.5 rounded-full border px-3 text-[13px] font-semibold",
-                      activeFilterCount > 0
-                        ? "border-brand-300 bg-brand-50 text-brand-700"
-                        : "border-neutral-200 bg-white text-neutral-700",
-                    )}
-                  >
-                    <SlidersHorizontal size={14} /> Filters{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ""}
-                  </button>
-                </div>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            <ActiveFilterTags stages={stages} tags={tags} />
-          </div>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <ActiveFilterTags stages={stages} tags={tags} />
+      </div>
 
-          <div className="mt-3">
-              <PeopleList contacts={searched} stages={stages} ownerId={ownerId} groupBy={groupBy} lastActivityLabels={lastActivityLabels} />
-          </div>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <ContactsListTabs segments={segments} ownerId={ownerId} variant="picker" />
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            if (selecting) {
+              setSelecting(false);
+              setSelected(new Set());
+            } else setSelecting(true);
+          }}
+          className="shrink-0 text-[14px] font-semibold text-[#c45c4a]"
+        >
+          {selecting ? "Cancel" : "Select"}
+        </button>
+      </div>
+
+      <PeopleList
+        contacts={searched}
+        stages={stages}
+        ownerId={ownerId}
+        groupBy={groupBy}
+        lastActivityLabels={lastActivityLabels}
+        selecting={false}
+        selected={selected}
+        onToggle={toggle}
+      />
 
       {filtersOpen && (
         <ContactFiltersSheet

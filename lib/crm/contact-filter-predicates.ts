@@ -3,7 +3,7 @@
 // proof script can import this without pulling the server graph.
 //
 // URL contract (see contact-filter-params.ts):
-//   regEvent missing/empty  → any-event on the main Contacts browse (Tess combo)
+//   regEvent missing/empty  → no registration filter (Contacts v2: all sources)
 //   regEvent=__any__        → registered for any event (Eventbrite / CRM signup)
 //   regEvent=__all__        → no registration filter (Anyone, including call-only)
 //   regEvent=<event name>   → registered for that specific event

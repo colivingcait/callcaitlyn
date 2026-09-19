@@ -1,32 +1,21 @@
 import type { ContactSort } from "@/lib/data/contacts";
 import type { ContactQueue } from "@/lib/crm/contact-queues";
+import type { ContactGender } from "@/lib/crm/contact-gender";
 
 export type ContactGroupBy = "none" | "stage" | "tag" | "source" | "month";
 
-// URL sentinels for the registration dropdown. Production used to label
-// missing/empty regEvent as "Registered for: any event" while applying no
-// predicate (Tess: Austin Sizemore still in ?phone=1). Missing/empty now
-// MEANS any-event on the main Contacts browse. Explicit opt-out is __all__.
+// URL sentinels for registration. Contacts v2 browse is everyone by default
+// (Zillow, referrals, events, and more) — missing/empty regEvent applies
+// no registration predicate. Explicit any-event is __any__; opt-out is __all__.
 export const REGISTERED_FOR_ANY_EVENT = "__any__";
 export const NOT_FILTERED_BY_REGISTRATION = "__all__";
 export const EVER_ATTENDED_EVENT = "__any__";
 
-// Working-list / insight deep links that are not the Tess browse combo.
-// Those URLs omit regEvent on purpose and must not inherit the any-event default.
-const REGISTRATION_DEFAULT_OPT_OUT_KEYS = [
-  "queue", "event", "newSince", "leadFrom", "leadTo", "archived", "type", "tags", "source", "q", "likelihood", "followup", "email", "notes", "ids", "list",
-] as const;
-
 export function resolveRegisteredEventName(sp: URLSearchParams): string | undefined {
   const raw = sp.get("regEvent");
-  if (raw === NOT_FILTERED_BY_REGISTRATION) return undefined;
-  if (raw === REGISTERED_FOR_ANY_EVENT || raw === "") return REGISTERED_FOR_ANY_EVENT;
-  if (raw) return raw;
-  if (sp.get("phone") === "0") return undefined;
-  for (const key of REGISTRATION_DEFAULT_OPT_OUT_KEYS) {
-    if (sp.get(key)) return undefined;
-  }
-  return REGISTERED_FOR_ANY_EVENT;
+  if (!raw || raw === NOT_FILTERED_BY_REGISTRATION) return undefined;
+  if (raw === REGISTERED_FOR_ANY_EVENT) return REGISTERED_FOR_ANY_EVENT;
+  return raw;
 }
 
 export function registrationSelectValue(sp: URLSearchParams): string {
@@ -41,6 +30,8 @@ export type ContactFilterParams = {
   timeline?: string;
   representing?: string;
   leadSource?: string;
+  stageIds?: string[];
+  gender?: ContactGender;
   hasPhone?: boolean;
   missingPhone?: boolean;
   hasEmail?: boolean;
@@ -77,15 +68,18 @@ export function parseContactFilterParams(sp: URLSearchParams): ContactFilterPara
   const phone = sp.get("phone");
   const email = sp.get("email");
   const notes = sp.get("notes");
+  const stageIds = sp.get("stage")?.split(",").filter(Boolean);
 
   return {
     q: sp.get("q") ?? undefined,
-    stageId: sp.get("stage") ?? undefined,
+    stageId: stageIds?.[0],
+    stageIds,
     tagIds: sp.get("tags") ? sp.get("tags")!.split(",").filter(Boolean) : undefined,
     type: sp.get("type") ?? undefined,
     timeline: sp.get("timeline") ?? undefined,
     representing: sp.get("representing") ?? undefined,
     leadSource: sp.get("source") ?? undefined,
+    gender: parseContactGender(sp.get("gender")),
     hasPhone: phone === "1",
     missingPhone: phone === "0",
     hasEmail: email === "1",
@@ -117,8 +111,15 @@ export function parseContactFilterParams(sp: URLSearchParams): ContactFilterPara
 export const SHEET_PARAM_KEYS = [
   "stage", "type", "tags", "source", "timeline", "representing", "likelihood",
   "phone", "email", "followup", "notes", "newSince", "leadFrom", "leadTo",
-  "event", "regEvent", "city", "state", "birthdayMonth", "minBudget", "archived", "quoSync", "group",
+  "event", "regEvent", "gender", "city", "state", "birthdayMonth", "minBudget", "archived", "quoSync", "group",
 ] as const;
+
+export const CONTACTS_V2_FILTER_KEYS = ["source", "stage", "event", "gender", "phone"] as const;
+
+function parseContactGender(raw: string | null): ContactGender | undefined {
+  if (raw === "women" || raw === "men" || raw === "unknown") return raw;
+  return undefined;
+}
 
 export function parseIncludeIds(raw: string | null | undefined): string[] {
   return raw ? raw.split(",").map((id) => id.trim()).filter(Boolean) : [];
