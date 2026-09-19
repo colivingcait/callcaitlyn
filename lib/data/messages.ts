@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { conversationOwedFromHistory } from "@/lib/crm/message-owed";
+import { inboundSmsTimes, lastSms, smsNeedsReply } from "@/lib/crm/messages-v1";
 import { isSpamLikeMissedCall } from "@/lib/crm/today-eligible";
 import { listAllowlistedPhoneKeys } from "@/lib/crm/spam-signals";
 import type { Activity, ContactWithRelations } from "@/types/database";
@@ -16,6 +17,10 @@ export type Conversation = {
   lastActivity: Activity;
   owed: boolean;
   owedActivity: Activity | null;
+  lastSms: Activity | null;
+  lastInboundSmsAt: string | null;
+  smsNeedsReply: boolean;
+  recentInboundSmsAt: string[];
 };
 
 // Supabase's JS client can't easily express "latest row per group" in one
@@ -126,11 +131,16 @@ export async function listConversations(opts?: { hidden?: boolean; spam?: boolea
     }
     const showOwed = opts?.spam || opts?.hidden ? owed : owed && !spamLike;
     if (opts?.filter === "owed" && !showOwed) continue;
+    const inboundTimes = inboundSmsTimes(thread);
     conversations.push({
       contact,
       lastActivity,
       owed: showOwed,
       owedActivity: showOwed ? activity : null,
+      lastSms: lastSms(thread),
+      lastInboundSmsAt: inboundTimes[0] ?? null,
+      smsNeedsReply: smsNeedsReply(thread),
+      recentInboundSmsAt: inboundTimes.slice(0, 50),
     });
   }
 

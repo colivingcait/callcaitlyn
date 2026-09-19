@@ -12,10 +12,11 @@ export function BottomNav({ counts = {}, userEmail }: { counts?: NavCounts; user
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
   const countFor = countForCounts(counts);
+  const onSmsThread = /^\/messages\/[^/]+$/.test(pathname);
 
   return (
     <>
-      <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-[#eadfd6] bg-[#f7f1ea]/95 backdrop-blur lg:hidden">
+      <nav className={onSmsThread ? "hidden" : "safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-[#eadfd6] bg-[#f7f1ea]/95 backdrop-blur lg:hidden"}>
         <ul className="flex items-stretch justify-around">
           {MOBILE_NAV_ITEMS.map((item) => {
             if (item.kind === "more") {
