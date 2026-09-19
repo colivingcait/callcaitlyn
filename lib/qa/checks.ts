@@ -105,7 +105,7 @@ export async function getQaReport(): Promise<QaSection[]> {
       label: "Gmail",
       status: !gmail ? "error" : gmailTokenStale ? "warn" : "ok",
       detail: !gmail
-        ? "Not connected - sequences, contact emails, and check-in recaps can't send"
+        ? "Not connected - campaigns, contact emails, and check-in recaps can't send"
         : gmailTokenStale
           ? `Connected as ${gmail.email_address}, but the access token hasn't refreshed in over an hour - reconnect if sends start failing`
           : `Connected as ${gmail.email_address}`,
@@ -131,7 +131,7 @@ export async function getQaReport(): Promise<QaSection[]> {
     },
     {
       id: "active_sequences",
-      label: "Active email sequences",
+      label: "Active campaigns",
       status: "ok",
       detail: `${activeSequencesResult.data?.length ?? 0} currently active`,
       link: "/sequences",
