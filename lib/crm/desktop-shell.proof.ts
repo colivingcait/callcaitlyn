@@ -22,6 +22,8 @@ const todayDesktop = read("components/dashboard/TodayDesktop.tsx");
 assert.ok(todayDesktop.includes("max-w-[1400px]"), "Desktop Today uses a wide max width, not a phone column");
 assert.ok(todayDesktop.includes("TodayHome"), "Desktop Today uses the mockup home, not a phone column of queues");
 assert.equal(todayDesktop.includes("max-w-lg"), false);
+assert.equal(todayDesktop.includes("TodayQueues"), false, "Desktop Today must not mount the legacy Do-next strip");
+assert.equal(todayDesktop.includes("wide"), false, "Desktop Today uses the same TodayHome tree");
 
 const todayHome = read("components/dashboard/TodayHome.tsx");
 assert.ok(todayHome.includes("TodayPipelineOverview"), "Today home mounts the pipeline overview");
@@ -29,31 +31,24 @@ assert.ok(todayHome.includes("TextAndNextDialer"), "Today home mounts on-page Te
 assert.ok(todayHome.includes("TodayUpcomingEvents"), "Today home has Upcoming Events");
 assert.ok(todayHome.includes("TodayTodosCard"), "Today home has To Dos under the middle row");
 assert.ok(todayHome.includes("TODAY_GRID") || todayHome.includes("grid-cols-12"), "Desktop home is a wide grid, not a stacked phone");
-assert.ok(todayHome.includes("col-span-6"), "Pipeline and Events share equal columns");
+assert.ok(todayHome.includes("md:col-span-6"), "Pipeline and Events share equal columns from tablet up");
+assert.equal(todayHome.includes("xl:col-span-6"), false, "Do not delay the 2-col split until 1280");
 assert.equal(todayHome.includes("col-span-7"), false, "Do not use the old 7/5 split");
 assert.ok(todayHome.includes('data-today-home="spotlight"'), "Text & Next keeps the spotlight landmark");
-assert.ok(todayHome.includes("TODAY_STACK_MOBILE"), "Mobile Today is a stacked single column");
+assert.equal(todayHome.includes("if (wide)"), false, "One Today home tree for every viewport");
+assert.equal(todayHome.includes("TodayQueues"), false, "Legacy Do-next chip strip is not on Today home");
+assert.equal(todayHome.includes("Do next"), false, "No 3-tile Do-next strip on Today home");
+assert.equal(todayHome.includes("Nothing on the calendar"), false, "No empty calendar peer card");
 assert.equal(todayHome.includes("Pulse"), false, "No Pulse 3-tile strip");
 assert.equal(todayHome.includes("Overdue"), false, "No separate Overdue hero on Today home");
 
-const wideBlock = todayHome.slice(todayHome.indexOf("if (wide)"));
-const dialerIdx = wideBlock.indexOf("{dialer}");
-const pipelineIdx = wideBlock.indexOf("{pipeline}");
-const eventsIdx = wideBlock.indexOf("{events}");
-const todosIdx = wideBlock.indexOf("{todos}");
+const homeBody = todayHome.slice(todayHome.indexOf("export function TodayHome"));
+const dialerIdx = homeBody.lastIndexOf("TextAndNextDialer");
+const pipelineIdx = homeBody.lastIndexOf("TodayPipelineOverview");
+const eventsIdx = homeBody.lastIndexOf("TodayUpcomingEvents");
+const todosIdx = homeBody.lastIndexOf("TodayTodosCard");
 assert.ok(dialerIdx > 0 && dialerIdx < pipelineIdx, "Text & Next sits under the greeting, above Pipeline");
 assert.ok(pipelineIdx > 0 && eventsIdx > pipelineIdx && todosIdx > eventsIdx, "To Dos render after Pipeline/Events");
-
-const mobileBlock = todayHome.slice(todayHome.indexOf("TODAY_STACK_MOBILE"));
-assert.ok(mobileBlock.indexOf("{dialer}") < mobileBlock.indexOf("{pipeline}"), "Mobile stacks Text & Next above Pipeline");
-assert.ok(mobileBlock.indexOf("{pipeline}") < mobileBlock.indexOf("{events}"), "Mobile stacks Pipeline above Events");
-assert.ok(mobileBlock.indexOf("{events}") < mobileBlock.indexOf("{todos}"), "Mobile stacks Events above To Dos");
-
-const todayQueues = read("components/dashboard/TodayQueues.tsx");
-assert.ok(todayQueues.includes("grid-cols-3"), "Do-next chips share a 3-col grid on desktop");
-assert.ok(todayQueues.includes("gap-6"), "Do-next uses the shared 24px gutter");
-assert.equal(todayQueues.includes("gap-8"), false, "Do not use a second gutter size on Today queues");
-assert.ok(todayQueues.includes("afterDoNext"), "Tasks/Messages slot in under Do-next, not beside Pipeline");
 
 const todayLayout = read("components/dashboard/today-home-layout.ts");
 assert.ok(todayLayout.includes("grid-cols-12"), "Shared Today grid is 12 columns");

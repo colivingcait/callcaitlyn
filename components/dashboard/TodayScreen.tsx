@@ -44,7 +44,7 @@ export function TodayScreen({
         className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#f3e6dc]/70 to-transparent"
       />
 
-      <div className="relative px-5 py-5 lg:hidden">
+      <div className="relative overflow-x-hidden px-5 py-5 lg:hidden">
         {!parsedFocus && activePrepSheets.length > 0 && (
           <div className="mb-5 space-y-3">
             {activePrepSheets.map((p) => (
@@ -82,7 +82,7 @@ export function TodayScreen({
         )}
       </div>
 
-      <div className="relative hidden lg:block">
+      <div className="relative hidden overflow-x-hidden lg:block">
         <TodayDesktop
           today={today}
           contacts={contacts}
