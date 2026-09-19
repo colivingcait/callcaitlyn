@@ -95,11 +95,11 @@ export function addCalendarDaysIso(iso: string, days: number): string {
   return new Date(noon.getTime() + days * 86_400_000).toISOString();
 }
 
-// Event cadence that surfaces on Today → To Dos. Offsets match the
-// pre-event templates in event-text-templates.ts: invite past attendees
-// two weeks out, text current registrants a couple of days before.
-export const EMAIL_INVITE_DAYS_BEFORE = 14;
-export const TEXT_REMINDER_DAYS_BEFORE = 2;
+// Event cadence that surfaces on Today → To Dos. Nico Events SoT:
+// email invite T-10 to past attendees; text reminder default T-3 to
+// current registrants (days-before is per-event and editable).
+export const EMAIL_INVITE_DAYS_BEFORE = 10;
+export const TEXT_REMINDER_DAYS_BEFORE = 3;
 export const CADENCE_LOOKAHEAD_DAYS = 7;
 
 export type EventCadenceInput = {
@@ -109,6 +109,8 @@ export type EventCadenceInput = {
   date: string;
   registrantIds: string[];
   pastAttendeeIds: string[];
+  textDaysBefore?: number;
+  showOnToday?: boolean;
 };
 
 export type EventCadenceDue = {
@@ -161,10 +163,12 @@ function cadenceDueRow(
 export function eventCadenceDues(events: EventCadenceInput[], now = new Date()): EventCadenceDue[] {
   const rows: EventCadenceDue[] = [];
   for (const event of events) {
+    if (event.showOnToday === false) continue;
     const registered = new Set(event.registrantIds);
     const pastNotRegistered = event.pastAttendeeIds.filter((id) => !registered.has(id));
+    const textDays = event.textDaysBefore ?? TEXT_REMINDER_DAYS_BEFORE;
     const email = cadenceDueRow(event, "email_invite", EMAIL_INVITE_DAYS_BEFORE, pastNotRegistered, "past attendee", now);
-    const text = cadenceDueRow(event, "text_reminder", TEXT_REMINDER_DAYS_BEFORE, event.registrantIds, "registrant", now);
+    const text = cadenceDueRow(event, "text_reminder", textDays, event.registrantIds, "registrant", now);
     if (email) rows.push(email);
     if (text) rows.push(text);
   }

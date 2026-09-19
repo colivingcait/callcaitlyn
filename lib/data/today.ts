@@ -257,6 +257,8 @@ function cadenceInputFromEntries(upcoming: EventEntry[], past: EventEntry[]): Ev
     date: event.date,
     registrantIds: event.people.filter((person) => person.registered).map((person) => person.contactId),
     pastAttendeeIds: [...(pastAttendeesBySeries.get(event.series) ?? [])],
+    textDaysBefore: event.cadenceTextDaysBefore,
+    showOnToday: event.cadenceShowOnToday,
   }));
 }
 

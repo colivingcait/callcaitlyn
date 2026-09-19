@@ -5,6 +5,7 @@ import { MessageSquareText } from "lucide-react";
 import { TextBlastModal } from "@/components/contacts/TextBlastModal";
 import type { BlastTarget } from "@/app/(app)/contacts/text-blast-actions";
 import type { Tag } from "@/types/database";
+import { parseCampaignIdsParam } from "@/lib/crm/events-sot";
 
 // The picker step TextTabClient used to own on its own route - folded
 // onto the unified Campaigns list instead, since a text send now shows up
@@ -13,18 +14,29 @@ export function NewTextButton({
   eventNames,
   tags,
   autoOpenEvent,
+  autoOpenIds,
 }: {
   eventNames: string[];
   tags: Tag[];
   // From the Events portal's prep card ("Send the day-before text") -
   // opens straight to that event's composer instead of the picker.
   autoOpenEvent?: string | null;
+  // Events Message all / Contacts-style bulk text: hand roster IDs into
+  // the existing Campaigns texter. Do not rebuild a second composer.
+  autoOpenIds?: string | null;
 }) {
+  const handedIds = parseCampaignIdsParam(autoOpenIds);
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"event" | "tag">(eventNames.length > 0 ? "event" : "tag");
   const [selectedEvent, setSelectedEvent] = useState(eventNames[0] ?? "");
   const [selectedTagId, setSelectedTagId] = useState(tags[0]?.id ?? "");
-  const [composeTarget, setComposeTarget] = useState<BlastTarget | null>(autoOpenEvent ? { kind: "event", eventName: autoOpenEvent } : null);
+  const [composeTarget, setComposeTarget] = useState<BlastTarget | null>(
+    handedIds.length > 0
+      ? { kind: "contacts", contactIds: handedIds, label: `${handedIds.length} registrant${handedIds.length === 1 ? "" : "s"}` }
+      : autoOpenEvent
+        ? { kind: "event", eventName: autoOpenEvent }
+        : null,
+  );
   const tagById = new Map(tags.map((t) => [t.id, t]));
 
   function compose() {

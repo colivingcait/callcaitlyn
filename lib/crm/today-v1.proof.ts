@@ -62,7 +62,7 @@ assert.equal(
 assert.equal(
   dues.some((row) => row.kind === "text_reminder" && row.eventName === womens.label),
   false,
-  "text reminder for an event 12 days out stays off Until the 2-day + 7-day lookahead window",
+  "text reminder for an event 12 days out stays off until the T-3 + 7-day lookahead window",
 );
 assert.equal(cadenceDueLabel("2026-09-19T16:00:00.000Z", now), "Due today");
 assert.equal(cadenceDueLabel("2026-09-21T16:00:00.000Z", now), "Due in 2 days");
@@ -128,7 +128,8 @@ assert.ok(todos.includes("cadenceDues"));
 assert.ok(todos.includes("Email invite") || todos.includes("row.title"));
 assert.ok(todos.includes("todo-email"));
 assert.ok(todos.includes("todo-text"));
-assert.ok(todos.includes("TextBlastModal"));
+assert.ok(todos.includes("MessageRegistrantsModal"), "Today Text CTA opens the Events choice modal");
+assert.equal(todos.includes("TextBlastModal"), false, "Today Text does not skip the choice modal");
 assert.equal(todos.includes("Nothing on the calendar"), false);
 
 const pipeline = read("components/dashboard/TodayPipelineOverview.tsx");
