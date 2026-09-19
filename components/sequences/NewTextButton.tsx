@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { MessageSquareText } from "lucide-react";
 import { TextBlastModal } from "@/components/contacts/TextBlastModal";
+import { parseCampaignAudienceIds } from "@/lib/crm/campaigns-handoff";
 import type { BlastTarget } from "@/app/(app)/contacts/text-blast-actions";
 import type { Tag } from "@/types/database";
 
@@ -13,18 +15,31 @@ export function NewTextButton({
   eventNames,
   tags,
   autoOpenEvent,
+  preloadedIds,
 }: {
   eventNames: string[];
   tags: Tag[];
   // From the Events portal's prep card ("Send the day-before text") -
   // opens straight to that event's composer instead of the picker.
   autoOpenEvent?: string | null;
+  preloadedIds?: string | null;
 }) {
+  const router = useRouter();
+  const preloaded = parseCampaignAudienceIds(preloadedIds);
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"event" | "tag">(eventNames.length > 0 ? "event" : "tag");
   const [selectedEvent, setSelectedEvent] = useState(eventNames[0] ?? "");
   const [selectedTagId, setSelectedTagId] = useState(tags[0]?.id ?? "");
-  const [composeTarget, setComposeTarget] = useState<BlastTarget | null>(autoOpenEvent ? { kind: "event", eventName: autoOpenEvent } : null);
+  const [composeTarget, setComposeTarget] = useState<BlastTarget | null>(() => {
+    if (preloaded.length) {
+      return {
+        kind: "contacts",
+        contactIds: preloaded,
+        label: `${preloaded.length} selected contact${preloaded.length === 1 ? "" : "s"}`,
+      };
+    }
+    return autoOpenEvent ? { kind: "event", eventName: autoOpenEvent } : null;
+  });
   const tagById = new Map(tags.map((t) => [t.id, t]));
 
   function compose() {
@@ -109,7 +124,15 @@ export function NewTextButton({
         </>
       )}
 
-      {composeTarget && <TextBlastModal target={composeTarget} onClose={() => setComposeTarget(null)} />}
+      {composeTarget && (
+        <TextBlastModal
+          target={composeTarget}
+          onClose={() => {
+            setComposeTarget(null);
+            if (preloaded.length) router.replace("/sequences");
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -37,7 +37,8 @@ export function ContactsWorkspace({
   lastActivityLabels: Record<string, string>;
 }) {
   const [selecting, setSelecting] = useState(false);
-  const [filtersOpen, setFiltersOpen] = useState(true);
+  const [selectOpen, setSelectOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   return (
     <div className="flex min-w-0 items-start gap-0">
@@ -56,11 +57,35 @@ export function ContactsWorkspace({
             <div className="relative">
               <button
                 type="button"
-                onClick={() => setSelecting((v) => !v)}
+                onClick={() => setSelectOpen((v) => !v)}
                 className="flex items-center gap-2 rounded-[11px] border border-neutral-200 bg-white px-3.5 py-3 text-[15px] font-medium text-neutral-800"
               >
                 Select <ChevronDown size={15} className="text-neutral-400" />
               </button>
+              {selectOpen && (
+                <div className="absolute right-0 top-full z-20 mt-1 w-40 rounded-xl border border-neutral-200 bg-white p-1 shadow-lg">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelecting(true);
+                      setSelectOpen(false);
+                    }}
+                    className="block w-full rounded-lg px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50"
+                  >
+                    Select rows
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelecting(false);
+                      setSelectOpen(false);
+                    }}
+                    className="block w-full rounded-lg px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50"
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
             </div>
           }
         />

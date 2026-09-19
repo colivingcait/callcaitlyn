@@ -10,6 +10,8 @@ import {
   hasUsablePhone,
   registeredContactIds,
 } from "@/lib/crm/contact-filter-predicates";
+import { contactMatchesGender } from "@/lib/crm/contact-gender";
+import { leadSourceMatches } from "@/lib/crm/contact-sources";
 import type { ContactQueue } from "@/lib/crm/contact-queues";
 import type { Activity, AiInsight, ContactSegment, ContactWithRelations, Deal, PipelineStage, Tag, Task } from "@/types/database";
 
@@ -87,6 +89,8 @@ export type ContactListFilters = {
   timeline?: string;
   representing?: string;
   leadSource?: string;
+  stageIds?: string[];
+  gender?: "women" | "men" | "unknown";
   hasPhone?: boolean;
   missingPhone?: boolean;
   hasEmail?: boolean;
@@ -134,11 +138,15 @@ export async function listContacts(filters: ContactListFilters) {
     /* no archived filter at all */
   } else query = query.eq("archived", false);
 
-  if (filters.stageId) query = query.eq("stage_id", filters.stageId);
+  if (filters.stageIds?.length) {
+    query = filters.stageIds.length === 1 ? query.eq("stage_id", filters.stageIds[0]) : query.in("stage_id", filters.stageIds);
+  } else if (filters.stageId) {
+    query = query.eq("stage_id", filters.stageId);
+  }
   if (filters.type) query = query.eq("contact_type", filters.type);
   if (filters.timeline) query = query.eq("timeline", filters.timeline);
   if (filters.representing) query = query.eq("representing", filters.representing);
-  if (filters.leadSource) query = query.eq("lead_source", filters.leadSource);
+  // Source buckets are matched in JS — lead_source is free text.
   if (filters.hasPhone) query = query.not("phone", "is", null);
   // Empty-string phones are not "missing" at SQL null-check time; JS
   // hasUsablePhone below is the real predicate so "" counts as no phone.
@@ -177,6 +185,8 @@ export async function listContacts(filters: ContactListFilters) {
 
   if (filters.hasPhone) contacts = contacts.filter((c) => hasUsablePhone(c.phone));
   if (filters.missingPhone) contacts = contacts.filter((c) => !hasUsablePhone(c.phone));
+  if (filters.leadSource) contacts = contacts.filter((c) => leadSourceMatches(c.lead_source, filters.leadSource!));
+  if (filters.gender) contacts = contacts.filter((c) => contactMatchesGender(c.first_name, filters.gender));
 
   if (filters.tagIds?.length) {
     const tagIds = filters.tagIds;
@@ -277,6 +287,8 @@ export async function listContacts(filters: ContactListFilters) {
 function hasRestrictiveFilters(filters: ContactListFilters): boolean {
   return Boolean(
     filters.stageId ||
+      filters.stageIds?.length ||
+      filters.gender ||
       filters.tagIds?.length ||
       filters.type ||
       filters.timeline ||

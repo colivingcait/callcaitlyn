@@ -6,6 +6,7 @@ import {
   registrationSelectValue,
 } from "@/lib/crm/contact-filter-params";
 import { SHEET_PARAM_KEYS } from "@/lib/crm/contact-filter-params";
+import { sourceFilterByValue } from "@/lib/crm/contact-sources";
 import type { PipelineStage, Tag } from "@/types/database";
 
 export type ActiveFilterTag = { key: string; label: string };
@@ -27,6 +28,7 @@ const PARAM_LABELS: Record<string, string> = {
   leadTo: "To",
   event: "Attended",
   regEvent: "Registered",
+  gender: "Gender",
   city: "City",
   state: "State",
   birthdayMonth: "Birthday",
@@ -80,8 +82,8 @@ export function activeFilterTags(
 
 function formatFilterValue(key: string, raw: string, stages: PipelineStage[], tags: Tag[]): string | null {
   if (key === "stage") {
-    const stage = stages.find((s) => s.id === raw);
-    return `Stage: ${stage?.name ?? raw}`;
+    const names = raw.split(",").filter(Boolean).map((id) => stages.find((s) => s.id === id)?.name ?? id);
+    return names.length ? `Stage: ${names.join(", ")}` : null;
   }
   if (key === "phone") return raw === "1" ? "Has phone" : raw === "0" ? "No phone" : null;
   if (key === "email") return raw === "1" ? "Has email" : raw === "0" ? "No email" : null;
@@ -93,7 +95,16 @@ function formatFilterValue(key: string, raw: string, stages: PipelineStage[], ta
   }
   if (key === "likelihood") return raw === "high" ? "Hot" : raw === "medium" ? "Warm" : raw === "low" ? "Cold" : raw;
   if (key === "newSince") return `Last ${raw} days`;
-  if (key === "source") return `Source: ${raw}`;
+  if (key === "source") {
+    const bucket = sourceFilterByValue(raw);
+    return `Source: ${bucket?.label ?? raw}`;
+  }
+  if (key === "gender") {
+    if (raw === "women") return "Gender: Women";
+    if (raw === "men") return "Gender: Men";
+    if (raw === "unknown") return "Gender: Unknown";
+    return null;
+  }
   const prefix = PARAM_LABELS[key];
   return prefix ? `${prefix}: ${raw}` : raw;
 }
