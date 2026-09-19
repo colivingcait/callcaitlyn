@@ -13,9 +13,7 @@ import {
 } from "@/lib/data/contacts";
 import { listSequencesWithSummary } from "@/lib/data/sequences";
 import { parseContactFilterParams } from "@/lib/crm/contact-filter-params";
-import { ContactsList } from "@/components/contacts/ContactsList";
-import { ContactFilters } from "@/components/contacts/ContactFilters";
-import { SegmentBar } from "@/components/contacts/SegmentBar";
+import { ContactsWorkspace } from "@/components/contacts/ContactsWorkspace";
 import { BulkImportContactsButton } from "@/components/contacts/BulkImportContactsButton";
 import { PeopleMobile } from "@/components/contacts/mobile/PeopleMobile";
 import { CountScopeNote } from "@/components/CountScopeNote";
@@ -32,9 +30,9 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
     if (value) usp.set(key, value);
   }
   const filters = parseContactFilterParams(usp);
-  // Grouped by stage by default - the header for each group is the stage,
-  // so this is the view the redesign is built around, not an opt-in.
-  const groupBy = filters.groupBy ?? "stage";
+  // Table is the default (Name · Source · Stage · Last touch). Grouping
+  // stays available from the Filters panel.
+  const groupBy = filters.groupBy ?? "none";
 
   const supabase = await createClient();
   const {
@@ -72,12 +70,13 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
       {/* Desktop list uses the full main column at lg+, not a phone-width
           max-w-3xl. Mobile PeopleMobile is lg:hidden so the two never stack. */}
       <div className="mx-auto hidden w-full max-w-[1400px] px-8 lg:block">
-      <div className="sticky top-0 z-10 bg-[#f7f1ea]">
-        <div className="flex items-start justify-between gap-3 pt-8 pb-3">
+      <div className="sticky top-0 z-10 bg-[#f7f1ea] pt-8 pb-3">
+        <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="font-display text-[32px] font-semibold leading-9 tracking-[-0.03em] text-neutral-900">Contacts</h1>
             <p className="mt-1.5 text-[15px] leading-[22px] text-neutral-600">
-              {contacts.length} in this list · {withPhoneCount} have a phone you can text. Deal board:{" "}
+              {contacts.length} people · leads from Zillow, referrals, events, and more · {withPhoneCount} textable. Deal
+              board:{" "}
               <Link href="/pipeline" className="font-medium text-brand-700 hover:underline">
                 Pipeline
               </Link>
@@ -111,26 +110,20 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
             </Link>
           </div>
         )}
-        <ContactFilters
+      </div>
+        <ContactsWorkspace
+          contacts={contacts}
           stages={stages}
           tags={tags}
           leadSources={leadSources}
           eventNames={eventNames}
           registeredEventNames={registeredEventNames}
-        />
-        {user && <SegmentBar segments={segments} ownerId={user.id} />}
-      </div>
-      <div className="bg-transparent pb-8">
-        <ContactsList
-          contacts={contacts}
-          tags={tags}
-          stages={stages}
-          ownerId={user?.id ?? ""}
+          segments={segments}
           sequences={sequences.map((s) => ({ id: s.id, name: s.name, type: s.type }))}
+          ownerId={user?.id ?? ""}
           groupBy={groupBy}
           lastActivityLabels={Object.fromEntries(lastActivityLabels)}
         />
-      </div>
       </div>
     </>
   );

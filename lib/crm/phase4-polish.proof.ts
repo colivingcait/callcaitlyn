@@ -79,8 +79,8 @@ const nav = read("components/nav/nav-items.ts");
 assert.ok(nav.includes('label: "Campaigns"'));
 assert.ok(nav.includes('hint: "Email and text campaigns"'));
 assert.equal(nav.includes('hint: "Email and text sequences"'), false);
-assert.ok(nav.includes('label: "Booking requests"'));
-assert.equal(nav.includes('label: "Bookings"'), false);
+assert.ok(nav.includes('label: "Bookings"'));
+assert.equal(nav.includes('label: "Booking requests"'), false);
 
 const campaignsPage = read("app/(app)/sequences/page.tsx");
 assert.ok(campaignsPage.includes(">Campaigns</h1>"));
@@ -103,7 +103,7 @@ assert.equal(qaChecks.includes("Active email sequences"), false);
 assert.equal(qaChecks.includes("Not connected - sequences,"), false);
 
 const scheduling = read("app/(app)/scheduling/page.tsx");
-assert.ok(scheduling.includes(">Booking requests</h1>"));
-assert.equal(scheduling.includes(">Bookings</h1>"), false);
+assert.ok(scheduling.includes(">Bookings</h1>"));
+assert.equal(scheduling.includes(">Booking requests</h1>"), false);
 
 console.log("phase4 polish: ok");

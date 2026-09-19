@@ -6,8 +6,14 @@ import { X } from "lucide-react";
 import { Button, Input, Select, Label } from "@/components/ui";
 import { CONTACT_TYPE_LABELS, TIMELINE_LABELS, REPRESENTING_LABELS, cn } from "@/lib/utils";
 import type { PipelineStage, Tag } from "@/types/database";
-import { REGISTERED_FOR_ANY_EVENT, NOT_FILTERED_BY_REGISTRATION, registrationSelectValue, type ContactGroupBy } from "@/lib/crm/contact-filter-params";
-import { SHEET_PARAM_KEYS } from "@/components/contacts/ContactFilters";
+import {
+  EVER_ATTENDED_EVENT,
+  REGISTERED_FOR_ANY_EVENT,
+  NOT_FILTERED_BY_REGISTRATION,
+  registrationSelectValue,
+  type ContactGroupBy,
+} from "@/lib/crm/contact-filter-params";
+import { SHEET_PARAM_KEYS } from "@/lib/crm/contact-filter-params";
 
 const LEAD_DATE_PRESETS = [
   { label: "Last 7 days", days: 7 },
@@ -44,6 +50,7 @@ export function ContactFiltersSheet({
   eventNames,
   registeredEventNames = [],
   onClose,
+  variant = "sheet",
 }: {
   stages: PipelineStage[];
   tags: Tag[];
@@ -51,6 +58,7 @@ export function ContactFiltersSheet({
   eventNames: string[];
   registeredEventNames?: string[];
   onClose: () => void;
+  variant?: "sheet" | "panel";
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -106,9 +114,13 @@ export function ContactFiltersSheet({
     onClose();
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
-      <div className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-2xl bg-white shadow-xl sm:rounded-2xl">
+  const chrome =
+    variant === "panel"
+      ? "flex h-full w-full max-w-none flex-col border-l border-[#eadfd6] bg-[#fffbf8]"
+      : "flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-2xl bg-white shadow-xl sm:rounded-2xl";
+
+  const body = (
+      <div className={chrome}>
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-neutral-100 px-5 py-4">
           <p className="font-serif text-xl font-semibold text-neutral-900">Filters</p>
           <button onClick={onClose} className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100">
@@ -118,7 +130,7 @@ export function ContactFiltersSheet({
 
         <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
           <Section title="Group by">
-            <Select value={draft.group ?? "stage"} onChange={(e) => set("group", e.target.value)}>
+            <Select value={draft.group ?? "none"} onChange={(e) => set("group", e.target.value)}>
               {GROUP_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
@@ -276,8 +288,17 @@ export function ContactFiltersSheet({
           </Section>
 
           <Section title="Events">
-            <Select value={draft.event ?? ""} onChange={(e) => set("event", e.target.value)}>
-              <option value="">Any / no event attended</option>
+            <label className="flex items-center justify-between gap-3 text-[14px] text-neutral-800">
+              <span>Ever attended</span>
+              <input
+                type="checkbox"
+                checked={!!draft.event}
+                onChange={(e) => set("event", e.target.checked ? (draft.event && draft.event !== EVER_ATTENDED_EVENT ? draft.event : EVER_ATTENDED_EVENT) : "")}
+                className="h-4 w-4 rounded border-neutral-300"
+              />
+            </label>
+            <Select value={draft.event && draft.event !== EVER_ATTENDED_EVENT ? draft.event : ""} onChange={(e) => set("event", e.target.value || (draft.event ? EVER_ATTENDED_EVENT : ""))}>
+              <option value="">Specific event</option>
               {eventNames.map((e) => (
                 <option key={e} value={e}>
                   Attended: {e}
@@ -335,11 +356,17 @@ export function ContactFiltersSheet({
 
         <div className="flex shrink-0 items-center justify-between gap-2 border-t border-neutral-100 px-5 py-4">
           <button onClick={clearAll} className="text-sm font-medium text-neutral-500 hover:text-neutral-700">
-            Clear all
+            Reset
           </button>
-          <Button onClick={apply}>Apply filters</Button>
+          <Button onClick={apply}>Apply</Button>
         </div>
       </div>
+  );
+
+  if (variant === "panel") return body;
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
+      {body}
     </div>
   );
 }

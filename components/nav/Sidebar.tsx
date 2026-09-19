@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Plus } from "lucide-react";
+import { ChevronDown, Plus } from "lucide-react";
 import { useState } from "react";
-import { PRIMARY_NAV_ITEMS, moreNavGroupsForSheet, navItemIsActive, type NavCounts } from "./nav-items";
+import { PRIMARY_NAV_ITEMS, moreNavItemsForSidebar, navItemIsActive, type NavCounts } from "./nav-items";
 import { SignOutButton } from "./SignOutButton";
 import { QuickAddMenu } from "./QuickAddMenu";
 import { countFor as countForCounts } from "@/lib/nav/countFor";
@@ -18,8 +18,10 @@ export function Sidebar({ userEmail, counts = {} }: { userEmail?: string | null;
   const searchParams = useSearchParams();
   const focus = searchParams.get("focus");
   const [quickAddOpen, setQuickAddOpen] = useState(false);
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
-  const moreGroups = moreNavGroupsForSheet();
+  const moreItems = moreNavItemsForSidebar();
+  const moreActive = moreItems.some((item) => navItemIsActive(item.href, pathname, focus));
+  const [moreOpen, setMoreOpen] = useState(true);
+  const expanded = moreOpen || moreActive;
 
   const countFor = countForCounts(counts);
 
@@ -65,50 +67,41 @@ export function Sidebar({ userEmail, counts = {} }: { userEmail?: string | null;
           })}
         </div>
         <div>
-          <p className="mb-2 px-2.5 text-[11px] font-semibold uppercase tracking-[.08em] text-neutral-400">More</p>
-          {moreGroups.map((group) => {
-            const groupActive = group.items.some((item) => navItemIsActive(item.href, pathname, focus));
-            const expanded = openGroups[group.label] ?? groupActive;
-            return (
-              <div key={group.label} className="mb-1">
-                <button
-                  type="button"
-                  onClick={() => setOpenGroups((prev) => ({ ...prev, [group.label]: !expanded }))}
-                  className="flex w-full items-center justify-between rounded-[11px] px-3 py-2 text-left text-[12px] font-semibold uppercase tracking-[.06em] text-neutral-400 hover:bg-neutral-100/60"
-                >
-                  {group.label}
-                  <span className="text-neutral-300">{expanded ? "–" : "+"}</span>
-                </button>
-                {expanded && (
-                  <div className="flex flex-col gap-0.5">
-                    {group.items.map(({ href, label, icon: Icon, hint }) => {
-                      const active = navItemIsActive(href, pathname, focus);
-                      const count = countFor[href];
-                      return (
-                        <Link
-                          key={href}
-                          href={href}
-                          title={hint}
-                          className={cn(
-                            "flex items-center gap-3 rounded-[11px] px-3 py-2.5 text-[15px] font-medium",
-                            active ? "bg-[#f3e4dc] font-semibold text-brand-800" : "text-neutral-700 hover:bg-[#efe6dc]/70",
-                          )}
-                        >
-                          <Icon size={18} className={active ? "text-brand-700" : "text-neutral-500"} />
-                          {label}
-                          {count && (
-                            <span className={cn("ml-auto text-sm", count.waiting ? "font-semibold text-brand-600" : "text-neutral-400")}>
-                              {count.value}
-                            </span>
-                          )}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          <button
+            type="button"
+            onClick={() => setMoreOpen((open) => !open)}
+            className="mb-2 flex w-full items-center justify-between px-2.5 text-[11px] font-semibold uppercase tracking-[.08em] text-neutral-400"
+          >
+            More
+            <ChevronDown size={14} className={cn("text-neutral-300 transition-transform", expanded ? "rotate-0" : "-rotate-90")} />
+          </button>
+          {expanded && (
+            <div className="flex flex-col">
+              {moreItems.map(({ href, label, icon: Icon, hint }) => {
+                const active = navItemIsActive(href, pathname, focus);
+                const count = countFor[href];
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    title={hint}
+                    className={cn(
+                      "flex items-center gap-3 rounded-[11px] px-3 py-2.5 text-[15px] font-medium",
+                      active ? "bg-[#f3e4dc] font-semibold text-brand-800" : "text-neutral-700 hover:bg-[#efe6dc]/70",
+                    )}
+                  >
+                    <Icon size={18} className={active ? "text-brand-700" : "text-neutral-500"} />
+                    {label}
+                    {count && (
+                      <span className={cn("ml-auto text-sm", count.waiting ? "font-semibold text-brand-600" : "text-neutral-400")}>
+                        {count.value}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
       </nav>
 

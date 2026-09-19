@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   getSchedulingSettings,
   listPendingBookingRequests,
@@ -24,11 +25,17 @@ export default async function SchedulingPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
-      <h1 className="font-serif text-2xl font-semibold text-neutral-900 sm:text-[28px]">Booking requests</h1>
-      <p className="mt-1 text-[15px] text-neutral-500">Requests need your approval before anything&apos;s booked. Calendar events for contacts still live on the person.</p>
+      <h1 className="font-serif text-2xl font-semibold text-neutral-900 sm:text-[28px]">Bookings</h1>
+      <p className="mt-1 text-[15px] text-neutral-500">
+        History and settings. New call requests wait in{" "}
+        <Link href="/" className="font-medium text-brand-700 hover:underline">
+          Today → Needs you
+        </Link>
+        , not only here.
+      </p>
 
       <div className="mt-4 space-y-3">
-        <Section sectionKey="scheduling:pending" title="Pending requests" meta={`${pending.length}`}>
+        <Section sectionKey="scheduling:pending" title="Still open (also on Today)" meta={`${pending.length}`} defaultOpen={false}>
           {pending.length === 0 ? (
             <p className="px-4 py-4 text-center text-sm text-neutral-400">Nothing waiting on you.</p>
           ) : (

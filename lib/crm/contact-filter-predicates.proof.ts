@@ -162,7 +162,7 @@ const params = read("lib/crm/contact-filter-params.ts");
 assert.ok(params.includes("resolveRegisteredEventName"), "parser uses the shared URL resolver");
 assert.ok(params.includes("registeredEventName: resolveRegisteredEventName(sp)"));
 
-const filtersUi = read("components/contacts/ContactFilters.tsx");
+const filtersUi = read("components/contacts/ContactFilters.tsx") + read("components/contacts/ContactFiltersSheet.tsx");
 assert.ok(filtersUi.includes("registrationSelectValue"), "toolbar select matches the parser");
 assert.ok(filtersUi.includes("REGISTERED_FOR_ANY_EVENT"), "any-event option uses the sentinel");
 assert.ok(filtersUi.includes("NOT_FILTERED_BY_REGISTRATION"), "Anyone is an explicit opt-out, not empty");
