@@ -51,7 +51,7 @@ export function TodayPipelineOverview({
   const hole = size === "desktop" ? "h-[108px] w-[108px]" : "h-[76px] w-[76px] md:h-[108px] md:w-[108px]";
 
   return (
-    <section data-today-home="pipeline" className={cn("h-full p-4 sm:p-5", TODAY_CARD, className)}>
+    <section data-today-home="pipeline" className={cn("h-full min-w-0 overflow-hidden p-4 sm:p-5", TODAY_CARD, className)}>
       <p className="flex items-center gap-2 text-[15px] font-semibold text-neutral-800">
         <Clock size={16} strokeWidth={1.7} className="text-[#c45c4a]" />
         Pipeline Overview

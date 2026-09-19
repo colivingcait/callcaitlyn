@@ -33,6 +33,8 @@ assert.ok(todayHome.includes("TodayTodosCard"), "Today home has To Dos under the
 assert.ok(todayHome.includes("TODAY_GRID") || todayHome.includes("grid-cols-12"), "Desktop home is a wide grid, not a stacked phone");
 assert.ok(todayHome.includes("md:col-span-6"), "Pipeline and Events share equal columns from tablet up");
 assert.equal(todayHome.includes("xl:col-span-6"), false, "Do not delay the 2-col split until 1280");
+assert.ok(todayHome.includes("whitespace-nowrap"), "greeting stays one line");
+assert.ok(todayHome.includes("overflow-x-hidden"), "Today home clips horizontal overflow");
 assert.equal(todayHome.includes("col-span-7"), false, "Do not use the old 7/5 split");
 assert.ok(todayHome.includes('data-today-home="spotlight"'), "Text & Next keeps the spotlight landmark");
 assert.equal(todayHome.includes("if (wide)"), false, "One Today home tree for every viewport");

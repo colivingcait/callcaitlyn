@@ -35,7 +35,7 @@ export function TodaySearch({ contacts, variant }: { contacts: ContactOption[]; 
   }, [showDesktopBar]);
 
   const desktopBar = (
-    <div className={variant === "desktop" ? "relative w-full max-w-sm" : "relative hidden w-full max-w-sm lg:block"}>
+    <div className={variant === "desktop" ? "relative w-full min-w-0 max-w-[16rem] shrink xl:max-w-sm" : "relative hidden w-full min-w-0 max-w-[16rem] shrink xl:block xl:max-w-sm"}>
       <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
       <input
         ref={inputRef}
@@ -81,7 +81,7 @@ export function TodaySearch({ contacts, variant }: { contacts: ContactOption[]; 
   );
 
   const mobileButton = (
-    <div className={variant === "mobile" ? undefined : "lg:hidden"}>
+    <div className={variant === "mobile" ? undefined : "xl:hidden"}>
       <button
         type="button"
         onClick={() => setOpen(true)}

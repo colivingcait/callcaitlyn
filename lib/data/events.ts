@@ -354,7 +354,11 @@ export async function getEventsData(): Promise<EventsData> {
 // of the event, not starts_at >= now). Today must share this so a meetup
 // that /events shows as Next up cannot disappear from the home card.
 export function upcomingEventsFromData(data: EventsData): EventEntry[] {
-  return data.events
+  const upcoming = data.events
     .filter((event) => !event.hasEnded)
     .sort((a, b) => new Date(a.startsAt ?? a.date).getTime() - new Date(b.startsAt ?? b.date).getTime());
+  if (data.nextUp && !upcoming.some((event) => event.key === data.nextUp!.key)) {
+    return [data.nextUp, ...upcoming];
+  }
+  return upcoming;
 }

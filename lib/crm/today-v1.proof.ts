@@ -108,6 +108,9 @@ assert.ok(todayData.includes("registeredCount"));
 assert.ok(todayData.includes("getEventsData"), "Today events use the same /events source");
 assert.ok(todayData.includes("upcomingEventsFromData"));
 assert.ok(todayData.includes("eventCadenceDues"));
+const eventsData = read("lib/data/events.ts");
+assert.ok(eventsData.includes("upcomingEventsFromData"));
+assert.ok(eventsData.includes("data.nextUp"), "Today upcoming set cannot drop /events nextUp");
 assert.equal(todayData.includes('.gte("starts_at"'), false, "do not use the too-narrow starts_at >= now filter");
 assert.equal(todayData.includes("googleapis"), false);
 assert.equal(todayData.includes("listGoogle"), false);
@@ -142,6 +145,12 @@ assert.ok(bottomNav.includes("lg:hidden"));
 const screen = read("components/dashboard/TodayScreen.tsx");
 assert.ok(screen.includes("lg:hidden"), "phone Today still mounts");
 assert.ok(screen.includes("TodayDesktop"));
+assert.ok(screen.includes("overflow-x-hidden"), "Today clips horizontal overflow at 1024");
+assert.equal(screen.includes("TodayQueues"), false);
 assert.equal(screen.includes("renderItem"), false);
+
+const search = read("components/dashboard/mobile/TodaySearch.tsx");
+assert.ok(search.includes("xl:block"), "full search bar waits until 1280 so 1024 greeting stays one line");
+assert.ok(search.includes("xl:hidden"), "icon search covers lg/1024 desktop");
 
 console.log("today v1 layout + dialer: ok");

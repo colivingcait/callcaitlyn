@@ -68,7 +68,7 @@ export function TextAndNextDialer({ leads }: { leads: TextAndNextLead[] }) {
           No new leads waiting for a first text. You&apos;re caught up.
         </p>
       ) : (
-        <div className="mt-4 grid gap-4 lg:mt-5 lg:grid-cols-2 lg:gap-10">
+        <div className="mt-4 grid min-w-0 gap-4 lg:mt-5 lg:grid-cols-2 lg:gap-6 xl:gap-10">
           <div className="min-w-0">
             <div className="flex items-start gap-3">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f3e4dc] font-serif text-[18px] font-semibold text-[#c45c4a] lg:h-14 lg:w-14 lg:text-[22px]">

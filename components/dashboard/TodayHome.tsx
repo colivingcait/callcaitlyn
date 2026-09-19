@@ -28,7 +28,7 @@ export function TodayHome({
     <div className={cn(TODAY_STACK_DESKTOP, "overflow-x-hidden")}>
       <div className="flex min-w-0 items-start justify-between gap-3 lg:gap-6">
         <div className="min-w-0 flex-1">
-          <h1 className="truncate whitespace-nowrap font-display text-[28px] font-semibold leading-none tracking-[-0.03em] text-neutral-900 md:text-[34px] lg:text-[38px] xl:text-[42px]">
+          <h1 className="truncate whitespace-nowrap font-display text-[28px] font-semibold leading-none tracking-[-0.03em] text-neutral-900 lg:text-[32px] xl:text-[40px]">
             {greeting}, {ownerFirstName || "Caitlyn"}
           </h1>
           <p className="mt-1 truncate text-[14px] text-neutral-500 lg:mt-1.5 lg:text-[15px]">Here&apos;s who needs you today.</p>
