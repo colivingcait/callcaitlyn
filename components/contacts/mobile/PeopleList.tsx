@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MessageSquareText, StickyNote, Clock, PhoneOff } from "lucide-react";
+import { MessageSquareText, StickyNote, Clock, PhoneOff, Check } from "lucide-react";
 import { ListRow } from "@/components/mobile/ListRow";
 import { SwipeActions } from "@/components/mobile/SwipeActions";
 import { StickyGroupHeader } from "@/components/mobile/StickyGroupHeader";
@@ -11,7 +11,7 @@ import { snoozeFollowUp } from "@/app/(app)/today-actions";
 import { groupContacts } from "@/lib/crm/contact-grouping";
 import { useToast } from "@/lib/hooks/useToast";
 import { Toast } from "@/components/mobile/Toast";
-import { CONTACT_TYPE_LABELS, formatPhone } from "@/lib/utils";
+import { CONTACT_TYPE_LABELS, cn, formatPhone, fullName } from "@/lib/utils";
 import { sourceChipLabel } from "@/lib/crm/contact-sources";
 import type { ContactGroupBy } from "@/lib/crm/contact-filter-params";
 import type { ContactWithRelations, PipelineStage } from "@/types/database";
@@ -35,6 +35,39 @@ function rowMeta(contact: ContactWithRelations, lastActivityLabel: string | unde
       {source && <span className="shrink-0 rounded-full bg-[#f3e4dc] px-2 py-0.5 text-[11px] font-medium text-[#c45c4a]">{source}</span>}
       <span className="truncate">{[CONTACT_TYPE_LABELS[contact.contact_type], formatPhone(contact.phone), lastActivityLabel].filter(Boolean).join(" · ")}</span>
     </span>
+  );
+}
+
+function SelectRow({
+  contact,
+  checked,
+  onToggle,
+}: {
+  contact: ContactWithRelations;
+  checked: boolean;
+  onToggle: () => void;
+}) {
+  const source = sourceChipLabel(contact.lead_source);
+  const phone = contact.phone ? formatPhone(contact.phone) : null;
+  return (
+    <button type="button" onClick={onToggle} className="flex w-full items-start gap-3.5 px-4 py-4 text-left">
+      <span
+        aria-hidden
+        className={cn(
+          "mt-0.5 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2",
+          checked ? "border-[#c45c4a] bg-[#c45c4a] text-white" : "border-[#c45c4a] bg-white",
+        )}
+      >
+        {checked && <Check size={13} strokeWidth={3} />}
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-[17px] font-semibold leading-[22px] text-neutral-900">{fullName(contact)}</span>
+        {source && (
+          <span className="mt-1 inline-flex rounded-full bg-[#f3e4dc] px-2 py-0.5 text-[11px] font-medium text-[#c45c4a]">{source}</span>
+        )}
+        {phone && <span className="mt-1 block text-[14px] leading-[20px] text-neutral-400">{phone}</span>}
+      </span>
+    </button>
   );
 }
 
@@ -71,6 +104,25 @@ export function PeopleList({
     else router.refresh();
   }
 
+  if (selecting) {
+    return (
+      <div className="divide-y divide-neutral-100 overflow-hidden rounded-[16px] bg-white">
+        {contacts.length === 0 ? (
+          <p className="px-4 py-10 text-center text-[15px] text-neutral-400">No contacts match. Try clearing filters or add a new contact.</p>
+        ) : (
+          contacts.map((contact) => (
+            <SelectRow
+              key={contact.id}
+              contact={contact}
+              checked={selected?.has(contact.id) ?? false}
+              onToggle={() => onToggle?.(contact.id)}
+            />
+          ))
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-[16px] border border-[#ebe9e7] bg-white">
       {contacts.length === 0 ? (
@@ -98,25 +150,12 @@ export function PeopleList({
               const href = `/contacts/${contact.id}`;
               return (
                 <SwipeActions key={contact.id} rowId={contact.id} openRowId={openRowId} onOpenChange={setOpenRowId} actions={actions}>
-                  <div className="flex items-center gap-0">
-                    {selecting && (
-                      <input
-                        type="checkbox"
-                        checked={selected?.has(contact.id) ?? false}
-                        onChange={() => onToggle?.(contact.id)}
-                        className="ml-3 h-4 w-4 shrink-0 rounded border-neutral-300 accent-[#c45c4a]"
-                      />
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <ListRow
-                        href={selecting ? undefined : href}
-                        onClick={selecting ? () => onToggle?.(contact.id) : undefined}
-                        avatar={{ firstName: contact.first_name, lastName: contact.last_name }}
-                        name={name}
-                        secondaryText={rowMeta(contact, lastActivityLabels[contact.id])}
-                      />
-                    </div>
-                  </div>
+                  <ListRow
+                    href={href}
+                    avatar={{ firstName: contact.first_name, lastName: contact.last_name }}
+                    name={name}
+                    secondaryText={rowMeta(contact, lastActivityLabels[contact.id])}
+                  />
                 </SwipeActions>
               );
             })}

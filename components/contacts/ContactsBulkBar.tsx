@@ -7,9 +7,36 @@ import { hasUsablePhone } from "@/lib/crm/contact-filter-predicates";
 import { BulkTagModal } from "@/components/contacts/BulkTagModal";
 import { BulkStageModal } from "@/components/contacts/BulkStageModal";
 import { BulkAddToListModal } from "@/components/contacts/BulkAddToListModal";
+import { cn } from "@/lib/utils";
 import type { ContactSegment, ContactWithRelations, PipelineStage, Tag } from "@/types/database";
 
 type BulkModal = "add-tag" | "remove-tag" | "stage" | "list" | null;
+
+function Pill({
+  children,
+  onClick,
+  disabled,
+  filled = false,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  filled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        "rounded-lg px-3.5 py-1.5 text-[13px] font-semibold disabled:opacity-50",
+        filled ? "bg-[#c45c4a] text-white" : "border border-[#eadfd6] bg-white text-neutral-800",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
 
 export function ContactsBulkBar({
   selectedIds,
@@ -19,7 +46,7 @@ export function ContactsBulkBar({
   segments,
   ownerId,
   onClear,
-  compact = false,
+  variant = "desktop",
 }: {
   selectedIds: string[];
   selectedContacts: ContactWithRelations[];
@@ -28,11 +55,12 @@ export function ContactsBulkBar({
   segments: ContactSegment[];
   ownerId: string;
   onClear: () => void;
-  compact?: boolean;
+  variant?: "desktop" | "mobile";
 }) {
   const router = useRouter();
   const [modal, setModal] = useState<BulkModal>(null);
   const selectedWithPhone = selectedContacts.filter((c) => hasUsablePhone(c.phone)).length;
+  const mobile = variant === "mobile";
 
   function afterAction() {
     setModal(null);
@@ -48,57 +76,20 @@ export function ContactsBulkBar({
 
   return (
     <>
-      <div
-        className={
-          compact
-            ? "fixed inset-x-0 bottom-[var(--app-bottom-nav)] z-40 border-t border-[#eadfd6] bg-[#fffbf8] px-3 py-2.5 lg:hidden"
-            : "mb-3 flex flex-wrap items-center gap-2 rounded-[14px] border border-[#eadfd6] bg-[#fffbf8] px-3 py-2.5"
-        }
-      >
-        <div className={compact ? "mx-auto flex max-w-lg flex-wrap items-center gap-2" : "contents"}>
-          <span className="text-[14px] font-semibold text-neutral-800">{selectedIds.length} selected</span>
-          <button
-            type="button"
-            onClick={() => setModal("stage")}
-            className="rounded-xl border border-[#eadfd6] bg-white px-3 py-1.5 text-[13px] font-semibold text-neutral-800"
-          >
-            {compact ? "Stage" : "Change stage"}
-          </button>
-          <button
-            type="button"
-            onClick={() => setModal("list")}
-            className="rounded-xl border border-[#eadfd6] bg-white px-3 py-1.5 text-[13px] font-semibold text-neutral-800"
-          >
-            {compact ? "List" : "Add to list"}
-          </button>
-          <button
-            type="button"
-            onClick={() => setModal("add-tag")}
-            className="rounded-xl border border-[#eadfd6] bg-white px-3 py-1.5 text-[13px] font-semibold text-neutral-800"
-          >
-            {compact ? "Tags" : "Add tags"}
-          </button>
-          {!compact && (
-            <button
-              type="button"
-              onClick={() => setModal("remove-tag")}
-              className="rounded-xl border border-[#eadfd6] bg-white px-3 py-1.5 text-[13px] font-semibold text-neutral-800"
-            >
-              Remove tags
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={textSelected}
-            disabled={selectedWithPhone === 0}
-            className="rounded-xl bg-[#c45c4a] px-3 py-1.5 text-[13px] font-semibold text-white disabled:opacity-50"
-          >
-            Text
-          </button>
+      <div className={cn("flex flex-wrap items-center gap-2", !mobile && "mb-3")}>
+        {!mobile && <span className="text-[14px] font-semibold text-neutral-800">{selectedIds.length} selected</span>}
+        <Pill filled onClick={textSelected} disabled={selectedWithPhone === 0}>
+          Text
+        </Pill>
+        <Pill onClick={() => setModal("stage")}>{mobile ? "Stage" : "Change stage"}</Pill>
+        <Pill onClick={() => setModal("list")}>{mobile ? "List" : "Add to list"}</Pill>
+        <Pill onClick={() => setModal("add-tag")}>{mobile ? "Tags" : "Add tags"}</Pill>
+        {!mobile && <Pill onClick={() => setModal("remove-tag")}>Remove tags</Pill>}
+        {!mobile && (
           <button type="button" onClick={onClear} className="text-[13px] font-medium text-neutral-500">
             Clear
           </button>
-        </div>
+        )}
       </div>
 
       {modal === "add-tag" && (

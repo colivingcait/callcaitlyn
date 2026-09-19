@@ -111,6 +111,11 @@ const bulk = read("components/contacts/ContactsBulkBar.tsx");
 assert.ok(bulk.includes("router.push(campaignsTextHref"));
 assert.equal(bulk.includes("createTextBlast"), false);
 assert.equal(bulk.includes("sendTestText"), false);
+assert.ok(bulk.indexOf(">\n          Text\n        </Pill>") < bulk.indexOf("Change stage"), "desktop bulk Text is first");
+assert.ok(bulk.includes('variant?: "desktop" | "mobile"') || bulk.includes("variant?: \"desktop\" | \"mobile\""));
+assert.ok(bulk.includes('mobile ? "Stage"') || bulk.includes("mobile ? \"Stage\""));
+assert.ok(bulk.includes('mobile ? "List"') || bulk.includes("mobile ? \"List\""));
+assert.ok(bulk.includes('mobile ? "Tags"') || bulk.includes("mobile ? \"Tags\""));
 
 const campaigns = read("app/(app)/sequences/page.tsx");
 assert.ok(campaigns.includes("preloadedIds"), "campaigns page accepts preloaded ids");
@@ -125,9 +130,16 @@ assert.ok(mobile.includes("flex flex-wrap"));
 assert.equal(mobile.includes("overflow-x-auto"), false);
 assert.ok(mobile.includes("ContactsBulkBar"));
 assert.ok(mobile.includes("leads from Zillow, referrals, events, and more"));
+assert.ok(mobile.includes("Cancel"));
+assert.ok(mobile.includes("selected"));
+assert.ok(mobile.includes('variant="mobile"') || mobile.includes("variant=\"mobile\""));
 
 const peopleList = read("components/contacts/mobile/PeopleList.tsx");
 assert.ok(peopleList.includes("sourceChipLabel"));
+assert.ok(peopleList.includes("function SelectRow"), "mobile select mode uses dedicated rows");
+assert.ok(peopleList.includes("rounded-full"), "select checkbox is circular");
+assert.ok(peopleList.includes("formatPhone"), "select rows show phone");
+assert.equal(peopleList.includes("type=\"checkbox\""), false, "select mode is not square native checkboxes");
 
 const nav = read("components/nav/nav-items.ts");
 assert.equal(nav.includes('label: "Lists"'), false, "Lists is not a More item");

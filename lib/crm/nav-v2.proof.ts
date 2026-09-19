@@ -88,6 +88,7 @@ assert.ok(bulk.includes("Change stage"));
 assert.ok(bulk.includes("Add to list"));
 assert.ok(bulk.includes("Add tags"));
 assert.ok(bulk.includes("Remove tags"));
+assert.ok(bulk.indexOf(">\n          Text\n        </Pill>") < bulk.indexOf("Change stage"), "desktop bulk Text is first");
 assert.equal(list.includes("TextBlastModal"), false, "bulk Text must not rebuild the Campaigns composer");
 assert.ok(list.includes("campaignsTextHref") || bulk.includes("campaignsTextHref"));
 assert.ok(list.includes("Source"));
@@ -99,6 +100,8 @@ const mobile = read("components/contacts/mobile/PeopleMobile.tsx");
 assert.ok(mobile.includes("ContactsListTabs"));
 assert.ok(mobile.includes("flex flex-wrap"));
 assert.equal(mobile.includes("overflow-x-auto"), false);
+assert.ok(mobile.includes("Cancel"));
+assert.ok(mobile.includes('variant="mobile"') || mobile.includes("variant=\"mobile\""));
 
 assert.equal(isEverAttendedFilter(EVER_ATTENDED_EVENT), true);
 const attended = attendedContactIds(

@@ -106,8 +106,53 @@ export function PeopleMobile({
   const selectedIds = [...selected];
   const selectedContacts = searched.filter((c) => selected.has(c.id));
 
+  if (selecting) {
+    return (
+      <div className="px-4 py-4 lg:hidden">
+        <div className="mb-3 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => {
+              setSelecting(false);
+              setSelected(new Set());
+            }}
+            className="text-[16px] font-semibold text-[#c45c4a]"
+          >
+            Cancel
+          </button>
+          <p className="text-[16px] font-semibold text-[#c45c4a]">{selected.size} selected</p>
+        </div>
+        <div className="mb-4">
+          <ContactsBulkBar
+            selectedIds={selectedIds}
+            selectedContacts={selectedContacts}
+            tags={tags}
+            stages={stages}
+            segments={segments}
+            ownerId={ownerId}
+            variant="mobile"
+            onClear={() => {
+              setSelecting(false);
+              setSelected(new Set());
+            }}
+          />
+        </div>
+        <PeopleList
+          contacts={searched}
+          stages={stages}
+          ownerId={ownerId}
+          groupBy={groupBy}
+          lastActivityLabels={lastActivityLabels}
+          selecting
+          selected={selected}
+          onToggle={toggle}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className={cn("px-4 py-5 lg:hidden", selected.size > 0 && "pb-24")}>
+    <div className="px-4 py-5 lg:hidden">
       <div className="mb-3 flex items-center justify-between gap-2">
         <div className="min-w-0">
           <p className="font-display text-[28px] font-semibold tracking-[-0.02em] text-neutral-900">Contacts</p>
@@ -176,26 +221,10 @@ export function PeopleMobile({
         ownerId={ownerId}
         groupBy={groupBy}
         lastActivityLabels={lastActivityLabels}
-        selecting={selecting}
+        selecting={false}
         selected={selected}
         onToggle={toggle}
       />
-
-      {selected.size > 0 && (
-        <ContactsBulkBar
-          selectedIds={selectedIds}
-          selectedContacts={selectedContacts}
-          tags={tags}
-          stages={stages}
-          segments={segments}
-          ownerId={ownerId}
-          compact
-          onClear={() => {
-            setSelecting(false);
-            setSelected(new Set());
-          }}
-        />
-      )}
 
       {filtersOpen && (
         <ContactFiltersSheet
