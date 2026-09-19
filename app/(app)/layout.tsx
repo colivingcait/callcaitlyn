@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/nav/Sidebar";
 import { BottomNav } from "@/components/nav/BottomNav";
 import { QuickAddButton } from "@/components/nav/QuickAddButton";
 import { LogPill } from "@/components/nav/LogPill";
-import { listConversations } from "@/lib/data/messages";
+import { inboxOwedCount, listConversations } from "@/lib/data/messages";
 import { listEventFollowupQueue, listConfirmationQueue } from "@/lib/data/dialer";
 import { getUnmatchedNotesCount } from "@/lib/data/notes-inbox";
 import { getSuggestionQueue } from "@/lib/data/insights";
@@ -28,7 +28,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       getSuggestionQueue(),
       getUnansweredAgentMessageCount(),
     ]);
-  const waitingOnReply = conversations.filter((c) => c.owed).length;
+  const waitingOnReply = inboxOwedCount(conversations);
   const navCounts = {
     contacts: contactsCount ?? 0,
     // New leads now live on Today, not the Dialer - this badge reflects

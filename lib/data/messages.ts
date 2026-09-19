@@ -4,6 +4,8 @@ import { isSpamLikeMissedCall } from "@/lib/crm/today-eligible";
 import { listAllowlistedPhoneKeys } from "@/lib/crm/spam-signals";
 import type { Activity, ContactWithRelations } from "@/types/database";
 
+export { inboxOwedCount } from "@/lib/crm/message-owed";
+
 type ContactSummary = Pick<
   ContactWithRelations,
   "id" | "first_name" | "last_name" | "phone" | "contact_type" | "timeline" | "representing" | "pipeline_stages" | "contact_tags" | "archived" | "spam"
@@ -47,7 +49,7 @@ export async function listConversations(opts?: { hidden?: boolean; spam?: boolea
     .eq("contacts.archived", !!opts?.hidden)
     .in("type", ["call", "text"])
     .order("occurred_at", { ascending: false })
-    .limit(300);
+    .limit(1000);
 
   if (!opts?.hidden) query = query.eq("contacts.spam", !!opts?.spam);
 
@@ -84,15 +86,38 @@ export async function listConversations(opts?: { hidden?: boolean; spam?: boolea
       .eq("contacts.spam", false)
       .in("type", ["call", "text"])
       .order("occurred_at", { ascending: false })
-      .limit(300);
+      .limit(1000);
     ingest(stubs);
+  }
+
+  // Discovery window only decides who is in the inbox. Owed/unread walks
+  // each of those contacts' full call/text history so a later answered
+  // call cannot hide an older inbound text the 1000-row window missed —
+  // that was Today (1000 rows, full-group walk) showing 1 while Messages
+  // (truncated 300) showed 0.
+  const contactIds = [...byContact.keys()];
+  const historyByContact = new Map<string, Activity[]>();
+  for (let i = 0; i < contactIds.length; i += 200) {
+    const chunk = contactIds.slice(i, i + 200);
+    const { data: history } = await supabase
+      .from("activities")
+      .select("*")
+      .in("contact_id", chunk)
+      .in("type", ["call", "text"])
+      .order("occurred_at", { ascending: false });
+    for (const row of history ?? []) {
+      const list = historyByContact.get(row.contact_id) ?? [];
+      list.push(row as Activity);
+      historyByContact.set(row.contact_id, list);
+    }
   }
 
   const conversations: Conversation[] = [];
   for (const { contact, activities } of byContact.values()) {
     const lastActivity = activities[0];
     if (opts?.filter === "calls" && lastActivity.type !== "call") continue;
-    const { owed, activity } = conversationOwedFromHistory(activities);
+    const thread = historyByContact.get(contact.id) ?? activities;
+    const { owed, activity } = conversationOwedFromHistory(thread);
     const spamLike = !!(activity && isSpamLikeMissedCall(contact, activity, allowlisted));
     if (opts?.spam) {
       if (!contact.spam && !spamLike) continue;

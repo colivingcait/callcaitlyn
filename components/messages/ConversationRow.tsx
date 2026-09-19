@@ -54,7 +54,7 @@ export function ConversationRow({
   return (
     <div
       className={cn(
-        "flex items-center gap-3.5 rounded-2xl border px-4 py-[15px]",
+        "flex flex-col gap-3 rounded-2xl border px-4 py-[15px] sm:flex-row sm:items-center sm:gap-3.5",
         owed ? "border-[#ebe9e7] bg-white" : "border-[#f0efee] bg-[#fcfbfa]",
       )}
     >
@@ -77,7 +77,7 @@ export function ConversationRow({
           {owed && contextLine && <p className="mt-0.5 truncate text-sm text-neutral-500">{contextLine}</p>}
         </div>
       </Link>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
         {owed &&
           (missedCall ? (
             <button

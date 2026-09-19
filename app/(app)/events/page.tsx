@@ -14,6 +14,7 @@ export default async function EventsPage() {
   // two listings for the same real meetup end up a day (or less) apart,
   // each with its own eventId and its own slice of the real registrants.
   const past = events.filter((e) => e.hasEnded);
+  const upcomingRest = events.filter((e) => !e.hasEnded && !(nextUp?.startsAt && e.key === nextUp.key));
   const duplicateGroups = new Map<string, typeof events>();
   for (const e of past) {
     if (!e.eventId) continue;
@@ -66,15 +67,41 @@ export default async function EventsPage() {
         </div>
       )}
 
-      {nextUp && (
+      {nextUp?.startsAt && (
         <div className="mt-4">
           <PrepCard event={nextUp} firstTimerCount={firstTimerCount} />
         </div>
       )}
 
+      {upcomingRest.length > 0 && (
+        <div className="mt-6">
+          <p className="mb-2 text-[13px] font-semibold uppercase tracking-[.05em] text-neutral-400">Upcoming</p>
+          <div className="space-y-2.5">
+            {upcomingRest.map((event) => (
+              <Link
+                key={event.key}
+                href={`/events/${encodeURIComponent(event.key)}`}
+                className="flex items-center gap-3.5 rounded-2xl border border-[#ebe9e7] bg-white px-[18px] py-4"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[17px] font-semibold text-neutral-900">{event.label}</p>
+                  <p className="mt-0.5 text-[15px] text-neutral-600">
+                    {formatLocal(event.startsAt ?? event.date, "EEEE, MMMM d")} · {event.seriesLabel}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-base font-semibold text-neutral-900">{event.counts.registered} registered</p>
+                  <p className="text-sm text-neutral-500">No-shows after it ends</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       <p className="mt-6 mb-2 text-[13px] font-semibold uppercase tracking-[.05em] text-neutral-400">Past events</p>
       {past.length === 0 ? (
-        <p className="text-[15px] text-neutral-400">No registrations or check-ins yet.</p>
+        <p className="text-[15px] text-neutral-400">Nothing past yet — upcoming meetups stay above until they end.</p>
       ) : (
         <div className="space-y-2.5">
           {past.map((event) => {

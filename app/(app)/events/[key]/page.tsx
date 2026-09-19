@@ -26,7 +26,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
     activeTab === "sends" ? getTextBlastsForEvent(event.label) : Promise.resolve([]),
   ]);
 
-  const showRate = event.counts.registered > 0 ? Math.round((event.counts.attended / event.counts.registered) * 100) : null;
+  const showRate = event.hasEnded && event.counts.registered > 0 ? Math.round((event.counts.attended / event.counts.registered) * 100) : null;
   const tabs: { key: Tab; label: string }[] = [
     { key: "roster", label: "Roster" },
     { key: "sends", label: "Sends" },
@@ -40,9 +40,18 @@ export default async function EventDetailPage({ params, searchParams }: { params
       </Link>
       <h1 className="mt-2 font-serif text-2xl font-semibold text-neutral-900">{event.label}</h1>
       <p className="mt-0.5 text-[15px] text-neutral-500">
-        {event.counts.attended} of {event.counts.registered} checked in
-        {event.counts.walkIn > 0 ? ` · ${event.counts.walkIn} walk-in${event.counts.walkIn === 1 ? "" : "s"}` : ""}
-        {showRate !== null ? ` · ${showRate}% show rate` : ""}
+        {event.hasEnded ? (
+          <>
+            {event.counts.attended} of {event.counts.registered} checked in
+            {event.counts.walkIn > 0 ? ` · ${event.counts.walkIn} walk-in${event.counts.walkIn === 1 ? "" : "s"}` : ""}
+            {showRate !== null ? ` · ${showRate}% show rate` : ""}
+          </>
+        ) : (
+          <>
+            {event.counts.registered} registered
+            {event.counts.attended > 0 ? ` · ${event.counts.attended} already checked in` : ""} — no-shows after it ends
+          </>
+        )}
       </p>
 
       <div className="mt-4 flex gap-1 border-b border-neutral-200">

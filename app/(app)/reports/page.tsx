@@ -42,6 +42,7 @@ import { CommissionTrendReport } from "@/components/reports/CommissionTrendRepor
 import { CommissionRateTrendReport } from "@/components/reports/CommissionRateTrendReport";
 import { DealForecastReport } from "@/components/reports/DealForecastReport";
 import { CapYearComparisonReport } from "@/components/reports/CapYearComparisonReport";
+import { CountScopeNote } from "@/components/CountScopeNote";
 import type { Period } from "@/lib/data/metrics";
 
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ period?: string }> }) {
@@ -117,6 +118,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
       <p className="mt-1 text-[15px] text-neutral-500">
         Where your leads actually come from, which sources turn into closed business, and what&apos;s coming next.
       </p>
+      <CountScopeNote current="reports" />
 
       <div className="mt-5 rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
         <p className="text-sm font-semibold text-neutral-500">Worth knowing this month</p>
