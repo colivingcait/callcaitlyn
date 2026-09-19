@@ -16,6 +16,7 @@
     "prove-ux-p1": "npx tsx lib/crm/inbox-owed.proof.ts && npx tsx lib/crm/event-ended.proof.ts && npx tsx lib/crm/commission-year.proof.ts && npx tsx lib/crm/count-scopes.proof.ts",
     "prove-polish": "npx tsx lib/crm/phase4-polish.proof.ts",
     "prove-nav-v2": "npx tsx lib/crm/nav-v2.proof.ts",
+    "prove-events": "npx tsx lib/crm/event-ended.proof.ts && npx tsx lib/crm/events-sot.proof.ts && npx tsx lib/crm/today-v1.proof.ts",
     "prove-contacts-v2": "npx tsx lib/crm/contacts-v2.proof.ts && npx tsx lib/crm/contact-filter-predicates.proof.ts && npx tsx lib/crm/nav-v2.proof.ts"
   },
   "dependencies": {

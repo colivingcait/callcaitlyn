@@ -17,6 +17,7 @@ export function NewEventButton() {
   const [name, setName] = useState("");
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
+  const [location, setLocation] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -25,7 +26,7 @@ export function NewEventButton() {
     if (!name.trim() || !startsAt || !endsAt) return;
     setSaving(true);
     setError("");
-    const result = await createEvent({ series, name: name.trim(), startsAt, endsAt });
+    const result = await createEvent({ series, name: name.trim(), startsAt, endsAt, location: location.trim() || null });
     setSaving(false);
     if (!result.ok) {
       setError(result.error);
@@ -37,7 +38,7 @@ export function NewEventButton() {
 
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className="flex h-11 items-center gap-1.5 rounded-xl bg-brand-600 px-3.5 text-sm font-semibold text-white">
+      <button type="button" onClick={() => setOpen(true)} className="flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-[#c45c4a] px-4 text-sm font-semibold text-white">
         <Plus size={15} /> New event
       </button>
     );
@@ -66,6 +67,15 @@ export function NewEventButton() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="House Hacking Meetup · October"
+              className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-neutral-700">Location</label>
+            <input
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="The Hive"
               className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm"
             />
           </div>

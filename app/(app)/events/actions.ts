@@ -24,6 +24,7 @@ export async function createEvent(input: {
   name: string;
   startsAt: string;
   endsAt: string;
+  location?: string | null;
 }): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   const supabase = await createClient();
   const {
@@ -46,13 +47,113 @@ export async function createEvent(input: {
 
   const { data, error } = await supabase
     .from("events")
-    .insert({ owner_id: user.id, series: input.series, name: input.name.trim(), starts_at: startsAt, ends_at: endsAt })
+    .insert({
+      owner_id: user.id,
+      series: input.series,
+      name: input.name.trim(),
+      starts_at: startsAt,
+      ends_at: endsAt,
+    })
     .select("id")
     .single();
   if (error || !data) return { ok: false as const, error: error?.message ?? "Couldn't create the event" };
+  if (input.location?.trim()) {
+    await supabase.from("events").update({ location: input.location.trim() }).eq("id", data.id);
+  }
 
   revalidatePath("/events");
+  revalidatePath("/");
   return { ok: true as const, id: data.id as string };
+}
+
+export async function saveEventCadence(input: {
+  recordId: string | null;
+  series: EventSeriesKey;
+  name: string;
+  startsAt: string;
+  endsAt: string | null;
+  eventbriteEventId: string | null;
+  location: string | null;
+  cadenceTextDaysBefore: number;
+  cadenceShowOnToday: boolean;
+}): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+  const days = Math.max(1, Math.round(input.cadenceTextDaysBefore) || 3);
+  const patch = {
+    location: input.location?.trim() || null,
+    cadence_text_days_before: days,
+    cadence_show_on_today: input.cadenceShowOnToday,
+  };
+
+  if (input.recordId) {
+    const { error } = await supabase.from("events").update(patch).eq("id", input.recordId);
+    if (error) return { ok: false as const, error: error.message };
+    revalidatePath("/events");
+    revalidatePath("/");
+    return { ok: true as const, id: input.recordId };
+  }
+
+  const startsAt = input.startsAt;
+  const endsAt = input.endsAt && new Date(input.endsAt) > new Date(startsAt) ? input.endsAt : new Date(new Date(startsAt).getTime() + 2 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from("events")
+    .insert({
+      owner_id: user.id,
+      series: input.series,
+      name: input.name.trim(),
+      starts_at: startsAt,
+      ends_at: endsAt,
+      eventbrite_event_id: input.eventbriteEventId,
+      ...patch,
+    })
+    .select("id")
+    .single();
+  if (error || !data) return { ok: false as const, error: error?.message ?? "Couldn't save cadence" };
+  revalidatePath("/events");
+  revalidatePath("/");
+  return { ok: true as const, id: data.id as string };
+}
+
+export async function addEventRegistrant(input: {
+  contactId: string;
+  series: EventSeriesKey;
+  eventId: string | null;
+  eventName: string;
+  eventStart: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const admin = createAdminClient();
+  const { data: contact } = await admin.from("contacts").select("id").eq("id", input.contactId).maybeSingle();
+  if (!contact) return { ok: false as const, error: "Contact not found" };
+
+  const dedupeKey = `${input.contactId}:${input.eventId ?? input.eventStart.slice(0, 10)}:manual-reg`;
+  await upsertActivity(admin, user.id, input.contactId, "eventbrite", "manual_registration_key", dedupeKey, {
+    type: "meeting",
+    direction: "none",
+    occurred_at: input.eventStart,
+    body: `Added to ${input.eventName} roster`,
+    metadata: {
+      manual_registration_key: dedupeKey,
+      eventbrite_account: input.series,
+      event_id: input.eventId,
+      event_name: input.eventName,
+      event_start: input.eventStart,
+      manual: true,
+    },
+  });
+
+  revalidatePath("/events");
+  revalidatePath("/");
+  return { ok: true as const };
 }
 
 // Manual override for the roster: someone she saw in person but who never

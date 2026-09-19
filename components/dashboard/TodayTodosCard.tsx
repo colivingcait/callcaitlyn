@@ -7,16 +7,15 @@ import { Check, ListTodo, Mail, MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cadenceDueLabel, taskDueLabel, type EventCadenceDue } from "@/lib/crm/today-v1";
 import { TODAY_CARD } from "@/components/dashboard/today-home-layout";
-import { TextBlastModal } from "@/components/contacts/TextBlastModal";
+import { MessageRegistrantsModal } from "@/components/events/MessageRegistrantsModal";
 import { cn } from "@/lib/utils";
 import type { WorklistTask } from "@/lib/data/today";
-import type { BlastTarget } from "@/app/(app)/contacts/text-blast-actions";
 
 export function TodayTodosCard({ tasks, cadenceDues }: { tasks: WorklistTask[]; cadenceDues: EventCadenceDue[] }) {
   const router = useRouter();
   const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
-  const [textTarget, setTextTarget] = useState<BlastTarget | null>(null);
+  const [textDue, setTextDue] = useState<EventCadenceDue | null>(null);
   const visibleTasks = tasks.filter((task) => !doneIds.has(task.id));
   const empty = cadenceDues.length === 0 && visibleTasks.length === 0;
 
@@ -61,7 +60,7 @@ export function TodayTodosCard({ tasks, cadenceDues }: { tasks: WorklistTask[]; 
                 <button
                   type="button"
                   data-today-control="todo-text"
-                  onClick={() => setTextTarget({ kind: "contacts", contactIds: row.contactIds, label: `${row.eventName} · ${row.audienceLabel}` })}
+                  onClick={() => setTextDue(row)}
                   className="inline-flex h-9 shrink-0 items-center rounded-xl bg-[#c45c4a] px-3 text-[13px] font-semibold text-white"
                 >
                   Text
@@ -102,7 +101,14 @@ export function TodayTodosCard({ tasks, cadenceDues }: { tasks: WorklistTask[]; 
           })}
         </ul>
       )}
-      {textTarget && <TextBlastModal target={textTarget} onClose={() => setTextTarget(null)} />}
+      {textDue && (
+        <MessageRegistrantsModal
+          eventKey={textDue.eventKey}
+          eventLabel={textDue.eventName}
+          contactIds={textDue.contactIds}
+          onClose={() => setTextDue(null)}
+        />
+      )}
     </section>
   );
 }

@@ -16,6 +16,7 @@ export function NewTextButton({
   tags,
   autoOpenEvent,
   preloadedIds,
+  autoOpenIds,
 }: {
   eventNames: string[];
   tags: Tag[];
@@ -23,9 +24,11 @@ export function NewTextButton({
   // opens straight to that event's composer instead of the picker.
   autoOpenEvent?: string | null;
   preloadedIds?: string | null;
+  // Events Message all: same ?ids= handoff as Contacts bulk text.
+  autoOpenIds?: string | null;
 }) {
   const router = useRouter();
-  const preloaded = parseCampaignAudienceIds(preloadedIds);
+  const preloaded = parseCampaignAudienceIds(preloadedIds ?? autoOpenIds);
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"event" | "tag">(eventNames.length > 0 ? "event" : "tag");
   const [selectedEvent, setSelectedEvent] = useState(eventNames[0] ?? "");

@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { formatLocal } from "@/lib/format-time";
 import { eventHasEnded, eventNoShowCount, eventWalkInCount } from "@/lib/crm/event-ended";
+import { attachFirstTimerCounts } from "@/lib/crm/events-sot";
+import { TEXT_REMINDER_DAYS_BEFORE } from "@/lib/crm/today-v1";
 
 // Same series/keying conventions as lib/data/events-report.ts (kept
 // separate rather than imported from there - that file mixes 10 unrelated
@@ -43,8 +45,11 @@ export function dateKey(iso: string) {
 export type RosterPerson = {
   contactId: string;
   name: string;
+  firstName: string;
+  lastName: string;
   email: string | null;
   phone: string | null;
+  source: string | null;
   registered: boolean;
   attended: boolean;
   // This contact's Nth check-in in this series, counting this event - 1
@@ -74,6 +79,11 @@ export type EventEntry = {
   startsAt: string | null;
   endsAt: string | null;
   hasEnded: boolean;
+  firstTimerCount: number;
+  recordId: string | null;
+  location: string | null;
+  cadenceTextDaysBefore: number;
+  cadenceShowOnToday: boolean;
 };
 
 export type EventsData = {
@@ -103,7 +113,7 @@ export async function getEventsData(): Promise<EventsData> {
 
   const [{ data: activities }, { data: contacts }, { data: eventRecords }] = await Promise.all([
     supabase.from("activities").select("contact_id, source, occurred_at, metadata").in("source", ["eventbrite", "checkin", "jotform"]),
-    supabase.from("contacts").select("id, first_name, last_name, email, phone").eq("archived", false),
+    supabase.from("contacts").select("id, first_name, last_name, email, phone, lead_source").eq("archived", false),
     supabase.from("events").select("*").order("starts_at", { ascending: true }),
   ]);
 
@@ -201,6 +211,16 @@ export async function getEventsData(): Promise<EventsData> {
   const records = eventRecords ?? [];
   const claimedRecordIds = new Set<string>();
 
+  function recordCadence(rec: EventRecord | undefined) {
+    const textDays = rec && typeof rec.cadence_text_days_before === "number" ? rec.cadence_text_days_before : TEXT_REMINDER_DAYS_BEFORE;
+    return {
+      recordId: rec?.id ?? null,
+      location: rec && typeof rec.location === "string" && rec.location.trim() ? rec.location : null,
+      cadenceTextDaysBefore: textDays > 0 ? textDays : TEXT_REMINDER_DAYS_BEFORE,
+      cadenceShowOnToday: rec?.cadence_show_on_today !== false,
+    };
+  }
+
   function localDay(iso: string | null | undefined): string | null {
     if (!iso) return null;
     return formatLocal(iso, "yyyy-MM-dd");
@@ -282,8 +302,11 @@ export async function getEventsData(): Promise<EventsData> {
           return {
             contactId: c.id,
             name: `${c.first_name} ${c.last_name}`.trim(),
+            firstName: c.first_name,
+            lastName: c.last_name,
             email: c.email,
             phone: c.phone,
+            source: typeof c.lead_source === "string" && c.lead_source.trim() ? c.lead_source : null,
             registered: bucket.registered.has(id),
             attended: bucket.attended.has(id),
             attendanceNumber: attendanceNumbers.get(id) ?? 0,
@@ -295,6 +318,7 @@ export async function getEventsData(): Promise<EventsData> {
       const hasEnded = bucket.hasEnded;
       const noShow = eventNoShowCount(hasEnded, bucket.registered, bucket.attended);
       const walkIn = eventWalkInCount(bucket.registered, bucket.attended);
+      const cadence = recordCadence(linkedByKey.get(bucket.key));
 
       return {
         key: bucket.key,
@@ -308,6 +332,8 @@ export async function getEventsData(): Promise<EventsData> {
         startsAt: bucket.startsAt,
         endsAt: bucket.endsAt,
         hasEnded,
+        firstTimerCount: 0,
+        ...cadence,
       };
     });
 
@@ -333,10 +359,12 @@ export async function getEventsData(): Promise<EventsData> {
         startsAt: e.starts_at,
         endsAt: e.ends_at,
         hasEnded,
+        firstTimerCount: 0,
+        ...recordCadence(e),
       };
     });
 
-  const allEvents = [...events, ...phantomEntries].sort((a, b) => b.date.localeCompare(a.date));
+  const allEvents = attachFirstTimerCounts([...events, ...phantomEntries].sort((a, b) => b.date.localeCompare(a.date)));
 
   const nextUp =
     allEvents
