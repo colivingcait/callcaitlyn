@@ -3,52 +3,53 @@
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { X } from "lucide-react";
-import { Button, Input, Select, Label } from "@/components/ui";
-import { CONTACT_TYPE_LABELS, TIMELINE_LABELS, REPRESENTING_LABELS, cn } from "@/lib/utils";
+import { Select } from "@/components/ui";
+import { cn } from "@/lib/utils";
 import type { PipelineStage, Tag } from "@/types/database";
 import {
+  CONTACTS_V2_FILTER_KEYS,
   EVER_ATTENDED_EVENT,
-  REGISTERED_FOR_ANY_EVENT,
-  NOT_FILTERED_BY_REGISTRATION,
-  registrationSelectValue,
-  type ContactGroupBy,
+  SHEET_PARAM_KEYS,
 } from "@/lib/crm/contact-filter-params";
-import { SHEET_PARAM_KEYS } from "@/lib/crm/contact-filter-params";
+import { CONTACT_SOURCE_FILTERS, sourceFilterByValue } from "@/lib/crm/contact-sources";
 
-const LEAD_DATE_PRESETS = [
-  { label: "Last 7 days", days: 7 },
-  { label: "Last 30 days", days: 30 },
-  { label: "Last 90 days", days: 90 },
-  { label: "This year", days: 365 },
-];
-
-const GROUP_OPTIONS: { value: ContactGroupBy; label: string }[] = [
-  { value: "none", label: "No grouping" },
-  { value: "stage", label: "Stage" },
-  { value: "tag", label: "Tag" },
-  { value: "source", label: "Lead source" },
-  { value: "month", label: "Lead month (cohort)" },
-];
-
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December",
-];
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children, flush }: { title: string; children: React.ReactNode; flush?: boolean }) {
   return (
-    <div className="space-y-2 border-b border-neutral-100 pb-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">{title}</p>
+    <div className={cn("space-y-2.5", !flush && "border-b border-[#eadfd6] pb-4 last:border-b-0")}>
+      <p className="text-[12px] font-semibold uppercase tracking-[.06em] text-neutral-400">{title}</p>
       {children}
     </div>
   );
 }
 
+function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (next: boolean) => void; label: string }) {
+  return (
+    <label className="flex items-center justify-between gap-3">
+      <span className="text-[14px] text-neutral-800">{label}</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={cn("relative h-6 w-11 shrink-0 rounded-full transition-colors", checked ? "bg-[#c45c4a]" : "bg-neutral-200")}
+      >
+        <span className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-[left]", checked ? "left-5" : "left-0.5")} />
+      </button>
+    </label>
+  );
+}
+
+function sourceDraftValue(raw: string | undefined): string {
+  if (!raw) return "";
+  return sourceFilterByValue(raw)?.value ?? raw;
+}
+
 export function ContactFiltersSheet({
   stages,
-  tags,
-  leadSources,
+  tags: _tags,
+  leadSources: _leadSources,
   eventNames,
-  registeredEventNames = [],
+  registeredEventNames: _registeredEventNames = [],
   onClose,
   variant = "sheet",
 }: {
@@ -64,15 +65,11 @@ export function ContactFiltersSheet({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Local draft state, seeded from the URL - nothing is applied until
-  // "Apply filters" so flipping through several fields doesn't trigger a
-  // navigation (and a full contacts refetch) per click.
   const [draft, setDraft] = useState(() => {
     const entries = Object.fromEntries(searchParams.entries());
-    entries.regEvent = registrationSelectValue(searchParams);
+    entries.source = sourceDraftValue(entries.source);
     return entries;
   });
-  const [selectedTags, setSelectedTags] = useState<string[]>(() => (searchParams.get("tags")?.split(",").filter(Boolean) ?? []));
 
   function set(key: string, value: string) {
     setDraft((prev) => {
@@ -83,284 +80,152 @@ export function ContactFiltersSheet({
     });
   }
 
-  function toggleTag(id: string) {
-    setSelectedTags((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
-  }
-
-  function applyLeadDatePreset(days: number) {
-    set("newSince", String(days));
-    set("leadFrom", "");
-    set("leadTo", "");
+  function toggleStage(id: string) {
+    const current = (draft.stage ?? "").split(",").filter(Boolean);
+    const next = current.includes(id) ? current.filter((s) => s !== id) : [...current, id];
+    set("stage", next.join(","));
   }
 
   function apply() {
     const params = new URLSearchParams(searchParams.toString());
-    for (const key of SHEET_PARAM_KEYS) {
-      if (key === "tags") continue;
+    for (const key of CONTACTS_V2_FILTER_KEYS) {
       const value = draft[key];
       if (value) params.set(key, value);
       else params.delete(key);
     }
-    if (selectedTags.length) params.set("tags", selectedTags.join(","));
-    else params.delete("tags");
-    router.push(`${pathname}?${params.toString()}`);
-    onClose();
+    router.push(params.toString() ? `${pathname}?${params.toString()}` : pathname);
+    if (variant !== "panel") onClose();
   }
 
-  function clearAll() {
+  function reset() {
     const params = new URLSearchParams(searchParams.toString());
     for (const key of SHEET_PARAM_KEYS) params.delete(key);
+    const list = searchParams.get("list");
+    if (list) params.set("list", list);
     router.push(params.toString() ? `${pathname}?${params.toString()}` : pathname);
-    onClose();
+    if (variant !== "panel") onClose();
   }
+
+  const selectedStages = new Set((draft.stage ?? "").split(",").filter(Boolean));
+  const everAttended = !!draft.event;
+  const specificEvent = draft.event && draft.event !== EVER_ATTENDED_EVENT ? draft.event : "";
 
   const chrome =
     variant === "panel"
       ? "flex h-full w-full max-w-none flex-col border-l border-[#eadfd6] bg-[#fffbf8]"
-      : "flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-2xl bg-white shadow-xl sm:rounded-2xl";
+      : "flex max-h-[90vh] w-full max-w-lg flex-col rounded-t-2xl bg-[#fffbf8] shadow-xl sm:rounded-2xl";
 
   const body = (
-      <div className={chrome}>
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-neutral-100 px-5 py-4">
-          <p className="font-serif text-xl font-semibold text-neutral-900">Filters</p>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100">
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
-          <Section title="Group by">
-            <Select value={draft.group ?? "none"} onChange={(e) => set("group", e.target.value)}>
-              {GROUP_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </Select>
-          </Section>
-
-          <Section title="Stage & type">
-            <div className="grid grid-cols-2 gap-2">
-              <Select value={draft.stage ?? ""} onChange={(e) => set("stage", e.target.value)}>
-                <option value="">All stages</option>
-                {stages.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </Select>
-              <Select value={draft.type ?? ""} onChange={(e) => set("type", e.target.value)}>
-                <option value="">All types</option>
-                {Object.entries(CONTACT_TYPE_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          </Section>
-
-          <Section title="Tags (any of)">
-            <div className="flex flex-wrap gap-1.5">
-              {tags.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => toggleTag(t.id)}
-                  className={cn(
-                    "rounded-full border px-3 py-1.5 text-xs font-medium",
-                    selectedTags.includes(t.id) ? "border-brand-500 bg-brand-50 text-brand-700" : "border-neutral-200 text-neutral-600",
-                  )}
-                >
-                  {t.name}
-                </button>
-              ))}
-              {tags.length === 0 && <p className="text-xs text-neutral-400">No tags yet.</p>}
-            </div>
-          </Section>
-
-          <Section title="Source, timeline & side">
-            <div className="grid grid-cols-2 gap-2">
-              <Select value={draft.source ?? ""} onChange={(e) => set("source", e.target.value)}>
-                <option value="">All sources</option>
-                {leadSources.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </Select>
-              <Select value={draft.timeline ?? ""} onChange={(e) => set("timeline", e.target.value)}>
-                <option value="">All timelines</option>
-                {Object.entries(TIMELINE_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
-              <Select value={draft.representing ?? ""} onChange={(e) => set("representing", e.target.value)}>
-                <option value="">Buyer/Seller (any)</option>
-                {Object.entries(REPRESENTING_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
-              <Select value={draft.likelihood ?? ""} onChange={(e) => set("likelihood", e.target.value)}>
-                <option value="">Likelihood (any)</option>
-                <option value="high">Hot</option>
-                <option value="medium">Warm</option>
-                <option value="low">Cold</option>
-              </Select>
-            </div>
-          </Section>
-
-          <Section title="Reachability">
-            <div className="grid grid-cols-2 gap-2">
-              <Select value={draft.phone ?? ""} onChange={(e) => set("phone", e.target.value)}>
-                <option value="">Any phone</option>
-                <option value="1">Has phone</option>
-                <option value="0">No phone</option>
-              </Select>
-              <Select value={draft.email ?? ""} onChange={(e) => set("email", e.target.value)}>
-                <option value="">Any email</option>
-                <option value="1">Has email</option>
-                <option value="0">No email</option>
-              </Select>
-            </div>
-          </Section>
-
-          <Section title="Follow-up & notes">
-            <div className="grid grid-cols-2 gap-2">
-              <Select value={draft.followup ?? ""} onChange={(e) => set("followup", e.target.value)}>
-                <option value="">Follow-up (any)</option>
-                <option value="1">Has follow-up set</option>
-                <option value="0">No follow-up set</option>
-                <option value="overdue">Overdue</option>
-              </Select>
-              <Select value={draft.notes ?? ""} onChange={(e) => set("notes", e.target.value)}>
-                <option value="">Notes (any)</option>
-                <option value="1">Has notes</option>
-                <option value="0">No notes</option>
-              </Select>
-            </div>
-          </Section>
-
-          <Section title="Lead date">
-            <div className="flex flex-wrap gap-1.5">
-              {LEAD_DATE_PRESETS.map((p) => (
-                <button
-                  key={p.days}
-                  type="button"
-                  onClick={() => applyLeadDatePreset(p.days)}
-                  className={cn(
-                    "rounded-full border px-3 py-1.5 text-xs font-medium",
-                    draft.newSince === String(p.days) ? "border-brand-500 bg-brand-50 text-brand-700" : "border-neutral-200 text-neutral-600",
-                  )}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              <div>
-                <Label className="text-xs">From</Label>
-                <Input
-                  type="date"
-                  value={draft.leadFrom ?? ""}
-                  onChange={(e) => {
-                    set("leadFrom", e.target.value);
-                    set("newSince", "");
-                  }}
-                />
-              </div>
-              <div>
-                <Label className="text-xs">To</Label>
-                <Input
-                  type="date"
-                  value={draft.leadTo ?? ""}
-                  onChange={(e) => {
-                    set("leadTo", e.target.value);
-                    set("newSince", "");
-                  }}
-                />
-              </div>
-            </div>
-          </Section>
-
-          <Section title="Events">
-            <label className="flex items-center justify-between gap-3 text-[14px] text-neutral-800">
-              <span>Ever attended</span>
-              <input
-                type="checkbox"
-                checked={!!draft.event}
-                onChange={(e) => set("event", e.target.checked ? (draft.event && draft.event !== EVER_ATTENDED_EVENT ? draft.event : EVER_ATTENDED_EVENT) : "")}
-                className="h-4 w-4 rounded border-neutral-300"
-              />
-            </label>
-            <Select value={draft.event && draft.event !== EVER_ATTENDED_EVENT ? draft.event : ""} onChange={(e) => set("event", e.target.value || (draft.event ? EVER_ATTENDED_EVENT : ""))}>
-              <option value="">Specific event</option>
-              {eventNames.map((e) => (
-                <option key={e} value={e}>
-                  Attended: {e}
-                </option>
-              ))}
-            </Select>
-            <Select value={draft.regEvent ?? REGISTERED_FOR_ANY_EVENT} onChange={(e) => set("regEvent", e.target.value)}>
-              <option value={REGISTERED_FOR_ANY_EVENT}>Registered for: any event</option>
-              <option value={NOT_FILTERED_BY_REGISTRATION}>Anyone (including not registered)</option>
-              {registeredEventNames.map((e) => (
-                <option key={e} value={e}>
-                  Registered for: {e}
-                </option>
-              ))}
-            </Select>
-          </Section>
-
-          <Section title="Personal details">
-            <div className="grid grid-cols-2 gap-2">
-              <Input placeholder="City contains…" value={draft.city ?? ""} onChange={(e) => set("city", e.target.value)} />
-              <Input placeholder="State contains…" value={draft.state ?? ""} onChange={(e) => set("state", e.target.value)} />
-            </div>
-            <div className="grid grid-cols-2 gap-2 pt-2">
-              <Select value={draft.birthdayMonth ?? ""} onChange={(e) => set("birthdayMonth", e.target.value)}>
-                <option value="">Birthday: any month</option>
-                {MONTHS.map((m, i) => (
-                  <option key={m} value={i + 1}>
-                    {m}
-                  </option>
-                ))}
-              </Select>
-              <Input
-                type="number"
-                placeholder="Min budget ($)"
-                value={draft.minBudget ?? ""}
-                onChange={(e) => set("minBudget", e.target.value)}
-              />
-            </div>
-          </Section>
-
-          <Section title="Data & status">
-            <div className="grid grid-cols-2 gap-2">
-              <Select value={draft.archived ?? "active"} onChange={(e) => set("archived", e.target.value)}>
-                <option value="active">Active only</option>
-                <option value="archived">Archived only</option>
-                <option value="all">Active + archived</option>
-              </Select>
-              <Select value={draft.quoSync ?? ""} onChange={(e) => set("quoSync", e.target.value)}>
-                <option value="">Quo sync (any)</option>
-                <option value="0">Not synced to Quo</option>
-              </Select>
-            </div>
-          </Section>
-        </div>
-
-        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-neutral-100 px-5 py-4">
-          <button onClick={clearAll} className="text-sm font-medium text-neutral-500 hover:text-neutral-700">
-            Reset
-          </button>
-          <Button onClick={apply}>Apply</Button>
-        </div>
+    <div className={chrome}>
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#eadfd6] px-5 py-4">
+        <p className="font-serif text-xl font-semibold text-neutral-900">Filters</p>
+        <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-neutral-400 hover:bg-[#f3e4dc]" aria-label="Close filters">
+          <X size={18} />
+        </button>
       </div>
+
+      <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+        <div className={variant === "sheet" ? "grid grid-cols-2 gap-4 border-b border-[#eadfd6] pb-4" : "contents"}>
+        <Section title="Source" flush={variant === "sheet"}>
+          <div className="space-y-2">
+            <label className="flex items-center gap-2.5 text-[14px] text-neutral-800">
+              <input type="radio" name="source" checked={!draft.source} onChange={() => set("source", "")} className="accent-[#c45c4a]" />
+              All
+            </label>
+            {CONTACT_SOURCE_FILTERS.map((source) => (
+              <label key={source.value} className="flex items-center gap-2.5 text-[14px] text-neutral-800">
+                <input
+                  type="radio"
+                  name="source"
+                  checked={draft.source === source.value}
+                  onChange={() => set("source", source.value)}
+                  className="accent-[#c45c4a]"
+                />
+                {source.label}
+              </label>
+            ))}
+          </div>
+        </Section>
+
+        <Section title="Stage" flush={variant === "sheet"}>
+          <div className="space-y-2">
+            {stages.map((stage) => (
+              <label key={stage.id} className="flex items-center gap-2.5 text-[14px] text-neutral-800">
+                <input
+                  type="checkbox"
+                  checked={selectedStages.has(stage.id)}
+                  onChange={() => toggleStage(stage.id)}
+                  className="h-4 w-4 rounded border-neutral-300 accent-[#c45c4a]"
+                />
+                {stage.name}
+              </label>
+            ))}
+            {stages.length === 0 && <p className="text-[13px] text-neutral-400">No stages yet.</p>}
+          </div>
+        </Section>
+        </div>
+
+        <Section title="Events">
+          <Toggle
+            label="Ever attended"
+            checked={everAttended}
+            onChange={(on) => set("event", on ? specificEvent || EVER_ATTENDED_EVENT : "")}
+          />
+          <Select
+            value={specificEvent}
+            onChange={(e) => set("event", e.target.value || (everAttended ? EVER_ATTENDED_EVENT : ""))}
+          >
+            <option value="">Specific event</option>
+            {eventNames.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </Select>
+        </Section>
+
+        <Section title="Gender">
+          <div className="space-y-2">
+            {(
+              [
+                ["", "Any"],
+                ["women", "Women"],
+                ["men", "Men"],
+                ["unknown", "Unknown"],
+              ] as const
+            ).map(([value, label]) => (
+              <label key={label} className="flex items-center gap-2.5 text-[14px] text-neutral-800">
+                <input
+                  type="radio"
+                  name="gender"
+                  checked={(draft.gender ?? "") === value}
+                  onChange={() => set("gender", value)}
+                  className="accent-[#c45c4a]"
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+        </Section>
+
+        <Section title="Has phone">
+          <Toggle label="Has phone" checked={draft.phone === "1"} onChange={(on) => set("phone", on ? "1" : "")} />
+        </Section>
+      </div>
+
+      <div className="grid shrink-0 grid-cols-2 gap-2 border-t border-[#eadfd6] px-5 py-4">
+        <button
+          type="button"
+          onClick={reset}
+          className="rounded-xl border border-[#c45c4a] bg-white px-4 py-2.5 text-[14px] font-semibold text-[#c45c4a]"
+        >
+          Reset
+        </button>
+        <button type="button" onClick={apply} className="rounded-xl bg-[#c45c4a] px-4 py-2.5 text-[14px] font-semibold text-white">
+          Apply
+        </button>
+      </div>
+    </div>
   );
 
   if (variant === "panel") return body;

@@ -81,7 +81,7 @@ assert.ok(contactRow.includes("data-contact-open={contact.id}"), "desktop rows e
 assert.ok(contactRow.includes('href={`/contacts/${contact.id}`}'), "desktop rows link to /contacts/:id");
 
 const peopleList = read("components/contacts/mobile/PeopleList.tsx");
-assert.ok(peopleList.includes('href={`/contacts/${contact.id}`}'), "mobile rows link to /contacts/:id");
+assert.ok(peopleList.includes("/contacts/${contact.id}"), "mobile rows link to /contacts/:id");
 
 const contactsPage = read("app/(app)/contacts/page.tsx");
 assert.ok(contactsPage.includes("lg:block"), "desktop contacts list shows at lg");

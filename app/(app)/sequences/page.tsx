@@ -30,7 +30,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
           <p className="mt-0.5 text-sm text-neutral-500">Scheduled campaigns, drips, one-off emails and texts to your meetup community.</p>
         </div>
         <div className="flex shrink-0 gap-2">
-          <NewTextButton eventNames={eventNames} tags={tags} autoOpenEvent={event} autoOpenIds={ids} />
+          <NewTextButton eventNames={eventNames} tags={tags} autoOpenEvent={event} preloadedIds={ids} autoOpenIds={ids} />
         </div>
       </div>
 

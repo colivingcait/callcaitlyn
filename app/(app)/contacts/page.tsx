@@ -49,7 +49,6 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
     listSegments(),
   ]);
   const lastActivityLabels = await getLastActivityLabels(contacts.map((c) => c.id));
-  const withPhoneCount = contacts.filter((c) => c.phone).length;
 
   return (
     <>
@@ -75,12 +74,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
           <div>
             <h1 className="font-display text-[32px] font-semibold leading-9 tracking-[-0.03em] text-neutral-900">Contacts</h1>
             <p className="mt-1.5 text-[15px] leading-[22px] text-neutral-600">
-              {contacts.length} people · leads from Zillow, referrals, events, and more · {withPhoneCount} textable. Deal
-              board:{" "}
-              <Link href="/pipeline" className="font-medium text-brand-700 hover:underline">
-                Pipeline
-              </Link>
-              .
+              {contacts.length} people · leads from Zillow, referrals, events, and more
             </p>
             <CountScopeNote current="contacts" />
           </div>
