@@ -13,9 +13,9 @@ import {
 } from "@/lib/crm/contact-filter-params";
 import { CONTACT_SOURCE_FILTERS, sourceFilterByValue } from "@/lib/crm/contact-sources";
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children, flush }: { title: string; children: React.ReactNode; flush?: boolean }) {
   return (
-    <div className="space-y-2.5 border-b border-[#eadfd6] pb-4 last:border-b-0">
+    <div className={cn("space-y-2.5", !flush && "border-b border-[#eadfd6] pb-4 last:border-b-0")}>
       <p className="text-[12px] font-semibold uppercase tracking-[.06em] text-neutral-400">{title}</p>
       {children}
     </div>
@@ -125,7 +125,8 @@ export function ContactFiltersSheet({
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
-        <Section title="Source">
+        <div className={variant === "sheet" ? "grid grid-cols-2 gap-4 border-b border-[#eadfd6] pb-4" : "contents"}>
+        <Section title="Source" flush={variant === "sheet"}>
           <div className="space-y-2">
             <label className="flex items-center gap-2.5 text-[14px] text-neutral-800">
               <input type="radio" name="source" checked={!draft.source} onChange={() => set("source", "")} className="accent-[#c45c4a]" />
@@ -146,7 +147,7 @@ export function ContactFiltersSheet({
           </div>
         </Section>
 
-        <Section title="Stage">
+        <Section title="Stage" flush={variant === "sheet"}>
           <div className="space-y-2">
             {stages.map((stage) => (
               <label key={stage.id} className="flex items-center gap-2.5 text-[14px] text-neutral-800">
@@ -162,6 +163,7 @@ export function ContactFiltersSheet({
             {stages.length === 0 && <p className="text-[13px] text-neutral-400">No stages yet.</p>}
           </div>
         </Section>
+        </div>
 
         <Section title="Events">
           <Toggle

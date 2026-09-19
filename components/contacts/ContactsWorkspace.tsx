@@ -103,7 +103,7 @@ export function ContactsWorkspace({
         />
       </div>
       {filtersOpen && (
-        <aside className="sticky top-[88px] hidden w-[280px] shrink-0 self-start lg:block">
+        <aside className="sticky top-[88px] hidden h-[calc(100dvh-110px)] w-[280px] shrink-0 self-start overflow-hidden lg:block">
           <ContactFiltersSheet
             stages={stages}
             tags={tags}
