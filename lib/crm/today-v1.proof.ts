@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { buildTextAndNextLeads, cadenceDueLabel, daysOutLabel, eventCadenceDues, leadAgeLabel, taskDueLabel } from "./today-v1";
+import { bookingCardName, bookingWindowLabel, buildTextAndNextLeads, cadenceDueLabel, daysOutLabel, eventCadenceDues, leadAgeLabel, taskDueLabel } from "./today-v1";
 
 // Today v1 (Nico mock): Text & Next + stacked mobile / 2-col desktop.
 // No Supabase. Run with: npx tsx lib/crm/today-v1.proof.ts
@@ -67,6 +67,10 @@ assert.equal(
 assert.equal(cadenceDueLabel("2026-09-19T16:00:00.000Z", now), "Due today");
 assert.equal(cadenceDueLabel("2026-09-21T16:00:00.000Z", now), "Due in 2 days");
 assert.equal(eventCadenceDues([], now).length, 0);
+assert.equal(bookingWindowLabel("2026-09-22T18:00:00.000Z", "2026-09-22T18:30:00.000Z"), "Tue 2:00–2:30 PM");
+assert.equal(bookingWindowLabel(null, null), "Time TBD");
+assert.equal(bookingCardName("Jordan Blake", "Visitor"), "Jordan Blake");
+assert.equal(bookingCardName(null, "Jordan Blake"), "Jordan Blake");
 
 const root = join(process.cwd());
 function read(rel: string) {
@@ -76,6 +80,8 @@ function read(rel: string) {
 const todayHome = read("components/dashboard/TodayHome.tsx");
 assert.ok(todayHome.includes("Here&apos;s who needs you today."));
 assert.ok(todayHome.includes("TextAndNextDialer"));
+assert.ok(todayHome.includes("TodayBookingRequestCard"));
+assert.ok(todayHome.includes("needs-you") || todayHome.includes("Needs you"));
 assert.ok(todayHome.includes("TodayTodosCard"));
 assert.ok(todayHome.includes("upcomingCrmEvents"));
 assert.ok(todayHome.includes("cadenceDues"), "To Dos receive event cadence dues");
@@ -135,7 +141,11 @@ assert.ok(nav.includes('label: "Today"'));
 assert.ok(nav.includes('label: "Contacts"'));
 assert.ok(nav.includes('label: "Messages"'));
 assert.ok(nav.includes('label: "Pipeline"'));
+assert.ok(nav.includes('label: "Events"'));
 assert.ok(nav.includes('label: "More"'));
+assert.ok(nav.includes('label: "Bookings"'));
+assert.equal(nav.includes("Also today"), false);
+assert.equal(nav.includes("Money & tools"), false);
 assert.equal(nav.includes('href: "/pulse"'), false);
 
 const bottomNav = read("components/nav/BottomNav.tsx");

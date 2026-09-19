@@ -1,9 +1,10 @@
 import { TodaySearch } from "@/components/dashboard/mobile/TodaySearch";
 import { TodayPipelineOverview } from "@/components/dashboard/TodayPipelineOverview";
 import { TextAndNextDialer } from "@/components/dashboard/TextAndNextDialer";
+import { TodayBookingRequestCard } from "@/components/dashboard/TodayBookingRequestCard";
 import { TodayUpcomingEvents } from "@/components/dashboard/TodayUpcomingEvents";
 import { TodayTodosCard } from "@/components/dashboard/TodayTodosCard";
-import { TODAY_GRID, TODAY_STACK_DESKTOP } from "@/components/dashboard/today-home-layout";
+import { TODAY_GRID, TODAY_LABEL, TODAY_STACK_DESKTOP } from "@/components/dashboard/today-home-layout";
 import { timeOfDayGreeting } from "@/lib/format-time";
 import { buildTextAndNextLeads, openTasksForToday, upcomingEventRows } from "@/lib/crm/today-v1";
 import { cn } from "@/lib/utils";
@@ -40,9 +41,15 @@ export function TodayHome({
           Couldn&apos;t load new leads: {today.newLeadsError}
         </p>
       )}
-      <div data-today-home="spotlight" className="contents">
-        <TextAndNextDialer leads={leads} />
-      </div>
+      <section data-today-home="needs-you" className="flex min-w-0 flex-col gap-3">
+        <h2 className={TODAY_LABEL}>Needs you</h2>
+        {today.bookingRequests.map((request) => (
+          <TodayBookingRequestCard key={request.id} request={request} />
+        ))}
+        <div data-today-home="spotlight" className="contents">
+          <TextAndNextDialer leads={leads} />
+        </div>
+      </section>
       <div className={TODAY_GRID}>
         <div className={cn("min-w-0", upcoming.length > 0 ? "col-span-12 md:col-span-6" : "col-span-12")}>
           <TodayPipelineOverview stages={today.stages} counts={today.statStrip.stageCounts} />

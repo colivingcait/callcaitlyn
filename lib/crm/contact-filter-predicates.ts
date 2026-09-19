@@ -12,7 +12,7 @@
 // Eventbrite orders and the CRM Eventbrite CSV import write source=eventbrite.
 // Inbound Quo calls write source=quo / type=call and must never match.
 
-import { REGISTERED_FOR_ANY_EVENT } from "./contact-filter-params";
+import { EVER_ATTENDED_EVENT, REGISTERED_FOR_ANY_EVENT } from "./contact-filter-params";
 
 export const EVENT_REGISTRATION_SOURCE = "eventbrite";
 export const EVENT_ATTENDANCE_SOURCES = ["jotform", "checkin"] as const;
@@ -83,18 +83,23 @@ export function contactMatchesRegisteredAnyAndHasPhone(
 // "Attended: {event}" must match anyone who checked in at that event, not
 // only contacts whose last_event_name still happens to be that title
 // (attending a later meetup would otherwise hide them from the earlier one).
+export function isEverAttendedFilter(eventName: string | undefined): boolean {
+  return eventName === EVER_ATTENDED_EVENT;
+}
+
 export function attendedContactIds(
   eventName: string,
   contacts: { id: string; last_event_name?: string | null }[],
   attendance: EventActivityRef[],
 ): Set<string> {
+  const any = isEverAttendedFilter(eventName);
   const ids = new Set<string>();
   for (const c of contacts) {
-    if (c.last_event_name === eventName) ids.add(c.id);
+    if (any ? !!c.last_event_name : c.last_event_name === eventName) ids.add(c.id);
   }
   for (const row of attendance) {
     if (!isEventAttendanceSource(row.source)) continue;
-    if (row.eventName === eventName) ids.add(row.contactId);
+    if (any ? !!row.eventName : row.eventName === eventName) ids.add(row.contactId);
   }
   return ids;
 }

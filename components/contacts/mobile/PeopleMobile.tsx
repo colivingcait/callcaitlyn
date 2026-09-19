@@ -4,21 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Plus, Search, SlidersHorizontal } from "lucide-react";
-import { SegmentedControl } from "@/components/mobile/SegmentedControl";
 import { PeopleList } from "@/components/contacts/mobile/PeopleList";
-import { MyLists } from "@/components/contacts/mobile/MyLists";
-import { InsideList } from "@/components/contacts/mobile/InsideList";
 import { ContactFiltersSheet } from "@/components/contacts/ContactFiltersSheet";
+import { ContactsListTabs } from "@/components/contacts/ContactsListTabs";
+import { ActiveFilterTags } from "@/components/contacts/ActiveFilterTags";
 import { SORT_OPTIONS } from "@/components/contacts/ContactFilters";
-import { QUEUES } from "@/lib/crm/contact-queues";
 import { CountScopeNote } from "@/components/CountScopeNote";
 import { cn } from "@/lib/utils";
 import type { ContactGroupBy } from "@/lib/crm/contact-filter-params";
 import type { ContactWithRelations, PipelineStage, Tag, ContactSegment } from "@/types/database";
 
 type SequenceOption = { id: string; name: string; type: string };
-type PeopleView = "everyone" | "by-stage" | "my-lists";
-
 const GROUP_VALUES: ContactGroupBy[] = ["none", "stage", "tag", "source", "month"];
 
 function matchesQuery(contact: ContactWithRelations, q: string) {
@@ -34,7 +30,7 @@ export function PeopleMobile({
   eventNames,
   registeredEventNames,
   segments,
-  sequences,
+  sequences: _sequences,
   ownerId,
   lastActivityLabels,
 }: {
@@ -55,17 +51,11 @@ export function PeopleMobile({
   const [search, setSearch] = useState(searchParams.get("q") ?? "");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const view = (searchParams.get("view") as PeopleView | null) ?? "by-stage";
-  const listLabel = searchParams.get("list");
-  const insideList = view === "my-lists" && !!listLabel;
   const urlGroup = searchParams.get("group");
-  const groupBy: ContactGroupBy =
-    view === "everyone" ? "none" : GROUP_VALUES.includes(urlGroup as ContactGroupBy) ? (urlGroup as ContactGroupBy) : "stage";
-  const activeQueue = searchParams.get("queue");
+  const groupBy: ContactGroupBy = GROUP_VALUES.includes(urlGroup as ContactGroupBy) ? (urlGroup as ContactGroupBy) : "none";
 
   const activeFilterCount = Array.from(searchParams.keys()).filter((k) => {
-    if (["view", "list", "sort", "q", "queue"].includes(k)) return false;
-    if (view === "everyone" && k === "group") return false;
+    if (["view", "list", "listName", "sort", "q"].includes(k)) return false;
     return true;
   }).length;
   const currentSort = searchParams.get("sort") ?? "updated_desc";
@@ -77,25 +67,10 @@ export function PeopleMobile({
     router.push(qs ? `/contacts?${qs}` : "/contacts");
   }
 
-  function setView(next: PeopleView) {
-    pushParams((params) => {
-      params.set("view", next);
-      if (next !== "my-lists") params.delete("list");
-      if (next === "everyone") params.delete("group");
-    });
-  }
-
   function setSort(value: string) {
     pushParams((params) => {
       if (value === "updated_desc") params.delete("sort");
       else params.set("sort", value);
-    });
-  }
-
-  function toggleQueue(value: string) {
-    pushParams((params) => {
-      if (params.get("queue") === value) params.delete("queue");
-      else params.set("queue", value);
     });
   }
 
@@ -122,34 +97,19 @@ export function PeopleMobile({
 
   const searched = search.trim() ? contacts.filter((c) => matchesQuery(c, search)) : contacts;
   const textableCount = searched.filter((c) => c.phone).length;
-  const dripSequences = sequences.filter((s) => s.type === "drip");
-
   const groupLabel =
     groupBy === "none" ? "Everyone" : groupBy === "stage" ? "Grouped by stage" : groupBy === "tag" ? "Grouped by tag" : groupBy === "source" ? "Grouped by source" : "Grouped by month";
 
   return (
     <div className="px-4 py-5 lg:hidden">
-      {insideList ? (
-        <InsideList
-          listName={listLabel!}
-          contacts={contacts}
-          stages={stages}
-          tags={tags}
-          sequences={dripSequences}
-          ownerId={ownerId}
-          backHref="/contacts?view=my-lists"
-        />
-      ) : (
-        <>
           <div className="mb-3 flex items-center justify-between gap-2">
             <div className="min-w-0">
               <p className="font-display text-[28px] font-semibold tracking-[-0.02em] text-neutral-900">Contacts</p>
               <p className="mt-0.5 text-[13px] text-neutral-400">
-                {contacts.length} in this list. Deal board is the{" "}
+                {contacts.length} people · lists live here, not in More.{" "}
                 <Link href="/pipeline" className="font-medium text-brand-700">
                   Pipeline
-                </Link>{" "}
-                tab.
+                </Link>
               </p>
               <CountScopeNote current="contacts" />
             </div>
@@ -160,7 +120,9 @@ export function PeopleMobile({
             </div>
           </div>
 
-          <div className="relative mb-3">
+          <ContactsListTabs segments={segments} ownerId={ownerId} />
+
+          <div className="relative mt-3 mb-3">
             <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
             <input
               value={search}
@@ -170,29 +132,7 @@ export function PeopleMobile({
             />
           </div>
 
-          <SegmentedControl
-            value={view}
-            onChange={setView}
-            options={[
-              { value: "everyone", label: "Everyone" },
-              { value: "by-stage", label: "By stage" },
-              { value: "my-lists", label: "Lists" },
-            ]}
-          />
-          {view === "my-lists" && (
-            <p className="mt-2 px-0.5 text-[13px] text-neutral-400">Saved lists live here — not a separate tab.</p>
-          )}
-          <Link
-            href="/pipeline"
-            className="mt-3 flex h-11 items-center justify-between rounded-[12px] border border-neutral-200 px-3.5 text-[15px] font-semibold text-neutral-800"
-          >
-            Deal board
-            <span className="text-[13px] font-medium text-neutral-400">Pipeline</span>
-          </Link>
-
-          {view !== "my-lists" && (
-            <>
-              <div className="mt-3 flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-[14px] text-neutral-500">
                   {groupLabel} · {textableCount} textable
                 </p>
@@ -222,40 +162,14 @@ export function PeopleMobile({
                     <SlidersHorizontal size={14} /> Filters{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ""}
                   </button>
                 </div>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {QUEUES.map((queue) => (
-                  <button
-                    key={queue.value}
-                    type="button"
-                    onClick={() => toggleQueue(queue.value)}
-                    className={cn(
-                      "h-9 whitespace-nowrap rounded-full border px-3 text-[13px] font-medium",
-                      activeQueue === queue.value ? "border-brand-500 bg-brand-50 text-brand-700" : "border-neutral-200 text-neutral-600",
-                    )}
-                  >
-                    {queue.label}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            <ActiveFilterTags stages={stages} tags={tags} />
+          </div>
 
           <div className="mt-3">
-            {view === "my-lists" ? (
-              <MyLists
-                contacts={contacts}
-                eventNames={eventNames}
-                registeredEventNames={registeredEventNames}
-                leadSources={leadSources}
-                segments={segments}
-              />
-            ) : (
               <PeopleList contacts={searched} stages={stages} ownerId={ownerId} groupBy={groupBy} lastActivityLabels={lastActivityLabels} />
-            )}
           </div>
-        </>
-      )}
 
       {filtersOpen && (
         <ContactFiltersSheet

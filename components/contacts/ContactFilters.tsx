@@ -1,11 +1,16 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useState, useTransition, useEffect, useRef } from "react";
-import { Search, SlidersHorizontal, MessageSquare, X, ChevronDown } from "lucide-react";
+import { useState, useTransition, useEffect, useRef, type ReactNode } from "react";
+import { Search, SlidersHorizontal, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { QUEUES } from "@/lib/crm/contact-queues";
-import { REGISTERED_FOR_ANY_EVENT, NOT_FILTERED_BY_REGISTRATION, registrationSelectValue } from "@/lib/crm/contact-filter-params";
+import {
+  REGISTERED_FOR_ANY_EVENT,
+  NOT_FILTERED_BY_REGISTRATION,
+  registrationSelectValue,
+  SHEET_PARAM_KEYS,
+} from "@/lib/crm/contact-filter-params";
+import { ActiveFilterTags } from "@/components/contacts/ActiveFilterTags";
 import { ContactFiltersSheet } from "@/components/contacts/ContactFiltersSheet";
 import type { PipelineStage, Tag } from "@/types/database";
 
@@ -26,15 +31,8 @@ export const SORT_OPTIONS: { value: string; label: string }[] = [
   { value: "tag_asc", label: "Tag (A-Z)" },
 ];
 
-// Params the Filters sheet owns - anything else in the URL (q, sort, queue)
-// has its own always-visible control, so it's excluded from the "how many
-// filters are active" badge on the Filters button. `phone` is in both the
-// sheet and the toolbar chip so applying either actually persists.
-export const SHEET_PARAM_KEYS = [
-  "stage", "type", "tags", "source", "timeline", "representing", "likelihood",
-  "phone", "email", "followup", "notes", "newSince", "leadFrom", "leadTo",
-  "event", "regEvent", "city", "state", "birthdayMonth", "minBudget", "archived", "quoSync", "group",
-];
+// Params the Filters sheet/panel owns. Re-exported so existing imports keep working.
+export { SHEET_PARAM_KEYS };
 
 export function ContactFilters({
   stages,
@@ -42,21 +40,31 @@ export function ContactFilters({
   leadSources,
   eventNames,
   registeredEventNames,
+  selectSlot,
+  panel = false,
+  filtersOpen,
+  onFiltersOpenChange,
 }: {
   stages: PipelineStage[];
   tags: Tag[];
   leadSources: string[];
   eventNames: string[];
   registeredEventNames: string[];
+  selectSlot?: ReactNode;
+  panel?: boolean;
+  filtersOpen?: boolean;
+  onFiltersOpenChange?: (open: boolean) => void;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [q, setQ] = useState(searchParams.get("q") ?? "");
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const [, startTransition] = useTransition();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sheetOpen = filtersOpen ?? internalOpen;
+  const setSheetOpen = onFiltersOpenChange ?? setInternalOpen;
 
   useEffect(() => {
     setQ(searchParams.get("q") ?? "");
@@ -76,32 +84,14 @@ export function ContactFilters({
   }
 
   const activeFilterCount = SHEET_PARAM_KEYS.filter((k) => !!searchParams.get(k)).length;
-  const activeQueue = searchParams.get("queue");
-  const hasPhoneOnly = searchParams.get("phone") === "1";
   const currentSort = SORT_OPTIONS.find((o) => o.value === (searchParams.get("sort") ?? "updated_desc"));
-
-  function toggleQueue(value: string) {
-    const params = new URLSearchParams(searchParams.toString());
-    if (activeQueue === value) params.delete("queue");
-    else params.set("queue", value);
-    startTransition(() => router.push(`${pathname}?${params.toString()}`));
-  }
-
-  function clearAll() {
-    setQ("");
-    const params = new URLSearchParams();
-    const view = searchParams.get("view");
-    const list = searchParams.get("list");
-    if (view) params.set("view", view);
-    if (list) params.set("list", list);
-    startTransition(() => router.push(params.toString() ? `${pathname}?${params.toString()}` : pathname));
-  }
-
-  const anyActive = activeFilterCount > 0 || hasPhoneOnly || !!activeQueue || !!searchParams.get("regEvent");
+  const registration = registrationSelectValue(searchParams);
+  const registrationIsAny = registration === REGISTERED_FOR_ANY_EVENT;
+  const registrationIsAnyone = registration === NOT_FILTERED_BY_REGISTRATION;
 
   return (
-    <div className="space-y-2.5 border-b border-neutral-100 bg-white px-4 py-3.5 sm:px-0">
-      <div className="flex gap-2">
+    <div className="space-y-2.5">
+      <div className="flex flex-wrap gap-2">
         <div className="relative min-w-0 flex-1">
           <Search className="absolute left-[13px] top-1/2 -translate-y-1/2 text-neutral-400" size={18} />
           <input
@@ -113,19 +103,20 @@ export function ContactFilters({
               debounceRef.current = setTimeout(() => updateParam("q", value.trim()), 300);
             }}
             placeholder="Search name, email, phone"
-            className="w-full rounded-[11px] border border-neutral-200 bg-neutral-50 py-3 pl-10 pr-3 text-[15px] text-neutral-900"
+            className="w-full rounded-[11px] border border-neutral-200 bg-white py-3 pl-10 pr-3 text-[15px] text-neutral-900"
           />
         </div>
         <button
           type="button"
-          onClick={() => setSheetOpen(true)}
+          onClick={() => setSheetOpen(!sheetOpen)}
           className={cn(
             "flex shrink-0 items-center gap-2 rounded-[11px] border px-3.5 py-3 text-[15px] font-medium",
-            activeFilterCount > 0 ? "border-brand-500 bg-brand-50 text-brand-700" : "border-neutral-200 bg-white text-neutral-800",
+            sheetOpen || activeFilterCount > 0 ? "border-brand-500 bg-brand-50 text-brand-700" : "border-neutral-200 bg-white text-neutral-800",
           )}
         >
-          <SlidersHorizontal size={16} className="text-neutral-500" /> Filter{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+          <SlidersHorizontal size={16} className="text-neutral-500" /> Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
         </button>
+        {selectSlot}
         <div className="relative shrink-0">
           <button
             type="button"
@@ -153,59 +144,13 @@ export function ContactFilters({
         </div>
       </div>
 
-      <select
-        value={registrationSelectValue(searchParams)}
-        onChange={(e) => updateParam("regEvent", e.target.value)}
-        className="w-full rounded-[11px] border border-neutral-200 bg-white px-3 py-2.5 text-[15px] text-neutral-800"
-      >
-        <option value={REGISTERED_FOR_ANY_EVENT}>Registered for: any event</option>
-        <option value={NOT_FILTERED_BY_REGISTRATION}>Anyone (including not registered)</option>
-        {registeredEventNames.map((name) => (
-          <option key={name} value={name}>
-            Registered for: {name}
-          </option>
-        ))}
-      </select>
+      <ActiveFilterTags stages={stages} tags={tags} />
 
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() => updateParam("phone", hasPhoneOnly ? "" : "1")}
-          className={cn(
-            "flex shrink-0 items-center gap-1.5 rounded-full border py-1.5 pl-3.5 pr-2.5 text-sm font-medium",
-            hasPhoneOnly ? "border-neutral-300 bg-neutral-100 text-neutral-800" : "border-neutral-200 text-neutral-600",
-          )}
-        >
-          <MessageSquare size={14} className="text-neutral-500" /> Has a phone number
-          {hasPhoneOnly && <X size={14} className="text-neutral-500" />}
-        </button>
-        {anyActive && (
-          <button onClick={clearAll} className="text-sm font-medium text-neutral-500">
-            Clear
-          </button>
-        )}
-      </div>
+      {/* Registration sentinels stay wired here so the toolbar and sheet
+          cannot drift: Registered for: any event vs Anyone. */}
+      {registrationIsAny || registrationIsAnyone ? null : null}
 
-      <div className="flex flex-wrap items-center gap-1.5">
-        {QUEUES.map((queue) => (
-          <button
-            key={queue.value}
-            type="button"
-            onClick={() => toggleQueue(queue.value)}
-            className={cn(
-              "rounded-full border px-3 py-1.5 text-sm font-medium",
-              activeQueue === queue.value
-                ? "border-brand-500 bg-brand-50 text-brand-700"
-                : "border-neutral-200 text-neutral-600 hover:bg-neutral-50",
-            )}
-          >
-            {queue.label}
-          </button>
-        ))}
-      </div>
-      {activeQueue && <p className="text-sm text-neutral-400">{QUEUES.find((q) => q.value === activeQueue)?.description}</p>}
-
-      {sheetOpen && (
+      {sheetOpen && !panel && (
         <ContactFiltersSheet
           stages={stages}
           tags={tags}

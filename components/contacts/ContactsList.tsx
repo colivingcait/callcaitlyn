@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { ContactRow } from "@/components/contacts/ContactRow";
@@ -10,15 +11,19 @@ import { BulkSequenceModal } from "@/components/contacts/BulkSequenceModal";
 import { BulkStageModal } from "@/components/contacts/BulkStageModal";
 import { BulkLeadSourceModal } from "@/components/contacts/BulkLeadSourceModal";
 import { BulkTypeModal } from "@/components/contacts/BulkTypeModal";
+import { BulkAddToListModal } from "@/components/contacts/BulkAddToListModal";
 import { TextBlastModal } from "@/components/contacts/TextBlastModal";
 import { useSectionOpen } from "@/lib/hooks/useSectionOpen";
 import { groupContacts } from "@/lib/crm/contact-grouping";
 import { hasUsablePhone } from "@/lib/crm/contact-filter-predicates";
+import { openQuoCall } from "@/lib/quo/call-link";
+import { threadHref } from "@/lib/crm/inbox-href";
+import { cn, fullName, initials } from "@/lib/utils";
 import type { ContactGroupBy } from "@/lib/crm/contact-filter-params";
-import type { ContactWithRelations, PipelineStage, Tag } from "@/types/database";
+import type { ContactSegment, ContactWithRelations, PipelineStage, Tag } from "@/types/database";
 
 type SequenceOption = { id: string; name: string; type: "broadcast" | "drip" | "batch" };
-type BulkModal = "add-tag" | "remove-tag" | "sequence" | "stage" | "source" | "type" | "text" | "more" | null;
+type BulkModal = "add-tag" | "remove-tag" | "sequence" | "stage" | "source" | "type" | "text" | "list" | "more" | null;
 
 export function ContactsList({
   contacts,
@@ -26,19 +31,27 @@ export function ContactsList({
   stages,
   ownerId,
   sequences,
-  groupBy = "stage",
+  segments = [],
+  groupBy = "none",
   lastActivityLabels,
+  selecting: selectingProp,
+  onSelectingChange,
 }: {
   contacts: ContactWithRelations[];
   tags: Tag[];
   stages: PipelineStage[];
   ownerId: string;
   sequences: SequenceOption[];
+  segments?: ContactSegment[];
   groupBy?: ContactGroupBy;
   lastActivityLabels: Record<string, string>;
+  selecting?: boolean;
+  onSelectingChange?: (next: boolean) => void;
 }) {
   const router = useRouter();
-  const [selecting, setSelecting] = useState(false);
+  const [internalSelecting, setInternalSelecting] = useState(false);
+  const selecting = selectingProp ?? internalSelecting;
+  const setSelecting = onSelectingChange ?? setInternalSelecting;
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [modal, setModal] = useState<BulkModal>(null);
   const [confirmingArchive, setConfirmingArchive] = useState(false);
@@ -110,24 +123,74 @@ export function ContactsList({
   const dripSequences = sequences.filter((s) => s.type === "drip");
   const groups = groupContacts(contacts, groupBy, stages);
 
+  const tableMode = groupBy === "none";
+
   return (
-    <div className={selecting && selected.size > 0 ? "pb-[calc(var(--app-bottom-nav)+4.5rem)] lg:pb-28" : undefined}>
-      <div className="flex items-center justify-between px-4 py-2.5 sm:px-0">
-        <button onClick={() => (selecting ? exitSelection() : setSelecting(true))} className="text-sm font-semibold text-brand-600">
-          {selecting ? "Cancel" : "Select"}
-        </button>
-        {selecting && (
-          <button
-            onClick={() => (selected.size === contacts.length ? setSelected(new Set()) : setSelected(new Set(contacts.map((c) => c.id))))}
-            className="text-sm font-medium text-neutral-400 hover:text-neutral-600"
-          >
-            {selected.size === contacts.length ? "Deselect all" : `Select all ${contacts.length}`}
+    <div className={selecting && selected.size > 0 && !tableMode ? "pb-[calc(var(--app-bottom-nav)+4.5rem)] lg:pb-28" : undefined}>
+      {selectingProp == null && (
+        <div className="flex items-center justify-between px-4 py-2.5 sm:px-0">
+          <button onClick={() => (selecting ? exitSelection() : setSelecting(true))} className="text-sm font-semibold text-brand-600">
+            {selecting ? "Cancel" : "Select"}
           </button>
-        )}
-      </div>
+          {selecting && (
+            <button
+              onClick={() => (selected.size === contacts.length ? setSelected(new Set()) : setSelected(new Set(contacts.map((c) => c.id))))}
+              className="text-sm font-medium text-neutral-400 hover:text-neutral-600"
+            >
+              {selected.size === contacts.length ? "Deselect all" : `Select all ${contacts.length}`}
+            </button>
+          )}
+        </div>
+      )}
+
+      {selecting && selected.size > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-[14px] border border-[#eadfd6] bg-[#fffbf8] px-3 py-2.5">
+          {confirmingArchive ? (
+            <>
+              <span className="text-[14px] font-semibold text-neutral-800">{archiveError ?? `Archive ${selected.size}?`}</span>
+              <button onClick={handleArchive} disabled={archiving} className="rounded-xl bg-red-600 px-3 py-1.5 text-[13px] font-semibold text-white">
+                {archiving ? "Archiving…" : "Confirm"}
+              </button>
+              <button onClick={() => setConfirmingArchive(false)} className="text-[13px] text-neutral-500">
+                Cancel
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="text-[14px] font-semibold text-neutral-800">{selected.size} selected</span>
+              <button onClick={() => setModal("text")} disabled={selectedWithPhone === 0} className="rounded-xl bg-[#c45c4a] px-3 py-1.5 text-[13px] font-semibold text-white disabled:opacity-50">
+                Text
+              </button>
+              <button onClick={() => setModal("stage")} className="rounded-xl border border-[#eadfd6] bg-white px-3 py-1.5 text-[13px] font-semibold text-neutral-800">
+                Change stage
+              </button>
+              <button onClick={() => setModal("list")} className="rounded-xl border border-[#eadfd6] bg-white px-3 py-1.5 text-[13px] font-semibold text-neutral-800">
+                Add to list
+              </button>
+              <button onClick={() => setModal("add-tag")} className="rounded-xl border border-[#eadfd6] bg-white px-3 py-1.5 text-[13px] font-semibold text-neutral-800">
+                Add tags
+              </button>
+              <button onClick={() => setModal("remove-tag")} className="rounded-xl border border-[#eadfd6] bg-white px-3 py-1.5 text-[13px] font-semibold text-neutral-800">
+                Remove tags
+              </button>
+              <button onClick={exitSelection} className="text-[13px] font-medium text-neutral-500">
+                Clear
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {contacts.length === 0 ? (
         <p className="px-4 py-10 text-center text-[15px] text-neutral-400">No contacts match. Try clearing filters or add a new contact.</p>
+      ) : tableMode ? (
+        <ContactsTable
+          contacts={contacts}
+          selecting={selecting}
+          selected={selected}
+          onToggle={toggle}
+          lastActivityLabels={lastActivityLabels}
+        />
       ) : (
         <div className="space-y-3 px-4 pb-6 sm:px-0">
           {groups.map((group) => (
@@ -148,78 +211,6 @@ export function ContactsList({
               }}
             />
           ))}
-        </div>
-      )}
-
-      {selecting && selected.size > 0 && (
-        <div className="fixed inset-x-0 bottom-[var(--app-bottom-nav)] z-40 bg-[#1c1917] p-3.5 shadow-lg lg:bottom-0">
-          <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-2">
-            {confirmingArchive ? (
-              <>
-                <span className="text-[15px] font-semibold text-white">
-                  {archiveError ?? `Archive ${selected.size} contact${selected.size === 1 ? "" : "s"}?`}
-                </span>
-                <button onClick={handleArchive} disabled={archiving} className="rounded-[10px] bg-red-600 px-3.5 py-2 text-sm font-semibold text-white disabled:opacity-60">
-                  {archiving ? "Archiving…" : "Confirm"}
-                </button>
-                <button
-                  onClick={() => {
-                    setConfirmingArchive(false);
-                    setArchiveError(null);
-                  }}
-                  disabled={archiving}
-                  className="rounded-[10px] border border-white/25 px-3.5 py-2 text-sm font-medium text-white"
-                >
-                  Cancel
-                </button>
-              </>
-            ) : (
-              <>
-                <span className="mr-1 text-[15px] font-semibold text-white">
-                  {archiveError ?? `${selected.size} selected · ${selectedWithPhone === selected.size ? `all ${selected.size}` : selectedWithPhone} can be texted`}
-                </span>
-                <button onClick={() => setModal("text")} disabled={selectedWithPhone === 0} className="rounded-[10px] bg-white px-3.5 py-2 text-sm font-semibold text-neutral-900 disabled:opacity-50">
-                  Text them
-                </button>
-                <button onClick={() => setModal("stage")} className="rounded-[10px] border border-white/25 px-3.5 py-2 text-sm font-medium text-white">
-                  Change stage
-                </button>
-                <button onClick={() => setModal("add-tag")} className="rounded-[10px] border border-white/25 px-3.5 py-2 text-sm font-medium text-white">
-                  Tag
-                </button>
-                <div className="relative">
-                  <button onClick={() => setModal(modal === "more" ? null : "more")} className="rounded-[10px] border border-white/25 px-3.5 py-2 text-sm font-medium text-white">
-                    More
-                  </button>
-                  {modal === "more" && (
-                    <div className="absolute bottom-full right-0 mb-2 w-44 rounded-xl border border-neutral-200 bg-white p-1 shadow-lg">
-                      <button onClick={() => setModal("remove-tag")} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50">
-                        Remove tag
-                      </button>
-                      <button onClick={() => setModal("source")} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50">
-                        Change source
-                      </button>
-                      <button onClick={() => setModal("type")} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50">
-                        Change type
-                      </button>
-                      <button onClick={() => setModal("sequence")} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50">
-                        Sequence…
-                      </button>
-                      {selectedContacts.every((c) => c.archived) ? (
-                        <button onClick={handleRestore} disabled={archiving} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50">
-                          {archiving ? "Restoring…" : "Restore"}
-                        </button>
-                      ) : (
-                        <button onClick={() => setConfirmingArchive(true)} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">
-                          Archive
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
         </div>
       )}
 
@@ -249,6 +240,95 @@ export function ContactsList({
           }}
         />
       )}
+      {modal === "list" && (
+        <BulkAddToListModal
+          contactIds={selectedIds}
+          segments={segments}
+          ownerId={ownerId}
+          onClose={() => setModal(null)}
+          onDone={afterAction}
+        />
+      )}
+    </div>
+  );
+}
+
+function ContactsTable({
+  contacts,
+  selecting,
+  selected,
+  onToggle,
+  lastActivityLabels,
+}: {
+  contacts: ContactWithRelations[];
+  selecting: boolean;
+  selected: Set<string>;
+  onToggle: (id: string) => void;
+  lastActivityLabels: Record<string, string>;
+}) {
+  return (
+    <div className="overflow-hidden rounded-[16px] border border-[#eadfd6] bg-[#fffbf8]">
+      <div className="grid grid-cols-[minmax(0,2fr)_1fr_1fr_1fr_auto] items-center gap-3 border-b border-[#eadfd6] px-4 py-2.5 text-[12px] font-semibold uppercase tracking-[.06em] text-neutral-400">
+        <span className={cn(selecting && "pl-8")}>Name</span>
+        <span>Source</span>
+        <span>Stage</span>
+        <span>Last touch</span>
+        <span className="text-right"> </span>
+      </div>
+      {contacts.map((contact) => {
+        const source = contact.lead_source?.trim();
+        const stageName = contact.pipeline_stages?.name ?? "—";
+        return (
+          <div
+            key={contact.id}
+            className="grid grid-cols-[minmax(0,2fr)_1fr_1fr_1fr_auto] items-center gap-3 border-b border-neutral-100 px-4 py-3 last:border-b-0"
+          >
+            <div className="flex min-w-0 items-center gap-3">
+              {selecting && (
+                <input type="checkbox" checked={selected.has(contact.id)} onChange={() => onToggle(contact.id)} className="h-4 w-4 shrink-0 rounded border-neutral-300" />
+              )}
+              <Link href={`/contacts/${contact.id}`} data-contact-open={contact.id} className="flex min-w-0 items-center gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f3e4dc] text-[12px] font-semibold text-[#c45c4a]">
+                  {initials(contact.first_name, contact.last_name)}
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-[15px] font-semibold text-neutral-900">{fullName(contact)}</span>
+                  {contact.phone && <span className="block truncate text-[12px] text-neutral-400">{contact.phone}</span>}
+                </span>
+              </Link>
+            </div>
+            <div>
+              {source ? (
+                <span className="inline-flex rounded-full bg-[#f3e4dc] px-2.5 py-0.5 text-[12px] font-medium text-[#c45c4a]">{source}</span>
+              ) : (
+                <span className="text-[13px] text-neutral-300">—</span>
+              )}
+            </div>
+            <span className="truncate text-[13px] text-neutral-600">{stageName}</span>
+            <span className="truncate text-[13px] text-neutral-500">{lastActivityLabels[contact.id] ?? "—"}</span>
+            <div className="flex items-center justify-end gap-2">
+              {hasUsablePhone(contact.phone) ? (
+                <>
+                  <Link href={threadHref(contact.id)} className="rounded-xl bg-[#c45c4a] px-3 py-1.5 text-[12px] font-semibold text-white">
+                    Text
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => openQuoCall(contact.phone!)}
+                    className="rounded-xl border border-[#eadfd6] bg-white px-3 py-1.5 text-[12px] font-semibold text-neutral-800"
+                  >
+                    Call
+                  </button>
+                </>
+              ) : (
+                <Link href={`/contacts/${contact.id}`} className="text-[12px] font-semibold text-neutral-400">
+                  Open
+                </Link>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

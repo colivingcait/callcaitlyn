@@ -9,11 +9,12 @@ export type ContactGroupBy = "none" | "stage" | "tag" | "source" | "month";
 // MEANS any-event on the main Contacts browse. Explicit opt-out is __all__.
 export const REGISTERED_FOR_ANY_EVENT = "__any__";
 export const NOT_FILTERED_BY_REGISTRATION = "__all__";
+export const EVER_ATTENDED_EVENT = "__any__";
 
 // Working-list / insight deep links that are not the Tess browse combo.
 // Those URLs omit regEvent on purpose and must not inherit the any-event default.
 const REGISTRATION_DEFAULT_OPT_OUT_KEYS = [
-  "queue", "event", "newSince", "leadFrom", "leadTo", "archived", "type", "tags", "source", "q", "likelihood", "followup", "email", "notes",
+  "queue", "event", "newSince", "leadFrom", "leadTo", "archived", "type", "tags", "source", "q", "likelihood", "followup", "email", "notes", "ids", "list",
 ] as const;
 
 export function resolveRegisteredEventName(sp: URLSearchParams): string | undefined {
@@ -64,6 +65,7 @@ export type ContactFilterParams = {
   leadDateTo?: string;
   groupBy?: ContactGroupBy;
   sort?: ContactSort;
+  includeIds?: string[];
 };
 
 // Single source of truth for reading contact-list query params, used by
@@ -108,5 +110,20 @@ export function parseContactFilterParams(sp: URLSearchParams): ContactFilterPara
     leadDateTo: sp.get("leadTo") ?? undefined,
     groupBy: (sp.get("group") as ContactGroupBy) ?? undefined,
     sort: (sp.get("sort") as ContactSort) ?? undefined,
+    includeIds: sp.get("ids") ? sp.get("ids")!.split(",").filter(Boolean) : undefined,
   };
+}
+
+export const SHEET_PARAM_KEYS = [
+  "stage", "type", "tags", "source", "timeline", "representing", "likelihood",
+  "phone", "email", "followup", "notes", "newSince", "leadFrom", "leadTo",
+  "event", "regEvent", "city", "state", "birthdayMonth", "minBudget", "archived", "quoSync", "group",
+] as const;
+
+export function parseIncludeIds(raw: string | null | undefined): string[] {
+  return raw ? raw.split(",").map((id) => id.trim()).filter(Boolean) : [];
+}
+
+export function mergeIncludeIds(existing: string | null | undefined, extra: string[]): string {
+  return [...new Set([...parseIncludeIds(existing), ...extra])].join(",");
 }

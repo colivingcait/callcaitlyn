@@ -1,22 +1,16 @@
 import {
   Home,
-  Lightbulb,
   MessageCircle,
-  PhoneCall,
   Users,
-  HeartHandshake,
   KanbanSquare,
   CalendarHeart,
   Mail,
-  Calculator,
   CalendarClock,
+  FileText,
   DollarSign,
   BarChart3,
   Settings,
-  NotebookText,
-  UserPlus,
   Menu,
-  ListTodo,
   type LucideIcon,
 } from "lucide-react";
 
@@ -24,48 +18,35 @@ export type NavItem = { href: string; label: string; icon: LucideIcon; hint?: st
 export type NavGroup = { label: string; items: NavItem[] };
 export type NavCounts = { contacts?: number; dialer?: number; messages?: number; notes?: number; insights?: number; listings?: number };
 
-// Five mobile primaries: Today | Contacts | Messages | Pipeline | More.
-// More is only destinations that are not already a tab. Routes stay live.
+// Desktop primary (always visible): Today · Contacts · Messages · Pipeline · Events.
+// Mobile keeps five tab slots: Today · Contacts · Messages · Pipeline · More.
+// Events moves into the mobile More sheet so More can occupy the fifth slot.
 export const PRIMARY_NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Today", icon: Home },
   { href: "/contacts", label: "Contacts", icon: Users },
   { href: "/messages", label: "Messages", icon: MessageCircle },
   { href: "/pipeline", label: "Pipeline", icon: KanbanSquare },
+  { href: "/events", label: "Events", icon: CalendarHeart },
 ];
 
-export const MORE_NAV_GROUPS: NavGroup[] = [
-  {
-    label: "Also today",
-    items: [
-      { href: "/?focus=tasks", label: "My tasks", icon: ListTodo, hint: "Lives on Today — not its own tab" },
-      { href: "/insights", label: "Insights", icon: Lightbulb, hint: "What changed on its own" },
-      { href: "/notes", label: "Meeting notes", icon: NotebookText, hint: "Granola review, not contact notes" },
-      { href: "/dialer", label: "Event calls", icon: PhoneCall, hint: "Meetup follow-up and confirmations, not daily calls" },
-    ],
-  },
-  {
-    label: "People",
-    items: [
-      { href: "/sphere", label: "Past clients", icon: HeartHandshake, hint: "Birthdays, reviews, referrers" },
-      { href: "/events", label: "Events", icon: CalendarHeart, hint: "Rosters & check-in" },
-    ],
-  },
-  {
-    label: "Money & tools",
-    items: [
-      { href: "/commissions", label: "Commissions", icon: DollarSign, hint: "Deals and cap" },
-      { href: "/scheduling", label: "Booking requests", icon: CalendarClock, hint: "Approve requests" },
-      { href: "/sequences", label: "Campaigns", icon: Mail, hint: "Email and text campaigns" },
-      { href: "/numbers", label: "House hack", icon: Calculator, hint: "Calculator" },
-      { href: "/listings", label: "Listings", icon: Home, hint: "Listing pages · agent replies live here" },
-      { href: "/recruiting", label: "Agent recruiting", icon: UserPlus },
-      { href: "/reports", label: "Reports", icon: BarChart3 },
-      { href: "/settings", label: "Settings", icon: Settings },
-    ],
-  },
+export const MORE_NAV_ITEMS: NavItem[] = [
+  { href: "/sequences", label: "Campaigns", icon: Mail, hint: "Email and text campaigns" },
+  { href: "/scheduling", label: "Bookings", icon: CalendarClock, hint: "History and settings — new requests live on Today" },
+  { href: "/listings", label: "Listings", icon: FileText, hint: "Listing pages · agent replies live here" },
+  { href: "/commissions", label: "Commissions", icon: DollarSign, hint: "Deals and cap" },
+  { href: "/reports", label: "Reports", icon: BarChart3 },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export const NAV_GROUPS: NavGroup[] = [{ label: "Work", items: PRIMARY_NAV_ITEMS }, ...MORE_NAV_GROUPS];
+export const MOBILE_MORE_ITEMS: NavItem[] = [
+  { href: "/events", label: "Events", icon: CalendarHeart, hint: "Rosters & check-in" },
+  ...MORE_NAV_ITEMS,
+];
+
+export const NAV_GROUPS: NavGroup[] = [
+  { label: "Work", items: PRIMARY_NAV_ITEMS },
+  { label: "More", items: MORE_NAV_ITEMS },
+];
 
 export type MobileNavItem = { kind: "link"; href: string; label: string; icon: LucideIcon } | { kind: "more"; label: string; icon: LucideIcon };
 
@@ -83,12 +64,14 @@ export function isPrimaryNavHref(href: string): boolean {
   return PRIMARY_NAV_ITEMS.some((item) => item.href === path);
 }
 
-/** More sheet/sidebar: never re-list Today/Contacts/Messages/Pipeline. */
-export function moreNavGroupsForSheet(): NavGroup[] {
-  return MORE_NAV_GROUPS.map((group) => ({
-    ...group,
-    items: group.items.filter((item) => !isPrimaryNavHref(item.href)),
-  })).filter((group) => group.items.length > 0);
+/** Desktop More: flat list, never re-lists a primary destination. */
+export function moreNavItemsForSidebar(): NavItem[] {
+  return MORE_NAV_ITEMS.filter((item) => !isPrimaryNavHref(item.href));
+}
+
+/** Mobile More sheet: Events + the desktop More list. Lists is not a nav item. */
+export function moreNavItemsForSheet(): NavItem[] {
+  return MOBILE_MORE_ITEMS.filter((item) => item.href !== "/" && item.href !== "/contacts" && item.href !== "/messages" && item.href !== "/pipeline");
 }
 
 export function navItemIsActive(href: string, pathname: string, focus?: string | null): boolean {
@@ -99,10 +82,8 @@ export function navItemIsActive(href: string, pathname: string, focus?: string |
 }
 
 export function isMorePath(pathname: string): boolean {
-  return moreNavGroupsForSheet().some((group) =>
-    group.items.some((item) => {
-      if (item.href.startsWith("/?")) return false;
-      return pathname === item.href || pathname.startsWith(`${item.href}/`);
-    }),
-  );
+  return moreNavItemsForSheet().some((item) => {
+    if (item.href.startsWith("/?")) return false;
+    return pathname === item.href || pathname.startsWith(`${item.href}/`);
+  });
 }

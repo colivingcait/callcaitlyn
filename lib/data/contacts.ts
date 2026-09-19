@@ -119,6 +119,7 @@ export type ContactListFilters = {
   leadDateFrom?: string;
   leadDateTo?: string;
   sort?: ContactSort;
+  includeIds?: string[];
 };
 
 export async function listContacts(filters: ContactListFilters) {
@@ -232,6 +233,10 @@ export async function listContacts(filters: ContactListFilters) {
     }
   }
 
+  if (filters.includeIds?.length) {
+    contacts = await applyIncludeIds(supabase, contacts, filters);
+  }
+
   if (sort === "name_asc") {
     contacts = [...contacts].sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`));
   } else if (sort === "name_desc") {
@@ -267,6 +272,62 @@ export async function listContacts(filters: ContactListFilters) {
   }
 
   return contacts;
+}
+
+function hasRestrictiveFilters(filters: ContactListFilters): boolean {
+  return Boolean(
+    filters.stageId ||
+      filters.tagIds?.length ||
+      filters.type ||
+      filters.timeline ||
+      filters.representing ||
+      filters.leadSource ||
+      filters.hasPhone ||
+      filters.missingPhone ||
+      filters.hasEmail ||
+      filters.missingEmail ||
+      filters.hasFollowUp ||
+      filters.missingFollowUp ||
+      filters.overdueFollowUp ||
+      filters.hasNotes ||
+      filters.missingNotes ||
+      filters.birthdayMonth ||
+      filters.city ||
+      filters.state ||
+      filters.minBudget ||
+      filters.notSyncedQuo ||
+      filters.eventName ||
+      filters.registeredEventName ||
+      filters.likelihood ||
+      filters.queue ||
+      filters.leadDateWithinDays ||
+      filters.leadDateFrom ||
+      filters.leadDateTo,
+  );
+}
+
+async function applyIncludeIds(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  contacts: ContactWithRelations[],
+  filters: ContactListFilters,
+): Promise<ContactWithRelations[]> {
+  const includeIds = filters.includeIds ?? [];
+  if (includeIds.length === 0) return contacts;
+
+  if (!hasRestrictiveFilters(filters)) {
+    const restricted = contacts.filter((c) => includeIds.includes(c.id));
+    const have = new Set(restricted.map((c) => c.id));
+    const missing = includeIds.filter((id) => !have.has(id));
+    if (missing.length === 0) return restricted;
+    const { data } = await supabase.from("contacts").select("*, pipeline_stages(*), contact_tags(tags(*))").eq("spam", false).in("id", missing);
+    return [...restricted, ...((data ?? []) as ContactWithRelations[])];
+  }
+
+  const have = new Set(contacts.map((c) => c.id));
+  const missing = includeIds.filter((id) => !have.has(id));
+  if (missing.length === 0) return contacts;
+  const { data } = await supabase.from("contacts").select("*, pipeline_stages(*), contact_tags(tags(*))").eq("spam", false).in("id", missing);
+  return [...contacts, ...((data ?? []) as ContactWithRelations[])];
 }
 
 // Populates the "Last event attended" filter dropdown with whatever event

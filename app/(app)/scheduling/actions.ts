@@ -141,6 +141,7 @@ export async function approveBooking(requestId: string) {
   }
 
   revalidatePath("/scheduling");
+  revalidatePath("/");
   return { ok: true as const };
 }
 
@@ -178,6 +179,7 @@ export async function declineBooking(requestId: string) {
   }
 
   revalidatePath("/scheduling");
+  revalidatePath("/");
   return { ok: true as const };
 }
 
@@ -227,6 +229,7 @@ export async function proposeNewTime(requestId: string, proposedStartsAt: string
   }
 
   revalidatePath("/scheduling");
+  revalidatePath("/");
   return { ok: true as const };
 }
 

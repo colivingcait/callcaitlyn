@@ -176,3 +176,20 @@ export function cadenceDueLabel(dueAt: string, now = new Date()): string {
   if (!label) return "";
   return label === "Today" ? "Due today" : `Due ${label}`;
 }
+
+export function bookingWindowLabel(startsAt: string | null | undefined, endsAt: string | null | undefined): string {
+  if (!startsAt) return "Time TBD";
+  const day = formatLocal(startsAt, "EEE");
+  const startTime = formatLocal(startsAt, "h:mm");
+  const startPeriod = formatLocal(startsAt, "a");
+  if (!endsAt) return `${day} ${startTime} ${startPeriod}`;
+  const endTime = formatLocal(endsAt, "h:mm");
+  const endPeriod = formatLocal(endsAt, "a");
+  if (startPeriod === endPeriod) return `${day} ${startTime}–${endTime} ${endPeriod}`;
+  return `${day} ${startTime} ${startPeriod}–${endTime} ${endPeriod}`;
+}
+
+export function bookingCardName(contactName: string | null | undefined, visitorName: string | null | undefined): string {
+  const name = (contactName || visitorName || "Someone").trim();
+  return name || "Someone";
+}
