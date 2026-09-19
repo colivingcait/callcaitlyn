@@ -9,6 +9,8 @@ import { listPendingBookingRequests, listUpcomingApprovedBookingRequests } from 
 import { computeDeals, summarizeDeals, capYearKey, capYearStart, KW_CAP } from "@/lib/crm/commission";
 import { isTodayWorkContact } from "@/lib/crm/today-eligible";
 import { listConversations } from "@/lib/data/messages";
+import { getEventsData, upcomingEventsFromData, type EventEntry } from "@/lib/data/events";
+import { eventCadenceDues, upcomingEventRows, type EventCadenceDue, type EventCadenceInput } from "@/lib/crm/today-v1";
 import type { PipelineStage } from "@/types/database";
 
 export type WorklistPerson = {
@@ -228,15 +230,34 @@ export type TodayCalendarItem = {
   registeredCount?: number;
 };
 
-async function registrantCountForEventbriteId(eventbriteEventId: string | null): Promise<number> {
-  if (!eventbriteEventId) return 0;
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("activities")
-    .select("contact_id")
-    .eq("source", "eventbrite")
-    .contains("metadata", { event_id: eventbriteEventId });
-  return new Set((data ?? []).map((row) => row.contact_id as string)).size;
+function calendarItemFromEntry(event: EventEntry): TodayCalendarItem {
+  return {
+    id: event.key,
+    title: event.label,
+    startsAt: event.startsAt ?? event.date,
+    href: `/events/${encodeURIComponent(event.key)}`,
+    meta: event.seriesLabel,
+    registeredCount: event.counts.registered,
+  };
+}
+
+function cadenceInputFromEntries(upcoming: EventEntry[], past: EventEntry[]): EventCadenceInput[] {
+  const pastAttendeesBySeries = new Map<string, Set<string>>();
+  for (const event of past) {
+    const ids = pastAttendeesBySeries.get(event.series) ?? new Set<string>();
+    for (const person of event.people) {
+      if (person.attended) ids.add(person.contactId);
+    }
+    pastAttendeesBySeries.set(event.series, ids);
+  }
+  return upcoming.map((event) => ({
+    key: event.key,
+    label: event.label,
+    startsAt: event.startsAt,
+    date: event.date,
+    registrantIds: event.people.filter((person) => person.registered).map((person) => person.contactId),
+    pastAttendeeIds: [...(pastAttendeesBySeries.get(event.series) ?? [])],
+  }));
 }
 
 export async function getTodayData() {
@@ -244,7 +265,7 @@ export async function getTodayData() {
   const { data: stagesData } = await supabase.from("pipeline_stages").select("*").order("sort_order", { ascending: true });
   const stages = (stagesData ?? []) as PipelineStage[];
 
-  const [calls, repliesOwedResult, myTasks, registeredNoFollowUp, statStrip, commissionYear, newLeads, bookingRequests, quietLeads, spamConversations, upcomingMeetings, { data: upcomingEventRows }] =
+  const [calls, repliesOwedResult, myTasks, registeredNoFollowUp, statStrip, commissionYear, newLeads, bookingRequests, quietLeads, spamConversations, upcomingMeetings, crmEvents] =
     await Promise.all([
       getCallsGroup(),
       getRepliesOwedGroup(),
@@ -257,19 +278,17 @@ export async function getTodayData() {
       getQuietLeadsGroup(),
       listConversations({ spam: true }),
       listUpcomingApprovedBookingRequests(),
-      supabase.from("events").select("id, name, series, starts_at, eventbrite_event_id").gte("starts_at", new Date().toISOString()).order("starts_at", { ascending: true }).limit(5),
+      getEventsData(),
     ]);
 
-  const crmEventRows = (upcomingEventRows ?? []).slice(0, 2);
-  const registrantCounts = await Promise.all(crmEventRows.map((e) => registrantCountForEventbriteId(e.eventbrite_event_id)));
-  const upcomingCrmEvents: TodayCalendarItem[] = crmEventRows.map((e, i) => ({
-    id: `event-${e.id}`,
-    title: e.name,
-    startsAt: e.starts_at as string,
-    href: e.eventbrite_event_id ? `/events/${e.series}:${e.eventbrite_event_id}` : "/events",
-    meta: e.series === "womens_rei" ? "Women's REI" : e.series === "house_hacking" ? "House hacking" : undefined,
-    registeredCount: registrantCounts[i] ?? 0,
-  }));
+  const upcomingEntries = upcomingEventsFromData(crmEvents);
+  const upcomingCrmEvents: TodayCalendarItem[] = upcomingEventRows(upcomingEntries).map(calendarItemFromEntry);
+  const cadenceDues: EventCadenceDue[] = eventCadenceDues(
+    cadenceInputFromEntries(
+      upcomingEntries,
+      crmEvents.events.filter((event) => event.hasEnded),
+    ),
+  );
 
   const calendar: TodayCalendarItem[] = [
     ...upcomingCrmEvents,
@@ -299,5 +318,6 @@ export async function getTodayData() {
     spamFilteredCount: spamConversations.length,
     calendar,
     upcomingCrmEvents,
+    cadenceDues,
   };
 }

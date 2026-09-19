@@ -349,3 +349,16 @@ export async function getEventsData(): Promise<EventsData> {
 
   return { events: allEvents, nextUp, totalUniqueAttendees, eventsInLastYear };
 }
+
+// Same upcoming set the Events page uses (hasEnded = timezone-aware end
+// of the event, not starts_at >= now). Today must share this so a meetup
+// that /events shows as Next up cannot disappear from the home card.
+export function upcomingEventsFromData(data: EventsData): EventEntry[] {
+  const upcoming = data.events
+    .filter((event) => !event.hasEnded)
+    .sort((a, b) => new Date(a.startsAt ?? a.date).getTime() - new Date(b.startsAt ?? b.date).getTime());
+  if (data.nextUp && !upcoming.some((event) => event.key === data.nextUp!.key)) {
+    return [data.nextUp, ...upcoming];
+  }
+  return upcoming;
+}

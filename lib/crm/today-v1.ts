@@ -88,3 +88,91 @@ export function upcomingEventRows<T>(items: T[], cap = 2): T[] {
 export function openTasksForToday(tasks: WorklistTask[], cap = 8): WorklistTask[] {
   return tasks.slice(0, cap);
 }
+
+export function addCalendarDaysIso(iso: string, days: number): string {
+  const day = formatLocal(iso, "yyyy-MM-dd");
+  const noon = fromZonedTime(`${day}T12:00:00`, APP_TIMEZONE);
+  return new Date(noon.getTime() + days * 86_400_000).toISOString();
+}
+
+// Event cadence that surfaces on Today → To Dos. Offsets match the
+// pre-event templates in event-text-templates.ts: invite past attendees
+// two weeks out, text current registrants a couple of days before.
+export const EMAIL_INVITE_DAYS_BEFORE = 14;
+export const TEXT_REMINDER_DAYS_BEFORE = 2;
+export const CADENCE_LOOKAHEAD_DAYS = 7;
+
+export type EventCadenceInput = {
+  key: string;
+  label: string;
+  startsAt: string | null;
+  date: string;
+  registrantIds: string[];
+  pastAttendeeIds: string[];
+};
+
+export type EventCadenceDue = {
+  id: string;
+  kind: "email_invite" | "text_reminder";
+  title: string;
+  eventName: string;
+  eventKey: string;
+  audienceCount: number;
+  audienceLabel: string;
+  dueAt: string;
+  action: "email" | "text";
+  contactIds: string[];
+};
+
+function eventStartIso(event: Pick<EventCadenceInput, "startsAt" | "date">): string {
+  return event.startsAt ?? event.date;
+}
+
+function cadenceDueRow(
+  event: EventCadenceInput,
+  kind: EventCadenceDue["kind"],
+  daysBefore: number,
+  contactIds: string[],
+  audienceNoun: string,
+  now: Date,
+): EventCadenceDue | null {
+  if (contactIds.length === 0) return null;
+  const startIso = eventStartIso(event);
+  if (!startIso) return null;
+  const daysUntilEvent = calendarDaysFromToday(startIso, now);
+  if (daysUntilEvent < 0) return null;
+  const daysUntilDue = daysUntilEvent - daysBefore;
+  if (daysUntilDue > CADENCE_LOOKAHEAD_DAYS) return null;
+  const noun = contactIds.length === 1 ? audienceNoun : `${audienceNoun}s`;
+  return {
+    id: `cadence-${kind}-${event.key}`,
+    kind,
+    title: kind === "email_invite" ? "Email invite" : "Text reminder",
+    eventName: event.label,
+    eventKey: event.key,
+    audienceCount: contactIds.length,
+    audienceLabel: `${contactIds.length} ${noun}`,
+    dueAt: addCalendarDaysIso(startIso, -daysBefore),
+    action: kind === "email_invite" ? "email" : "text",
+    contactIds,
+  };
+}
+
+export function eventCadenceDues(events: EventCadenceInput[], now = new Date()): EventCadenceDue[] {
+  const rows: EventCadenceDue[] = [];
+  for (const event of events) {
+    const registered = new Set(event.registrantIds);
+    const pastNotRegistered = event.pastAttendeeIds.filter((id) => !registered.has(id));
+    const email = cadenceDueRow(event, "email_invite", EMAIL_INVITE_DAYS_BEFORE, pastNotRegistered, "past attendee", now);
+    const text = cadenceDueRow(event, "text_reminder", TEXT_REMINDER_DAYS_BEFORE, event.registrantIds, "registrant", now);
+    if (email) rows.push(email);
+    if (text) rows.push(text);
+  }
+  return rows.sort((a, b) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime());
+}
+
+export function cadenceDueLabel(dueAt: string, now = new Date()): string {
+  const label = taskDueLabel(dueAt, now);
+  if (!label) return "";
+  return label === "Today" ? "Due today" : `Due ${label}`;
+}

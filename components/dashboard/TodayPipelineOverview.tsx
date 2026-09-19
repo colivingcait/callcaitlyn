@@ -47,20 +47,20 @@ export function TodayPipelineOverview({
           )
           .parts.join(", ")})`;
 
-  const donut = size === "desktop" ? "h-[168px] w-[168px]" : "h-[118px] w-[118px]";
-  const hole = size === "desktop" ? "h-[108px] w-[108px]" : "h-[76px] w-[76px]";
+  const donut = size === "desktop" ? "h-[168px] w-[168px]" : "h-[118px] w-[118px] md:h-[168px] md:w-[168px]";
+  const hole = size === "desktop" ? "h-[108px] w-[108px]" : "h-[76px] w-[76px] md:h-[108px] md:w-[108px]";
 
   return (
-    <section data-today-home="pipeline" className={cn("h-full p-4 sm:p-5", TODAY_CARD, className)}>
+    <section data-today-home="pipeline" className={cn("h-full min-w-0 overflow-hidden p-4 sm:p-5", TODAY_CARD, className)}>
       <p className="flex items-center gap-2 text-[15px] font-semibold text-neutral-800">
         <Clock size={16} strokeWidth={1.7} className="text-[#c45c4a]" />
         Pipeline Overview
       </p>
-      <div className={cn("mt-3 flex items-center gap-5", size === "desktop" && "gap-8")}>
+      <div className={cn("mt-3 flex items-center gap-5", size !== "phone" ? "gap-8" : "md:gap-8")}>
         <Link href="/pipeline" aria-label={`${total} in pipeline`} className="relative shrink-0">
           <div className={cn("rounded-full", donut)} style={{ background: gradient }} />
           <div className={cn("absolute inset-0 m-auto flex flex-col items-center justify-center rounded-full bg-[#fffbf8]", hole)}>
-            <p className={cn("font-serif font-semibold leading-none text-neutral-900", size === "desktop" ? "text-[32px]" : "text-[22px]")}>
+            <p className={cn("font-serif font-semibold leading-none text-neutral-900", size === "desktop" ? "text-[32px]" : "text-[22px] md:text-[32px]")}>
               {total}
             </p>
             <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-neutral-400">Total</p>

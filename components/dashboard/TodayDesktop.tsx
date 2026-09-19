@@ -33,7 +33,7 @@ export function TodayDesktop({
   const parsedFocus = parseTodayFocus(focus);
 
   return (
-    <div className="mx-auto w-full max-w-[1400px] px-8 py-8">
+    <div className="mx-auto w-full min-w-0 max-w-[1400px] overflow-x-hidden px-8 py-8">
       {!parsedFocus && activePrepSheets.length > 0 && (
         <div className="mb-6 grid gap-3 lg:grid-cols-2">
           {activePrepSheets.map((p) => (
@@ -67,7 +67,7 @@ export function TodayDesktop({
           newLeadsError={today.newLeadsError}
         />
       ) : (
-        <TodayHome today={today} contacts={contacts} ownerFirstName={ownerFirstName} wide />
+        <TodayHome today={today} contacts={contacts} ownerFirstName={ownerFirstName} />
       )}
     </div>
   );
