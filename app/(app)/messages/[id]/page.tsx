@@ -1,50 +1,35 @@
-import Link from "next/link";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Mail, ChevronRight } from "lucide-react";
-import { CallButton } from "@/components/CallButton";
-import { getContact, getContactInsights, listStages, listTags } from "@/lib/data/contacts";
-import { getContactThread } from "@/lib/data/messages";
-import { fullName, formatPhone } from "@/lib/utils";
-import { Avatar } from "@/components/ui";
-import { ChatBubble } from "@/components/messages/ChatBubble";
-import { CallLogEntry } from "@/components/messages/CallLogEntry";
-import { ThreadComposer } from "@/components/messages/ThreadComposer";
-import { ScrollToBottomOnLoad } from "@/components/messages/ScrollToBottomOnLoad";
-import { ContactContextBar } from "@/components/messages/ContactContextBar";
-import { ConversationActions } from "@/components/messages/ConversationActions";
-import { SuggestedRow } from "@/components/contacts/SuggestedRow";
+import { MessagesInbox } from "@/components/messages/MessagesInbox";
+import { getContact } from "@/lib/data/contacts";
+import { getContactThread, listConversations } from "@/lib/data/messages";
 import { createClient } from "@/lib/supabase/server";
-import { listTextTemplates } from "@/lib/data/text-templates";
 import { applyMergeFields } from "@/lib/crm/merge-fields";
 import { firstTouchTemplate, resolveFirstTouchSource, shouldPrefillFirstTouchSms, eventbriteAccountFromActivities } from "@/lib/crm/new-lead-text-templates";
-import { inboxHref } from "@/lib/crm/inbox-href";
+import { INBOX_SEEN_COOKIE, parseInboxSeen } from "@/lib/crm/inbox-seen";
+import { parseMessagesFilter, toSmsInboxThreads, type OpenSmsThread, type SmsThreadMessage } from "@/lib/crm/messages-v1";
 
 export default async function MessageThreadPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ draft?: string; from?: string; hidden?: string; spam?: string }>;
+  searchParams: Promise<{ draft?: string; from?: string }>;
 }) {
   const { id } = await params;
-  const { draft, from, hidden, spam } = await searchParams;
-  const backHref = inboxHref({ filter: from, hidden: hidden === "1", spam: spam === "1" });
+  const { draft, from } = await searchParams;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const [contact, thread, stages, insights, textTemplates, tags, { data: eventbriteRows }] = await Promise.all([
+  const [contact, thread, conversations, cookieStore, { data: eventbriteRows }] = await Promise.all([
     getContact(id),
     getContactThread(id),
-    listStages(),
-    getContactInsights(id),
-    listTextTemplates(),
-    listTags(),
+    listConversations(),
+    cookies(),
     supabase.from("activities").select("metadata").eq("contact_id", id).eq("source", "eventbrite").limit(5),
   ]);
 
   if (!contact) notFound();
 
+  const sms = thread.filter((activity) => activity.type === "text");
   const tagNames = contact.contact_tags.map((ct) => ct.tags?.name).filter((name): name is string => !!name);
   const firstTouchSignals = {
     leadSource: contact.lead_source,
@@ -53,84 +38,37 @@ export default async function MessageThreadPage({
     eventbriteAccount: eventbriteAccountFromActivities(eventbriteRows ?? []),
   };
   const source = resolveFirstTouchSource(firstTouchSignals);
-  const hasOutboundText = thread.some((a) => a.type === "text" && a.direction === "outbound");
+  const hasOutboundText = sms.some((a) => a.direction === "outbound");
   const firstTouchBody = shouldPrefillFirstTouchSms({ hasOutboundText, source })
     ? applyMergeFields(firstTouchTemplate(firstTouchSignals), contact)
     : undefined;
 
+  const messages: SmsThreadMessage[] = sms.map((activity) => ({
+    id: activity.id,
+    direction: activity.direction === "outbound" ? "outbound" : "inbound",
+    body: activity.body,
+    occurredAt: activity.occurred_at,
+  }));
+
+  const openThread: OpenSmsThread = {
+    contactId: contact.id,
+    firstName: contact.first_name,
+    lastName: contact.last_name ?? "",
+    phone: contact.phone,
+    stageName: contact.pipeline_stages?.name ?? null,
+    representing: contact.representing ?? null,
+    messages,
+    draft: draft || firstTouchBody,
+  };
+
   return (
-    <div className="mx-auto flex min-w-0 max-w-3xl flex-col">
-      <div className="sticky top-0 z-10 bg-[#f7f1ea]/95 backdrop-blur">
-        <div className="flex items-center gap-3 border-b border-neutral-200 px-3 py-2.5">
-          <Link href={backHref} aria-label="Back to messages" className="text-neutral-500">
-            <ArrowLeft size={20} />
-          </Link>
-          <Link href={`/contacts/${contact.id}`} data-contact-open={contact.id} aria-label={`Open ${fullName(contact)} record`} className="flex min-w-0 flex-1 items-center gap-2.5">
-            <Avatar id={contact.id} firstName={contact.first_name} lastName={contact.last_name} size={36} />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-neutral-900">{fullName(contact)}</p>
-              <p className="truncate text-xs text-neutral-400">{formatPhone(contact.phone) || "Open record"}</p>
-            </div>
-            <ChevronRight size={16} className="shrink-0 text-neutral-300" />
-          </Link>
-          {contact.phone && <CallButton phone={contact.phone} />}
-          {contact.email && (
-            <a href={`mailto:${contact.email}`} className="rounded-full p-2 text-neutral-500 hover:bg-neutral-100">
-              <Mail size={18} />
-            </a>
-          )}
-          <ConversationActions
-            contactId={contact.id}
-            hidden={contact.archived}
-            afterDelete="back-to-messages"
-            afterDeleteHref={backHref}
-          />
-        </div>
-        <ContactContextBar contact={contact} stages={stages} />
-      </div>
-
-      <div className="flex-1 space-y-3 px-3 py-4 pb-[7.5rem] lg:pb-4">
-        {insights.length > 0 && (
-          <div className="overflow-hidden rounded-2xl border border-[#ebe9e7] bg-white">
-            {insights.map((insight) => (
-              <SuggestedRow
-                key={insight.id}
-                insight={insight}
-                contactId={contact.id}
-                ownerId={user?.id ?? contact.owner_id}
-                contactStageId={contact.stage_id}
-                contactName={fullName(contact)}
-                contactCreatedAt={contact.created_at}
-                representing={contact.representing}
-                stages={stages}
-                tags={tags}
-              />
-            ))}
-          </div>
-        )}
-
-        {thread.length === 0 ? (
-          <p className="py-10 text-center text-sm text-neutral-400">No calls or texts with {contact.first_name} yet.</p>
-        ) : (
-          thread.map((activity) =>
-            activity.type === "call" ? (
-              <CallLogEntry key={activity.id} activity={activity} />
-            ) : (
-              <ChatBubble key={activity.id} activity={activity} />
-            ),
-          )
-        )}
-        <ScrollToBottomOnLoad token={thread.at(-1)?.id} />
-      </div>
-
-      <ThreadComposer
-        key={contact.id}
-        contactId={contact.id}
-        phone={contact.phone}
-        firstName={contact.first_name}
-        lastName={contact.last_name}
-        textTemplates={textTemplates}
-        initialBody={draft || firstTouchBody}
+    <div className="lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-hidden lg:px-8 lg:pt-8 lg:pb-6">
+      <MessagesInbox
+        threads={toSmsInboxThreads(conversations)}
+        initialSeen={parseInboxSeen(cookieStore.get(INBOX_SEEN_COOKIE)?.value)}
+        filter={parseMessagesFilter(from)}
+        selected={contact.id}
+        openThread={openThread}
       />
     </div>
   );
