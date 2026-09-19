@@ -187,7 +187,7 @@ export default async function SettingsPage({
       {user && <PipelineStagesAndTags stages={stages} tags={tags} ownerId={user.id} stageCounts={stageCounts} />}
 
       {user && (
-        <Card>
+        <Card id="text-templates">
           <TextTemplatesManager templates={textTemplates} ownerId={user.id} />
         </Card>
       )}

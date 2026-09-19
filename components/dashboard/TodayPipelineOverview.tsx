@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TODAY_CARD } from "@/components/dashboard/today-home-layout";
 import type { PipelineStage } from "@/types/database";
@@ -50,12 +51,11 @@ export function TodayPipelineOverview({
   const hole = size === "desktop" ? "h-[108px] w-[108px]" : "h-[76px] w-[76px]";
 
   return (
-    <section
-      data-today-home="pipeline"
-      className={cn("h-full p-4 sm:p-5", TODAY_CARD, className)}
-    >
-      <p className="text-[13px] font-semibold text-neutral-800">Pipeline Overview</p>
-      <p className="mt-0.5 text-[12px] text-neutral-400">Largest stages — not the Contacts list, not Reports.</p>
+    <section data-today-home="pipeline" className={cn("h-full p-4 sm:p-5", TODAY_CARD, className)}>
+      <p className="flex items-center gap-2 text-[15px] font-semibold text-neutral-800">
+        <Clock size={16} strokeWidth={1.7} className="text-[#c45c4a]" />
+        Pipeline Overview
+      </p>
       <div className={cn("mt-3 flex items-center gap-5", size === "desktop" && "gap-8")}>
         <Link href="/pipeline" aria-label={`${total} in pipeline`} className="relative shrink-0">
           <div className={cn("rounded-full", donut)} style={{ background: gradient }} />
@@ -63,7 +63,7 @@ export function TodayPipelineOverview({
             <p className={cn("font-serif font-semibold leading-none text-neutral-900", size === "desktop" ? "text-[32px]" : "text-[22px]")}>
               {total}
             </p>
-            <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-neutral-400">Stages</p>
+            <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-neutral-400">Total</p>
           </div>
         </Link>
         <ul className="min-w-0 flex-1 space-y-2">
@@ -74,8 +74,8 @@ export function TodayPipelineOverview({
               <li key={slice.id}>
                 <Link href={`/pipeline?stage=${slice.id}`} className="flex items-center gap-2.5 text-[14px]">
                   <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: slice.color }} />
-                  <span className="w-6 shrink-0 font-semibold text-neutral-800">{slice.count}</span>
-                  <span className="min-w-0 truncate text-neutral-500">{slice.name}</span>
+                  <span className="min-w-0 flex-1 truncate text-neutral-600">{slice.name}</span>
+                  <span className="shrink-0 font-semibold text-neutral-800">{slice.count}</span>
                 </Link>
               </li>
             ))

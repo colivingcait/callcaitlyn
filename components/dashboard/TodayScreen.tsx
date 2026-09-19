@@ -78,7 +78,7 @@ export function TodayScreen({
             newLeadsError={today.newLeadsError}
           />
         ) : (
-          <TodayHome today={today} contacts={contacts} ownerFirstName={ownerFirstName} groups={groups} />
+          <TodayHome today={today} contacts={contacts} ownerFirstName={ownerFirstName} />
         )}
       </div>
 

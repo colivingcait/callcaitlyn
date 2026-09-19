@@ -67,7 +67,7 @@ export function TodayDesktop({
           newLeadsError={today.newLeadsError}
         />
       ) : (
-        <TodayHome today={today} contacts={contacts} ownerFirstName={ownerFirstName} groups={groups} wide />
+        <TodayHome today={today} contacts={contacts} ownerFirstName={ownerFirstName} wide />
       )}
     </div>
   );
