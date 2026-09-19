@@ -1,9 +1,10 @@
 // Pure string logic, no imports - same style as event-text-templates.ts.
 //
 // First-touch SMS for New/uncontacted. Caitlyn's locked copy, 2026-09-17:
-// five source-routed templates, {{first_name}} merged at compose.
+// source-routed templates, {{first_name}} merged at compose.
 // Eventbrite stores lead_source as the event *name* (see process-order.ts),
 // so routing also reads last_event_name, Meetup tags, and eventbrite_account.
+// Zillow / Facebook / leftover Eventbrite added for Today v1 (Nico mock).
 
 export type NewLeadSourceBucket =
   | "site_form"
@@ -15,11 +16,23 @@ export type NewLeadSourceBucket =
   | "checkin"
   | "house_hacking"
   | "quo"
+  | "zillow"
+  | "facebook"
+  | "eventbrite"
   | "other";
 
 export type NewLeadSourceInfo = { bucket: NewLeadSourceBucket; label: string };
 
-export type FirstTouchSource = "womens_rei" | "house_hacking" | "blinq" | "listing" | "webform" | "other";
+export type FirstTouchSource =
+  | "womens_rei"
+  | "house_hacking"
+  | "blinq"
+  | "listing"
+  | "webform"
+  | "zillow"
+  | "facebook"
+  | "eventbrite"
+  | "other";
 
 /** @deprecated use FirstTouchSource */
 export type FirstTouchMeetup = FirstTouchSource;
@@ -46,14 +59,40 @@ export const FIRST_TOUCH_LISTING =
 export const FIRST_TOUCH_WEBFORM =
   "Hi {{first_name}}, this is Caitlyn Verdugo with KW Metro Atlanta. Thanks for reaching out through my site — just wanted to introduce myself and see what you’re looking for! Any questions I can answer for you? 🙂";
 
-// Last resort only when none of the five sources match.
+// Nico mock (Today v1) — Zillow / Facebook / leftover Eventbrite. Meetup
+// Women's REI + House Hacking still win first so those locked openers stay.
+export const FIRST_TOUCH_ZILLOW =
+  "Hey {{first_name}} — Caitlyn here (KW Metro Atlanta). Saw you came through Zillow looking at Atlanta homes — want me to pull a few that match what you liked?";
+
+export const FIRST_TOUCH_FACEBOOK =
+  "Hey {{first_name}} — Caitlyn here (KW Metro Atlanta). Saw you came through Facebook — wanted to introduce myself and see how I can help with Atlanta homes!";
+
+export const FIRST_TOUCH_EVENTBRITE =
+  "Hi {{first_name}}, this is Caitlyn Verdugo. Thanks for registering — just wanted to introduce myself and welcome you! Any questions I can answer for you? 🙂";
+
+// Last resort only when none of the sources match.
 export const FIRST_TOUCH_FALLBACK = "Hi {{first_name}}, this is Caitlyn Verdugo…";
+
+export const FIRST_TOUCH_SOURCE_LABEL: Record<FirstTouchSource, string> = {
+  womens_rei: "Women's REI",
+  house_hacking: "House hacking",
+  blinq: "Blinq",
+  listing: "Listing",
+  webform: "Website",
+  zillow: "Zillow",
+  facebook: "Facebook",
+  eventbrite: "Eventbrite",
+  other: "New lead",
+};
 
 const WOMENS_TEXT = /women'?s?\s*(rei|r\.?e\.?i\.?|real estate|investors?)/i;
 const HOUSE_HACK_TEXT = /house\s*hack/i;
 const BLINQ_TEXT = /\bblinq\b/i;
 const LISTING_PAGE_TEXT = /^listing page\b/i;
 const CALLCAITLYN_WEBFORM_TEXT = /callcaitlyn\.com\b|^callcaitlyn\b/i;
+const ZILLOW_TEXT = /\bzillow\b/i;
+const FACEBOOK_TEXT = /\bfacebook\b|\bfb lead/i;
+const EVENTBRITE_TEXT = /\beventbrite\b/i;
 
 function blob(signals: FirstTouchSignals): string {
   return [signals.leadSource, signals.lastEventName].filter(Boolean).join("\n");
@@ -72,9 +111,13 @@ export function resolveFirstTouchSource(signals: FirstTouchSignals): FirstTouchS
   // Women's REI tag/account wins even when the event name mentions house
   // hacking (a real Eventbrite case — see process-order.ts).
   if (account === "womens_rei" || tags.has("women's rei") || tags.has("womens rei")) return "womens_rei";
-  if (WOMENS_TEXT.test(text)) return "womens_rei";
-
   if (account === "house_hacking" || tags.has("house hacking")) return "house_hacking";
+
+  // Explicit portal sources beat a leftover last_event_name on the record.
+  if (ZILLOW_TEXT.test(lead) || tags.has("zillow")) return "zillow";
+  if (FACEBOOK_TEXT.test(lead) || tags.has("facebook")) return "facebook";
+
+  if (WOMENS_TEXT.test(text)) return "womens_rei";
   if (HOUSE_HACK_TEXT.test(text)) return "house_hacking";
 
   if (tags.has("blinq") || BLINQ_TEXT.test(lead) || BLINQ_TEXT.test(text)) return "blinq";
@@ -85,6 +128,14 @@ export function resolveFirstTouchSource(signals: FirstTouchSignals): FirstTouchS
   if (LISTING_PAGE_TEXT.test(lead) || tags.has("investor lead")) return "listing";
 
   if (CALLCAITLYN_WEBFORM_TEXT.test(lead)) return "webform";
+
+  if (ZILLOW_TEXT.test(text)) return "zillow";
+  if (FACEBOOK_TEXT.test(text)) return "facebook";
+
+  // Generic Eventbrite only after the two meetup accounts/tags/names.
+  if (account || EVENTBRITE_TEXT.test(lead) || EVENTBRITE_TEXT.test(text) || tags.has("eventbrite") || signals.lastEventName?.trim()) {
+    return "eventbrite";
+  }
 
   return "other";
 }
@@ -122,9 +173,23 @@ export function firstTouchTemplate(signals: FirstTouchSignals): string {
       return FIRST_TOUCH_LISTING;
     case "webform":
       return FIRST_TOUCH_WEBFORM;
+    case "zillow":
+      return FIRST_TOUCH_ZILLOW;
+    case "facebook":
+      return FIRST_TOUCH_FACEBOOK;
+    case "eventbrite":
+      return FIRST_TOUCH_EVENTBRITE;
     default:
       return FIRST_TOUCH_FALLBACK;
   }
+}
+
+export function firstTouchSourceChipLabel(signals: FirstTouchSignals): string {
+  const source = resolveFirstTouchSource(signals);
+  if (source !== "other") return FIRST_TOUCH_SOURCE_LABEL[source];
+  const lead = signals.leadSource?.trim();
+  if (lead) return lead;
+  return FIRST_TOUCH_SOURCE_LABEL.other;
 }
 
 // First SMS compose (no outbound text yet) always gets a draft — matched
@@ -154,6 +219,9 @@ const PATTERNS: { test: RegExp; bucket: NewLeadSourceBucket; label: string }[] =
   { test: /walk-in|jotform/i, bucket: "checkin", label: "Event check-in" },
   { test: /house hacking site/i, bucket: "house_hacking", label: "House Hacking Site" },
   { test: /^quo /i, bucket: "quo", label: "Inbound call/text" },
+  { test: /zillow/i, bucket: "zillow", label: "Zillow" },
+  { test: /facebook/i, bucket: "facebook", label: "Facebook" },
+  { test: /eventbrite/i, bucket: "eventbrite", label: "Eventbrite" },
   { test: /coliving\s?cait|callcaitlyn|women'?s (coliving summit|investors)|granola/i, bucket: "site_form", label: "Site form" },
 ];
 

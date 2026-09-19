@@ -225,7 +225,19 @@ export type TodayCalendarItem = {
   startsAt: string;
   href: string;
   meta?: string;
+  registeredCount?: number;
 };
+
+async function registrantCountForEventbriteId(eventbriteEventId: string | null): Promise<number> {
+  if (!eventbriteEventId) return 0;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("activities")
+    .select("contact_id")
+    .eq("source", "eventbrite")
+    .contains("metadata", { event_id: eventbriteEventId });
+  return new Set((data ?? []).map((row) => row.contact_id as string)).size;
+}
 
 export async function getTodayData() {
   const supabase = await createClient();
@@ -248,14 +260,19 @@ export async function getTodayData() {
       supabase.from("events").select("id, name, series, starts_at, eventbrite_event_id").gte("starts_at", new Date().toISOString()).order("starts_at", { ascending: true }).limit(5),
     ]);
 
+  const crmEventRows = (upcomingEventRows ?? []).slice(0, 2);
+  const registrantCounts = await Promise.all(crmEventRows.map((e) => registrantCountForEventbriteId(e.eventbrite_event_id)));
+  const upcomingCrmEvents: TodayCalendarItem[] = crmEventRows.map((e, i) => ({
+    id: `event-${e.id}`,
+    title: e.name,
+    startsAt: e.starts_at as string,
+    href: e.eventbrite_event_id ? `/events/${e.series}:${e.eventbrite_event_id}` : "/events",
+    meta: e.series === "womens_rei" ? "Women's REI" : e.series === "house_hacking" ? "House hacking" : undefined,
+    registeredCount: registrantCounts[i] ?? 0,
+  }));
+
   const calendar: TodayCalendarItem[] = [
-    ...(upcomingEventRows ?? []).map((e) => ({
-      id: `event-${e.id}`,
-      title: e.name,
-      startsAt: e.starts_at as string,
-      href: e.eventbrite_event_id ? `/events/${e.series}:${e.eventbrite_event_id}` : "/events",
-      meta: e.series === "womens_rei" ? "Women's REI" : e.series === "house_hacking" ? "House hacking" : undefined,
-    })),
+    ...upcomingCrmEvents,
     ...upcomingMeetings
       .filter((m) => m.starts_at)
       .map((m) => ({
@@ -265,9 +282,7 @@ export async function getTodayData() {
         href: "/scheduling",
         meta: "Booked meeting",
       })),
-  ]
-    .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())
-    .slice(0, 5);
+  ].sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
 
   return {
     stages,
@@ -283,5 +298,6 @@ export async function getTodayData() {
     quietLeads,
     spamFilteredCount: spamConversations.length,
     calendar,
+    upcomingCrmEvents,
   };
 }
