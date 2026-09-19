@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   getSchedulingSettings,
   listPendingBookingRequests,
@@ -27,9 +28,9 @@ export default async function SchedulingPage() {
       <h1 className="font-serif text-2xl font-semibold text-neutral-900 sm:text-[28px]">Bookings</h1>
       <p className="mt-1 text-[15px] text-neutral-500">
         History and settings. New call requests wait in{" "}
-        <a href="/" className="font-medium text-brand-700 hover:underline">
+        <Link href="/" className="font-medium text-brand-700 hover:underline">
           Today → Needs you
-        </a>
+        </Link>
         , not only here.
       </p>
 
