@@ -65,10 +65,10 @@ async function runApplyCases() {
   assert.equal(applied.ok, true, "apply-with-listing-id must succeed");
   assert.equal(applied.listingId, CANDACE_ID, "writes must target listings.id UUID");
   assert.equal(applied.publicSlug, "candace");
-  assert.equal(applied.patch.band_gross_rent, "$5.0–5.5k/mo");
-  assert.equal(applied.patch.band_expense_load, "high-teens%");
-  assert.equal(applied.patch.band_cash_on_cash, "high-teens to low-20s%");
-  assert.equal(applied.patch.band_cap_rate, "low-10s%");
+  assert.equal(applied.patch.band_gross_rent, "~$5,500/mo");
+  assert.equal(applied.patch.band_expense_load, "~19%");
+  assert.equal(applied.patch.band_cash_on_cash, "~20%");
+  assert.equal(applied.patch.band_cap_rate, "~10%");
   assert.equal(applied.patch.padsplit_url, "https://www.padsplit.com/rooms-for-rent/listing/8299");
   const financials = applied.patch.financials as {
     noi?: string;
@@ -80,15 +80,18 @@ async function runApplyCases() {
     opex?: string;
     net_cash_flow?: string;
     buyer_workbook_filename?: string;
+    annual?: { gross_rents?: string };
   };
-  assert.equal(financials.noi, "41216.71");
-  assert.equal(financials.net_cash_flow, "15669.09");
+  assert.equal(financials.noi, "3434.73");
+  assert.equal(financials.net_cash_flow, "1305.76");
   assert.equal(Array.isArray(financials.t12) && financials.t12.length, 7);
   assert.equal(financials.deal_key, "candace");
   assert.equal(financials.padsplit_fees, "8178.18");
-  assert.equal(financials.gross_rents, "61483.07");
-  assert.equal(financials.net_earnings, "53304.89");
-  assert.equal(financials.opex, "12088.18");
+  assert.equal(financials.gross_rents, "5123.59");
+  assert.equal(financials.net_earnings, "4442.07");
+  assert.equal(financials.opex, "1007.35");
+  assert.equal(Array.isArray(applied.patch.improvements) && applied.patch.improvements.length, 7);
+  assert.equal(financials.annual?.gross_rents, "61483.07");
   assert.equal(financials.buyer_workbook_filename, "Candace_OM_Complete.xlsx");
   assert.equal(applied.patch.nickname, "Candace");
   assert.equal(applied.patch.submarket, "Atlanta metro");

@@ -8,6 +8,8 @@ import {
   GATED_REMOVED_FIELDS,
   GATED_UNDERWRITING_FIELDS,
   formatMonthlyAverage,
+  annualToMonthlyString,
+  GATED_MONTHLY_DOLLAR_FIELDS,
 } from "./gated-underwriting";
 import { SIDECAR_FIELD_MAP } from "./om-sidecar";
 
@@ -191,6 +193,12 @@ assert.equal(gate.includes("RESET DEMO"), false);
 
 const omPageGate = read("app/listing/[slug]/page.tsx");
 assert.ok(omPageGate.includes("improvements={listing.improvements}"));
+assert.ok(omPageGate.includes("formatPublicBand"));
+
+const marketingPage = read("app/(app)/listings/[id]/page.tsx");
+assert.equal(marketingPage.includes("ImprovementsEditor"), false, "Marketing must not edit CapEx");
+assert.equal(marketingPage.includes("Capital improvements"), false);
+assert.ok(marketingPage.includes("ApplyToOmPanel"));
 
 const hero = read("components/listings/om/PhotoCarousel.tsx");
 assert.ok(hero.includes("VIEW PHOTOS"));
@@ -206,16 +214,20 @@ assert.deepEqual(
   GATED_UNDERWRITING_FIELDS.map((f) => f.key),
   ["gross_rents", "net_earnings", "opex", "noi", "projected_debt_service", "net_cash_flow"],
 );
+assert.deepEqual([...GATED_MONTHLY_DOLLAR_FIELDS], GATED_UNDERWRITING_FIELDS.map((f) => f.key));
 assert.deepEqual(
   GATED_RATIO_FIELDS.map((f) => f.key),
   ["cash_on_cash", "cap_rate", "dscr"],
 );
-assert.equal(formatMonthlyAverage("61483.07"), "$5,124");
-assert.equal(formatMonthlyAverage("53304.89"), "$4,442");
-assert.equal(formatMonthlyAverage("12088.18"), "$1,007");
-assert.equal(formatMonthlyAverage("41216.71"), "$3,435");
-assert.equal(formatMonthlyAverage("25547.62"), "$2,129");
-assert.equal(formatMonthlyAverage("15669.09"), "$1,306");
+assert.equal(formatMonthlyAverage("5123.59"), "$5,124");
+assert.equal(formatMonthlyAverage("4442.07"), "$4,442");
+assert.equal(formatMonthlyAverage("1007.35"), "$1,007");
+assert.equal(formatMonthlyAverage("3434.73"), "$3,435");
+assert.equal(formatMonthlyAverage("2128.97"), "$2,129");
+assert.equal(formatMonthlyAverage("1305.76"), "$1,306");
+assert.equal(formatMonthlyAverage("61483.07"), "$61,483", "gated $ are already monthly — do not divide again");
+assert.equal(annualToMonthlyString("61483.07"), "5123.59");
+assert.equal(annualToMonthlyString("15669.09"), "1305.76");
 
 const unlockCtx = read("components/listings/om/UnlockContext.tsx");
 assert.ok(unlockCtx.includes("writeOmUnlock"));
@@ -229,6 +241,8 @@ assert.deepEqual(
 assert.deepEqual([...GATED_REMOVED_FIELDS], SIDECAR_FIELD_MAP.gated_removed);
 
 const editor = read("components/listings/FinancialsEditor.tsx");
+assert.ok(editor.includes("T12 monthly averages"));
+assert.equal(editor.includes("T12 annual totals"), false);
 for (const removed of GATED_REMOVED_FIELDS) {
   assert.equal(editor.includes(removed), false, `Marketing editor must not offer ${removed}`);
   assert.equal(gate.includes(removed), false, `Gated OM must not show ${removed}`);

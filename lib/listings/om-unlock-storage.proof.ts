@@ -36,8 +36,8 @@ assert.equal(parseOmUnlockPayload({ financials: { cap_rate: "10%" } }), null, "m
 
 const candaceFin = normalizeFinancials({
   purchase_price: "400000",
-  gross_rents: "61483.07",
-  opex: "12088.18",
+  gross_rents: "5123.59",
+  opex: "1007.35",
   cash_on_cash: "19.59",
   cap_rate: "10.30",
 } as never);
@@ -50,7 +50,7 @@ assert.equal(written.workbookUrl, "https://example.test/wb");
 
 const stored = store.get(omUnlockStorageKey("candace"));
 assert.ok(stored);
-assert.equal(parseOmUnlockPayload(stored)?.financials?.gross_rents, "61483.07");
+assert.equal(parseOmUnlockPayload(stored)?.financials?.gross_rents, "5123.59");
 
 clearOmUnlock("candace");
 store.set(
@@ -68,11 +68,11 @@ const t12Only = normalizeFinancials({
   cap_rate: 10.3,
   scenarios: [{ label: "base", coc: 19.59, cash_in: "80000", debt_service: "25547.62", cash_flow: "15669.09", dscr: 1.61 }],
 } as never);
-assert.equal(t12Only.gross_rents, "61483.07");
-assert.equal(t12Only.opex, "12088.18");
+assert.equal(t12Only.gross_rents, "5123.59");
+assert.equal(t12Only.opex, "1007.35");
 assert.equal(t12Only.net_earnings, "41216.71");
 assert.equal(t12Only.noi, "41216.71");
-assert.equal(t12Only.net_cash_flow, "15669.09");
+assert.equal(t12Only.net_cash_flow, "1305.76");
 assert.equal(t12Only.cash_on_cash, "19.59");
 assert.equal(t12Only.dscr, "1.61");
 assert.equal(gatedFinancialsHaveValues(t12Only), true);

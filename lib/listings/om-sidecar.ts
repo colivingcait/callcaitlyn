@@ -4,6 +4,7 @@ import { normalizeFinancials } from "@/lib/listings/crm-marketing-fields";
 import { padsplitListingUrlFromInput } from "@/lib/listings/padsplit-url";
 import { GATED_REMOVED_FIELDS, GATED_UNDERWRITING_FIELDS } from "@/lib/listings/gated-underwriting";
 import { parseListingOccupancy, parseRoomCount } from "@/lib/listings/occupancy";
+import { formatPublicBand } from "@/lib/listings/public-bands";
 
 export const OM_SIDECAR_SCHEMA_VERSION = 2;
 export const OM_SIDECAR_ACCEPTED_VERSIONS = [1, 2] as const;
@@ -96,7 +97,9 @@ const financialsSchema = z
     opex: optionalStringish,
     projected_debt_service: optionalStringish,
     net_cash_flow: optionalStringish,
+    net_cashflow: optionalStringish,
     cash_on_cash: optionalStringish,
+    annual: z.record(z.unknown()).optional(),
     scenarios: z.array(scenarioSchema).optional(),
   })
   .passthrough();
@@ -261,8 +264,9 @@ function mergeFinancials(existing: ListingFinancials | null | undefined, sidecar
     net_earnings: incoming.net_earnings ?? base.net_earnings ?? "",
     opex: incoming.opex ?? base.opex ?? "",
     projected_debt_service: incoming.projected_debt_service ?? base.projected_debt_service ?? "",
-    net_cash_flow: incoming.net_cash_flow ?? base.net_cash_flow ?? "",
+    net_cash_flow: incoming.net_cash_flow ?? incoming.net_cashflow ?? base.net_cash_flow ?? "",
     cash_on_cash: incoming.cash_on_cash ?? base.cash_on_cash ?? "",
+    annual: incoming.annual ?? base.annual,
     scenarios: Array.isArray(incoming.scenarios) ? incoming.scenarios : Array.isArray(base.scenarios) ? base.scenarios : [],
   } as ListingFinancials;
 
@@ -314,7 +318,7 @@ export function planOmSidecarApply(sidecar: OmSidecarV1, current: ListingOmSnaps
   ];
   for (const band of bandPairs) {
     if (band.incoming === undefined) continue;
-    const next = band.incoming || null;
+    const next = formatPublicBand(band.incoming);
     if (sameText(current[band.path], next)) continue;
     patch[band.path] = next;
     changes.push({

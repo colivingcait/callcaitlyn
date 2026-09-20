@@ -15,9 +15,10 @@ import { baseUrl } from "@/lib/crm/sequences";
 import { generateUniqueListingSlug } from "@/lib/listings/public-slug";
 import { LISTING_DOCUMENT_TYPES } from "@/lib/listings/documents";
 import { planOwnedOmSidecarApply, type OmApplyListingRow } from "@/lib/listings/om-apply";
+import { formatPublicBand } from "@/lib/listings/public-bands";
 import { phonesMatch } from "@/lib/phone";
 import { importablePadsplitPhotos } from "@/lib/listings/padsplit-photos";
-import type { ListingDocumentType, ListingFinancials, ListingImprovement, ListingPhotoSource, ListingStatus, PadsplitPhoto } from "@/types/database";
+import type { ListingDocumentType, ListingFinancials, ListingPhotoSource, ListingStatus, PadsplitPhoto } from "@/types/database";
 
 const PREVIEW_AGENT = { name: "Jamie Agent" };
 
@@ -677,10 +678,10 @@ export async function updateListingOmFields(
   if (input.laundry !== undefined) patch.laundry = input.laundry;
   if (input.furnishings !== undefined) patch.furnishings = input.furnishings;
   if (input.publicDescription !== undefined) patch.public_description = input.publicDescription;
-  if (input.bandGrossRent !== undefined) patch.band_gross_rent = input.bandGrossRent;
-  if (input.bandExpenseLoad !== undefined) patch.band_expense_load = input.bandExpenseLoad;
-  if (input.bandCashOnCash !== undefined) patch.band_cash_on_cash = input.bandCashOnCash;
-  if (input.bandCapRate !== undefined) patch.band_cap_rate = input.bandCapRate;
+  if (input.bandGrossRent !== undefined) patch.band_gross_rent = formatPublicBand(input.bandGrossRent);
+  if (input.bandExpenseLoad !== undefined) patch.band_expense_load = formatPublicBand(input.bandExpenseLoad);
+  if (input.bandCashOnCash !== undefined) patch.band_cash_on_cash = formatPublicBand(input.bandCashOnCash);
+  if (input.bandCapRate !== undefined) patch.band_cap_rate = formatPublicBand(input.bandCapRate);
   if (input.coAgentName !== undefined) patch.co_agent_name = input.coAgentName;
   if (input.coAgentBrokerage !== undefined) patch.co_agent_brokerage = input.coAgentBrokerage;
   if (input.coAgentPhone !== undefined) patch.co_agent_phone = input.coAgentPhone;
@@ -749,22 +750,6 @@ export async function updateListingFinancials(listingId: string, financials: Lis
   if (!user) return { ok: false, error: "Not signed in" };
 
   const { error } = await supabase.from("listings").update({ financials }).eq("id", listingId);
-  if (error) return { ok: false, error: error.message };
-
-  revalidatePath(`/listings/${listingId}`);
-  return { ok: true };
-}
-
-// Capital improvements are optional - an empty/null array hides the
-// section on the public page entirely rather than showing a blank block.
-export async function updateListingImprovements(listingId: string, improvements: ListingImprovement[] | null): Promise<ActionResult> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Not signed in" };
-
-  const { error } = await supabase.from("listings").update({ improvements }).eq("id", listingId);
   if (error) return { ok: false, error: error.message };
 
   revalidatePath(`/listings/${listingId}`);

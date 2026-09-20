@@ -19,7 +19,6 @@ import { DocumentUploader } from "@/components/listings/DocumentUploader";
 import { ApplyToOmPanel } from "@/components/listings/ApplyToOmPanel";
 import { OmDetailsForm } from "@/components/listings/OmDetailsForm";
 import { FinancialsEditor } from "@/components/listings/FinancialsEditor";
-import { ImprovementsEditor } from "@/components/listings/ImprovementsEditor";
 import { ListingPhotosPanel } from "@/components/listings/ListingPhotosPanel";
 import { baseUrl } from "@/lib/crm/sequences";
 import { MarketingGraphics } from "@/components/listings/MarketingGraphics";
@@ -223,9 +222,6 @@ export default async function ListingDetailPage({ params, searchParams }: { para
             <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
               <h2 className="mb-3 text-base font-semibold text-neutral-900">Gated underwriting detail</h2>
               <FinancialsEditor key={`fin-${listing.updated_at}`} listingId={listing.id} financials={listing.financials} />
-            </div>
-            <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
-              <ImprovementsEditor key={`imp-${listing.updated_at}`} listingId={listing.id} improvements={listing.improvements} />
             </div>
             <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
               <div className="mb-3 flex items-center justify-between">

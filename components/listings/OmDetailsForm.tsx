@@ -136,23 +136,24 @@ export function OmDetailsForm({ listing }: { listing: Listing }) {
       </div>
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-neutral-900">Public financial bands (deliberately imprecise)</h3>
+        <h3 className="mb-2 text-sm font-semibold text-neutral-900">Public financial bands (rounded tilde)</h3>
+        <p className="mb-2 text-xs text-neutral-500">Single rounded values with a tilde — not min–max ranges. Apply-to-OM fills these from Vera&apos;s sidecar.</p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className={labelClass}>Gross Rents</label>
-            <input value={bandGrossRent} onChange={(e) => setBandGrossRent(e.target.value)} className={inputClass} placeholder="$5.0–5.5k/mo" />
+            <input value={bandGrossRent} onChange={(e) => setBandGrossRent(e.target.value)} className={inputClass} placeholder="~$5,500/mo" />
           </div>
           <div>
             <label className={labelClass}>Operating Expenses</label>
-            <input value={bandExpenseLoad} onChange={(e) => setBandExpenseLoad(e.target.value)} className={inputClass} placeholder="high-teens%" />
+            <input value={bandExpenseLoad} onChange={(e) => setBandExpenseLoad(e.target.value)} className={inputClass} placeholder="~19%" />
           </div>
           <div>
             <label className={labelClass}>Cash-on-cash</label>
-            <input value={bandCashOnCash} onChange={(e) => setBandCashOnCash(e.target.value)} className={inputClass} placeholder="high-teens to low-20s%" />
+            <input value={bandCashOnCash} onChange={(e) => setBandCashOnCash(e.target.value)} className={inputClass} placeholder="~20%" />
           </div>
           <div>
             <label className={labelClass}>Cap rate</label>
-            <input value={bandCapRate} onChange={(e) => setBandCapRate(e.target.value)} className={inputClass} placeholder="low-10s%" />
+            <input value={bandCapRate} onChange={(e) => setBandCapRate(e.target.value)} className={inputClass} placeholder="~10%" />
           </div>
         </div>
       </div>

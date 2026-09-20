@@ -9,22 +9,31 @@
     "rooms": 8
   },
   "public_bands": {
-    "band_gross_rent": "$5.0\u20135.5k/mo",
-    "band_expense_load": "high-teens%",
-    "band_cash_on_cash": "high-teens to low-20s%",
-    "band_cap_rate": "low-10s%"
+    "band_gross_rent": "~$5,500/mo",
+    "band_expense_load": "~19%",
+    "band_cash_on_cash": "~20%",
+    "band_cap_rate": "~10%"
   },
   "financials": {
     "purchase_price": "400000",
-    "gross_rents": "61483.07",
+    "gross_rents": "5123.59",
     "padsplit_fees": "8178.18",
-    "net_earnings": "53304.89",
-    "opex": "12088.18",
-    "projected_debt_service": "25547.62",
+    "net_earnings": "4442.07",
+    "opex": "1007.35",
+    "projected_debt_service": "2128.97",
     "cash_on_cash": "19.59",
     "cap_rate": "10.30",
     "dscr": "1.61",
-    "noi": "41216.71",
+    "noi": "3434.73",
+    "net_cash_flow": "1305.76",
+    "annual": {
+      "gross_rents": "61483.07",
+      "net_earnings": "53304.89",
+      "opex": "12088.18",
+      "noi": "41216.71",
+      "projected_debt_service": "25547.62",
+      "net_cash_flow": "15669.09"
+    },
     "t12": [
       {
         "label": "Gross rents (collected)",
@@ -79,7 +88,15 @@
     "basis": "bed_night",
     "t12_occupancy_pct": 86.34
   },
-  "improvements": [],
+  "improvements": [
+    { "item": "Roof", "year": "", "cost": "" },
+    { "item": "HVAC", "year": "", "cost": "18000" },
+    { "item": "Kitchen", "year": "", "cost": "14000" },
+    { "item": "Bathrooms", "year": "", "cost": "12000" },
+    { "item": "Flooring", "year": "", "cost": "8000" },
+    { "item": "Electrical", "year": "", "cost": "5000" },
+    { "item": "Plumbing", "year": "", "cost": "4000" }
+  ],
   "documents": {
     "buyer_workbook": "Candace_OM_Complete.xlsx"
   },
@@ -88,8 +105,8 @@
     "gross_basis": "collected_only",
     "notes": [
       "PadSplit house id 8299 (from export Property ID).",
-      "Public bands are imprecise Candace-derived ranges (not the generic 30%+ / 13\u201315% style examples).",
-      "Gated UI fields per Marketing SoT: monthly T12 gross_rents, net_earnings, opex, noi, projected_debt_service, net_cash_flow. Ratios (cash_on_cash, cap_rate, dscr) are cards. purchase_price stays available but is not a gated row.",
+      "Public bands are rounded tilde strings (not min\u2013max ranges).",
+      "Gated flat $ fields are T12 monthly (annual\u00f712). Annual totals stay on financials.annual + the workbook. Ratios (cash_on_cash, cap_rate, dscr) are cards. purchase_price is not monthlyized.",
       "platform fees \u2260 PM; PM rolled into opex total for gated display.",
       "Sep 2026 in-flight; Aug\u2013Sep opex thin."
     ]
