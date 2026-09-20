@@ -11,7 +11,8 @@ import { upsertActivity } from "@/lib/crm/activities";
 import { recordEventAttendance } from "@/lib/crm/events";
 import { sendCheckinRecapEmail } from "@/lib/checkin/send-recap-email";
 import { SERIES_TAG, SERIES_LABEL } from "@/lib/checkin/process-checkin";
-import { APP_TIMEZONE } from "@/lib/format-time";
+import { APP_TIMEZONE, dateInputToAppIso } from "@/lib/format-time";
+import { encodeFollowUpDescription, FOLLOWUP_NOTES_MAX } from "@/lib/crm/event-followup";
 import type { EventSeriesKey } from "@/lib/crm/nearest-event";
 
 // A real events-table row (see migration 0068) - what the Next up prep
@@ -530,4 +531,61 @@ export async function importEventbriteOrdersCsv(csvText: string, account: EventS
     skipped,
     failed,
   };
+}
+
+export async function createEventFollowUpTask(input: {
+  eventKey: string;
+  eventLabel: string;
+  title: string;
+  notes: string;
+  dueAt: string;
+  audience: "all" | "checked_in" | "no_show" | "registered" | "first_timers";
+  contactIds: string[];
+  showOnToday?: boolean;
+  actionText?: boolean;
+  actionDoNext?: boolean;
+}): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const title = input.title.trim();
+  if (!title) return { ok: false as const, error: "Name this follow-up" };
+  const contactIds = [...new Set(input.contactIds.filter(Boolean))];
+  if (contactIds.length === 0) return { ok: false as const, error: "Pick at least one person for this follow-up" };
+
+  const notes = input.notes.trim().slice(0, FOLLOWUP_NOTES_MAX);
+  const dueAt = input.dueAt ? dateInputToAppIso(input.dueAt) : null;
+  const description = encodeFollowUpDescription(notes, {
+    v: 1,
+    kind: "event_followup",
+    eventKey: input.eventKey,
+    eventLabel: input.eventLabel,
+    audience: input.audience,
+    contactIds,
+    showOnToday: input.showOnToday !== false,
+    actionText: input.actionText !== false,
+    actionDoNext: input.actionDoNext !== false,
+  });
+
+  const { data, error } = await supabase
+    .from("tasks")
+    .insert({
+      owner_id: user.id,
+      contact_id: null,
+      title,
+      description,
+      due_at: dueAt,
+      priority: "high",
+    })
+    .select("id")
+    .single();
+  if (error || !data) return { ok: false as const, error: error?.message ?? "Couldn't save the follow-up task" };
+
+  revalidatePath("/events");
+  revalidatePath(`/events/${encodeURIComponent(input.eventKey)}`);
+  revalidatePath("/");
+  return { ok: true as const, id: data.id as string };
 }

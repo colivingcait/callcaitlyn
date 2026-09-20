@@ -11,6 +11,7 @@ import { isTodayWorkContact } from "@/lib/crm/today-eligible";
 import { listConversations } from "@/lib/data/messages";
 import { getEventsData, upcomingEventsFromData, type EventEntry } from "@/lib/data/events";
 import { eventCadenceDues, upcomingEventRows, type EventCadenceDue, type EventCadenceInput } from "@/lib/crm/today-v1";
+import { followUpAudienceLabel, parseFollowUpMeta, type EventFollowUpAudience } from "@/lib/crm/event-followup";
 import type { PipelineStage } from "@/types/database";
 
 export type WorklistPerson = {
@@ -85,13 +86,18 @@ export type WorklistTask = {
   contactName: string | null;
   phone: string | null;
   late: boolean;
+  isEventFollowUp?: boolean;
+  eventKey?: string | null;
+  followUpAudience?: EventFollowUpAudience | null;
+  followUpAudienceLabel?: string | null;
+  followUpTextHref?: string | null;
 };
 
 async function getMyTasksGroup(): Promise<WorklistTask[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("tasks")
-    .select("id, title, due_at, contact_id, contacts(first_name, last_name, phone)")
+    .select("id, title, description, due_at, contact_id, contacts(first_name, last_name, phone)")
     .is("completed_at", null)
     .order("due_at", { ascending: true, nullsFirst: false })
     .limit(30);
@@ -99,6 +105,8 @@ async function getMyTasksGroup(): Promise<WorklistTask[]> {
   return (data ?? []).map((t) => {
     const contact = t.contacts as unknown as { first_name: string; last_name: string; phone: string | null } | null;
     const late = t.due_at ? isPast(new Date(t.due_at)) && !isTodayLocal(t.due_at) : false;
+    const followUp = parseFollowUpMeta(typeof t.description === "string" ? t.description : null);
+    const showFollowUp = Boolean(followUp && followUp.showOnToday !== false && followUp.actionText !== false);
     return {
       id: t.id,
       title: t.title,
@@ -107,6 +115,14 @@ async function getMyTasksGroup(): Promise<WorklistTask[]> {
       contactName: contact ? `${contact.first_name} ${contact.last_name}`.trim() : null,
       phone: contact?.phone ?? null,
       late,
+      isEventFollowUp: Boolean(followUp),
+      eventKey: followUp?.eventKey ?? null,
+      followUpAudience: followUp?.audience ?? null,
+      followUpAudienceLabel: followUp ? followUpAudienceLabel(followUp.audience, followUp.contactIds.length) : null,
+      followUpTextHref:
+        showFollowUp && followUp
+          ? `/events/${encodeURIComponent(followUp.eventKey)}?textNext=1&audience=${encodeURIComponent(followUp.audience)}`
+          : null,
     };
   });
 }

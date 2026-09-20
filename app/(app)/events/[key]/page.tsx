@@ -10,6 +10,8 @@ import { CheckInLive } from "@/components/events/CheckInLive";
 import { SendsTab } from "@/components/events/SendsTab";
 import { InsightsTab } from "@/components/events/InsightsTab";
 import { EventCadencePanel } from "@/components/events/EventCadencePanel";
+import { getOpenEventFollowUp } from "@/lib/data/event-followup";
+import { parseFollowUpAudienceParam } from "@/lib/crm/event-followup";
 import { cn } from "@/lib/utils";
 
 type Tab = "roster" | "cadence" | "sends" | "insights";
@@ -19,21 +21,24 @@ export default async function EventDetailPage({
   searchParams,
 }: {
   params: Promise<{ key: string }>;
-  searchParams: Promise<{ tab?: string; textNext?: string }>;
+  searchParams: Promise<{ tab?: string; textNext?: string; audience?: string; followUp?: string }>;
 }) {
   const { key } = await params;
-  const { tab, textNext } = await searchParams;
+  const { tab, textNext, audience, followUp } = await searchParams;
   const activeTab: Tab = tab === "sends" ? "sends" : tab === "insights" ? "insights" : tab === "cadence" ? "cadence" : "roster";
   const startTextNext = textNext === "1" || textNext === "true";
+  const startFollowUp = followUp === "1" || followUp === "true";
+  const textNextAudience = parseFollowUpAudienceParam(audience);
 
   const { events } = await getEventsData();
   const event = events.find((e) => e.key === decodeURIComponent(key));
   if (!event) notFound();
 
-  const [eventsReport, blasts, lastActivityLabels] = await Promise.all([
+  const [eventsReport, blasts, lastActivityLabels, existingFollowUp] = await Promise.all([
     activeTab === "insights" ? getEventsReport() : null,
     activeTab === "sends" ? getTextBlastsForEvent(event.label) : Promise.resolve([]),
     getLastActivityLabels(event.people.map((person) => person.contactId)),
+    activeTab === "roster" ? getOpenEventFollowUp(event.key) : Promise.resolve(null),
   ]);
 
   const showRate = event.hasEnded && event.counts.registered > 0 ? Math.round((event.counts.attended / event.counts.registered) * 100) : null;
@@ -95,7 +100,14 @@ export default async function EventDetailPage({
                 <CheckInLive event={event} />
               </div>
             )}
-            <RosterView event={event} lastActivityLabels={Object.fromEntries(lastActivityLabels)} startTextNext={startTextNext} />
+            <RosterView
+              event={event}
+              lastActivityLabels={Object.fromEntries(lastActivityLabels)}
+              startTextNext={startTextNext}
+              startFollowUp={startFollowUp}
+              textNextAudience={textNextAudience}
+              existingFollowUp={existingFollowUp}
+            />
           </>
         )}
         {activeTab === "cadence" && <EventCadencePanel event={event} />}

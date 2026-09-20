@@ -8,15 +8,17 @@ export function MessageRegistrantsModal({
   eventKey,
   eventLabel,
   contactIds,
+  audience,
   onClose,
 }: {
   eventKey: string;
   eventLabel: string;
   contactIds: string[];
+  audience?: string | null;
   onClose: () => void;
 }) {
   const count = contactIds.length;
-  const textNextHref = `/events/${encodeURIComponent(eventKey)}?textNext=1`;
+  const textNextHref = `/events/${encodeURIComponent(eventKey)}?textNext=1${audience ? `&audience=${encodeURIComponent(audience)}` : ""}`;
   const campaignsHref = campaignsBlastHref(contactIds);
 
   return (
