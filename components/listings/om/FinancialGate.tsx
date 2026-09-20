@@ -3,7 +3,12 @@
 import { useState } from "react";
 import { unlockListingFinancials } from "@/app/listing/[slug]/actions";
 import { useUnlocked } from "./UnlockContext";
-import { GATED_UNDERWRITING_FIELDS, gatedFinancialsHaveValues } from "@/lib/listings/gated-underwriting";
+import {
+  GATED_RATIO_FIELDS,
+  GATED_UNDERWRITING_FIELDS,
+  formatMonthlyAverage,
+  gatedFinancialsHaveValues,
+} from "@/lib/listings/gated-underwriting";
 import { asListingFinancials, normalizeFinancials } from "@/lib/listings/crm-marketing-fields";
 import { writeOmUnlock } from "@/lib/listings/om-unlock-storage";
 
@@ -12,7 +17,7 @@ import { writeOmUnlock } from "@/lib/listings/om-unlock-storage";
 // contains the real figures.
 const TEASER_ROWS = GATED_UNDERWRITING_FIELDS.map((field) => ({
   label: field.label,
-  value: field.key === "dscr" || field.key === "cap_rate" || field.key === "cash_on_cash" ? "XX.X%" : "$XX,XXX",
+  value: "$X,XXX",
 }));
 
 const labelStyle: React.CSSProperties = { display: "block", fontSize: 12, fontWeight: 500, letterSpacing: "0.14em", color: "#a39a8e" };
@@ -27,6 +32,12 @@ const inputStyle: React.CSSProperties = {
   fontSize: 15,
   color: "#f4f1ec",
 };
+
+function scrollToFinancials() {
+  const el = document.getElementById("financials");
+  if (!el) return;
+  window.scrollTo({ top: window.scrollY + el.getBoundingClientRect().top - 80 });
+}
 
 export function FinancialGate({ slug, omNumber }: { slug: string; omNumber: string }) {
   const { unlocked, financials, workbookUrl, applyUnlock } = useUnlocked();
@@ -58,6 +69,7 @@ export function FinancialGate({ slug, omNumber }: { slug: string; omNumber: stri
     };
     writeOmUnlock(slug, next);
     applyUnlock(next);
+    requestAnimationFrame(scrollToFinancials);
   }
 
   if (!unlocked) {
@@ -68,7 +80,12 @@ export function FinancialGate({ slug, omNumber }: { slug: string; omNumber: stri
             {TEASER_ROWS.map((row, i) => (
               <div
                 key={row.label}
-                style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", borderBottom: i < TEASER_ROWS.length - 1 ? "1px solid #e6e0d7" : undefined }}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  padding: "11px 0",
+                  borderBottom: i < TEASER_ROWS.length - 1 ? "1px solid #e6e0d7" : undefined,
+                }}
               >
                 <span style={{ fontSize: 14 }}>{row.label}</span>
                 <span style={{ fontSize: 14, fontWeight: 600 }}>{row.value}</span>
@@ -89,7 +106,7 @@ export function FinancialGate({ slug, omNumber }: { slug: string; omNumber: stri
             <div style={{ textAlign: "center", maxWidth: "42ch" }}>
               <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.2em", color: "#a33a29" }}>LINE-ITEM DETAIL LOCKED</p>
               <p style={{ margin: "12px 0 0", fontFamily: "var(--font-om-serif)", fontSize: 23, lineHeight: 1.3, color: "#211c19" }}>
-                Purchase price, rents, fees, and the buyer workbook open on this page.
+                Monthly rents, expenses, debt service, and the buyer workbook open on this page.
               </p>
             </div>
           </div>
@@ -100,8 +117,8 @@ export function FinancialGate({ slug, omNumber }: { slug: string; omNumber: stri
             <div style={{ maxWidth: "46ch" }}>
               <p style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontSize: 22, color: "#f4f1ec" }}>Open the numbers</p>
               <p style={{ margin: "8px 0 0", fontSize: 14, lineHeight: 1.65, color: "#cdc4ba" }}>
-                Detail unlocks here instantly — no inbox trip. Vera&apos;s buyer workbook is also texted and emailed to you, so use real contact info if you
-                want the source file.
+                Detail unlocks right here — no inbox trip, no waiting on a reply. Figures are monthly averages across the trailing twelve months; the
+                workbook has it month by month.
               </p>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 380 }}>
@@ -133,6 +150,7 @@ export function FinancialGate({ slug, omNumber }: { slug: string; omNumber: stri
                   letterSpacing: "0.12em",
                   color: "#fff",
                   cursor: "pointer",
+                  whiteSpace: "nowrap",
                 }}
               >
                 {submitting ? "UNLOCKING…" : "UNLOCK THE DETAIL"}
@@ -145,37 +163,64 @@ export function FinancialGate({ slug, omNumber }: { slug: string; omNumber: stri
   }
 
   const hasGated = gatedFinancialsHaveValues(financials);
+  const ratioCards = GATED_RATIO_FIELDS.filter((field) => Boolean(financials?.[field.key]));
+  const monthlyRows = GATED_UNDERWRITING_FIELDS.filter((field) => Boolean(financials?.[field.key]));
 
   if (!hasGated && !workbookUrl) {
     return (
-      <div style={{ marginTop: 32 }}>
+      <div style={{ marginTop: 32 }} aria-live="polite">
         <p style={{ margin: 0, fontSize: 14, lineHeight: 1.7, color: "#574f47", maxWidth: "62ch" }}>
-          Unlocked — and Caitlyn has your info. Line-item underwriting isn&apos;t published on this listing yet, so the buyer workbook will come by text and
-          email instead of on this page.
+          Unlocked — and Caitlyn has your info. Line-item underwriting isn&apos;t published on this listing yet.
         </p>
       </div>
     );
   }
 
   return (
-    <div style={{ marginTop: 32 }}>
+    <div style={{ marginTop: 32 }} aria-live="polite">
       <div style={{ display: "flex", alignItems: "center", gap: 10, border: "1px solid #a33a29", background: "#fdf3f2", padding: "13px 18px" }}>
         <span style={{ width: 6, height: 6, borderRadius: 999, background: "#cc4a37" }} />
-        <p style={{ margin: 0, fontSize: 13, color: "#8a2c1e" }}>Unlocked. Vera&apos;s buyer workbook is also on its way by text and email.</p>
+        <p style={{ margin: 0, fontSize: 13, color: "#8a2c1e" }}>Unlocked. The line items and the buyer workbook are below.</p>
       </div>
 
-      {hasGated && financials && (
-        <div style={{ marginTop: 22, borderTop: "1px solid #211c19" }}>
-          {GATED_UNDERWRITING_FIELDS.filter((field) => Boolean(financials[field.key])).map((field, i, arr) => (
-            <div
-              key={field.key}
-              style={{ display: "flex", justifyContent: "space-between", gap: 18, alignItems: "baseline", padding: "12px 0", borderBottom: i < arr.length - 1 ? "1px solid #e6e0d7" : undefined }}
-            >
-              <span style={{ fontSize: 14, color: "#2e2823" }}>{field.label}</span>
-              <span style={{ fontWeight: 500, fontSize: 17, color: "#211c19" }}>{financials[field.key]}</span>
+      {ratioCards.length > 0 && financials && (
+        <div className="om-fin-ratios" style={{ marginTop: 26, display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 14 }}>
+          {ratioCards.map((field) => (
+            <div key={field.key} style={{ background: "#fffdfa", border: "1px solid #e4ddd2", borderTop: "2px solid #cc4a37", padding: "18px 18px 20px" }}>
+              <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.14em", color: "#6b6259" }}>{field.omLabel}</p>
+              <p style={{ margin: "12px 0 0", fontFamily: "var(--font-om-serif)", fontSize: 34, lineHeight: 1, color: "#211c19" }}>{financials[field.key]}</p>
             </div>
           ))}
         </div>
+      )}
+
+      {monthlyRows.length > 0 && financials && (
+        <>
+          <p style={{ margin: "26px 0 0", fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#6b6259" }}>MONTHLY AVERAGE · TRAILING TWELVE MONTHS</p>
+          <div style={{ marginTop: 14, background: "#fffdfa", border: "1px solid #e4ddd2" }}>
+            {monthlyRows.map((field, i) => (
+              <div
+                key={field.key}
+                style={{
+                  display: "flex",
+                  alignItems: "baseline",
+                  justifyContent: "space-between",
+                  gap: 20,
+                  padding: "15px 20px",
+                  borderBottom: i < monthlyRows.length - 1 ? "1px solid #ece5da" : undefined,
+                }}
+              >
+                <span style={{ fontSize: 15, lineHeight: 1.4, color: "#574f47" }}>{field.label}</span>
+                <span style={{ fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 22, lineHeight: 1, color: "#211c19", whiteSpace: "nowrap" }}>
+                  {formatMonthlyAverage(financials[field.key], { signed: field.key === "net_cash_flow" })}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p style={{ margin: "14px 0 0", fontSize: 13, lineHeight: 1.65, color: "#574f47", maxWidth: "62ch" }}>
+            Every figure above is a monthly average across the trailing twelve months. Month-by-month detail is in the buyer workbook.
+          </p>
+        </>
       )}
 
       {workbookUrl && (
@@ -185,7 +230,7 @@ export function FinancialGate({ slug, omNumber }: { slug: string; omNumber: stri
           <div style={{ flex: "1 1 260px", minWidth: 0 }}>
             <p style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 21, color: "#f4f1ec" }}>Download the full workbook</p>
             <p style={{ margin: "8px 0 0", fontSize: 14, lineHeight: 1.65, color: "#cdc4ba" }}>
-              Vera&apos;s buyer workbook — the same file emailed and texted after unlock.
+              Rent roll, T12, and the scenario tabs behind these numbers.
             </p>
           </div>
           <a
@@ -193,7 +238,18 @@ export function FinancialGate({ slug, omNumber }: { slug: string; omNumber: stri
             target="_blank"
             rel="noopener noreferrer"
             className="om-hover-fill-border"
-            style={{ flex: "0 0 auto", border: "1px solid #cc4a37", background: "#cc4a37", padding: "15px 28px", fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: "#fff", textDecoration: "none" }}
+            style={{
+              flex: "0 0 auto",
+              border: "1px solid #cc4a37",
+              background: "#cc4a37",
+              padding: "15px 28px",
+              fontSize: 12,
+              fontWeight: 600,
+              letterSpacing: "0.12em",
+              color: "#fff",
+              textDecoration: "none",
+              whiteSpace: "nowrap",
+            }}
           >
             DOWNLOAD WORKBOOK
           </a>

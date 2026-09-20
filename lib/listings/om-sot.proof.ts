@@ -3,11 +3,16 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { extractPadsplitListingId, padsplitListingUrlFromInput, PADSPLIT_LISTING_URL_BASE } from "./padsplit-url";
 import { isExteriorPadsplitPhoto, interiorPhotos, listingCoverPhotoUrl } from "./padsplit-photos";
-import { GATED_REMOVED_FIELDS, GATED_UNDERWRITING_FIELDS } from "./gated-underwriting";
+import {
+  GATED_RATIO_FIELDS,
+  GATED_REMOVED_FIELDS,
+  GATED_UNDERWRITING_FIELDS,
+  formatMonthlyAverage,
+} from "./gated-underwriting";
 import { SIDECAR_FIELD_MAP } from "./om-sidecar";
 
 // Locked Marketing/OM SoT: PadSplit ID, exterior photo skip, workbook-only
-// upload, no Process card, gated underwriting list. Run with:
+// upload, process 4-up, monthly gated underwriting. Run with:
 //   npx tsx lib/listings/om-sot.proof.ts
 
 const root = process.cwd();
@@ -60,9 +65,12 @@ assert.ok(scrape.includes("interiorUrls"));
 
 const omPage = read("app/listing/[slug]/page.tsx");
 assert.equal(omPage.includes("Process & timeline"), false);
-assert.equal(omPage.includes("Process"), false);
-assert.equal(omPage.includes('id="process"'), false);
-assert.equal(omPage.includes("om-process"), false);
+assert.ok(omPage.includes('id="process"'));
+assert.ok(omPage.includes("om-process"));
+assert.ok(omPage.includes("The process"));
+assert.ok(omPage.includes("Review the offering"));
+assert.ok(omPage.includes("See it in person during DD"));
+assert.equal(omPage.includes("listing.address"), false, "public OM must never render the street address");
 assert.equal(omPage.includes("dd_days"), false);
 assert.equal(omPage.includes("seller_support"), false);
 assert.equal(omPage.includes("finiteDays"), false);
@@ -70,34 +78,79 @@ assert.ok(omPage.includes("GROSS RENTS"));
 assert.ok(omPage.includes("OPERATING EXPENSES"));
 assert.ok(omPage.includes("CASH-ON-CASH"));
 assert.ok(omPage.includes("CAP RATE"));
-assert.ok(omPage.includes("om-fin-overview"), "financial overview must use the 2×2 class, not auto-fit");
-assert.equal(omPage.includes('cellGridStyle("repeat(auto-fit, minmax(min(200px, 100%), 1fr))")'), false);
+assert.ok(omPage.includes("om-fin"), "financial overview uses card grid, not auto-fit");
+assert.equal(omPage.includes("om-fin-overview"), false);
+assert.equal(
+  /className="om-body"[^>]*alignItems:\s*"start"/.test(omPage),
+  false,
+  "body grid must stretch so the sticky rail can pin",
+);
+assert.ok(omPage.includes('alignSelf: "stretch"'));
 assert.ok(omPage.includes("UnlockedProvider slug={slug}"));
+assert.ok(omPage.includes("PhotoCarousel"));
+assert.ok(omPage.includes("VIEW PHOTOS") === false, "VIEW PHOTOS lives on the hero client, not the server page");
 
 const omCss = read("app/listing/om.css");
-assert.equal(omCss.includes("#process"), false);
-assert.equal(omCss.includes("om-process"), false);
-assert.ok(omCss.includes(".om-fin-overview"));
+assert.ok(omCss.includes("#process"));
+assert.ok(omCss.includes("om-process"));
+assert.ok(omCss.includes(".om-fin"));
 assert.ok(omCss.includes("repeat(2, minmax(0, 1fr))"));
+assert.equal(omCss.includes("min-width: 520px"), false, "TTM chart must not clip inside the 492px column");
 
 const publicCopy = read("lib/listings/public-copy.ts");
 assert.equal(publicCopy.includes("finiteDays"), false);
 assert.equal(publicCopy.includes("due-diligence"), false);
 
 const nav = read("components/listings/om/OmHeaderNav.tsx");
-assert.equal(nav.includes("#process"), false);
-assert.equal(nav.includes("PROCESS"), false);
+assert.ok(nav.includes("#process"));
+assert.ok(nav.includes("PROCESS"));
+assert.ok(nav.includes("#occupancy"));
+assert.ok(nav.indexOf("#property") < nav.indexOf("#occupancy"));
+assert.ok(nav.indexOf("#occupancy") < nav.indexOf("#financials"));
+assert.ok(nav.includes("SUBMIT AN OFFER"));
+assert.ok(nav.includes("UNLOCK FINANCIALS"));
 
 const gate = read("components/listings/om/FinancialGate.tsx");
 assert.ok(gate.includes("GATED_UNDERWRITING_FIELDS"));
+assert.ok(gate.includes("GATED_RATIO_FIELDS"));
+assert.ok(gate.includes("formatMonthlyAverage"));
 assert.ok(gate.includes("workbookUrl"));
 assert.ok(gate.includes("writeOmUnlock"));
 assert.ok(gate.includes("applyUnlock"));
+assert.ok(gate.includes("scrollToFinancials") || gate.includes("getElementById(\"financials\")"));
 assert.equal(gate.includes("setUnlocked(true)"), false, "unlock must persist payload, not flip a boolean alone");
 assert.equal(gate.includes("Financing scenarios"), false);
 assert.equal(gate.includes("financials.t12"), false);
 assert.equal(gate.includes("PM fees"), false);
 assert.equal(gate.includes("Occupancy summary"), false);
+assert.equal(gate.includes("texted and emailed"), false);
+assert.ok(gate.includes("no inbox trip, no waiting on a reply"));
+assert.ok(gate.includes("MONTHLY AVERAGE · TRAILING TWELVE MONTHS"));
+assert.equal(gate.includes("RESET DEMO"), false);
+
+const hero = read("components/listings/om/PhotoCarousel.tsx");
+assert.ok(hero.includes("VIEW PHOTOS"));
+assert.ok(hero.includes("photoMode"));
+assert.ok(hero.includes("Escape"));
+assert.ok(hero.includes("ArrowLeft"));
+assert.ok(hero.includes("om-thumbs"));
+assert.ok(hero.includes("rgba(33,28,25,0.97)"));
+assert.equal(hero.includes("photo.alt"), false, "scrape alt can carry a street address");
+
+assert.deepEqual(
+  GATED_UNDERWRITING_FIELDS.map((f) => f.key),
+  ["gross_rents", "net_earnings", "opex", "noi", "projected_debt_service", "net_cash_flow"],
+);
+assert.deepEqual(
+  GATED_RATIO_FIELDS.map((f) => f.key),
+  ["cash_on_cash", "cap_rate", "dscr"],
+);
+assert.equal(formatMonthlyAverage("61483.07"), "$5,124");
+assert.equal(formatMonthlyAverage("53304.89"), "$4,442");
+assert.equal(formatMonthlyAverage("12088.18"), "$1,007");
+assert.equal(formatMonthlyAverage("41216.71"), "$3,435");
+assert.equal(formatMonthlyAverage("25547.62"), "$2,129");
+assert.equal(formatMonthlyAverage("15669.09"), "$1,306");
 
 const unlockCtx = read("components/listings/om/UnlockContext.tsx");
 assert.ok(unlockCtx.includes("writeOmUnlock"));

@@ -71,6 +71,8 @@ const t12Only = normalizeFinancials({
 assert.equal(t12Only.gross_rents, "61483.07");
 assert.equal(t12Only.opex, "12088.18");
 assert.equal(t12Only.net_earnings, "41216.71");
+assert.equal(t12Only.noi, "41216.71");
+assert.equal(t12Only.net_cash_flow, "15669.09");
 assert.equal(t12Only.cash_on_cash, "19.59");
 assert.equal(t12Only.dscr, "1.61");
 assert.equal(gatedFinancialsHaveValues(t12Only), true);

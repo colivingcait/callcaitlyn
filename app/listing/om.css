@@ -50,6 +50,7 @@
 .om-wrap,
 .om-hero,
 .om-stats,
+.om-stats-wrap,
 main {
   min-width: 0;
 }
@@ -57,19 +58,31 @@ main {
 #financials,
 #unlock,
 #occupancy,
+#process,
 #offer,
 #seller {
   scroll-margin-top: 80px;
 }
 
-/* Financial overview is always 2×2 so Cap Rate cannot hang under a 3-up
-   auto-fit row. Property detail keeps auto-fit; this class is overview-only. */
-.om-fin-overview {
+.om-fin {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
 }
-.om-fin-overview > div {
+.om-fin > div,
+.om-fin-ratios > div,
+.om-cells > div,
+.om-process > div {
   min-width: 0;
+}
+.om-thumbs {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .om-header-menu,
 .om-header-drawer {
@@ -100,7 +113,7 @@ main {
   .om-header-drawer {
     display: flex !important;
   }
-  .om-hero,
+  .om-gutter,
   .om-wrap {
     padding-left: 16px !important;
     padding-right: 16px !important;
@@ -113,7 +126,7 @@ main {
     gap: 36px !important;
     padding-top: 36px !important;
   }
-  .om-aside {
+  .om-aside-sticky {
     position: static !important;
     top: auto !important;
   }
@@ -125,28 +138,32 @@ main {
     padding-right: 0 !important;
     border-right: none !important;
   }
-  .om-occupancy-chart {
-    overflow-x: auto;
-    max-width: 100%;
-    -webkit-overflow-scrolling: touch;
+  .om-h1 {
+    font-size: 40px !important;
   }
-  .om-occupancy-chart-inner {
-    min-width: 520px;
-    height: 132px;
+  .om-process {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
   .om-section-head h2 {
     font-size: 26px !important;
   }
-  .om-cells > div {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    border-right: none !important;
-  }
-  .om-fin-overview > div {
-    padding: 20px 12px 22px !important;
-  }
   .om-capex-row {
     grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+}
+
+@media (max-width: 759px) {
+  .om-wrap {
+    padding-bottom: 130px !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .om-process,
+  .om-cells,
+  .om-fin,
+  .om-fin-ratios {
+    grid-template-columns: minmax(0, 1fr) !important;
   }
 }
 
@@ -160,6 +177,19 @@ main {
   }
   [data-om-printonly] {
     display: block !important;
+  }
+  .om-hero {
+    background: #211c19 !important;
+    background-image: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+  .om-hero-scrim {
+    display: none !important;
+  }
+  .om-hero-chrome {
+    position: relative !important;
+    padding: 24px 0 28px !important;
   }
   section {
     break-inside: avoid;

@@ -93,6 +93,7 @@ const financialsSchema = z
     net_earnings: optionalStringish,
     opex: optionalStringish,
     projected_debt_service: optionalStringish,
+    net_cash_flow: optionalStringish,
     cash_on_cash: optionalStringish,
     scenarios: z.array(scenarioSchema).optional(),
   })
@@ -260,6 +261,7 @@ function mergeFinancials(existing: ListingFinancials | null | undefined, sidecar
     net_earnings: incoming.net_earnings ?? base.net_earnings ?? "",
     opex: incoming.opex ?? base.opex ?? "",
     projected_debt_service: incoming.projected_debt_service ?? base.projected_debt_service ?? "",
+    net_cash_flow: incoming.net_cash_flow ?? base.net_cash_flow ?? "",
     cash_on_cash: incoming.cash_on_cash ?? base.cash_on_cash ?? "",
     scenarios: Array.isArray(incoming.scenarios) ? incoming.scenarios : Array.isArray(base.scenarios) ? base.scenarios : [],
   } as ListingFinancials;
@@ -330,6 +332,7 @@ export function planOmSidecarApply(sidecar: OmSidecarV1, current: ListingOmSnaps
     { path: "financials.net_earnings", label: "Net Earnings", before: existingFin.net_earnings, after: nextFin.net_earnings },
     { path: "financials.opex", label: "OpEx", before: existingFin.opex, after: nextFin.opex },
     { path: "financials.projected_debt_service", label: "Projected Debt Service", before: existingFin.projected_debt_service, after: nextFin.projected_debt_service },
+    { path: "financials.net_cash_flow", label: "Net cash flow", before: existingFin.net_cash_flow, after: nextFin.net_cash_flow },
     { path: "financials.cash_on_cash", label: "Cash on Cash", before: existingFin.cash_on_cash, after: nextFin.cash_on_cash },
     { path: "financials.cap_rate", label: "Cap Rate", before: existingFin.cap_rate, after: nextFin.cap_rate },
     { path: "financials.dscr", label: "DSCR Ratio", before: existingFin.dscr, after: nextFin.dscr },
