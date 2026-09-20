@@ -23,6 +23,15 @@ const TEASER_ROWS = GATED_UNDERWRITING_FIELDS.map((field) => ({
 }));
 
 const omValueStyle: React.CSSProperties = { fontFamily: "var(--font-om-serif)", fontSize: 34, lineHeight: 1, color: "#211c19" };
+// Table $ (monthly averages + CapEx COST, including "unknown") — not the 34px
+// overview / ratio-card billboard. Same size/weight/line-height for both.
+const omTableValueStyle: React.CSSProperties = {
+  fontFamily: "var(--font-om-serif)",
+  fontWeight: 600,
+  fontSize: 22,
+  lineHeight: 1,
+  color: "#211c19",
+};
 const labelStyle: React.CSSProperties = { display: "block", fontSize: 12, fontWeight: 500, letterSpacing: "0.14em", color: "#a39a8e" };
 const inputStyle: React.CSSProperties = {
   marginTop: 8,
@@ -89,11 +98,7 @@ function CapExCard({ rows }: { rows: ListingImprovement[] }) {
             <span style={{ fontSize: 15, color: "#574f47" }}>{row.year || "—"}</span>
             <span
               style={{
-                fontFamily: "var(--font-om-serif)",
-                fontWeight: 600,
-                fontSize: 22,
-                lineHeight: 1,
-                color: "#211c19",
+                ...omTableValueStyle,
                 textAlign: "right",
                 whiteSpace: "nowrap",
               }}
@@ -301,7 +306,7 @@ export function FinancialGate({
                 }}
               >
                 <span style={{ fontSize: 15, lineHeight: 1.4, color: isNcf ? "#211c19" : "#574f47", fontWeight: isNcf ? 600 : undefined }}>{field.label}</span>
-                <span style={{ ...omValueStyle, whiteSpace: "nowrap" }}>
+                <span style={{ ...omTableValueStyle, whiteSpace: "nowrap" }}>
                   {displayGatedMonthlyAverage(financials, field.key)}
                 </span>
               </div>
