@@ -209,7 +209,7 @@ export default async function ListingDetailPage({ params, searchParams }: { para
               <DocumentUploader listingId={listing.id} documents={documents} />
             </div>
             <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
-              <ApplyToOmPanel listing={listing} />
+              <ApplyToOmPanel listingId={listing.id} listing={listing} />
             </div>
             <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
               <h2 className="mb-3 text-base font-semibold text-neutral-900">Offering memorandum details</h2>

@@ -14,7 +14,7 @@ import { draftToHtml } from "@/lib/crm/merge-fields";
 import { baseUrl } from "@/lib/crm/sequences";
 import { generateUniqueListingSlug } from "@/lib/listings/public-slug";
 import { LISTING_DOCUMENT_TYPES } from "@/lib/listings/documents";
-import { parseOmSidecarJson, planOmSidecarApply } from "@/lib/listings/om-sidecar";
+import { planOwnedOmSidecarApply, type OmApplyListingRow } from "@/lib/listings/om-apply";
 import { phonesMatch } from "@/lib/phone";
 import type { ListingStatus, ListingDocumentType, ListingFinancials, ListingImprovement } from "@/types/database";
 
@@ -698,49 +698,41 @@ export async function updateListingOmFields(
 // lives in ApplyToOmPanel; this re-parses on the server so a bad payload
 // cannot write. listing_hints only overwrite non-empty identity fields
 // when overwriteHints is set.
-export async function applyOmSidecarToListing(
-  listingId: string,
-  rawJson: string,
-  options: { overwriteHints?: boolean } = {},
-): Promise<ActionResult> {
+//
+// Single payload (not positional args): Next.js server actions can scramble
+// listingId vs rawJson, which made PostgREST reject a non-UUID `.eq("id")`
+// and the old code mapped that miss/error to "Listing not found". The
+// Marketing page already loaded listings.id — use that UUID, prefer it
+// over public_slug/om_number, and always UPDATE by the resolved row id.
+export async function applyOmSidecarToListing(input: {
+  listingId: string;
+  rawJson: string;
+  overwriteHints?: boolean;
+}): Promise<ActionResult> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Not signed in" };
 
-  const parsed = parseOmSidecarJson(rawJson);
-  if (!parsed.ok) return { ok: false, error: parsed.error };
+  const listingId = typeof input?.listingId === "string" ? input.listingId : "";
+  const result = await planOwnedOmSidecarApply(
+    listingId,
+    typeof input?.rawJson === "string" ? input.rawJson : "",
+    async (column, value) => {
+      const { data, error } = await supabase.from("listings").select("*").eq(column, value).eq("owner_id", user.id).maybeSingle();
+      if (error) return { listing: null, error: error.message };
+      return { listing: (data as OmApplyListingRow | null) ?? null };
+    },
+    { overwriteHints: input?.overwriteHints },
+  );
+  if (!result.ok) return result;
 
-  const { data: listing } = await supabase
-    .from("listings")
-    .select(
-      "nickname, om_number, submarket, total_rooms, band_gross_rent, band_expense_load, band_cash_on_cash, band_cap_rate, financials, improvements, public_slug",
-    )
-    .eq("id", listingId)
-    .maybeSingle();
-  if (!listing) return { ok: false, error: "Listing not found" };
-
-  const plan = planOmSidecarApply(parsed.sidecar, listing, { overwriteHints: options.overwriteHints });
-  const patch: Record<string, unknown> = {
-    financials: plan.patch.financials,
-    updated_at: new Date().toISOString(),
-  };
-  if (plan.patch.nickname !== undefined) patch.nickname = plan.patch.nickname;
-  if (plan.patch.om_number !== undefined) patch.om_number = plan.patch.om_number;
-  if (plan.patch.submarket !== undefined) patch.submarket = plan.patch.submarket;
-  if (plan.patch.total_rooms !== undefined) patch.total_rooms = plan.patch.total_rooms;
-  if (plan.patch.band_gross_rent !== undefined) patch.band_gross_rent = plan.patch.band_gross_rent;
-  if (plan.patch.band_expense_load !== undefined) patch.band_expense_load = plan.patch.band_expense_load;
-  if (plan.patch.band_cash_on_cash !== undefined) patch.band_cash_on_cash = plan.patch.band_cash_on_cash;
-  if (plan.patch.band_cap_rate !== undefined) patch.band_cap_rate = plan.patch.band_cap_rate;
-  if (plan.patch.improvements !== undefined) patch.improvements = plan.patch.improvements;
-
-  const { error } = await supabase.from("listings").update(patch).eq("id", listingId);
+  const { error } = await supabase.from("listings").update(result.patch).eq("id", result.listingId);
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath(`/listings/${listingId}`);
-  if (listing.public_slug) revalidatePath(`/listing/${listing.public_slug}`);
+  revalidatePath(`/listings/${result.listingId}`);
+  if (result.publicSlug) revalidatePath(`/listing/${result.publicSlug}`);
   return { ok: true };
 }
 

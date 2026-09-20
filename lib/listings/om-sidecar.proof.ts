@@ -160,5 +160,6 @@ assert.ok(unlock.includes("LISTING_DOCUMENT_LABELS"));
 
 const marketing = readFileSync(join(process.cwd(), "app/(app)/listings/[id]/page.tsx"), "utf8");
 assert.ok(marketing.includes("ApplyToOmPanel"));
+assert.ok(marketing.includes("listingId={listing.id}"));
 
 console.log("om sidecar: ok");

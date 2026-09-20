@@ -85,6 +85,7 @@ assert.ok(improvements.includes("asImprovements(improvements)"));
 
 const page = read("app/(app)/listings/[id]/page.tsx");
 assert.ok(page.includes("ApplyToOmPanel"));
+assert.ok(page.includes("listingId={listing.id}"));
 assert.ok(page.includes("asPhotoList(listing.padsplit_photos)"));
 assert.ok(page.includes("asUrlList(listing.excluded_photo_urls)"));
 assert.ok(page.includes("asUrlList(listing.photo_paths)"));
