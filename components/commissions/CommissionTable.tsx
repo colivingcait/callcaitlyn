@@ -98,9 +98,9 @@ function AddressCell({ row }: { row: CommissionRow }) {
 
 function pillClass(tone: "cream" | "terracotta" | "green") {
   return cn(
-    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-medium",
-    tone === "cream" && "bg-[#f3e4dc] text-neutral-700",
-    tone === "terracotta" && "bg-[#f8efe4] text-[#c45c4a]",
+    "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-medium",
+    tone === "cream" && "border border-[#eadfd6] bg-white text-neutral-700",
+    tone === "terracotta" && "bg-[#f3e4dc] text-[#c45c4a]",
     tone === "green" && "bg-[#e8f5e9] text-[#2e7d32]",
   );
 }

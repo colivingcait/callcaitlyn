@@ -34,8 +34,8 @@ export function CommissionKpis({ kpis, period }: { kpis: CommissionKpisType; per
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-3">
       {tiles.map((tile) => (
-        <div key={tile.label} className="rounded-xl border border-[#eadfd6] bg-[#fffbf8] px-4 py-3.5">
-          <p className="text-[12px] text-neutral-400">{tile.label}</p>
+        <div key={tile.label} className="rounded-xl border border-[#eadfd6] bg-white px-4 py-3.5">
+          <p className="text-[12px] font-medium text-neutral-500">{tile.label}</p>
           <p className="mt-1.5 font-display text-[24px] font-semibold leading-none tracking-[-0.03em] text-neutral-900 lg:text-[26px]">
             {tile.value}
           </p>
