@@ -84,7 +84,7 @@
     "notes": [
       "PadSplit house id 8299 (from export Property ID).",
       "Public bands are imprecise Candace-derived ranges (not the generic 30%+ / 13\u201315% style examples).",
-      "Gated UI fields per Marketing SoT: monthly TTM gross_rents, net_earnings, opex, noi, projected_debt_service, net_cash_flow. Ratios (cash_on_cash, cap_rate, dscr) are cards. purchase_price stays available but is not a gated row.",
+      "Gated UI fields per Marketing SoT: monthly T12 gross_rents, net_earnings, opex, noi, projected_debt_service, net_cash_flow. Ratios (cash_on_cash, cap_rate, dscr) are cards. purchase_price stays available but is not a gated row.",
       "platform fees \u2260 PM; PM rolled into opex total for gated display.",
       "Sep 2026 in-flight; Aug\u2013Sep opex thin."
     ]
