@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "deal_key": "candace",
-  "padsplit_house_id": 8299,
+  "padsplit_house_id": "8299",
   "listing_hints": {
     "nickname": "Candace",
     "om_number": "",
@@ -9,87 +9,110 @@
     "rooms": 8
   },
   "public_bands": {
-    "band_gross_rent": "$5.0–5.5k/mo",
+    "band_gross_rent": "$5.0\u20135.5k/mo",
     "band_expense_load": "high-teens%",
     "band_cash_on_cash": "high-teens to low-20s%",
     "band_cap_rate": "low-10s%"
   },
-  "field_map": {
-    "public_ui": ["Gross Rents", "Operating Expenses", "Cash-on-cash", "Cap rate"],
-    "gated_ui": [
-      "Purchase price",
-      "Gross Rents",
-      "PadSplit fees",
-      "Net Earnings",
-      "OpEx",
-      "Projected Debt Service",
-      "Cash on Cash",
-      "Cap Rate",
-      "DSCR Ratio"
-    ]
-  },
   "financials": {
-    "t12": [
-      { "label": "Gross collected (PadSplit, cash)", "value": "61483.07", "subtotal": false },
-      { "label": "Platform fees (booking + service)", "value": "-8178.18", "subtotal": false },
-      { "label": "Net to host", "value": "53304.89", "subtotal": true },
-      { "label": "Utilities", "value": "-5279.86", "subtotal": false },
-      { "label": "Repairs & maintenance", "value": "-4704.43", "subtotal": false },
-      { "label": "Insurance", "value": "-570.90", "subtotal": false },
-      { "label": "Property management", "value": "-1075.00", "subtotal": false },
-      { "label": "Admin & other", "value": "-457.99", "subtotal": false },
-      { "label": "Total operating expenses", "value": "-12088.18", "subtotal": true },
-      { "label": "NOI", "value": "41216.71", "subtotal": true }
-    ],
-    "noi": "41216.71",
-    "cap_rate": "10.30",
-    "vacancy_pct": "13.7",
-    "occupancy_summary": "TTM bed-night occupancy 86.3% (8 rooms). Soft months: Jun ~57.5%, Sep in-flight ~66%.",
-    "platform_fees": "8178.18",
-    "padsplit_fees": "8178.18",
-    "pm_fees": "1075.00",
-    "expense_load_pct": "19.7",
-    "dscr": "1.61",
     "purchase_price": "400000",
     "gross_rents": "61483.07",
+    "padsplit_fees": "8178.18",
     "net_earnings": "53304.89",
-    "opex": "-12088.18",
+    "opex": "12088.18",
     "projected_debt_service": "25547.62",
     "cash_on_cash": "19.59",
+    "cap_rate": "10.30",
+    "dscr": "1.61",
+    "noi": "41216.71",
+    "t12": [
+      {
+        "label": "Gross rents (collected)",
+        "value": "61483.07",
+        "subtotal": false
+      },
+      {
+        "label": "PadSplit fees",
+        "value": "-8178.18",
+        "subtotal": false
+      },
+      {
+        "label": "Net earnings",
+        "value": "53304.89",
+        "subtotal": true
+      },
+      {
+        "label": "Operating expenses",
+        "value": "-12088.18",
+        "subtotal": false
+      },
+      {
+        "label": "NOI",
+        "value": "41216.71",
+        "subtotal": true
+      },
+      {
+        "label": "Projected debt service",
+        "value": "-25547.62",
+        "subtotal": false
+      },
+      {
+        "label": "Cash flow after debt",
+        "value": "15669.09",
+        "subtotal": true
+      }
+    ],
     "scenarios": [
       {
         "label": "20% down / 7% / 30yr DSCR",
         "coc": "19.59",
         "cash_in": "80000",
         "debt_service": "25547.62",
-        "cash_flow": "15669.10",
+        "cash_flow": "15669.09",
         "dscr": "1.61",
         "loan_amount": "320000"
-      },
-      {
-        "label": "All-cash",
-        "coc": "10.30",
-        "cash_in": "400000",
-        "debt_service": "0",
-        "cash_flow": "41216.71",
-        "dscr": "",
-        "loan_amount": "0"
       }
     ]
   },
   "improvements": [],
   "documents": {
-    "buyer_workbook": "Candace_OM_Financials_TTM.xlsx"
+    "buyer_workbook": "Candace_OM_Complete.xlsx"
   },
   "meta": {
-    "period": "TTM 2025-10 to 2026-09",
+    "period": "T12 2025-10 to 2026-09",
     "gross_basis": "collected_only",
-    "occupancy_basis": "bed_night",
     "notes": [
-      "Platform fees are PadSplit booking+service; separate from PM.",
-      "Owner opex ledger thin for Aug–Sep 2026.",
-      "Sep PadSplit earnings in-flight.",
-      "Closing costs not modeled."
+      "PadSplit house id 8299 (from export Property ID).",
+      "Public bands are imprecise Candace-derived ranges (not the generic 30%+ / 13\u201315% style examples).",
+      "Gated UI fields per Marketing SoT: purchase_price, gross_rents, padsplit_fees, net_earnings, opex, projected_debt_service, cash_on_cash, cap_rate, dscr + workbook.",
+      "platform fees \u2260 PM; PM rolled into opex total for gated display.",
+      "Sep 2026 in-flight; Aug\u2013Sep opex thin."
     ]
+  },
+  "field_map": {
+    "public_ui": [
+      "public_bands.band_gross_rent",
+      "public_bands.band_expense_load",
+      "public_bands.band_cash_on_cash",
+      "public_bands.band_cap_rate"
+    ],
+    "gated_ui": [
+      "financials.purchase_price",
+      "financials.gross_rents",
+      "financials.padsplit_fees",
+      "financials.net_earnings",
+      "financials.opex",
+      "financials.projected_debt_service",
+      "financials.cash_on_cash",
+      "financials.cap_rate",
+      "financials.dscr"
+    ],
+    "gated_removed": [
+      "pm_fees",
+      "expense_load_pct",
+      "occupancy_summary",
+      "vacancy_pct"
+    ],
+    "padsplit_url": "CRM builds from padsplit_house_id only"
   }
 }

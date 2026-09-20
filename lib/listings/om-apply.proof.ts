@@ -77,13 +77,17 @@ async function runApplyCases() {
     padsplit_fees?: string;
     gross_rents?: string;
     net_earnings?: string;
+    opex?: string;
+    buyer_workbook_filename?: string;
   };
   assert.equal(financials.noi, "41216.71");
-  assert.equal(Array.isArray(financials.t12) && financials.t12.length, 10);
+  assert.equal(Array.isArray(financials.t12) && financials.t12.length, 7);
   assert.equal(financials.deal_key, "candace");
   assert.equal(financials.padsplit_fees, "8178.18");
   assert.equal(financials.gross_rents, "61483.07");
   assert.equal(financials.net_earnings, "53304.89");
+  assert.equal(financials.opex, "12088.18");
+  assert.equal(financials.buyer_workbook_filename, "Candace_OM_Complete.xlsx");
   assert.equal(applied.patch.nickname, "Candace");
   assert.equal(applied.patch.submarket, "Atlanta metro");
   assert.equal(applied.patch.total_rooms, 8);

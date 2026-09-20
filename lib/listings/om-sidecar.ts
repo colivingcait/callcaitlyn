@@ -2,19 +2,26 @@ import { z } from "zod";
 import type { ListingFinancials, ListingImprovement } from "@/types/database";
 import { normalizeFinancials } from "@/lib/listings/crm-marketing-fields";
 import { padsplitListingUrlFromInput } from "@/lib/listings/padsplit-url";
-import { GATED_UNDERWRITING_FIELDS } from "@/lib/listings/gated-underwriting";
+import { GATED_REMOVED_FIELDS, GATED_UNDERWRITING_FIELDS } from "@/lib/listings/gated-underwriting";
 
 export const OM_SIDECAR_SCHEMA_VERSION = 2;
 export const OM_SIDECAR_ACCEPTED_VERSIONS = [1, 2] as const;
 
 export const PUBLIC_UI_FIELDS = [
-  { key: "band_gross_rent", label: "Gross Rents" },
-  { key: "band_expense_load", label: "Operating Expenses" },
-  { key: "band_cash_on_cash", label: "Cash-on-cash" },
-  { key: "band_cap_rate", label: "Cap rate" },
+  { key: "band_gross_rent", path: "public_bands.band_gross_rent", label: "Gross Rents" },
+  { key: "band_expense_load", path: "public_bands.band_expense_load", label: "Operating Expenses" },
+  { key: "band_cash_on_cash", path: "public_bands.band_cash_on_cash", label: "Cash-on-cash" },
+  { key: "band_cap_rate", path: "public_bands.band_cap_rate", label: "Cap rate" },
 ] as const;
 
 export const GATED_UI_FIELDS = GATED_UNDERWRITING_FIELDS;
+
+export const SIDECAR_FIELD_MAP = {
+  public_ui: PUBLIC_UI_FIELDS.map((field) => field.path),
+  gated_ui: GATED_UI_FIELDS.map((field) => field.path),
+  gated_removed: [...GATED_REMOVED_FIELDS],
+  padsplit_url: "CRM builds from padsplit_house_id only",
+} as const;
 
 const stringish = z.union([z.string(), z.number()]).transform((value) => String(value));
 const optionalStringish = z

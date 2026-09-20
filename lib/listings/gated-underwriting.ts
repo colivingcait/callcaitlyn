@@ -1,16 +1,18 @@
 import type { ListingFinancials, ListingFinancialsT12Line } from "@/types/database";
 
 export const GATED_UNDERWRITING_FIELDS = [
-  { key: "purchase_price", label: "Purchase price" },
-  { key: "gross_rents", label: "Gross Rents" },
-  { key: "padsplit_fees", label: "PadSplit fees" },
-  { key: "net_earnings", label: "Net Earnings" },
-  { key: "opex", label: "OpEx" },
-  { key: "projected_debt_service", label: "Projected Debt Service" },
-  { key: "cash_on_cash", label: "Cash on Cash" },
-  { key: "cap_rate", label: "Cap Rate" },
-  { key: "dscr", label: "DSCR Ratio" },
+  { key: "purchase_price", path: "financials.purchase_price", label: "Purchase price" },
+  { key: "gross_rents", path: "financials.gross_rents", label: "Gross Rents" },
+  { key: "padsplit_fees", path: "financials.padsplit_fees", label: "PadSplit fees" },
+  { key: "net_earnings", path: "financials.net_earnings", label: "Net Earnings" },
+  { key: "opex", path: "financials.opex", label: "OpEx" },
+  { key: "projected_debt_service", path: "financials.projected_debt_service", label: "Projected Debt Service" },
+  { key: "cash_on_cash", path: "financials.cash_on_cash", label: "Cash on Cash" },
+  { key: "cap_rate", path: "financials.cap_rate", label: "Cap Rate" },
+  { key: "dscr", path: "financials.dscr", label: "DSCR Ratio" },
 ] as const;
+
+export const GATED_REMOVED_FIELDS = ["pm_fees", "expense_load_pct", "occupancy_summary", "vacancy_pct"] as const;
 
 export type GatedUnderwritingKey = (typeof GATED_UNDERWRITING_FIELDS)[number]["key"];
 

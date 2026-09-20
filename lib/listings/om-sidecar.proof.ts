@@ -2,9 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  GATED_UI_FIELDS,
   OM_SIDECAR_SCHEMA_VERSION,
-  PUBLIC_UI_FIELDS,
+  SIDECAR_FIELD_MAP,
   parseOmSidecar,
   parseOmSidecarJson,
   planOmSidecarApply,
@@ -33,14 +32,11 @@ const emptyListing: ListingOmSnapshot = {
 };
 
 assert.equal(OM_SIDECAR_SCHEMA_VERSION, 2);
-assert.deepEqual(
-  PUBLIC_UI_FIELDS.map((f) => f.label),
-  fixture.field_map.public_ui,
-);
-assert.deepEqual(
-  GATED_UI_FIELDS.map((f) => f.label),
-  fixture.field_map.gated_ui,
-);
+assert.deepEqual(SIDECAR_FIELD_MAP.public_ui, fixture.field_map.public_ui);
+assert.deepEqual(SIDECAR_FIELD_MAP.gated_ui, fixture.field_map.gated_ui);
+assert.deepEqual(SIDECAR_FIELD_MAP.gated_removed, fixture.field_map.gated_removed);
+assert.equal(SIDECAR_FIELD_MAP.padsplit_url, fixture.field_map.padsplit_url);
+assert.deepEqual(fixture.field_map, SIDECAR_FIELD_MAP);
 
 const parsed = parseOmSidecar(fixture);
 if (!parsed.ok) throw new Error(parsed.error);
@@ -48,7 +44,7 @@ assert.equal(parsed.ok, true);
 
 const plan = planOmSidecarApply(parsed.sidecar, emptyListing);
 assert.equal(plan.dealKey, "candace");
-assert.equal(plan.buyerWorkbookHint, "Candace_OM_Financials_TTM.xlsx");
+assert.equal(plan.buyerWorkbookHint, "Candace_OM_Complete.xlsx");
 assert.equal(plan.protectedCount, 0);
 assert.equal(plan.patch.nickname, "Candace");
 assert.equal(plan.patch.om_number, undefined, "empty om_number must not overwrite");
@@ -61,41 +57,32 @@ assert.equal(plan.patch.band_cash_on_cash, "high-teens to low-20s%");
 assert.equal(plan.patch.band_cap_rate, "low-10s%");
 
 const fin = plan.patch.financials;
-assert.equal(fin.t12.length, 10);
-assert.deepEqual(fin.t12[0], { label: "Gross collected (PadSplit, cash)", value: "61483.07", subtotal: false });
-assert.deepEqual(fin.t12[2], { label: "Net to host", value: "53304.89", subtotal: true });
-assert.deepEqual(fin.t12[9], { label: "NOI", value: "41216.71", subtotal: true });
+assert.equal(fin.t12.length, 7);
+assert.deepEqual(fin.t12[0], { label: "Gross rents (collected)", value: "61483.07", subtotal: false });
+assert.deepEqual(fin.t12[2], { label: "Net earnings", value: "53304.89", subtotal: true });
+assert.deepEqual(fin.t12[4], { label: "NOI", value: "41216.71", subtotal: true });
 assert.equal(fin.noi, "41216.71");
 assert.equal(fin.cap_rate, "10.30");
-assert.equal(fin.vacancy_pct, "13.7");
-assert.equal(fin.occupancy_summary, "TTM bed-night occupancy 86.3% (8 rooms). Soft months: Jun ~57.5%, Sep in-flight ~66%.");
-assert.equal(fin.platform_fees, "8178.18");
 assert.equal(fin.padsplit_fees, "8178.18");
-assert.equal(fin.pm_fees, "1075.00");
-assert.equal(fin.expense_load_pct, "19.7");
 assert.equal(fin.dscr, "1.61");
 assert.equal(fin.purchase_price, "400000");
 assert.equal(fin.gross_rents, "61483.07");
 assert.equal(fin.net_earnings, "53304.89");
-assert.equal(fin.opex, "-12088.18");
+assert.equal(fin.opex, "12088.18");
 assert.equal(fin.projected_debt_service, "25547.62");
 assert.equal(fin.cash_on_cash, "19.59");
-assert.equal(fin.scenarios.length, 2);
+assert.equal(fin.scenarios.length, 1);
 assert.equal(fin.scenarios[0].label, "20% down / 7% / 30yr DSCR");
 assert.equal(fin.scenarios[0].coc, "19.59");
 assert.equal(fin.scenarios[0].cash_in, "80000");
 assert.equal(fin.scenarios[0].debt_service, "25547.62");
-assert.equal(fin.scenarios[0].cash_flow, "15669.10");
+assert.equal(fin.scenarios[0].cash_flow, "15669.09");
 assert.equal(fin.scenarios[0].dscr, "1.61");
 assert.equal(fin.scenarios[0].loan_amount, "320000");
-assert.equal(fin.scenarios[1].label, "All-cash");
-assert.equal(fin.scenarios[1].coc, "10.30");
-assert.equal(fin.scenarios[1].dscr, "");
-assert.equal(fin.scenarios[1].loan_amount, "0");
 assert.equal(fin.deal_key, "candace");
-assert.equal(fin.buyer_workbook_filename, "Candace_OM_Financials_TTM.xlsx");
+assert.equal(fin.buyer_workbook_filename, "Candace_OM_Complete.xlsx");
 assert.ok(fin.meta && typeof fin.meta === "object");
-assert.equal((fin.meta as { period?: string }).period, "TTM 2025-10 to 2026-09");
+assert.equal((fin.meta as { period?: string }).period, "T12 2025-10 to 2026-09");
 assert.equal(plan.patch.improvements, undefined, "empty sidecar improvements against empty listing is a no-op");
 
 const filled: ListingOmSnapshot = {

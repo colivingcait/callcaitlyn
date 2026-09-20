@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { extractPadsplitListingId, padsplitListingUrlFromInput, PADSPLIT_LISTING_URL_BASE } from "./padsplit-url";
 import { isExteriorPadsplitPhoto, interiorPhotos, listingCoverPhotoUrl } from "./padsplit-photos";
-import { GATED_UNDERWRITING_FIELDS } from "./gated-underwriting";
+import { GATED_REMOVED_FIELDS, GATED_UNDERWRITING_FIELDS } from "./gated-underwriting";
+import { SIDECAR_FIELD_MAP } from "./om-sidecar";
 
 // Locked Marketing/OM SoT: PadSplit ID, exterior photo skip, workbook-only
 // upload, no Process card, gated underwriting list. Run with:
@@ -77,18 +78,17 @@ assert.equal(gate.includes("financials.t12"), false);
 assert.equal(gate.includes("PM fees"), false);
 assert.equal(gate.includes("Occupancy summary"), false);
 
-const labels = GATED_UNDERWRITING_FIELDS.map((f) => f.label);
-assert.deepEqual(labels, [
-  "Purchase price",
-  "Gross Rents",
-  "PadSplit fees",
-  "Net Earnings",
-  "OpEx",
-  "Projected Debt Service",
-  "Cash on Cash",
-  "Cap Rate",
-  "DSCR Ratio",
-]);
+assert.deepEqual(
+  GATED_UNDERWRITING_FIELDS.map((f) => f.path),
+  SIDECAR_FIELD_MAP.gated_ui,
+);
+assert.deepEqual([...GATED_REMOVED_FIELDS], SIDECAR_FIELD_MAP.gated_removed);
+
+const editor = read("components/listings/FinancialsEditor.tsx");
+for (const removed of GATED_REMOVED_FIELDS) {
+  assert.equal(editor.includes(removed), false, `Marketing editor must not offer ${removed}`);
+  assert.equal(gate.includes(removed), false, `Gated OM must not show ${removed}`);
+}
 
 const unlock = read("app/listing/[slug]/actions.ts");
 assert.ok(unlock.includes("buyer_workbook"));
