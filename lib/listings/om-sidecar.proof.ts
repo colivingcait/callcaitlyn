@@ -57,10 +57,16 @@ assert.equal(fin.cap_rate, "10.30");
 assert.equal(fin.vacancy_pct, "13.7");
 assert.equal(fin.occupancy_summary, "TTM bed-night occupancy 86.3% (8 rooms). Soft months: Jun ~57.5%, Sep in-flight ~66%.");
 assert.equal(fin.platform_fees, "8178.18");
+assert.equal(fin.padsplit_fees, "8178.18");
 assert.equal(fin.pm_fees, "1075.00");
 assert.equal(fin.expense_load_pct, "19.7");
 assert.equal(fin.dscr, "1.61");
 assert.equal(fin.purchase_price, "400000");
+assert.equal(fin.gross_rents, "61483.07");
+assert.equal(fin.net_earnings, "53304.89");
+assert.equal(fin.opex, "-12088.18");
+assert.equal(fin.projected_debt_service, "25547.62");
+assert.equal(fin.cash_on_cash, "19.59");
 assert.equal(fin.scenarios.length, 2);
 assert.equal(fin.scenarios[0].label, "20% down / 7% / 30yr DSCR");
 assert.equal(fin.scenarios[0].coc, "19.59");
@@ -144,19 +150,52 @@ if (numbersAsNumbers.ok) {
 
 assert.ok(plan.changes.some((c) => c.group === "bands" && c.path === "band_gross_rent"));
 assert.ok(plan.changes.some((c) => c.group === "financials" && c.path === "financials.t12"));
+assert.ok(plan.changes.some((c) => c.group === "financials" && c.path === "financials.padsplit_fees"));
+assert.ok(plan.changes.some((c) => c.group === "financials" && c.path === "financials.gross_rents"));
 assert.ok(plan.changes.some((c) => c.group === "documents" && c.path === "documents.buyer_workbook"));
 
+const aliasOnly = parseOmSidecar({
+  schema_version: 1,
+  financials: {
+    noi: "41216.71",
+    cap_rate: "10.30",
+    platform_fees: "8178.18",
+    purchase_price: "400000",
+    dscr: "1.61",
+    t12: [
+      { label: "Gross collected (PadSplit, cash)", value: "61483.07" },
+      { label: "Net to host", value: "53304.89", subtotal: true },
+      { label: "Total operating expenses", value: "-12088.18", subtotal: true },
+    ],
+    scenarios: [{ label: "A", coc: "19.59", cash_in: "80000", debt_service: "25547.62", cash_flow: "1" }],
+  },
+});
+assert.equal(aliasOnly.ok, true);
+if (aliasOnly.ok) {
+  const mapped = planOmSidecarApply(aliasOnly.sidecar, emptyListing).patch.financials;
+  assert.equal(mapped.padsplit_fees, "8178.18", "platform_fees hydrates padsplit_fees");
+  assert.equal(mapped.gross_rents, "61483.07");
+  assert.equal(mapped.net_earnings, "53304.89");
+  assert.equal(mapped.opex, "-12088.18");
+  assert.equal(mapped.projected_debt_service, "25547.62");
+  assert.equal(mapped.cash_on_cash, "19.59");
+}
+
 const documents = readFileSync(join(process.cwd(), "lib/listings/documents.ts"), "utf8");
-assert.ok(documents.includes('buyer_workbook: "Buyer workbook"'));
+assert.ok(documents.includes('buyer_workbook: "Vera\'s buyer workbook"'));
 assert.ok(documents.includes("earnings_statement"));
 assert.ok(documents.includes('t12: "T12"'));
+assert.ok(documents.includes("MARKETING_UPLOAD_TYPES"));
 
 const uploader = readFileSync(join(process.cwd(), "components/listings/DocumentUploader.tsx"), "utf8");
 assert.ok(uploader.includes("buyer_workbook"));
-assert.ok(uploader.includes("LISTING_DOCUMENT_TYPES"));
+assert.ok(uploader.includes("MARKETING_UPLOAD_TYPES"));
+assert.equal(uploader.includes("LISTING_DOCUMENT_TYPES"), false, "Marketing uploader must not iterate the full DB enum");
 
 const unlock = readFileSync(join(process.cwd(), "app/listing/[slug]/actions.ts"), "utf8");
 assert.ok(unlock.includes("LISTING_DOCUMENT_LABELS"));
+assert.ok(unlock.includes("buyer_workbook"));
+assert.ok(unlock.includes("workbookUrl"));
 
 const marketing = readFileSync(join(process.cwd(), "app/(app)/listings/[id]/page.tsx"), "utf8");
 assert.ok(marketing.includes("ApplyToOmPanel"));

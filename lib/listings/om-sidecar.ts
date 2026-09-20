@@ -64,10 +64,16 @@ const financialsSchema = z
     vacancy_pct: optionalStringish,
     occupancy_summary: z.string().optional(),
     platform_fees: optionalStringish,
+    padsplit_fees: optionalStringish,
     pm_fees: optionalStringish,
     expense_load_pct: optionalStringish,
     dscr: optionalStringish,
     purchase_price: optionalStringish,
+    gross_rents: optionalStringish,
+    net_earnings: optionalStringish,
+    opex: optionalStringish,
+    projected_debt_service: optionalStringish,
+    cash_on_cash: optionalStringish,
     scenarios: z.array(scenarioSchema).optional(),
   })
   .passthrough();
@@ -224,10 +230,16 @@ function mergeFinancials(existing: ListingFinancials | null | undefined, sidecar
     vacancy_pct: incoming.vacancy_pct ?? base.vacancy_pct ?? "",
     occupancy_summary: incoming.occupancy_summary ?? base.occupancy_summary ?? "",
     platform_fees: incoming.platform_fees ?? base.platform_fees ?? "",
+    padsplit_fees: incoming.padsplit_fees ?? incoming.platform_fees ?? base.padsplit_fees ?? base.platform_fees ?? "",
     pm_fees: incoming.pm_fees ?? base.pm_fees ?? "",
     expense_load_pct: incoming.expense_load_pct ?? base.expense_load_pct ?? "",
     dscr: incoming.dscr ?? base.dscr ?? "",
     purchase_price: incoming.purchase_price ?? base.purchase_price ?? "",
+    gross_rents: incoming.gross_rents ?? base.gross_rents ?? "",
+    net_earnings: incoming.net_earnings ?? base.net_earnings ?? "",
+    opex: incoming.opex ?? base.opex ?? "",
+    projected_debt_service: incoming.projected_debt_service ?? base.projected_debt_service ?? "",
+    cash_on_cash: incoming.cash_on_cash ?? base.cash_on_cash ?? "",
     scenarios: Array.isArray(incoming.scenarios) ? incoming.scenarios : Array.isArray(base.scenarios) ? base.scenarios : [],
   } as ListingFinancials;
 
@@ -248,10 +260,10 @@ export function planOmSidecarApply(sidecar: OmSidecarV1, current: ListingOmSnaps
 
   const bands = sidecar.public_bands ?? {};
   const bandPairs: { path: keyof ListingOmSnapshot & `band_${string}`; label: string; incoming?: string }[] = [
-    { path: "band_gross_rent", label: "Gross rent band", incoming: bands.band_gross_rent },
-    { path: "band_expense_load", label: "Expense-load band", incoming: bands.band_expense_load },
-    { path: "band_cash_on_cash", label: "Cash-on-cash band", incoming: bands.band_cash_on_cash },
-    { path: "band_cap_rate", label: "Cap-rate band", incoming: bands.band_cap_rate },
+    { path: "band_gross_rent", label: "Gross Rents", incoming: bands.band_gross_rent },
+    { path: "band_expense_load", label: "Operating Expenses", incoming: bands.band_expense_load },
+    { path: "band_cash_on_cash", label: "Cash-on-cash", incoming: bands.band_cash_on_cash },
+    { path: "band_cap_rate", label: "Cap rate", incoming: bands.band_cap_rate },
   ];
   for (const band of bandPairs) {
     if (band.incoming === undefined) continue;
@@ -270,15 +282,17 @@ export function planOmSidecarApply(sidecar: OmSidecarV1, current: ListingOmSnaps
   const existingFin = normalizeFinancials(current.financials);
   const nextFin = patch.financials;
   const finFields: { path: string; label: string; before: unknown; after: unknown }[] = [
-    { path: "financials.noi", label: "NOI", before: existingFin.noi, after: nextFin.noi },
-    { path: "financials.cap_rate", label: "Cap rate", before: existingFin.cap_rate, after: nextFin.cap_rate },
-    { path: "financials.vacancy_pct", label: "Vacancy %", before: existingFin.vacancy_pct, after: nextFin.vacancy_pct },
-    { path: "financials.occupancy_summary", label: "Occupancy summary", before: existingFin.occupancy_summary, after: nextFin.occupancy_summary },
-    { path: "financials.platform_fees", label: "Platform fees", before: existingFin.platform_fees, after: nextFin.platform_fees },
-    { path: "financials.pm_fees", label: "PM fees", before: existingFin.pm_fees, after: nextFin.pm_fees },
-    { path: "financials.expense_load_pct", label: "Expense load %", before: existingFin.expense_load_pct, after: nextFin.expense_load_pct },
-    { path: "financials.dscr", label: "DSCR", before: existingFin.dscr, after: nextFin.dscr },
     { path: "financials.purchase_price", label: "Purchase price", before: existingFin.purchase_price, after: nextFin.purchase_price },
+    { path: "financials.gross_rents", label: "Gross Rents", before: existingFin.gross_rents, after: nextFin.gross_rents },
+    { path: "financials.padsplit_fees", label: "PadSplit fees", before: existingFin.padsplit_fees, after: nextFin.padsplit_fees },
+    { path: "financials.net_earnings", label: "Net Earnings", before: existingFin.net_earnings, after: nextFin.net_earnings },
+    { path: "financials.opex", label: "OpEx", before: existingFin.opex, after: nextFin.opex },
+    { path: "financials.projected_debt_service", label: "Projected Debt Service", before: existingFin.projected_debt_service, after: nextFin.projected_debt_service },
+    { path: "financials.cash_on_cash", label: "Cash on Cash", before: existingFin.cash_on_cash, after: nextFin.cash_on_cash },
+    { path: "financials.cap_rate", label: "Cap Rate", before: existingFin.cap_rate, after: nextFin.cap_rate },
+    { path: "financials.dscr", label: "DSCR Ratio", before: existingFin.dscr, after: nextFin.dscr },
+    { path: "financials.noi", label: "NOI", before: existingFin.noi, after: nextFin.noi },
+    { path: "financials.platform_fees", label: "Platform fees", before: existingFin.platform_fees, after: nextFin.platform_fees },
     { path: "financials.t12", label: "T12", before: existingFin.t12, after: nextFin.t12 },
     { path: "financials.scenarios", label: "Scenarios", before: existingFin.scenarios, after: nextFin.scenarios },
   ];

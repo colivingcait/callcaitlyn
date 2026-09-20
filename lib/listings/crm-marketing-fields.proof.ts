@@ -45,6 +45,7 @@ const partial = normalizeFinancials({ noi: "$1", cap_rate: "10%", keep_me: "yes"
 assert.deepEqual(partial.t12, []);
 assert.deepEqual(partial.scenarios, []);
 assert.equal(partial.noi, "$1");
+assert.equal(partial.net_earnings, "$1");
 assert.equal((partial as { keep_me?: string }).keep_me, "yes");
 assert.equal(financialsHaveContent(partial), true);
 assert.equal(financialsHaveContent(emptyFinancials), false);
@@ -69,9 +70,14 @@ assert.equal(daysInputValue(({} as { dd_days?: number }).dd_days, DEFAULT_DD_DAY
 const om = read("components/listings/OmDetailsForm.tsx");
 assert.equal(om.includes("listing.dd_days.toString()"), false, "dd_days.toString() white-screens when the field is missing");
 assert.equal(om.includes("listing.seller_support_days.toString()"), false, "seller_support_days.toString() white-screens when the field is missing");
-assert.ok(om.includes("daysInputValue(listing.dd_days, DEFAULT_DD_DAYS)"));
-assert.ok(om.includes("daysInputValue(listing.seller_support_days, DEFAULT_SELLER_SUPPORT_DAYS)"));
+assert.equal(om.includes("Process terms"), false, "Process terms must not render in Marketing");
+assert.equal(om.includes("Due diligence days"), false);
+assert.equal(om.includes("ddDays"), false);
 assert.ok(om.includes("listing.show_seller_section ?? true"));
+assert.ok(om.includes("Gross Rents"));
+assert.ok(om.includes("Operating Expenses"));
+assert.ok(om.includes("Cash-on-cash"));
+assert.ok(om.includes("Cap rate"));
 
 const photos = read("components/listings/PhotoExcludeManager.tsx");
 assert.equal(photos.includes("new Set(excludedUrls)"), false, "new Set(null/undefined) throws");
@@ -79,6 +85,10 @@ assert.ok(photos.includes("new Set(asUrlList(excludedUrls))"));
 
 const financials = read("components/listings/FinancialsEditor.tsx");
 assert.ok(financials.includes("normalizeFinancials(financials)"));
+assert.ok(financials.includes("GATED_UNDERWRITING_FIELDS"));
+assert.equal(financials.includes("Occupancy summary"), false);
+assert.equal(financials.includes("PM fees"), false);
+assert.equal(financials.includes("T12 line items"), false);
 
 const improvements = read("components/listings/ImprovementsEditor.tsx");
 assert.ok(improvements.includes("asImprovements(improvements)"));

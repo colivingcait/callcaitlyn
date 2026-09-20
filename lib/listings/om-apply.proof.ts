@@ -68,10 +68,20 @@ async function runApplyCases() {
   assert.equal(applied.patch.band_expense_load, "15–20% of gross");
   assert.equal(applied.patch.band_cash_on_cash, "18–22% @ 20% down / 7% / 30yr DSCR");
   assert.equal(applied.patch.band_cap_rate, "10–11%");
-  const financials = applied.patch.financials as { noi?: string; t12?: unknown[]; deal_key?: string };
+  const financials = applied.patch.financials as {
+    noi?: string;
+    t12?: unknown[];
+    deal_key?: string;
+    padsplit_fees?: string;
+    gross_rents?: string;
+    net_earnings?: string;
+  };
   assert.equal(financials.noi, "41216.71");
   assert.equal(Array.isArray(financials.t12) && financials.t12.length, 10);
   assert.equal(financials.deal_key, "candace");
+  assert.equal(financials.padsplit_fees, "8178.18");
+  assert.equal(financials.gross_rents, "61483.07");
+  assert.equal(financials.net_earnings, "53304.89");
   assert.equal(applied.patch.nickname, "Candace");
   assert.equal(applied.patch.submarket, "Atlanta metro");
   assert.equal(applied.patch.total_rooms, 8);

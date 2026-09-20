@@ -2,16 +2,30 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X } from "lucide-react";
 import { updateListingFinancials } from "@/app/(app)/listings/actions";
 import { financialsHaveContent, normalizeFinancials } from "@/lib/listings/crm-marketing-fields";
+import { GATED_UNDERWRITING_FIELDS } from "@/lib/listings/gated-underwriting";
 import type { ListingFinancials } from "@/types/database";
 
 const inputClass = "w-full rounded-lg border border-neutral-200 px-2.5 py-1.5 text-sm";
 
-// The gated underwriting detail behind the public page's unlock form -
-// every line here only ever reaches a visitor's browser after they submit
-// contact info (see FinancialGate.tsx), never in the locked page's HTML.
+const PLACEHOLDERS: Record<(typeof GATED_UNDERWRITING_FIELDS)[number]["key"], string> = {
+  purchase_price: "400000",
+  gross_rents: "61483",
+  padsplit_fees: "8178",
+  net_earnings: "53305",
+  opex: "12088",
+  projected_debt_service: "25548",
+  cash_on_cash: "19.6%",
+  cap_rate: "10.3%",
+  dscr: "1.61",
+};
+
+// The gated underwriting detail behind the public page's unlock form.
+// Only these fields reach a visitor after they submit contact info
+// (see FinancialGate.tsx). T12 / scenarios / pm fees stay in JSONB when
+// Apply-to-OM writes them so the numbers can hydrate these keys, but they
+// are not edited or shown here.
 export function FinancialsEditor({ listingId, financials }: { listingId: string; financials: ListingFinancials | null }) {
   const router = useRouter();
   const [data, setData] = useState<ListingFinancials>(() => normalizeFinancials(financials));
@@ -28,127 +42,20 @@ export function FinancialsEditor({ listingId, financials }: { listingId: string;
     setTimeout(() => setSaved(false), 1500);
   }
 
-  function updateLine(i: number, patch: Partial<ListingFinancials["t12"][number]>) {
-    setData((d) => ({ ...d, t12: (d.t12 ?? []).map((line, idx) => (idx === i ? { ...line, ...patch } : line)) }));
-  }
-  function updateScenario(i: number, patch: Partial<ListingFinancials["scenarios"][number]>) {
-    setData((d) => ({ ...d, scenarios: (d.scenarios ?? []).map((s, idx) => (idx === i ? { ...s, ...patch } : s)) }));
-  }
-
   return (
     <div className="space-y-5">
-      <div>
-        <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-neutral-900">T12 line items</h3>
-          <button
-            type="button"
-            onClick={() => setData((d) => ({ ...d, t12: [...(d.t12 ?? []), { label: "", value: "" }] }))}
-            className="flex items-center gap-1 text-xs font-semibold text-brand-600"
-          >
-            <Plus size={13} /> Add line
-          </button>
-        </div>
-        <div className="space-y-2">
-          {(data.t12 ?? []).map((line, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <input value={line.label ?? ""} onChange={(e) => updateLine(i, { label: e.target.value })} placeholder="Label" className={`${inputClass} flex-1`} />
-              <input value={line.value ?? ""} onChange={(e) => updateLine(i, { value: e.target.value })} placeholder="$98,592" className={`${inputClass} w-32`} />
-              <label className="flex shrink-0 items-center gap-1 text-xs text-neutral-500">
-                <input type="checkbox" checked={!!line.subtotal} onChange={(e) => updateLine(i, { subtotal: e.target.checked })} />
-                Subtotal
-              </label>
-              <button type="button" onClick={() => setData((d) => ({ ...d, t12: (d.t12 ?? []).filter((_, idx) => idx !== i) }))} className="shrink-0 text-neutral-400">
-                <X size={15} />
-              </button>
-            </div>
-          ))}
-          {(data.t12 ?? []).length === 0 && <p className="text-xs text-neutral-400">No line items yet.</p>}
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-neutral-700">NOI</label>
-          <input value={data.noi ?? ""} onChange={(e) => setData((d) => ({ ...d, noi: e.target.value }))} placeholder="$56,892" className={inputClass} />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-neutral-700">Cap rate</label>
-          <input value={data.cap_rate ?? ""} onChange={(e) => setData((d) => ({ ...d, cap_rate: e.target.value }))} placeholder="14.8%" className={inputClass} />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-neutral-700">Vacancy %</label>
-          <input value={data.vacancy_pct ?? ""} onChange={(e) => setData((d) => ({ ...d, vacancy_pct: e.target.value }))} placeholder="8.0%" className={inputClass} />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-neutral-700">Purchase price</label>
-          <input value={data.purchase_price ?? ""} onChange={(e) => setData((d) => ({ ...d, purchase_price: e.target.value }))} placeholder="400000" className={inputClass} />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-neutral-700">Platform fees</label>
-          <input value={data.platform_fees ?? ""} onChange={(e) => setData((d) => ({ ...d, platform_fees: e.target.value }))} placeholder="8178.18" className={inputClass} />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-neutral-700">PM fees</label>
-          <input value={data.pm_fees ?? ""} onChange={(e) => setData((d) => ({ ...d, pm_fees: e.target.value }))} placeholder="1075.00" className={inputClass} />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-neutral-700">Expense load %</label>
-          <input value={data.expense_load_pct ?? ""} onChange={(e) => setData((d) => ({ ...d, expense_load_pct: e.target.value }))} placeholder="19.7" className={inputClass} />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-neutral-700">DSCR</label>
-          <input value={data.dscr ?? ""} onChange={(e) => setData((d) => ({ ...d, dscr: e.target.value }))} placeholder="1.61" className={inputClass} />
-        </div>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-neutral-700">Occupancy summary</label>
-        <textarea
-          value={data.occupancy_summary ?? ""}
-          onChange={(e) => setData((d) => ({ ...d, occupancy_summary: e.target.value }))}
-          rows={3}
-          placeholder="TTM bed-night occupancy…"
-          className="w-full rounded-lg border border-neutral-200 px-2.5 py-1.5 text-sm"
-        />
-      </div>
-
-      <div>
-        <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-neutral-900">Financing scenarios</h3>
-          <button
-            type="button"
-            onClick={() =>
-              setData((d) => ({
-                ...d,
-                scenarios: [...(d.scenarios ?? []), { label: "", coc: "", cash_in: "", debt_service: "", cash_flow: "", dscr: "", loan_amount: "" }],
-              }))
-            }
-            className="flex items-center gap-1 text-xs font-semibold text-brand-600"
-          >
-            <Plus size={13} /> Add scenario
-          </button>
-        </div>
-        <div className="space-y-3">
-          {(data.scenarios ?? []).map((s, i) => (
-            <div key={i} className="rounded-xl border border-neutral-200 p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <input value={s.label ?? ""} onChange={(e) => updateScenario(i, { label: e.target.value })} placeholder="25% DOWN · 7.25% · 30-YR" className={`${inputClass} flex-1`} />
-                <button type="button" onClick={() => setData((d) => ({ ...d, scenarios: (d.scenarios ?? []).filter((_, idx) => idx !== i) }))} className="ml-2 shrink-0 text-neutral-400">
-                  <X size={15} />
-                </button>
-              </div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                <input value={s.coc ?? ""} onChange={(e) => updateScenario(i, { coc: e.target.value })} placeholder="CoC 30.7%" className={inputClass} />
-                <input value={s.cash_in ?? ""} onChange={(e) => updateScenario(i, { cash_in: e.target.value })} placeholder="Cash in" className={inputClass} />
-                <input value={s.debt_service ?? ""} onChange={(e) => updateScenario(i, { debt_service: e.target.value })} placeholder="Debt service" className={inputClass} />
-                <input value={s.cash_flow ?? ""} onChange={(e) => updateScenario(i, { cash_flow: e.target.value })} placeholder="Cash flow" className={inputClass} />
-                <input value={s.dscr ?? ""} onChange={(e) => updateScenario(i, { dscr: e.target.value })} placeholder="DSCR" className={inputClass} />
-                <input value={s.loan_amount ?? ""} onChange={(e) => updateScenario(i, { loan_amount: e.target.value })} placeholder="Loan amount" className={inputClass} />
-              </div>
-            </div>
-          ))}
-          {(data.scenarios ?? []).length === 0 && <p className="text-xs text-neutral-400">No scenarios yet.</p>}
-        </div>
+        {GATED_UNDERWRITING_FIELDS.map((field) => (
+          <div key={field.key}>
+            <label className="mb-1 block text-sm font-medium text-neutral-700">{field.label}</label>
+            <input
+              value={data[field.key] ?? ""}
+              onChange={(e) => setData((d) => ({ ...d, [field.key]: e.target.value }))}
+              placeholder={PLACEHOLDERS[field.key]}
+              className={inputClass}
+            />
+          </div>
+        ))}
       </div>
 
       <button type="button" onClick={handleSave} disabled={saving} className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">

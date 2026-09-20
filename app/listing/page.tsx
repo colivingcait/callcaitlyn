@@ -38,7 +38,7 @@ export default async function PublicListingsOverviewPage() {
         ) : (
           <div style={{ marginTop: 32, display: "flex", flexDirection: "column", gap: 12 }}>
             {listings.map((listing) => {
-              const cover = listing.padsplit_photo_urls?.[0] ?? listing.photoUrls[0] ?? null;
+              const cover = listing.coverPhotoUrl;
               const occ = listing.occupied_rooms != null && listing.total_rooms != null ? `${listing.occupied_rooms}/${listing.total_rooms} occupied` : "Coming soon";
               const title = publicListingCopy(listing.nickname) || publicListingCopy(listing.property_type) || "Listing";
 

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateListingOmFields } from "@/app/(app)/listings/actions";
-import { DEFAULT_DD_DAYS, DEFAULT_SELLER_SUPPORT_DAYS, daysInputValue } from "@/lib/listings/crm-marketing-fields";
 import type { Listing } from "@/types/database";
 
 const inputClass = "w-full rounded-xl border border-neutral-200 px-3 py-2 text-[15px]";
@@ -13,6 +12,8 @@ const labelClass = "mb-1 block text-sm font-medium text-neutral-700";
 // (price/beds/baths/photos, already in BasicsForm) - since the address is
 // never shown there, this is the page's real identity plus everything the
 // design surfaces. Grouped to match the page's own section order.
+// Due-diligence / seller-support fields are intentionally not edited
+// here — the public OM no longer renders that card.
 export function OmDetailsForm({ listing }: { listing: Listing }) {
   const router = useRouter();
   const [nickname, setNickname] = useState(listing.nickname ?? "");
@@ -34,11 +35,6 @@ export function OmDetailsForm({ listing }: { listing: Listing }) {
   const [coAgentBrokerage, setCoAgentBrokerage] = useState(listing.co_agent_brokerage ?? "");
   const [coAgentPhone, setCoAgentPhone] = useState(listing.co_agent_phone ?? "");
   const [coAgentEmail, setCoAgentEmail] = useState(listing.co_agent_email ?? "");
-  // Production listing rows can omit due-diligence integers (the public OM
-  // page already guards this). Calling .toString() here white-screened the
-  // CRM Marketing tab.
-  const [ddDays, setDdDays] = useState(daysInputValue(listing.dd_days, DEFAULT_DD_DAYS));
-  const [sellerSupportDays, setSellerSupportDays] = useState(daysInputValue(listing.seller_support_days, DEFAULT_SELLER_SUPPORT_DAYS));
   const [showSellerSection, setShowSellerSection] = useState(listing.show_seller_section ?? true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -66,8 +62,6 @@ export function OmDetailsForm({ listing }: { listing: Listing }) {
       coAgentBrokerage: coAgentBrokerage || null,
       coAgentPhone: coAgentPhone || null,
       coAgentEmail: coAgentEmail || null,
-      ddDays: ddDays ? Number(ddDays) : 10,
-      sellerSupportDays: sellerSupportDays ? Number(sellerSupportDays) : 30,
       showSellerSection,
     });
     setSaving(false);
@@ -145,19 +139,19 @@ export function OmDetailsForm({ listing }: { listing: Listing }) {
         <h3 className="mb-2 text-sm font-semibold text-neutral-900">Public financial bands (deliberately imprecise)</h3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className={labelClass}>Gross scheduled rent</label>
-            <input value={bandGrossRent} onChange={(e) => setBandGrossRent(e.target.value)} className={inputClass} placeholder="~$8.2K / mo" />
+            <label className={labelClass}>Gross Rents</label>
+            <input value={bandGrossRent} onChange={(e) => setBandGrossRent(e.target.value)} className={inputClass} placeholder="$8k–$10k/mo" />
           </div>
           <div>
-            <label className={labelClass}>Expense load</label>
+            <label className={labelClass}>Operating Expenses</label>
             <input value={bandExpenseLoad} onChange={(e) => setBandExpenseLoad(e.target.value)} className={inputClass} placeholder="mid-30s %" />
           </div>
           <div>
-            <label className={labelClass}>Levered cash-on-cash</label>
+            <label className={labelClass}>Cash-on-cash</label>
             <input value={bandCashOnCash} onChange={(e) => setBandCashOnCash(e.target.value)} className={inputClass} placeholder="30%+" />
           </div>
           <div>
-            <label className={labelClass}>Cap rate band (masthead)</label>
+            <label className={labelClass}>Cap rate</label>
             <input value={bandCapRate} onChange={(e) => setBandCapRate(e.target.value)} className={inputClass} placeholder="13–15%" />
           </div>
         </div>
@@ -171,26 +165,10 @@ export function OmDetailsForm({ listing }: { listing: Listing }) {
           <input value={coAgentPhone} onChange={(e) => setCoAgentPhone(e.target.value)} className={inputClass} placeholder="Phone" />
           <input value={coAgentEmail} onChange={(e) => setCoAgentEmail(e.target.value)} className={inputClass} placeholder="Email" />
         </div>
-      </div>
-
-      <div>
-        <h3 className="mb-2 text-sm font-semibold text-neutral-900">Process terms</h3>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div>
-            <label className={labelClass}>Due diligence days</label>
-            <input type="number" value={ddDays} onChange={(e) => setDdDays(e.target.value)} className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass}>Seller support days after close</label>
-            <input type="number" value={sellerSupportDays} onChange={(e) => setSellerSupportDays(e.target.value)} className={inputClass} />
-          </div>
-          <div className="flex items-end">
-            <label className="flex items-center gap-2 text-sm text-neutral-700">
-              <input type="checkbox" checked={showSellerSection} onChange={(e) => setShowSellerSection(e.target.checked)} />
-              Show &quot;sell your PadSplit&quot; section
-            </label>
-          </div>
-        </div>
+        <label className="mt-3 flex items-center gap-2 text-sm text-neutral-700">
+          <input type="checkbox" checked={showSellerSection} onChange={(e) => setShowSellerSection(e.target.checked)} />
+          Show &quot;sell your PadSplit&quot; section
+        </label>
       </div>
 
       <button

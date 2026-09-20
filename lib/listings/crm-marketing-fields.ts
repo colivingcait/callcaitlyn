@@ -1,4 +1,5 @@
 import type { ListingFinancials, ListingImprovement, PadsplitPhoto } from "@/types/database";
+import { gatedFinancialsHaveValues, hydrateGatedFinancials } from "@/lib/listings/gated-underwriting";
 
 // CRM marketing-tab defaults. Same integers as migration 0073, used when a
 // listing row is missing those columns (or they came back null/undefined).
@@ -14,7 +15,7 @@ export function daysInputValue(n: number | string | null | undefined, fallback: 
 
 export function normalizeFinancials(financials: ListingFinancials | null | undefined): ListingFinancials {
   const extras = financials ? { ...financials } : {};
-  return {
+  return hydrateGatedFinancials({
     ...extras,
     t12: Array.isArray(financials?.t12) ? financials.t12 : [],
     noi: financials?.noi ?? "",
@@ -22,27 +23,31 @@ export function normalizeFinancials(financials: ListingFinancials | null | undef
     vacancy_pct: financials?.vacancy_pct ?? "",
     occupancy_summary: financials?.occupancy_summary ?? "",
     platform_fees: financials?.platform_fees ?? "",
+    padsplit_fees: financials?.padsplit_fees ?? "",
     pm_fees: financials?.pm_fees ?? "",
     expense_load_pct: financials?.expense_load_pct ?? "",
     dscr: financials?.dscr ?? "",
     purchase_price: financials?.purchase_price ?? "",
+    gross_rents: financials?.gross_rents ?? "",
+    net_earnings: financials?.net_earnings ?? "",
+    opex: financials?.opex ?? "",
+    projected_debt_service: financials?.projected_debt_service ?? "",
+    cash_on_cash: financials?.cash_on_cash ?? "",
     scenarios: Array.isArray(financials?.scenarios) ? financials.scenarios : [],
-  };
+  });
 }
 
 export function financialsHaveContent(data: ListingFinancials | null | undefined): boolean {
   if (!data) return false;
   return (
+    gatedFinancialsHaveValues(data) ||
     (data.t12 ?? []).length > 0 ||
     Boolean(data.noi) ||
-    Boolean(data.cap_rate) ||
     Boolean(data.vacancy_pct) ||
     Boolean(data.occupancy_summary) ||
     Boolean(data.platform_fees) ||
     Boolean(data.pm_fees) ||
     Boolean(data.expense_load_pct) ||
-    Boolean(data.dscr) ||
-    Boolean(data.purchase_price) ||
     (data.scenarios ?? []).length > 0
   );
 }

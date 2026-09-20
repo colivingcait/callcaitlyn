@@ -45,6 +45,36 @@ mkdirSync(ART, { recursive: true });
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 const CHALLENGE = /just a moment|verify you are human|captcha|access denied|attention required/i;
 
+// Exterior filter — keep in sync with lib/listings/padsplit-photos.ts.
+// Drop photos labeled exterior OR that appear to be one: category/tags plus
+// alt/title/filename keywords (exterior, outside, front, facade, curb) and
+// the prior street/yard/porch/roof/driveway/back set. Prefer interiors.
+const EXTERIOR_PHOTO_RE =
+  /exterior|outside|front|facade|façade|curb|back|yard|street|driveway|porch|roof/i;
+
+function photoFilename(url) {
+  try {
+    const path = new URL(url).pathname;
+    return decodeURIComponent(path.split("/").pop() || url);
+  } catch {
+    return url;
+  }
+}
+
+function isExteriorPhoto(photo) {
+  const haystack = [photo.category, photo.alt, photo.title, Array.isArray(photo.tags) ? photo.tags.join(" ") : "", photoFilename(photo.url)]
+    .filter(Boolean)
+    .join(" ");
+  return EXTERIOR_PHOTO_RE.test(haystack);
+}
+
+function stringField(node, keys) {
+  for (const key of keys) {
+    if (typeof node[key] === "string" && node[key].trim()) return node[key];
+  }
+  return null;
+}
+
 // Pull the raw __NEXT_DATA__ blob out of the hydrated page.
 async function getNextData(page) {
   return page.evaluate(() => {
@@ -95,7 +125,21 @@ function findPhotos(node, depth = 0, seen = new Set(), out = [], urlsSeen = new 
   if (typeof node.location === "string" && /^https?:\/\//.test(node.location) && "category" in node) {
     if (!urlsSeen.has(node.location)) {
       urlsSeen.add(node.location);
-      out.push({ url: node.location, category: typeof node.category === "string" ? node.category : null });
+      const tags = Array.isArray(node.tags)
+        ? node.tags.filter((t) => typeof t === "string")
+        : Array.isArray(node.labels)
+          ? node.labels.filter((t) => typeof t === "string")
+          : null;
+      const photo = {
+        url: node.location,
+        category: typeof node.category === "string" ? node.category : null,
+      };
+      const alt = stringField(node, ["alt", "altText", "caption", "description"]);
+      const title = stringField(node, ["title", "name"]);
+      if (alt) photo.alt = alt;
+      if (title) photo.title = title;
+      if (tags && tags.length > 0) photo.tags = tags;
+      out.push(photo);
     }
   }
   for (const value of Object.values(node)) findPhotos(value, depth + 1, seen, out, urlsSeen);
@@ -145,7 +189,13 @@ async function scrapeListing(context, listing) {
     const property = findProperty(data);
     if (!property) throw new Error("Page hydrated but no property data was found in it");
 
-    const photos = findPhotos(data).slice(0, 24);
+    const allPhotos = findPhotos(data);
+    const interiors = allPhotos.filter((p) => !isExteriorPhoto(p));
+    const exteriors = allPhotos.filter((p) => isExteriorPhoto(p));
+    // Store interiors first so the 24-photo cap does not drop rooms for
+    // curb shots. padsplit_photo_urls is interiors-only (listing covers).
+    const photos = [...interiors, ...exteriors].slice(0, 24);
+    const interiorUrls = interiors.map((p) => p.url);
 
     const totalRooms = typeof property.totalRoomsCount === "number" ? property.totalRoomsCount : null;
     // `rooms` only lists CURRENTLY AVAILABLE rooms - confirmed empty on a
@@ -168,7 +218,7 @@ async function scrapeListing(context, listing) {
     const priceLow = roomRates.length ? Math.min(...roomRates) : floorPrice;
     const priceHigh = roomRates.length ? Math.max(...roomRates) : floorPrice;
 
-    return { ok: true, totalRooms, occupiedRooms, priceLow, priceHigh, photos };
+    return { ok: true, totalRooms, occupiedRooms, priceLow, priceHigh, photos, interiorUrls };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
   } finally {
@@ -208,7 +258,7 @@ for (const listing of listings) {
         total_rooms: result.totalRooms,
         price_low: result.priceLow,
         price_high: result.priceHigh,
-        padsplit_photo_urls: result.photos.map((p) => p.url),
+        padsplit_photo_urls: result.interiorUrls,
         padsplit_photos: result.photos,
         last_scraped_at: now,
         last_scrape_error: null,
