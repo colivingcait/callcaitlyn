@@ -18,7 +18,8 @@
     "prove-nav-v2": "npx tsx lib/crm/nav-v2.proof.ts",
     "prove-events": "npx tsx lib/crm/event-ended.proof.ts && npx tsx lib/crm/events-sot.proof.ts && npx tsx lib/crm/today-v1.proof.ts",
     "prove-contacts-v2": "npx tsx lib/crm/contacts-v2.proof.ts && npx tsx lib/crm/contact-filter-predicates.proof.ts && npx tsx lib/crm/nav-v2.proof.ts",
-    "prove-smart-lists": "npx tsx lib/crm/smart-lists.proof.ts && npx tsx lib/crm/contacts-v2.proof.ts && npx tsx lib/crm/nav-v2.proof.ts"
+    "prove-smart-lists": "npx tsx lib/crm/smart-lists.proof.ts && npx tsx lib/crm/contacts-v2.proof.ts && npx tsx lib/crm/nav-v2.proof.ts",
+    "prove-activity-commissions": "npx tsx lib/crm/listing-activity.proof.ts && npx tsx lib/crm/commission-period.proof.ts && npx tsx lib/crm/commission-year.proof.ts && npx tsx lib/crm/nav-v2.proof.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",

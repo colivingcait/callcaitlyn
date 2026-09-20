@@ -79,7 +79,7 @@ const nav = read("components/nav/nav-items.ts");
 assert.ok(nav.includes('label: "Campaigns"'));
 assert.ok(nav.includes('hint: "Email and text campaigns"'));
 assert.equal(nav.includes('hint: "Email and text sequences"'), false);
-assert.ok(nav.includes('label: "Bookings"'));
+assert.equal(nav.includes('label: "Bookings"'), false, "Bookings stays off More");
 assert.equal(nav.includes('label: "Booking requests"'), false);
 
 const campaignsPage = read("app/(app)/sequences/page.tsx");

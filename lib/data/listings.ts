@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { clusterAgentsByIdentity, collapseListingAgents, dedupeAgentsByIdentity, normalizeAgentEmail } from "@/lib/crm/agent-identity";
-import type { Listing, ListingAgent, ListingPriceChange, ListingSend, ListingDocument, Agent, ListingStatus } from "@/types/database";
+import { classifyListingPageActivity } from "@/lib/crm/listing-activity";
+import type { ListingPageLeadEvent } from "@/lib/crm/listing-activity";
+import type { Listing, ListingAgent, ListingPriceChange, ListingSend, ListingDocument, Agent, ListingStatus, ListingStatusChange } from "@/types/database";
 
 export type ListingWithSummary = Listing & {
   agentCount: number;
@@ -49,23 +51,60 @@ export type ListingDetail = {
   agents: ListingAgent[];
   sends: ListingSend[];
   priceChanges: ListingPriceChange[];
+  statusChanges: ListingStatusChange[];
   messages: import("@/types/database").ListingAgentMessage[];
   documents: ListingDocument[];
+  pageEvents: ListingPageLeadEvent[];
 };
 
 export async function getListingDetail(id: string): Promise<ListingDetail | null> {
   const supabase = await createClient();
-  const [{ data: listing }, { data: agents }, { data: sends }, { data: priceChanges }, { data: messages }, { data: documents }] = await Promise.all([
-    supabase.from("listings").select("*").eq("id", id).maybeSingle(),
-    supabase.from("listing_agents").select("*").eq("listing_id", id).order("created_at", { ascending: false }),
-    supabase.from("listing_sends").select("*").eq("listing_id", id).order("created_at", { ascending: false }),
-    supabase.from("listing_price_changes").select("*").eq("listing_id", id).order("occurred_at", { ascending: false }),
-    supabase.from("listing_agent_messages").select("*").eq("listing_id", id).order("occurred_at", { ascending: false }).limit(30),
-    supabase.from("listing_documents").select("*").eq("listing_id", id),
-  ]);
+  const [{ data: listing }, { data: agents }, { data: sends }, { data: priceChanges }, { data: statusChanges }, { data: messages }, { data: documents }, pageEvents] =
+    await Promise.all([
+      supabase.from("listings").select("*").eq("id", id).maybeSingle(),
+      supabase.from("listing_agents").select("*").eq("listing_id", id).order("created_at", { ascending: false }),
+      supabase.from("listing_sends").select("*").eq("listing_id", id).order("created_at", { ascending: false }),
+      supabase.from("listing_price_changes").select("*").eq("listing_id", id).order("occurred_at", { ascending: false }),
+      supabase.from("listing_status_changes").select("*").eq("listing_id", id).order("occurred_at", { ascending: false }),
+      supabase.from("listing_agent_messages").select("*").eq("listing_id", id).order("occurred_at", { ascending: false }).limit(80),
+      supabase.from("listing_documents").select("*").eq("listing_id", id),
+      getListingPageEvents(id),
+    ]);
 
   if (!listing) return null;
-  return { listing, agents: agents ?? [], sends: sends ?? [], priceChanges: priceChanges ?? [], messages: messages ?? [], documents: documents ?? [] };
+  return {
+    listing,
+    agents: agents ?? [],
+    sends: sends ?? [],
+    priceChanges: priceChanges ?? [],
+    statusChanges: (statusChanges ?? []) as ListingStatusChange[],
+    messages: messages ?? [],
+    documents: documents ?? [],
+    pageEvents,
+  };
+}
+
+export async function getListingPageEvents(listingId: string): Promise<ListingPageLeadEvent[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("activities")
+    .select("id, body, occurred_at, metadata, dedupe_field, contacts(first_name, last_name)")
+    .eq("source", "listing_page")
+    .order("occurred_at", { ascending: false })
+    .limit(80);
+
+  const events: ListingPageLeadEvent[] = [];
+  for (const row of data ?? []) {
+    const metadata = (row.metadata ?? {}) as Record<string, unknown>;
+    if (metadata.listing_id !== listingId) continue;
+    const kind = classifyListingPageActivity({ body: row.body, dedupe_field: row.dedupe_field, metadata });
+    if (!kind) continue;
+    const contact = row.contacts as { first_name?: string; last_name?: string } | { first_name?: string; last_name?: string }[] | null;
+    const person = Array.isArray(contact) ? contact[0] : contact;
+    const name = [person?.first_name, person?.last_name].filter(Boolean).join(" ").trim() || "Investor";
+    events.push({ id: row.id as string, kind, occurred_at: row.occurred_at as string, name, body: row.body });
+  }
+  return events;
 }
 
 export type SendWithProgress = ListingSend & { total: number; sent: number; failed: number; skipped: number; pending: number };
