@@ -5,6 +5,7 @@ import {
   DEFAULT_DD_DAYS,
   DEFAULT_SELLER_SUPPORT_DAYS,
   asImprovements,
+  visibleImprovements,
   asPhotoList,
   asUrlList,
   daysInputValue,
@@ -65,6 +66,10 @@ assert.deepEqual(asImprovements(undefined), []);
 assert.deepEqual(asImprovements({} as never), []);
 assert.deepEqual(asImprovements([{ item: "Roof", year: "2022", cost: "$1" }]), [{ item: "Roof", year: "2022", cost: "$1" }]);
 assert.deepEqual(asImprovements([{} as never]), [{ item: "", year: "", cost: "" }]);
+assert.deepEqual(visibleImprovements(null), []);
+assert.deepEqual(visibleImprovements([]), []);
+assert.deepEqual(visibleImprovements([{ item: "", year: "", cost: "" }]), []);
+assert.deepEqual(visibleImprovements([{ item: "Roof", year: "2022", cost: "11000" }]), [{ item: "Roof", year: "2022", cost: "11000" }]);
 
 assert.deepEqual(asPhotoList(null), []);
 assert.deepEqual(asPhotoList(undefined), []);
@@ -104,6 +109,7 @@ assert.equal(financials.includes("T12 line items"), false);
 
 const improvements = read("components/listings/ImprovementsEditor.tsx");
 assert.ok(improvements.includes("asImprovements(improvements)"));
+assert.ok(read("components/listings/om/FinancialGate.tsx").includes("visibleImprovements(improvements)"));
 
 const page = read("app/(app)/listings/[id]/page.tsx");
 assert.ok(page.includes("ApplyToOmPanel"));

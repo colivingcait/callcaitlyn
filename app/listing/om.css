@@ -152,7 +152,8 @@ main {
     font-size: 26px !important;
   }
   .om-capex-row {
-    grid-template-columns: minmax(0, 1fr) auto !important;
+    grid-template-columns: minmax(0, 1fr) 72px 96px !important;
+    gap: 12px !important;
   }
 }
 
