@@ -72,11 +72,15 @@ const workspace = read("components/contacts/ContactsWorkspace.tsx");
 assert.ok(workspace.includes("ContactsListTabs"));
 assert.ok(workspace.includes('variant="panel"') || workspace.includes("variant=\"panel\""));
 assert.equal(workspace.includes("max-w-lg"), false, "desktop Contacts is not a phone shell");
+assert.ok(workspace.includes("SmartListBuilder"));
+assert.equal(workspace.includes("RosterView"), false, "Contacts smart lists are not Events roster");
 
 const tabs = read("components/contacts/ContactsListTabs.tsx");
 assert.ok(tabs.includes("All contacts"));
 assert.ok(tabs.includes("Save view as list"));
 assert.ok(tabs.includes('variant?: "tabs" | "picker"') || tabs.includes("picker"));
+assert.ok(tabs.includes("Smart lists"), "smart lists is a tab, not a replacement for Lists-as-tabs");
+assert.ok(tabs.includes("staticLists"), "saved views stay in the tabs rail");
 
 const sheet = read("components/contacts/ContactFiltersSheet.tsx");
 assert.ok(sheet.includes("Ever attended"), "sheet ever attended");
@@ -92,6 +96,8 @@ const filters = read("components/contacts/ContactFilters.tsx");
 assert.ok(filters.includes("flex flex-wrap"), "filters wrap");
 assert.equal(filters.includes("overflow-x-auto"), false, "no sideways chip scroll");
 assert.ok(filters.includes("ActiveFilterTags"), "filters tags");
+assert.ok(filters.includes("Search name, email, phone"), "v2 search stays on All contacts");
+assert.ok(filters.includes("compact"), "smart lists can hide search without removing the control");
 
 const tagsUi = read("components/contacts/ActiveFilterTags.tsx");
 assert.ok(tagsUi.includes("flex flex-wrap"), "tags wrap");

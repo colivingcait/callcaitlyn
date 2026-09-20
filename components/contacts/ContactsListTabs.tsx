@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Plus, Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { isSmartList, partitionLists, SMART_LIST_VIEW, smartListSearchParamsFromFilters } from "@/lib/crm/smart-lists";
 import { cn } from "@/lib/utils";
 import type { ContactSegment } from "@/types/database";
 
@@ -24,6 +25,8 @@ export function ContactsListTabs({
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
   const activeList = searchParams.get("list");
+  const { staticLists, smartLists } = partitionLists(segments);
+  const smartView = searchParams.get("view") === SMART_LIST_VIEW || isSmartList(segments.find((s) => s.id === activeList));
 
   function go(params: URLSearchParams) {
     const qs = params.toString();
@@ -35,8 +38,20 @@ export function ContactsListTabs({
   }
 
   function openSegment(seg: ContactSegment) {
+    if (isSmartList(seg)) {
+      const params = smartListSearchParamsFromFilters(seg.filters);
+      params.set("list", seg.id);
+      go(params);
+      return;
+    }
     const params = new URLSearchParams(seg.filters as Record<string, string>);
     params.set("list", seg.id);
+    go(params);
+  }
+
+  function openSmartBuilder() {
+    const params = new URLSearchParams();
+    params.set("view", SMART_LIST_VIEW);
     go(params);
   }
 
@@ -62,11 +77,15 @@ export function ContactsListTabs({
     return (
       <div className="space-y-2">
         <select
-          value={activeList ?? ""}
+          value={smartView && !activeList ? "__smart__" : (activeList ?? "")}
           onChange={(e) => {
             const id = e.target.value;
             if (!id) {
               openAll();
+              return;
+            }
+            if (id === "__smart__") {
+              openSmartBuilder();
               return;
             }
             const seg = segments.find((s) => s.id === id);
@@ -75,11 +94,23 @@ export function ContactsListTabs({
           className="w-full rounded-[11px] border border-neutral-200 bg-white px-3 py-2.5 text-[15px] text-neutral-800"
         >
           <option value="">All contacts</option>
-          {segments.map((seg) => (
-            <option key={seg.id} value={seg.id}>
-              {seg.name}
-            </option>
-          ))}
+          {staticLists.length > 0 && (
+            <optgroup label="Static lists">
+              {staticLists.map((seg) => (
+                <option key={seg.id} value={seg.id}>
+                  {seg.name}
+                </option>
+              ))}
+            </optgroup>
+          )}
+          <optgroup label="Smart lists">
+            <option value="__smart__">Smart List Builder</option>
+            {smartLists.map((seg) => (
+              <option key={seg.id} value={seg.id}>
+                {seg.name}
+              </option>
+            ))}
+          </optgroup>
         </select>
         {saving ? (
           <form
@@ -123,24 +154,34 @@ export function ContactsListTabs({
         onClick={openAll}
         className={cn(
           "-mb-px border-b-2 px-3 py-2.5 text-[14px] font-medium",
-          !activeList ? "border-[#c45c4a] font-semibold text-[#c45c4a]" : "border-transparent text-neutral-500 hover:text-neutral-800",
+          !activeList && !smartView ? "border-[#c45c4a] font-semibold text-[#c45c4a]" : "border-transparent text-neutral-500 hover:text-neutral-800",
         )}
       >
         All contacts
       </button>
-      {segments.map((seg) => (
+      {staticLists.map((seg) => (
         <button
           key={seg.id}
           type="button"
           onClick={() => openSegment(seg)}
           className={cn(
             "-mb-px border-b-2 px-3 py-2.5 text-[14px] font-medium",
-            activeList === seg.id ? "border-[#c45c4a] font-semibold text-[#c45c4a]" : "border-transparent text-neutral-500 hover:text-neutral-800",
+            !smartView && activeList === seg.id ? "border-[#c45c4a] font-semibold text-[#c45c4a]" : "border-transparent text-neutral-500 hover:text-neutral-800",
           )}
         >
           {seg.name}
         </button>
       ))}
+      <button
+        type="button"
+        onClick={openSmartBuilder}
+        className={cn(
+          "-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-[14px] font-medium",
+          smartView ? "border-[#c45c4a] font-semibold text-[#c45c4a]" : "border-transparent text-neutral-500 hover:text-neutral-800",
+        )}
+      >
+        <Zap size={13} /> Smart lists
+      </button>
       {saving ? (
         <form
           className="mb-1 ml-1 flex items-center gap-1.5"
