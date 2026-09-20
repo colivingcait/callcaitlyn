@@ -1,9 +1,9 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Listing, PadsplitPhoto } from "@/types/database";
-import { interiorPhotos, listingCoverPhotoUrl } from "@/lib/listings/padsplit-photos";
+import { listingCoverPhotoUrl, listingPublicPhotos } from "@/lib/listings/padsplit-photos";
 
-export { interiorPhotos, listingCoverPhotoUrl } from "@/lib/listings/padsplit-photos";
+export { interiorPhotos, listingCoverPhotoUrl, listingPublicPhotos } from "@/lib/listings/padsplit-photos";
 
 const OWNER_ID = process.env.CRM_OWNER_USER_ID;
 
@@ -52,7 +52,7 @@ async function getOccupancyTrend(admin: SupabaseClient, listingId: string): Prom
   return points;
 }
 
-export type PublicListing = Listing & { photoUrls: string[]; photos: PadsplitPhoto[]; occupancyTrend: OccupancyTrendPoint[] };
+export type PublicListing = Listing & { photoUrls: string[]; photos: PadsplitPhoto[]; coverPhotoUrl: string | null; occupancyTrend: OccupancyTrendPoint[] };
 
 // Public, unauthenticated reads - same idiom as app/n/[slug]/actions.ts and
 // app/book/[slug]/booking-actions.ts: scoped to the single owner account
@@ -72,14 +72,13 @@ export async function getPublicListing(slug: string): Promise<PublicListing | nu
   if (!listing) return null;
 
   const photoUrls = (listing.photo_paths as string[]).map((p) => admin.storage.from("listing-photos").getPublicUrl(p).data.publicUrl);
-  // Interior PadSplit photos first (fresher, scraped daily); if the scrape
-  // has nothing yet, fall back to the manually uploaded set - she chose
-  // those for marketing already, so no exterior filter is needed on them.
-  const scraped = interiorPhotos(listing);
-  const photos = scraped.length > 0 ? scraped : photoUrls.map((url) => ({ url, category: null }));
+  // Active photo_source only — switching modes does not merge the two
+  // stores. PadSplit mode reads the curated snapshot once pulled, else
+  // last-scrape interiors so existing OMs stay up until the first Pull.
+  const photos = listingPublicPhotos(listing, photoUrls);
   const occupancyTrend = await getOccupancyTrend(admin, listing.id);
 
-  return { ...listing, photoUrls, photos, occupancyTrend };
+  return { ...listing, photoUrls, photos, coverPhotoUrl: listingCoverPhotoUrl(listing, photoUrls), occupancyTrend };
 }
 
 export type PublicListingCard = Listing & { photoUrls: string[]; coverPhotoUrl: string | null };

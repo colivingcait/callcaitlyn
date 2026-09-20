@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { extractPadsplitListingId, padsplitListingUrlFromInput, PADSPLIT_LISTING_URL_BASE } from "./padsplit-url";
-import { isExteriorPadsplitPhoto, interiorPhotos, listingCoverPhotoUrl } from "./padsplit-photos";
+import { isExteriorPadsplitPhoto, interiorPhotos, listingCoverPhotoUrl, listingPhotoSource, listingPublicPhotos } from "./padsplit-photos";
 import {
   GATED_RATIO_FIELDS,
   GATED_REMOVED_FIELDS,
@@ -57,11 +57,49 @@ assert.deepEqual(
   ["https://cdn.example/kitchen.jpg"],
 );
 assert.equal(listingCoverPhotoUrl(listing, ["https://manual.example/a.jpg"]), "https://cdn.example/kitchen.jpg");
+assert.equal(listingPhotoSource(listing), "padsplit");
+assert.deepEqual(listingPublicPhotos(listing, ["https://manual.example/a.jpg"]).map((p) => p.url), ["https://cdn.example/kitchen.jpg"]);
+
+const curated = {
+  ...listing,
+  photo_source: "padsplit" as const,
+  hero_photo_url: "https://cdn.example/living.jpg",
+  padsplit_gallery: [
+    { url: "https://cdn.example/kitchen.jpg", category: "kitchen" },
+    { url: "https://cdn.example/living.jpg", category: "living" },
+  ],
+};
+assert.deepEqual(listingPublicPhotos(curated).map((p) => p.url), ["https://cdn.example/kitchen.jpg", "https://cdn.example/living.jpg"]);
+assert.equal(listingCoverPhotoUrl(curated), "https://cdn.example/living.jpg");
+
+const excludedHero = { ...curated, excluded_photo_urls: ["https://cdn.example/living.jpg"] };
+assert.equal(listingCoverPhotoUrl(excludedHero), "https://cdn.example/kitchen.jpg");
+
+const manual = {
+  ...listing,
+  photo_source: "manual" as const,
+  hero_photo_url: "https://manual.example/b.jpg",
+  photo_paths: ["a.jpg", "b.jpg"],
+};
+assert.deepEqual(listingPublicPhotos(manual, ["https://manual.example/a.jpg", "https://manual.example/b.jpg"]).map((p) => p.url), [
+  "https://manual.example/a.jpg",
+  "https://manual.example/b.jpg",
+]);
+assert.equal(listingCoverPhotoUrl(manual, ["https://manual.example/a.jpg", "https://manual.example/b.jpg"]), "https://manual.example/b.jpg");
+assert.equal(listingCoverPhotoUrl({ ...manual, hero_photo_url: null }, ["https://manual.example/a.jpg", "https://manual.example/b.jpg"]), "https://manual.example/a.jpg");
 
 const scrape = read("scripts/scrape-padsplit.mjs");
 assert.ok(scrape.includes("EXTERIOR_PHOTO_RE"));
 assert.ok(scrape.includes("isExteriorPhoto"));
 assert.ok(scrape.includes("interiorUrls"));
+assert.ok(scrape.includes("padsplit_gallery"), "scrape must document that curated gallery is off-limits");
+const scrapeUpdates = [...scrape.matchAll(/\.update\(\{[\s\S]*?\}\)/g)].map((m) => m[0]);
+assert.ok(scrapeUpdates.length >= 2);
+for (const block of scrapeUpdates) {
+  assert.equal(block.includes("padsplit_gallery"), false, "daily scrape must not write padsplit_gallery");
+  assert.equal(block.includes("hero_photo_url"), false, "daily scrape must not write hero_photo_url");
+  assert.equal(block.includes("photo_source"), false, "daily scrape must not write photo_source");
+}
 
 const omPage = read("app/listing/[slug]/page.tsx");
 assert.equal(omPage.includes("Process & timeline"), false);
@@ -130,6 +168,7 @@ assert.equal(gate.includes("RESET DEMO"), false);
 
 const hero = read("components/listings/om/PhotoCarousel.tsx");
 assert.ok(hero.includes("VIEW PHOTOS"));
+assert.ok(hero.includes("coverUrl"));
 assert.ok(hero.includes("photoMode"));
 assert.ok(hero.includes("Escape"));
 assert.ok(hero.includes("ArrowLeft"));
