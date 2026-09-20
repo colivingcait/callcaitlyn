@@ -123,8 +123,18 @@ export async function updateListingStatus(listingId: string, status: ListingStat
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Not signed in" };
 
+  const { data: current } = await supabase.from("listings").select("status").eq("id", listingId).maybeSingle();
   const { error } = await supabase.from("listings").update({ status, updated_at: new Date().toISOString() }).eq("id", listingId);
   if (error) return { ok: false, error: error.message };
+
+  if (current && current.status !== status) {
+    await supabase.from("listing_status_changes").insert({
+      listing_id: listingId,
+      owner_id: user.id,
+      old_status: current.status,
+      new_status: status,
+    });
+  }
 
   revalidatePath("/listings");
   revalidatePath(`/listings/${listingId}`);
@@ -266,12 +276,38 @@ export async function addAgentManually(input: { name: string; brokerage?: string
 
 // Deliberate, never automatic (README §8) - brokerage rides along via the
 // `company` column added in migration 0069.
-export async function promoteAgentToContact(input: { name: string; brokerage: string | null; email: string | null; phone: string | null }): Promise<ActionResult<{ contactId: string }>> {
+export async function promoteAgentToContact(input: {
+  listingId?: string;
+  name: string;
+  brokerage: string | null;
+  email: string | null;
+  phone: string | null;
+}): Promise<ActionResult<{ contactId: string }>> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Not signed in" };
+
+  const email = input.email?.trim().toLowerCase() || null;
+  const phone = input.phone?.trim() || null;
+  if (email || phone) {
+    const { data: existing } = await supabase.from("contacts").select("id, phone, secondary_phone, email").eq("archived", false);
+    const match = (existing ?? []).find((c) => (email && c.email?.trim().toLowerCase() === email) || (phone && (phonesMatch(c.phone, phone) || phonesMatch(c.secondary_phone, phone))));
+    if (match) {
+      await supabase
+        .from("contacts")
+        .update({
+          contact_type: "referral_partner",
+          company: input.brokerage,
+          lead_source: "Referral partner (agent)",
+        })
+        .eq("id", match.id);
+      revalidatePath("/contacts");
+      if (input.listingId) revalidatePath(`/listings/${input.listingId}`);
+      return { ok: true, contactId: match.id as string };
+    }
+  }
 
   const [firstName, ...rest] = input.name.trim().split(/\s+/);
   const { data, error } = await supabase
@@ -291,6 +327,7 @@ export async function promoteAgentToContact(input: { name: string; brokerage: st
 
   if (error || !data) return { ok: false, error: error?.message ?? "Couldn't add them as a contact" };
   revalidatePath("/contacts");
+  if (input.listingId) revalidatePath(`/listings/${input.listingId}`);
   return { ok: true, contactId: data.id as string };
 }
 
@@ -349,6 +386,7 @@ export async function createListingSend(input: {
       channel: input.channel,
       subject: input.subject?.trim() || null,
       message: input.message.trim(),
+      audience: input.audience,
       send_immediately: input.sendImmediately,
     })
     .select("id")

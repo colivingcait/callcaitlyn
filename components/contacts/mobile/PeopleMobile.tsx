@@ -7,6 +7,8 @@ import { Plus, Search, SlidersHorizontal } from "lucide-react";
 import { PeopleList } from "@/components/contacts/mobile/PeopleList";
 import { ContactFiltersSheet } from "@/components/contacts/ContactFiltersSheet";
 import { ContactsListTabs } from "@/components/contacts/ContactsListTabs";
+import { SmartListBuilder } from "@/components/contacts/SmartListBuilder";
+import { isSmartList, SMART_LIST_VIEW } from "@/lib/crm/smart-lists";
 import { ActiveFilterTags } from "@/components/contacts/ActiveFilterTags";
 import { ContactsBulkBar } from "@/components/contacts/ContactsBulkBar";
 import { CountScopeNote } from "@/components/CountScopeNote";
@@ -102,6 +104,8 @@ export function PeopleMobile({
     });
   }
 
+  const activeList = searchParams.get("list");
+  const smartView = searchParams.get("view") === SMART_LIST_VIEW || isSmartList(segments.find((seg) => seg.id === activeList));
   const searched = search.trim() ? contacts.filter((c) => matchesQuery(c, search)) : contacts;
   const selectedIds = [...selected];
   const selectedContacts = searched.filter((c) => selected.has(c.id));
@@ -196,6 +200,19 @@ export function PeopleMobile({
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <ActiveFilterTags stages={stages} tags={tags} />
       </div>
+
+      {smartView && (
+        <div className="mb-3">
+          <SmartListBuilder
+            contacts={searched}
+            stages={stages}
+            tags={tags}
+            segments={segments}
+            ownerId={ownerId}
+            variant="mobile"
+          />
+        </div>
+      )}
 
       <div className="mb-3 flex items-center justify-between gap-2">
         <div className="min-w-0 flex-1">

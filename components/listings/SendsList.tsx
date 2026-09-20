@@ -44,7 +44,7 @@ export function SendsList({ listingId, sends, progress }: { listingId: string; s
             const p = progress[s.id] ?? { total: 0, sent: 0, failed: 0, skipped: 0, pending: 0 };
             const colors = STATE_COLORS[s.status] ?? STATE_COLORS.completed;
             return (
-              <div key={s.id} className="flex items-center gap-3.5 border-b border-neutral-100 px-[18px] py-3.5 last:border-b-0">
+              <div id={`listing-send-${s.id}`} key={s.id} className="flex items-center gap-3.5 border-b border-neutral-100 px-[18px] py-3.5 last:border-b-0">
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-neutral-900">
                     {s.channel === "email" ? "Email" : "Text"} · {relativeTime(s.created_at)}

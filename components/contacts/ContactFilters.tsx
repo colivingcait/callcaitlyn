@@ -37,6 +37,7 @@ export function ContactFilters({
   registeredEventNames,
   selectSlot,
   panel = false,
+  compact = false,
   filtersOpen,
   onFiltersOpenChange,
 }: {
@@ -47,6 +48,7 @@ export function ContactFilters({
   registeredEventNames: string[];
   selectSlot?: ReactNode;
   panel?: boolean;
+  compact?: boolean;
   filtersOpen?: boolean;
   onFiltersOpenChange?: (open: boolean) => void;
 }) {
@@ -90,6 +92,7 @@ export function ContactFilters({
   return (
     <div className="space-y-2.5">
       <div className="flex flex-wrap gap-2">
+        {!compact && (
         <div className="relative min-w-0 flex-1">
           <Search className="absolute left-[13px] top-1/2 -translate-y-1/2 text-neutral-400" size={18} />
           <input
@@ -104,6 +107,7 @@ export function ContactFilters({
             className="w-full rounded-[11px] border border-neutral-200 bg-white py-3 pl-10 pr-3 text-[15px] text-neutral-900"
           />
         </div>
+        )}
         <button
           type="button"
           onClick={() => setSheetOpen(!sheetOpen)}
@@ -114,7 +118,7 @@ export function ContactFilters({
         >
           <SlidersHorizontal size={16} className="text-neutral-500" /> Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
         </button>
-        {selectSlot}
+        {!compact && selectSlot}
         {!panel && (
           <div className="relative shrink-0">
             <button

@@ -54,7 +54,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </div>
       {/* Mobile's FAB slot is Today-only-Log now (LogPill below); New
           contact lives on the Contacts header. More is a flat sheet
-          (Campaigns · Bookings · Listings · Commissions · Reports · Settings,
+          (Campaigns · Listings · Commissions · Reports · Settings,
           plus Events on mobile). QuickAddButton stays desktop-only. */}
       <div className="hidden lg:block">
         <QuickAddButton />

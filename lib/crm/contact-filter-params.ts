@@ -57,6 +57,8 @@ export type ContactFilterParams = {
   groupBy?: ContactGroupBy;
   sort?: ContactSort;
   includeIds?: string[];
+  lastTouchOlderThanDays?: number;
+  inListIds?: string[];
 };
 
 // Single source of truth for reading contact-list query params, used by
@@ -105,6 +107,8 @@ export function parseContactFilterParams(sp: URLSearchParams): ContactFilterPara
     groupBy: (sp.get("group") as ContactGroupBy) ?? undefined,
     sort: (sp.get("sort") as ContactSort) ?? undefined,
     includeIds: sp.get("ids") ? sp.get("ids")!.split(",").filter(Boolean) : undefined,
+    lastTouchOlderThanDays: parsePositiveDays(sp.get("lastTouch")),
+    inListIds: sp.get("inList") ? sp.get("inList")!.split(",").filter(Boolean) : undefined,
   };
 }
 
@@ -119,6 +123,13 @@ export const CONTACTS_V2_FILTER_KEYS = ["source", "stage", "event", "gender", "p
 function parseContactGender(raw: string | null): ContactGender | undefined {
   if (raw === "women" || raw === "men" || raw === "unknown") return raw;
   return undefined;
+}
+
+function parsePositiveDays(raw: string | null): number | undefined {
+  if (!raw) return undefined;
+  const days = Number(raw);
+  if (!Number.isFinite(days) || days <= 0) return undefined;
+  return Math.floor(days);
 }
 
 export function parseIncludeIds(raw: string | null | undefined): string[] {

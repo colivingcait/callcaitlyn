@@ -6,6 +6,7 @@ import { X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Input, Select } from "@/components/ui";
 import { mergeIncludeIds } from "@/lib/crm/contact-filter-params";
+import { partitionLists } from "@/lib/crm/smart-lists";
 import type { ContactSegment } from "@/types/database";
 
 export function BulkAddToListModal({
@@ -22,8 +23,9 @@ export function BulkAddToListModal({
   onDone: () => void;
 }) {
   const router = useRouter();
-  const [mode, setMode] = useState<"existing" | "new">(segments.length > 0 ? "existing" : "new");
-  const [segmentId, setSegmentId] = useState(segments[0]?.id ?? "");
+  const staticLists = partitionLists(segments).staticLists;
+  const [mode, setMode] = useState<"existing" | "new">(staticLists.length > 0 ? "existing" : "new");
+  const [segmentId, setSegmentId] = useState(staticLists[0]?.id ?? "");
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +54,7 @@ export function BulkAddToListModal({
       router.refresh();
       return;
     }
-    const segment = segments.find((s) => s.id === segmentId);
+    const segment = staticLists.find((s) => s.id === segmentId);
     if (!segment) {
       setSaving(false);
       setError("Pick a list.");
@@ -84,7 +86,7 @@ export function BulkAddToListModal({
           separate nav item.
         </p>
         <div className="mt-4 space-y-3">
-          {segments.length > 0 && (
+          {staticLists.length > 0 && (
             <div className="flex gap-2">
               <button
                 type="button"
@@ -104,7 +106,7 @@ export function BulkAddToListModal({
           )}
           {mode === "existing" ? (
             <Select value={segmentId} onChange={(e) => setSegmentId(e.target.value)}>
-              {segments.map((seg) => (
+              {staticLists.map((seg) => (
                 <option key={seg.id} value={seg.id}>
                   {seg.name}
                 </option>
