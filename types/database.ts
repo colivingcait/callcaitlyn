@@ -104,11 +104,17 @@ export interface ContactFilterState {
   q?: string;
   stage?: string;
   tag?: string;
+  tags?: string;
   type?: string;
   timeline?: string;
   representing?: string;
   phone?: string;
   sort?: string;
+  kind?: string;
+  lastTouch?: string;
+  inList?: string;
+  ids?: string;
+  view?: string;
 }
 
 export interface ContactSegment {

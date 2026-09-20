@@ -13,6 +13,7 @@ import {
 } from "@/lib/data/contacts";
 import { listSequencesWithSummary } from "@/lib/data/sequences";
 import { parseContactFilterParams } from "@/lib/crm/contact-filter-params";
+import { isSmartList, SMART_LIST_VIEW } from "@/lib/crm/smart-lists";
 import { ContactsWorkspace } from "@/components/contacts/ContactsWorkspace";
 import { BulkImportContactsButton } from "@/components/contacts/BulkImportContactsButton";
 import { PeopleMobile } from "@/components/contacts/mobile/PeopleMobile";
@@ -49,6 +50,8 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
     listSegments(),
   ]);
   const lastActivityLabels = await getLastActivityLabels(contacts.map((c) => c.id));
+  const activeSegment = segments.find((seg) => seg.id === usp.get("list"));
+  const smartView = usp.get("view") === SMART_LIST_VIEW || isSmartList(activeSegment);
 
   return (
     <>
@@ -72,9 +75,13 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
       <div className="sticky top-0 z-10 bg-[#f7f1ea] pt-8 pb-3">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="font-display text-[32px] font-semibold leading-9 tracking-[-0.03em] text-neutral-900">Contacts</h1>
+            <h1 className="font-display text-[32px] font-semibold leading-9 tracking-[-0.03em] text-neutral-900">
+              {smartView ? (activeSegment?.name ?? "Smart List Builder") : "Contacts"}
+            </h1>
             <p className="mt-1.5 text-[15px] leading-[22px] text-neutral-600">
-              {contacts.length} people · leads from Zillow, referrals, events, and more
+              {smartView
+                ? `${contacts.length} contact${contacts.length === 1 ? "" : "s"} match these rules`
+                : `${contacts.length} people · leads from Zillow, referrals, events, and more`}
             </p>
             <CountScopeNote current="contacts" />
           </div>

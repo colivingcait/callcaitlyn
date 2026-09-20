@@ -12,6 +12,7 @@ import {
 } from "@/lib/crm/contact-filter-predicates";
 import { contactMatchesGender } from "@/lib/crm/contact-gender";
 import { leadSourceMatches } from "@/lib/crm/contact-sources";
+import { lastTouchIsOlderThan, membershipIdsFromFilters } from "@/lib/crm/smart-lists";
 import type { ContactQueue } from "@/lib/crm/contact-queues";
 import type { Activity, AiInsight, ContactSegment, ContactWithRelations, Deal, PipelineStage, Tag, Task } from "@/types/database";
 
@@ -22,6 +23,24 @@ import type { Activity, AiInsight, ContactSegment, ContactWithRelations, Deal, P
 // this stays a cheap, targeted query rather than a full-table scan. Any
 // channel counts here, not just calls - texted() covers Instagram DMs
 // too, since those are logged with type "text" (see instagram-messages.ts).
+export async function getLastTouchAts(contactIds: string[]): Promise<Map<string, string>> {
+  if (contactIds.length === 0) return new Map();
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("activities")
+    .select("contact_id, occurred_at")
+    .in("contact_id", contactIds)
+    .in("type", ["call", "text", "email"])
+    .order("occurred_at", { ascending: false });
+
+  const timestamps = new Map<string, string>();
+  for (const row of data ?? []) {
+    if (timestamps.has(row.contact_id)) continue;
+    timestamps.set(row.contact_id, row.occurred_at);
+  }
+  return timestamps;
+}
+
 export async function getLastActivityLabels(contactIds: string[]): Promise<Map<string, string>> {
   if (contactIds.length === 0) return new Map();
   const supabase = await createClient();
@@ -124,6 +143,8 @@ export type ContactListFilters = {
   leadDateTo?: string;
   sort?: ContactSort;
   includeIds?: string[];
+  lastTouchOlderThanDays?: number;
+  inListIds?: string[];
 };
 
 export async function listContacts(filters: ContactListFilters) {
@@ -191,6 +212,21 @@ export async function listContacts(filters: ContactListFilters) {
   if (filters.tagIds?.length) {
     const tagIds = filters.tagIds;
     contacts = contacts.filter((c) => c.contact_tags.some((ct) => ct.tags && tagIds.includes(ct.tags.id)));
+  }
+
+  if (filters.inListIds?.length) {
+    const { data: lists } = await supabase.from("contact_segments").select("filters").in("id", filters.inListIds);
+    const allowed = new Set<string>();
+    for (const row of lists ?? []) {
+      for (const id of membershipIdsFromFilters(row.filters)) allowed.add(id);
+    }
+    contacts = contacts.filter((c) => allowed.has(c.id));
+  }
+
+  if (filters.lastTouchOlderThanDays) {
+    const lastTouchById = await getLastTouchAts(contacts.map((c) => c.id));
+    const days = filters.lastTouchOlderThanDays;
+    contacts = contacts.filter((c) => lastTouchIsOlderThan(lastTouchById.get(c.id), days));
   }
 
   if (filters.registeredEventName) {
@@ -314,7 +350,9 @@ function hasRestrictiveFilters(filters: ContactListFilters): boolean {
       filters.queue ||
       filters.leadDateWithinDays ||
       filters.leadDateFrom ||
-      filters.leadDateTo,
+      filters.leadDateTo ||
+      filters.lastTouchOlderThanDays ||
+      filters.inListIds?.length,
   );
 }
 

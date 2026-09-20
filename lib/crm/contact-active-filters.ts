@@ -36,6 +36,8 @@ const PARAM_LABELS: Record<string, string> = {
   archived: "Status",
   quoSync: "Quo",
   queue: "Queue",
+  lastTouch: "Last touch",
+  inList: "List",
 };
 
 export function activeFilterTags(
@@ -71,6 +73,12 @@ export function activeFilterTags(
     const q = QUEUES.find((item) => item.value === queue);
     out.push({ key: "queue", label: q?.label ?? queue });
   }
+
+  const lastTouch = sp.get("lastTouch");
+  if (lastTouch) out.push({ key: "lastTouch", label: `Last touch older than ${lastTouch} days` });
+
+  const inList = sp.get("inList");
+  if (inList) out.push({ key: "inList", label: "In saved list" });
 
   const reg = registrationSelectValue(sp);
   if (reg === REGISTERED_FOR_ANY_EVENT && !sp.get("regEvent") && !out.some((t) => t.key === "regEvent")) {
