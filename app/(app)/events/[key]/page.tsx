@@ -51,9 +51,11 @@ export default async function EventDetailPage({
 
   return (
     <div className="mx-auto w-full max-w-[1400px] px-4 py-6 lg:px-8 lg:py-8">
-      <Link href="/events" className="flex items-center gap-1 text-sm font-medium text-neutral-500 hover:text-neutral-700">
-        <ChevronLeft size={16} /> Events
-      </Link>
+      {activeTab !== "roster" && (
+        <Link href="/events" className="flex items-center gap-1 text-sm font-medium text-neutral-500 hover:text-neutral-700">
+          <ChevronLeft size={16} /> Events
+        </Link>
+      )}
 
       {activeTab !== "roster" && (
         <>
