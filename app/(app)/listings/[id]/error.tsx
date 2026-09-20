@@ -2,7 +2,7 @@
 
 export default function ListingDetailError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6">
+    <div className="mx-auto w-full max-w-[1400px] px-4 py-6 lg:px-8">
       <p className="font-serif text-2xl font-semibold text-neutral-900">This listing tab hit an error</p>
       <p className="mt-2 text-[15px] text-neutral-600">
         A missing or unexpected listing field crashed this view. The listing itself is fine — try again, or open a different tab.

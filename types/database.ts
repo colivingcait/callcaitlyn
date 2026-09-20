@@ -1,4 +1,4 @@
-// Hand-written types matching supabase/migrations (through 0074).
+// Hand-written types matching supabase/migrations (through 0076).
 // If you use the Supabase CLI later, you can replace this with
 // `supabase gen types typescript` output.
 
@@ -321,6 +321,15 @@ export interface ListingPriceChange {
   occurred_at: string;
 }
 
+export interface ListingStatusChange {
+  id: string;
+  listing_id: string;
+  owner_id: string;
+  old_status: ListingStatus | null;
+  new_status: ListingStatus;
+  occurred_at: string;
+}
+
 export type AgentSource = "fmls" | "gamls" | "manual";
 
 // The cross-listing directory - every agent ever imported, deduped, plus
@@ -387,6 +396,7 @@ export interface ListingSend {
   channel: "email" | "text";
   subject: string | null;
   message: string;
+  audience?: string | null;
   status: ListingSendStatus;
   send_immediately: boolean;
   created_at: string;

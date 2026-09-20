@@ -40,9 +40,9 @@ export function ListingStatusMenu({ listingId, status }: { listingId: string; st
         type="button"
         onClick={() => setOpen((v) => !v)}
         disabled={saving}
-        className="flex items-center gap-1.5 rounded-[10px] border border-neutral-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-600 disabled:opacity-50"
+        className="flex items-center gap-1.5 rounded-full border border-[#eadfd6] bg-white px-3 py-1.5 text-[13px] font-medium text-neutral-700 disabled:opacity-50"
       >
-        Mark {STATUS_LABEL[next].toLowerCase()} <ChevronDown size={13} className="text-neutral-400" />
+        Mark next status <ChevronDown size={13} className="text-neutral-400" />
       </button>
       {open && (
         <>

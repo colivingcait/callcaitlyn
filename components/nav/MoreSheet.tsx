@@ -5,9 +5,9 @@ import { BottomSheet } from "@/components/mobile/BottomSheet";
 import { moreNavItemsForSheet, type NavCounts } from "@/components/nav/nav-items";
 import { countFor as countForCounts } from "@/lib/nav/countFor";
 
-// Flat More sheet matching the mobile mock: Events, Campaigns, Bookings,
-// Listings, Commissions, Reports, Settings. No ALSO TODAY / PEOPLE / MONEY
-// groups, and Lists is not a nav destination.
+// Flat More sheet: Events, Campaigns, Listings, Commissions, Reports,
+// Settings. Bookings stays off nav (history is undesigned). Lists is not
+// a nav destination.
 export function MoreSheet({ open, onClose, counts }: { open: boolean; onClose: () => void; userEmail?: string | null; counts: NavCounts }) {
   const countFor = countForCounts(counts);
   const items = moreNavItemsForSheet();

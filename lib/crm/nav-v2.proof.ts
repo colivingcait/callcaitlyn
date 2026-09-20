@@ -17,13 +17,14 @@ const mobileMoreBlock = nav.slice(nav.indexOf("export const MOBILE_MORE_ITEMS"),
 for (const label of ["Today", "Contacts", "Messages", "Pipeline", "Events"]) {
   assert.ok(primaryBlock.includes(`label: "${label}"`), `primary includes ${label}`);
 }
-for (const label of ["Campaigns", "Bookings", "Listings", "Commissions", "Reports", "Settings"]) {
+for (const label of ["Campaigns", "Listings", "Commissions", "Reports", "Settings"]) {
   assert.ok(moreBlock.includes(`label: "${label}"`), `more includes ${label}`);
   assert.equal(primaryBlock.includes(`label: "${label}"`), false, `${label} is not a desktop primary`);
 }
 assert.ok(mobileMoreBlock.includes('label: "Events"'), "mobile More includes Events");
 assert.ok(nav.includes('kind: "more", label: "More"'));
 assert.equal(moreBlock.includes('href: "/events"'), false, "desktop More does not list Events");
+assert.equal(nav.includes('label: "Bookings"'), false, "Bookings stays off More");
 assert.equal(nav.includes('label: "Lists"'), false);
 assert.equal(nav.includes("Also today"), false);
 assert.equal(nav.includes("Money & tools"), false);

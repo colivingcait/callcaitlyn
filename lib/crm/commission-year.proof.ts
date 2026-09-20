@@ -42,8 +42,8 @@ assert.ok(toggle.includes("href={`/commissions?year=${year}`}"), "tab href uses 
 assert.ok(toggle.includes("{capYearLabel(year)}"), "tab label uses capYearLabel of that same key");
 
 const page = read("app/(app)/commissions/page.tsx");
-assert.ok(page.includes("resolveCapYearQuery"), "commissions page resolves ?year= through the shared mapper");
-assert.ok(page.includes("d.capYear === currentYear"), "visible deals match the resolved year key");
+assert.ok(page.includes("computeDeals"), "commissions still walks deals through the KW/KWRI cap math");
+assert.equal(page.includes("CapYearToggle"), false, "period filter is the page chrome; cap-year tabs are no longer primary");
 
 const commission = read("lib/crm/commission.ts");
 assert.ok(commission.includes("return `${startYear + 1}`") || commission.includes("startYear + 1"), "pre-2026 keys are the dominant calendar year, not Dec-start year");
