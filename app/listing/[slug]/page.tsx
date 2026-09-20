@@ -13,6 +13,7 @@ import { publicListingCopy } from "@/lib/listings/public-copy";
 import { asListingFinancials } from "@/lib/listings/crm-marketing-fields";
 import { occupancyFromFinancials, t12OccupancySummary } from "@/lib/listings/occupancy";
 import { formatPublicBand } from "@/lib/listings/public-bands";
+import { CAITLYN_HEADSHOT_SRC } from "@/lib/brand/caitlyn";
 
 // Occupancy changes daily and a listing can be unpublished at any time -
 // this must never be served from a stale build-time cache.
@@ -313,7 +314,19 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                     <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.18em", color: "#e9a396" }}>YOUR CONTACT FOR THIS OFFERING</p>
                   </div>
                   <div style={{ display: "flex", gap: 14, padding: "16px 20px 0" }}>
-                    <div style={{ flex: "0 0 84px", height: 104, background: "repeating-linear-gradient(135deg, #322a25 0 10px, #2a231f 10px 20px)" }} />
+                    {/* Source is a standing 1080 square. Cover alone shows the
+                        whole figure in this 84×104 slot; zoom + origin keeps
+                        it on her face and yellow blazer. */}
+                    <div style={{ flex: "0 0 84px", height: 104, overflow: "hidden", background: "#2a231f" }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={CAITLYN_HEADSHOT_SRC}
+                        alt="Caitlyn Verdugo"
+                        width={84}
+                        height={104}
+                        style={{ display: "block", width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.55)", transformOrigin: "center 14%" }}
+                      />
+                    </div>
                     <div style={{ minWidth: 0 }}>
                       <p style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 24, lineHeight: 1.1, color: "#f4f1ec" }}>Caitlyn Verdugo</p>
                       <p style={{ margin: "8px 0 0", fontSize: 12, fontWeight: 500, letterSpacing: "0.1em", lineHeight: 1.5, color: "#a39a8e" }}>LISTING AGENT · KELLER WILLIAMS METRO ATLANTA</p>
