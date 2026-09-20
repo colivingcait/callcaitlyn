@@ -8,6 +8,7 @@ import {
   asPhotoList,
   asUrlList,
   daysInputValue,
+  financialsHaveContent,
   normalizeFinancials,
 } from "./crm-marketing-fields";
 
@@ -40,10 +41,14 @@ assert.equal(emptyFinancials.scenarios.length, 0);
 assert.equal(emptyFinancials.noi, "");
 assert.equal(emptyFinancials.cap_rate, "");
 
-const partial = normalizeFinancials({ noi: "$1", cap_rate: "10%" } as never);
+const partial = normalizeFinancials({ noi: "$1", cap_rate: "10%", keep_me: "yes" } as never);
 assert.deepEqual(partial.t12, []);
 assert.deepEqual(partial.scenarios, []);
 assert.equal(partial.noi, "$1");
+assert.equal((partial as { keep_me?: string }).keep_me, "yes");
+assert.equal(financialsHaveContent(partial), true);
+assert.equal(financialsHaveContent(emptyFinancials), false);
+assert.equal(financialsHaveContent(normalizeFinancials({ purchase_price: "400000" } as never)), true);
 
 assert.deepEqual(asImprovements(null), []);
 assert.deepEqual(asImprovements(undefined), []);
@@ -79,6 +84,7 @@ const improvements = read("components/listings/ImprovementsEditor.tsx");
 assert.ok(improvements.includes("asImprovements(improvements)"));
 
 const page = read("app/(app)/listings/[id]/page.tsx");
+assert.ok(page.includes("ApplyToOmPanel"));
 assert.ok(page.includes("asPhotoList(listing.padsplit_photos)"));
 assert.ok(page.includes("asUrlList(listing.excluded_photo_urls)"));
 assert.ok(page.includes("asUrlList(listing.photo_paths)"));

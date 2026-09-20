@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
 import { updateListingFinancials } from "@/app/(app)/listings/actions";
-import { normalizeFinancials } from "@/lib/listings/crm-marketing-fields";
+import { financialsHaveContent, normalizeFinancials } from "@/lib/listings/crm-marketing-fields";
 import type { ListingFinancials } from "@/types/database";
 
 const inputClass = "w-full rounded-lg border border-neutral-200 px-2.5 py-1.5 text-sm";
@@ -21,8 +21,7 @@ export function FinancialsEditor({ listingId, financials }: { listingId: string;
   async function handleSave() {
     setSaving(true);
     setSaved(false);
-    const hasContent = (data.t12 ?? []).length > 0 || data.noi || data.cap_rate;
-    await updateListingFinancials(listingId, hasContent ? data : null);
+    await updateListingFinancials(listingId, financialsHaveContent(data) ? data : null);
     setSaving(false);
     setSaved(true);
     router.refresh();
@@ -80,6 +79,37 @@ export function FinancialsEditor({ listingId, financials }: { listingId: string;
           <label className="mb-1 block text-sm font-medium text-neutral-700">Vacancy %</label>
           <input value={data.vacancy_pct ?? ""} onChange={(e) => setData((d) => ({ ...d, vacancy_pct: e.target.value }))} placeholder="8.0%" className={inputClass} />
         </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-neutral-700">Purchase price</label>
+          <input value={data.purchase_price ?? ""} onChange={(e) => setData((d) => ({ ...d, purchase_price: e.target.value }))} placeholder="400000" className={inputClass} />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-neutral-700">Platform fees</label>
+          <input value={data.platform_fees ?? ""} onChange={(e) => setData((d) => ({ ...d, platform_fees: e.target.value }))} placeholder="8178.18" className={inputClass} />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-neutral-700">PM fees</label>
+          <input value={data.pm_fees ?? ""} onChange={(e) => setData((d) => ({ ...d, pm_fees: e.target.value }))} placeholder="1075.00" className={inputClass} />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-neutral-700">Expense load %</label>
+          <input value={data.expense_load_pct ?? ""} onChange={(e) => setData((d) => ({ ...d, expense_load_pct: e.target.value }))} placeholder="19.7" className={inputClass} />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-neutral-700">DSCR</label>
+          <input value={data.dscr ?? ""} onChange={(e) => setData((d) => ({ ...d, dscr: e.target.value }))} placeholder="1.61" className={inputClass} />
+        </div>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-neutral-700">Occupancy summary</label>
+        <textarea
+          value={data.occupancy_summary ?? ""}
+          onChange={(e) => setData((d) => ({ ...d, occupancy_summary: e.target.value }))}
+          rows={3}
+          placeholder="TTM bed-night occupancy…"
+          className="w-full rounded-lg border border-neutral-200 px-2.5 py-1.5 text-sm"
+        />
       </div>
 
       <div>
@@ -88,7 +118,10 @@ export function FinancialsEditor({ listingId, financials }: { listingId: string;
           <button
             type="button"
             onClick={() =>
-              setData((d) => ({ ...d, scenarios: [...(d.scenarios ?? []), { label: "", coc: "", cash_in: "", debt_service: "", cash_flow: "" }] }))
+              setData((d) => ({
+                ...d,
+                scenarios: [...(d.scenarios ?? []), { label: "", coc: "", cash_in: "", debt_service: "", cash_flow: "", dscr: "", loan_amount: "" }],
+              }))
             }
             className="flex items-center gap-1 text-xs font-semibold text-brand-600"
           >
@@ -104,11 +137,13 @@ export function FinancialsEditor({ listingId, financials }: { listingId: string;
                   <X size={15} />
                 </button>
               </div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 <input value={s.coc ?? ""} onChange={(e) => updateScenario(i, { coc: e.target.value })} placeholder="CoC 30.7%" className={inputClass} />
                 <input value={s.cash_in ?? ""} onChange={(e) => updateScenario(i, { cash_in: e.target.value })} placeholder="Cash in" className={inputClass} />
                 <input value={s.debt_service ?? ""} onChange={(e) => updateScenario(i, { debt_service: e.target.value })} placeholder="Debt service" className={inputClass} />
                 <input value={s.cash_flow ?? ""} onChange={(e) => updateScenario(i, { cash_flow: e.target.value })} placeholder="Cash flow" className={inputClass} />
+                <input value={s.dscr ?? ""} onChange={(e) => updateScenario(i, { dscr: e.target.value })} placeholder="DSCR" className={inputClass} />
+                <input value={s.loan_amount ?? ""} onChange={(e) => updateScenario(i, { loan_amount: e.target.value })} placeholder="Loan amount" className={inputClass} />
               </div>
             </div>
           ))}
