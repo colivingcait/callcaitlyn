@@ -9,6 +9,7 @@ import {
   planOmSidecarApply,
   type ListingOmSnapshot,
 } from "./om-sidecar";
+import { knownImprovementTotal } from "./crm-marketing-fields";
 
 // Local proof that Vera's versioned sidecar hydrates the existing listings
 // bands + financials JSONB shape. No Supabase. Run with:
@@ -51,26 +52,29 @@ assert.equal(plan.patch.om_number, undefined, "empty om_number must not overwrit
 assert.equal(plan.patch.submarket, "Atlanta metro");
 assert.equal(plan.patch.total_rooms, 8);
 assert.equal(plan.patch.padsplit_url, "https://www.padsplit.com/rooms-for-rent/listing/8299");
-assert.equal(plan.patch.band_gross_rent, "$5.0–5.5k/mo");
-assert.equal(plan.patch.band_expense_load, "high-teens%");
-assert.equal(plan.patch.band_cash_on_cash, "high-teens to low-20s%");
-assert.equal(plan.patch.band_cap_rate, "low-10s%");
+assert.equal(plan.patch.band_gross_rent, "~$5,500/mo");
+assert.equal(plan.patch.band_expense_load, "~19%");
+assert.equal(plan.patch.band_cash_on_cash, "~20%");
+assert.equal(plan.patch.band_cap_rate, "~10%");
 
 const fin = plan.patch.financials;
 assert.equal(fin.t12.length, 7);
 assert.deepEqual(fin.t12[0], { label: "Gross rents (collected)", value: "61483.07", subtotal: false });
 assert.deepEqual(fin.t12[2], { label: "Net earnings", value: "53304.89", subtotal: true });
 assert.deepEqual(fin.t12[4], { label: "NOI", value: "41216.71", subtotal: true });
-assert.equal(fin.noi, "41216.71");
+assert.equal(fin.noi, "3434.73");
 assert.equal(fin.cap_rate, "10.30");
 assert.equal(fin.padsplit_fees, "8178.18");
 assert.equal(fin.dscr, "1.61");
 assert.equal(fin.purchase_price, "400000");
-assert.equal(fin.gross_rents, "61483.07");
-assert.equal(fin.net_earnings, "53304.89");
-assert.equal(fin.opex, "12088.18");
-assert.equal(fin.projected_debt_service, "25547.62");
-assert.equal(fin.net_cash_flow, "15669.09");
+assert.equal(fin.gross_rents, "5123.59");
+assert.equal(fin.net_earnings, "4442.07");
+assert.equal(fin.opex, "1007.35");
+assert.equal(fin.projected_debt_service, "2128.97");
+assert.equal(fin.net_cash_flow, "1305.76");
+assert.equal(fin.annual?.gross_rents, "61483.07");
+assert.equal(fin.annual?.net_cash_flow, "15669.09");
+assert.equal(fin.annual?.noi, "41216.71");
 assert.equal(fin.cash_on_cash, "19.59");
 assert.equal(fin.scenarios.length, 1);
 assert.equal(fin.scenarios[0].label, "20% down / 7% / 30yr DSCR");
@@ -87,7 +91,10 @@ assert.equal(fin.occupancy?.basis, "bed_night");
 assert.equal(fin.occupancy?.t12_occupancy_pct, 86.34);
 assert.ok(fin.meta && typeof fin.meta === "object");
 assert.equal((fin.meta as { period?: string }).period, "T12 2025-10 to 2026-09");
-assert.equal(plan.patch.improvements, undefined, "empty sidecar improvements against empty listing is a no-op");
+assert.equal(plan.patch.improvements?.length, 7);
+assert.equal(plan.patch.improvements?.find((row) => /roof/i.test(row.item))?.cost, "");
+assert.equal(knownImprovementTotal(plan.patch.improvements), 61000);
+assert.ok(plan.changes.some((c) => c.group === "improvements" && c.path === "improvements"));
 
 const filled: ListingOmSnapshot = {
   ...emptyListing,
@@ -104,7 +111,7 @@ assert.equal(protectedPlan.patch.nickname, undefined);
 assert.equal(protectedPlan.patch.submarket, undefined);
 assert.equal(protectedPlan.patch.total_rooms, undefined);
 assert.equal(protectedPlan.protectedCount >= 3, true);
-assert.equal(protectedPlan.patch.band_gross_rent, "$5.0–5.5k/mo");
+assert.equal(protectedPlan.patch.band_gross_rent, "~$5,500/mo");
 assert.equal((protectedPlan.patch.financials as { keep_me?: string }).keep_me, "yes", "unknown existing financials keys must survive ingest");
 
 const overwritePlan = planOmSidecarApply(parsed.sidecar, filled, { overwriteHints: true });
@@ -117,13 +124,21 @@ const withImprovements: ListingOmSnapshot = {
   improvements: [{ item: "Roof", year: "2022", cost: "11000" }],
 };
 const clearImprovements = planOmSidecarApply(parsed.sidecar, withImprovements);
-assert.equal(clearImprovements.patch.improvements, null);
+assert.equal(clearImprovements.patch.improvements?.length, 7);
+assert.equal(knownImprovementTotal(clearImprovements.patch.improvements), 61000);
+
+const emptyImprovementsSidecar = parseOmSidecar({ ...fixture, improvements: [] });
+assert.equal(emptyImprovementsSidecar.ok, true);
+if (emptyImprovementsSidecar.ok) {
+  const cleared = planOmSidecarApply(emptyImprovementsSidecar.sidecar, withImprovements);
+  assert.equal(cleared.patch.improvements, null);
+}
 
 const v1 = parseOmSidecar(fixtureV1);
 assert.equal(v1.ok, true, "schema_version 1 still hydrates");
 if (v1.ok) {
   const v1Plan = planOmSidecarApply(v1.sidecar, emptyListing);
-  assert.equal(v1Plan.patch.band_gross_rent, "$60k–$65k T12 collected");
+  assert.equal(v1Plan.patch.band_gross_rent, "~$65,000 T12 collected");
   assert.equal(v1Plan.patch.financials.padsplit_fees, "8178.18");
 }
 
@@ -186,11 +201,27 @@ assert.equal(aliasOnly.ok, true);
 if (aliasOnly.ok) {
   const mapped = planOmSidecarApply(aliasOnly.sidecar, emptyListing).patch.financials;
   assert.equal(mapped.padsplit_fees, "8178.18", "platform_fees hydrates padsplit_fees");
-  assert.equal(mapped.gross_rents, "61483.07");
-  assert.equal(mapped.net_earnings, "53304.89");
-  assert.equal(mapped.opex, "-12088.18");
-  assert.equal(mapped.projected_debt_service, "25547.62");
+  assert.equal(mapped.gross_rents, "5123.59", "t12 annual fallback becomes monthly");
+  assert.equal(mapped.net_earnings, "4442.07");
+  assert.equal(mapped.opex, "-1007.35");
+  assert.equal(mapped.projected_debt_service, "2128.97");
   assert.equal(mapped.cash_on_cash, "19.59");
+}
+
+const cashflowAlias = parseOmSidecar({
+  schema_version: 2,
+  financials: {
+    noi: "3434.73",
+    cap_rate: "10.30",
+    net_cashflow: "1305.76",
+    t12: [],
+    scenarios: [],
+  },
+});
+assert.equal(cashflowAlias.ok, true);
+if (cashflowAlias.ok) {
+  const mapped = planOmSidecarApply(cashflowAlias.sidecar, emptyListing).patch.financials;
+  assert.equal(mapped.net_cash_flow, "1305.76", "net_cashflow alias hydrates net_cash_flow");
 }
 
 const documents = readFileSync(join(process.cwd(), "lib/listings/documents.ts"), "utf8");

@@ -12,6 +12,7 @@ import { OmHeaderNav } from "@/components/listings/om/OmHeaderNav";
 import { publicListingCopy } from "@/lib/listings/public-copy";
 import { asListingFinancials } from "@/lib/listings/crm-marketing-fields";
 import { occupancyFromFinancials, occupancyTrendHasSidecarData, t12OccupancySummary } from "@/lib/listings/occupancy";
+import { formatPublicBand } from "@/lib/listings/public-bands";
 
 // Occupancy changes daily and a listing can be unpublished at any time -
 // this must never be served from a stale build-time cache.
@@ -102,10 +103,10 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
   ].filter((c) => c.value);
 
   const publicFinCells = [
-    { label: "GROSS RENTS", value: listing.band_gross_rent, caption: "All rooms at in-place weekly rates." },
-    { label: "OPERATING EXPENSES", value: listing.band_expense_load, caption: "Utilities, cleaning, platform fees, taxes, reserves." },
-    { label: "CASH-ON-CASH", value: listing.band_cash_on_cash, caption: "Conventional financing, current rates." },
-    { label: "CAP RATE", value: listing.band_cap_rate, caption: "On in-place income." },
+    { label: "GROSS RENTS", value: formatPublicBand(listing.band_gross_rent), caption: "All rooms at in-place weekly rates." },
+    { label: "OPERATING EXPENSES", value: formatPublicBand(listing.band_expense_load), caption: "Utilities, cleaning, platform fees, taxes, reserves." },
+    { label: "CASH-ON-CASH", value: formatPublicBand(listing.band_cash_on_cash), caption: "Conventional financing, current rates." },
+    { label: "CAP RATE", value: formatPublicBand(listing.band_cap_rate), caption: "On in-place income." },
   ].filter((c) => c.value);
 
   const sidecarOccupancy = occupancyFromFinancials(asListingFinancials(listing.financials));
@@ -165,13 +166,13 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
             <div style={{ padding: "20px 24px 22px", borderRight: "1px solid #3a322c" }}>
               <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#a39a8e" }}>CAP RATE</p>
               <p style={{ margin: "10px 0 0", fontFamily: "var(--font-om-serif)", fontSize: 36, lineHeight: 1, color: "#f4f1ec" }}>
-                {listing.band_cap_rate || (
+                {formatPublicBand(listing.band_cap_rate) || (
                   <a href="#unlock" className="om-hover-light" style={{ color: "inherit", fontSize: 22, letterSpacing: "0.04em" }}>
                     Unlock
                   </a>
                 )}
               </p>
-              <p style={{ margin: "7px 0 0", fontSize: 13, color: "#b3aaa0" }}>{listing.band_cap_rate ? "On in-place income" : "Share contact info to see the numbers"}</p>
+              <p style={{ margin: "7px 0 0", fontSize: 13, color: "#b3aaa0" }}>{formatPublicBand(listing.band_cap_rate) ? "On in-place income" : "Share contact info to see the numbers"}</p>
             </div>
             <div style={{ padding: "20px 0 22px 24px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

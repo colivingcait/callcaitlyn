@@ -88,7 +88,8 @@ export function ApplyToOmPanel({ listingId, listing }: { listingId: string; list
       <div>
         <h2 className="text-base font-semibold text-neutral-900">Apply to OM</h2>
         <p className="mt-1 text-sm text-neutral-500">
-          Upload or paste Vera&apos;s sidecar JSON. Apply fills public bands and gated financials. The xlsx is a download packet —
+          Upload or paste Vera&apos;s sidecar JSON. Apply fills public bands (rounded tildes), gated monthly T12 dollars, and
+          CapEx from <code>improvements[]</code>. There is no separate Marketing CapEx form. The xlsx is a download packet —
           upload it in the Buyer workbook slot, do not parse cells from it.
         </p>
       </div>

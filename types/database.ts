@@ -303,12 +303,23 @@ export type ListingFinancialsScenario = {
 
 // Gated underwriting JSONB. Public OM never reads these exact figures
 // until unlock; the locked page only shows the four band_* strings.
-// Canonical gated rows are monthly T12 averages: gross_rents, net_earnings,
-// opex, noi, projected_debt_service, net_cash_flow. Ratios (cash_on_cash,
-// cap_rate, dscr) render as cards. purchase_price stays on the object for
-// CRM / Apply-to-OM but is not a gated row. Older aliases (platform_fees,
-// padsplit_fees, t12, scenarios) stay so Vera JSON can hydrate without new
-// columns. Extra sidecar keys are preserved.
+// Canonical gated $ rows are T12 monthly averages (Vera already ÷12):
+// gross_rents, net_earnings, opex, noi, projected_debt_service, net_cash_flow.
+// Ratios (cash_on_cash, cap_rate, dscr) render as cards. purchase_price stays
+// on the object for CRM / Apply-to-OM but is not a gated row. Annual totals
+// live on `annual` + the buyer workbook. Older aliases (platform_fees,
+// padsplit_fees, t12, scenarios, net_cashflow) stay so Vera JSON can hydrate
+// without new columns. Extra sidecar keys are preserved.
+export type ListingFinancialsAnnual = {
+  gross_rents?: string;
+  net_earnings?: string;
+  opex?: string;
+  noi?: string;
+  projected_debt_service?: string;
+  net_cash_flow?: string;
+  net_cashflow?: string;
+};
+
 export type ListingFinancials = {
   t12: ListingFinancialsT12Line[];
   noi: string;
@@ -326,7 +337,9 @@ export type ListingFinancials = {
   opex?: string;
   projected_debt_service?: string;
   net_cash_flow?: string;
+  net_cashflow?: string;
   cash_on_cash?: string;
+  annual?: ListingFinancialsAnnual;
   scenarios: ListingFinancialsScenario[];
   meta?: unknown;
   deal_key?: string;

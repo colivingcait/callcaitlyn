@@ -6,6 +6,7 @@ import {
   DEFAULT_SELLER_SUPPORT_DAYS,
   asImprovements,
   visibleImprovements,
+  knownImprovementTotal,
   asPhotoList,
   asUrlList,
   daysInputValue,
@@ -70,6 +71,7 @@ assert.deepEqual(visibleImprovements(null), []);
 assert.deepEqual(visibleImprovements([]), []);
 assert.deepEqual(visibleImprovements([{ item: "", year: "", cost: "" }]), []);
 assert.deepEqual(visibleImprovements([{ item: "Roof", year: "2022", cost: "11000" }]), [{ item: "Roof", year: "2022", cost: "11000" }]);
+assert.equal(knownImprovementTotal([{ item: "Roof", year: "", cost: "" }, { item: "HVAC", year: "", cost: "18000" }, { item: "Kitchen", year: "", cost: "43000" }]), 61000);
 
 assert.deepEqual(asPhotoList(null), []);
 assert.deepEqual(asPhotoList(undefined), []);
@@ -107,11 +109,10 @@ assert.equal(financials.includes("Occupancy summary"), false);
 assert.equal(financials.includes("PM fees"), false);
 assert.equal(financials.includes("T12 line items"), false);
 
-const improvements = read("components/listings/ImprovementsEditor.tsx");
-assert.ok(improvements.includes("asImprovements(improvements)"));
 assert.ok(read("components/listings/om/FinancialGate.tsx").includes("visibleImprovements(improvements)"));
 
 const page = read("app/(app)/listings/[id]/page.tsx");
+assert.equal(page.includes("ImprovementsEditor"), false, "Marketing has no CapEx input form");
 assert.ok(page.includes("ApplyToOmPanel"));
 assert.ok(page.includes("listingId={listing.id}"));
 assert.ok(page.includes("ListingPhotosPanel"));

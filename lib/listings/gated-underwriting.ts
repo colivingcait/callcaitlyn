@@ -57,16 +57,33 @@ function parseNumeric(value: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-// Stored gated dollars are T12 annual totals (Vera / T12 / scenarios).
-// The public OM renders monthly averages: annual / 12. Candace fixture
-// 61483.07 → $5,124. Expense-like T12 lines can arrive signed; magnitudes
-// display unsigned unless `signed` (net cash flow).
+export const GATED_MONTHLY_DOLLAR_FIELDS = [
+  "gross_rents",
+  "net_earnings",
+  "opex",
+  "noi",
+  "projected_debt_service",
+  "net_cash_flow",
+] as const;
+
+// Vera Apply contract: gated flat $ fields are already T12 monthly
+// (annual ÷ 12). Public OM formats them as currency — do not divide again.
+// Candace 5123.59 → $5,124. Expense-like lines can arrive signed;
+// magnitudes display unsigned unless `signed` (net cash flow).
 export function formatMonthlyAverage(value: string | null | undefined, options?: { signed?: boolean }): string {
   if (value == null || String(value).trim() === "") return "";
   const n = parseNumeric(String(value));
   if (n == null) return String(value);
-  const monthly = n / 12;
-  return formatCurrency(options?.signed ? monthly : Math.abs(monthly));
+  return formatCurrency(options?.signed ? n : Math.abs(n));
+}
+
+// T12 line items and scenario cash/debt stay annual. Only use this when
+// hydrating a missing gated monthly field from those annual sources.
+export function annualToMonthlyString(value: string | null | undefined): string | undefined {
+  if (value == null || String(value).trim() === "") return undefined;
+  const n = parseNumeric(String(value));
+  if (n == null) return String(value);
+  return String(Math.round((n / 12) * 100) / 100);
 }
 
 // Fill the gated OM keys from explicit sidecar/JSONB fields, then from
@@ -76,16 +93,26 @@ export function formatMonthlyAverage(value: string | null | undefined, options?:
 export function hydrateGatedFinancials(data: ListingFinancials): ListingFinancials {
   const t12 = data.t12 ?? [];
   const scenario = data.scenarios?.[0];
+  const extras = data as ListingFinancials & { net_cashflow?: string };
   return {
     ...data,
     purchase_price: firstNonEmpty(data.purchase_price),
-    gross_rents: firstNonEmpty(data.gross_rents, t12Value(t12, /gross\s+(collected|rent)/i)),
+    gross_rents: firstNonEmpty(data.gross_rents, annualToMonthlyString(t12Value(t12, /gross\s+(collected|rent)/i))),
     padsplit_fees: firstNonEmpty(data.padsplit_fees, data.platform_fees, t12Value(t12, /platform\s+fee|padsplit\s+fee/i)),
-    net_earnings: firstNonEmpty(data.net_earnings, t12Value(t12, /net\s+to\s+host|net\s+earnings/i), data.noi),
-    opex: firstNonEmpty(data.opex, t12Value(t12, /total\s+operating\s+expenses|^opex$|operating\s+expenses/i)),
-    noi: firstNonEmpty(data.noi, t12Value(t12, /^noi$|net\s+operating\s+income/i)),
-    projected_debt_service: firstNonEmpty(data.projected_debt_service, scenario?.debt_service, t12Value(t12, /debt\s+service/i)),
-    net_cash_flow: firstNonEmpty(data.net_cash_flow, t12Value(t12, /cash\s+flow/i), scenario?.cash_flow),
+    net_earnings: firstNonEmpty(data.net_earnings, annualToMonthlyString(t12Value(t12, /net\s+to\s+host|net\s+earnings/i)), data.noi),
+    opex: firstNonEmpty(data.opex, annualToMonthlyString(t12Value(t12, /total\s+operating\s+expenses|^opex$|operating\s+expenses/i))),
+    noi: firstNonEmpty(data.noi, annualToMonthlyString(t12Value(t12, /^noi$|net\s+operating\s+income/i))),
+    projected_debt_service: firstNonEmpty(
+      data.projected_debt_service,
+      annualToMonthlyString(scenario?.debt_service),
+      annualToMonthlyString(t12Value(t12, /debt\s+service/i)),
+    ),
+    net_cash_flow: firstNonEmpty(
+      data.net_cash_flow,
+      extras.net_cashflow,
+      annualToMonthlyString(t12Value(t12, /cash\s+flow/i)),
+      annualToMonthlyString(scenario?.cash_flow),
+    ),
     cash_on_cash: firstNonEmpty(data.cash_on_cash, scenario?.coc),
     cap_rate: firstNonEmpty(data.cap_rate),
     dscr: firstNonEmpty(data.dscr, scenario?.dscr),

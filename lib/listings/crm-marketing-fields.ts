@@ -49,8 +49,9 @@ export function normalizeFinancials(financials: ListingFinancials | null | undef
     net_earnings: financials?.net_earnings ?? "",
     opex: financials?.opex ?? "",
     projected_debt_service: financials?.projected_debt_service ?? "",
-    net_cash_flow: financials?.net_cash_flow ?? "",
+    net_cash_flow: financials?.net_cash_flow ?? financials?.net_cashflow ?? "",
     cash_on_cash: financials?.cash_on_cash ?? "",
+    annual: financials?.annual,
     scenarios: Array.isArray(financials?.scenarios) ? financials.scenarios : [],
     occupancy: parseListingOccupancy(financials?.occupancy) ?? undefined,
   });
@@ -87,6 +88,15 @@ export function asImprovements(value: ListingImprovement[] | null | undefined): 
 // Blank editor stubs (empty item/year/cost) do not count.
 export function visibleImprovements(value: ListingImprovement[] | null | undefined): ListingImprovement[] {
   return asImprovements(value).filter((row) => Boolean(row.item.trim() || row.year.trim() || row.cost.trim()));
+}
+
+export function knownImprovementTotal(value: ListingImprovement[] | null | undefined): number {
+  return visibleImprovements(value).reduce((sum, row) => {
+    const digits = String(row.cost ?? "").replace(/[^0-9.-]/g, "");
+    if (!digits) return sum;
+    const n = Number(digits);
+    return Number.isFinite(n) ? sum + n : sum;
+  }, 0);
 }
 
 export function asPhotoList(value: PadsplitPhoto[] | null | undefined): PadsplitPhoto[] {
