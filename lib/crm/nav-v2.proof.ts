@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { bookingCardName, bookingWindowLabel } from "./today-v1";
 import { EVER_ATTENDED_EVENT, mergeIncludeIds, parseIncludeIds } from "./contact-filter-params";
@@ -34,6 +34,17 @@ const sidebar = read("components/nav/Sidebar.tsx");
 assert.ok(sidebar.includes("moreNavItemsForSidebar"));
 assert.equal(sidebar.includes("moreGroups.map"), false);
 assert.equal(sidebar.includes("Also today"), false);
+assert.ok(sidebar.includes("CAITLYN_HEADSHOT_SRC"), "sidebar avatar uses the shared Caitlyn headshot path");
+assert.ok(sidebar.includes("rounded-full"), "sidebar avatar stays circular");
+assert.ok(sidebar.includes('transformOrigin: "center 16%"'), "sidebar zooms the standing portrait onto her face");
+assert.equal(sidebar.includes("initials("), false, "sidebar does not fall back to initials");
+
+const headshot = read("lib/brand/caitlyn.ts");
+assert.ok(headshot.includes('"/images/checkin/caitlyn.jpg"'), "headshot constant is the existing public file");
+assert.ok(existsSync(join(root, "public/images/checkin/caitlyn.jpg")), "Caitlyn headshot exists in public/");
+
+const checkinCards = read("lib/checkin/contact-cards.ts");
+assert.ok(checkinCards.includes("CAITLYN_HEADSHOT_SRC"), "check-in cards share the same headshot path");
 
 const moreSheet = read("components/nav/MoreSheet.tsx");
 assert.ok(moreSheet.includes("moreNavItemsForSheet"));
