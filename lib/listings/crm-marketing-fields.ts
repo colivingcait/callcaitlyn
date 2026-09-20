@@ -80,6 +80,12 @@ export function asImprovements(value: ListingImprovement[] | null | undefined): 
   }));
 }
 
+// Public OM hides the whole CapEx card when the listing has no real rows.
+// Blank editor stubs (empty item/year/cost) do not count.
+export function visibleImprovements(value: ListingImprovement[] | null | undefined): ListingImprovement[] {
+  return asImprovements(value).filter((row) => Boolean(row.item.trim() || row.year.trim() || row.cost.trim()));
+}
+
 export function asPhotoList(value: PadsplitPhoto[] | null | undefined): PadsplitPhoto[] {
   return Array.isArray(value) ? value : [];
 }

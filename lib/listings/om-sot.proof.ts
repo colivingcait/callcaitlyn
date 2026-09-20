@@ -164,7 +164,17 @@ assert.equal(gate.includes("Occupancy summary"), false);
 assert.equal(gate.includes("texted and emailed"), false);
 assert.ok(gate.includes("no inbox trip, no waiting on a reply"));
 assert.ok(gate.includes("MONTHLY AVERAGE · TRAILING TWELVE MONTHS"));
+assert.ok(gate.includes("Recent capital improvements"));
+assert.ok(gate.includes("CapEx"));
+assert.ok(gate.includes("Unlock reveals rents, expenses, debt service, CapEx, and the workbook."));
+assert.ok(gate.includes("visibleImprovements"));
+assert.ok(gate.includes("<CapExCard"));
+assert.ok(gate.indexOf("<CapExCard") < gate.indexOf("DOWNLOAD WORKBOOK"), "CapEx card sits before the workbook");
+assert.equal(gate.includes("TTMETRIC"), false, "do not replace live TTM monthly averages with the mock month-grid");
 assert.equal(gate.includes("RESET DEMO"), false);
+
+const omPageGate = read("app/listing/[slug]/page.tsx");
+assert.ok(omPageGate.includes("improvements={listing.improvements}"));
 
 const hero = read("components/listings/om/PhotoCarousel.tsx");
 assert.ok(hero.includes("VIEW PHOTOS"));

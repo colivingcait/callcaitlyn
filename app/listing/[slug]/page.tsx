@@ -304,7 +304,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                     : "Line-item rent, expenses, and cap rate are locked until you share a name and a phone or email. Nothing here is a projection — it is the seller’s underwriting, unlocked on this page."}
                 </p>
                 <div id="unlock" style={{ paddingTop: 6 }}>
-                  <FinancialGate slug={slug} omNumber={omNumber} />
+                  <FinancialGate slug={slug} omNumber={omNumber} improvements={listing.improvements} />
                 </div>
               </section>
             </main>
