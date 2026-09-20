@@ -198,7 +198,7 @@ export function FinancialGate({
               <div style={{ maxWidth: "46ch" }}>
                 <p style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontSize: 22, color: "#f4f1ec" }}>Open the numbers</p>
                 <p style={{ margin: "8px 0 0", fontSize: 14, lineHeight: 1.65, color: "#cdc4ba" }}>
-                  Detail unlocks right here — no inbox trip, no waiting on a reply. Figures are monthly averages across the trailing twelve months; the
+                  Detail unlocks right here — no inbox trip, no waiting on a reply. Figures are T12 monthly averages; the
                   workbook has it month by month.
                 </p>
               </div>
@@ -282,7 +282,7 @@ export function FinancialGate({
 
       {monthlyRows.length > 0 && financials && (
         <>
-          <p style={{ margin: "26px 0 0", fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#6b6259" }}>MONTHLY AVERAGE · TRAILING TWELVE MONTHS</p>
+          <p style={{ margin: "26px 0 0", fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#6b6259" }}>MONTHLY AVERAGE · T12</p>
           <div style={{ marginTop: 14, background: "#fffdfa", border: "1px solid #e4ddd2" }}>
             {monthlyRows.map((field, i) => (
               <div
@@ -304,7 +304,7 @@ export function FinancialGate({
             ))}
           </div>
           <p style={{ margin: "14px 0 0", fontSize: 13, lineHeight: 1.65, color: "#574f47", maxWidth: "62ch" }}>
-            Every figure above is a monthly average across the trailing twelve months. Month-by-month detail is in the buyer workbook.
+            Every figure above is a T12 monthly average. Month-by-month detail is in the buyer workbook.
           </p>
         </>
       )}

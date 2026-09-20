@@ -254,7 +254,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                       {listing.last_scraped_at
                         ? ` — last pulled ${new Date(listing.last_scraped_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" })} ET`
                         : ""}
-                      . This is what the house is doing right now, which is not always what the T12 shows.
+                      . This is what the house is doing right now, which is not always what a T12 shows.
                     </p>
                   </div>
 
