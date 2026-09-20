@@ -23,6 +23,7 @@ import { ImprovementsEditor } from "@/components/listings/ImprovementsEditor";
 import { ListingPhotosPanel } from "@/components/listings/ListingPhotosPanel";
 import { baseUrl } from "@/lib/crm/sequences";
 import { MarketingGraphics } from "@/components/listings/MarketingGraphics";
+import { listingLiveOccupancy } from "@/lib/listings/occupancy";
 import { CopyBlocks } from "@/components/listings/CopyBlocks";
 import { ActivityTab } from "@/components/listings/ActivityTab";
 import { Section } from "@/components/ui/Section";
@@ -205,8 +206,8 @@ export default async function ListingDetailPage({ params, searchParams }: { para
               <PublicPageToggle listingId={listing.id} publicSlug={listing.public_slug} appOrigin={baseUrl()} />
               <PadsplitScrapeStatus
                 padsplitUrl={listing.padsplit_url}
-                occupiedRooms={listing.occupied_rooms}
-                totalRooms={listing.total_rooms}
+                occupiedRooms={listingLiveOccupancy(listing).occupied}
+                totalRooms={listingLiveOccupancy(listing).total}
                 lastScrapedAt={listing.last_scraped_at}
                 lastScrapeError={listing.last_scrape_error}
               />

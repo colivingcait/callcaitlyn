@@ -130,7 +130,7 @@ async function enrichContact(
   }
 }
 
-export async function addTagByName(admin: SupabaseClient, ownerId: string, contactId: string, tagName: string) {
+export async function addTagByName(admin: SupabaseClient, ownerId: string, contactId: string, tagName: string): Promise<boolean> {
   let { data: tag } = await admin.from("tags").select("id").eq("owner_id", ownerId).eq("name", tagName).maybeSingle();
 
   if (!tag) {
@@ -141,7 +141,8 @@ export async function addTagByName(admin: SupabaseClient, ownerId: string, conta
       .maybeSingle();
     tag = created;
   }
-  if (!tag) return;
+  if (!tag) return false;
 
-  await admin.from("contact_tags").upsert({ contact_id: contactId, tag_id: tag.id }, { onConflict: "contact_id,tag_id" });
+  const { error } = await admin.from("contact_tags").upsert({ contact_id: contactId, tag_id: tag.id }, { onConflict: "contact_id,tag_id" });
+  return !error;
 }

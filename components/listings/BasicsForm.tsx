@@ -72,6 +72,9 @@ export function BasicsForm({ listing }: { listing: Listing }) {
             <input type="number" value={beds} onChange={(e) => setBeds(e.target.value)} className={inputClass} placeholder="Beds" />
             <input type="number" step="0.5" value={baths} onChange={(e) => setBaths(e.target.value)} className={inputClass} placeholder="Baths" />
           </div>
+          <p className="mt-1 text-xs text-neutral-400">
+            Beds is the live occupancy denominator when PadSplit lists fewer rooms than the house (Gresham Park Eight: 8 beds, 6 listed).
+          </p>
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-neutral-700">Square feet</label>

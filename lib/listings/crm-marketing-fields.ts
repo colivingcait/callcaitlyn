@@ -1,5 +1,6 @@
 import type { ListingFinancials, ListingImprovement, ListingPhotoSource, PadsplitPhoto } from "@/types/database";
 import { gatedFinancialsHaveValues, hydrateGatedFinancials } from "@/lib/listings/gated-underwriting";
+import { parseListingOccupancy } from "@/lib/listings/occupancy";
 
 // CRM marketing-tab defaults. Same integers as migration 0073, used when a
 // listing row is missing those columns (or they came back null/undefined).
@@ -51,6 +52,7 @@ export function normalizeFinancials(financials: ListingFinancials | null | undef
     net_cash_flow: financials?.net_cash_flow ?? "",
     cash_on_cash: financials?.cash_on_cash ?? "",
     scenarios: Array.isArray(financials?.scenarios) ? financials.scenarios : [],
+    occupancy: parseListingOccupancy(financials?.occupancy) ?? undefined,
   });
 }
 
@@ -67,6 +69,7 @@ export function financialsHaveContent(data: ListingFinancials | null | undefined
     Boolean(data.pm_fees) ||
     Boolean(data.expense_load_pct) ||
     Boolean(data.net_cash_flow) ||
+    Boolean(data.occupancy?.monthly?.length) ||
     (data.scenarios ?? []).length > 0
   );
 }

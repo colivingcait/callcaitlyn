@@ -39,7 +39,7 @@ export default async function PublicListingsOverviewPage() {
           <div style={{ marginTop: 32, display: "flex", flexDirection: "column", gap: 12 }}>
             {listings.map((listing) => {
               const cover = listing.coverPhotoUrl;
-              const occ = listing.occupied_rooms != null && listing.total_rooms != null ? `${listing.occupied_rooms}/${listing.total_rooms} occupied` : "Coming soon";
+              const occ = listing.liveOccupied != null && listing.liveTotal != null ? `${listing.liveOccupied}/${listing.liveTotal} occupied` : "Coming soon";
               const title = publicListingCopy(listing.nickname) || publicListingCopy(listing.property_type) || "Listing";
 
               return (
@@ -59,7 +59,7 @@ export default async function PublicListingsOverviewPage() {
                       {title}
                     </p>
                     <p style={{ margin: "6px 0 0", fontSize: 14, color: "#574f47" }}>
-                      {formatCurrency(listing.list_price)} · {listing.total_rooms ?? "?"} rooms · {occ}
+                      {formatCurrency(listing.list_price)} · {listing.liveTotal ?? "?"} rooms · {occ}
                     </p>
                   </div>
                 </Link>
