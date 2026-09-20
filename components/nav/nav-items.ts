@@ -5,7 +5,6 @@ import {
   KanbanSquare,
   CalendarHeart,
   Mail,
-  CalendarClock,
   FileText,
   DollarSign,
   BarChart3,
@@ -31,7 +30,6 @@ export const PRIMARY_NAV_ITEMS: NavItem[] = [
 
 export const MORE_NAV_ITEMS: NavItem[] = [
   { href: "/sequences", label: "Campaigns", icon: Mail, hint: "Email and text campaigns" },
-  { href: "/scheduling", label: "Bookings", icon: CalendarClock, hint: "History and settings — new requests live on Today" },
   { href: "/listings", label: "Listings", icon: FileText, hint: "Listing pages · agent replies live here" },
   { href: "/commissions", label: "Commissions", icon: DollarSign, hint: "Deals and cap" },
   { href: "/reports", label: "Reports", icon: BarChart3 },

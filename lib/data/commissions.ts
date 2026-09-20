@@ -29,3 +29,9 @@ export async function listPendingDeals(): Promise<DealWithContact[]> {
     .order("closed_at", { ascending: true });
   return (data ?? []) as DealWithContact[];
 }
+
+export async function listUnderContractListings(): Promise<{ id: string; address: string; list_price: number | null; status: "under_contract" }[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("listings").select("id, address, list_price, status").eq("status", "under_contract").order("updated_at", { ascending: false });
+  return (data ?? []) as { id: string; address: string; list_price: number | null; status: "under_contract" }[];
+}

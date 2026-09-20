@@ -28,10 +28,10 @@ import { ActivityTab } from "@/components/listings/ActivityTab";
 import { Section } from "@/components/ui/Section";
 import { asPhotoList, asUrlList } from "@/lib/listings/crm-marketing-fields";
 import { listingFieldCopy } from "@/lib/listings/public-copy";
-import type { ListingAgentMessage } from "@/types/database";
+import { normalizePhone } from "@/lib/phone";
+import type { ListingAgentTouch } from "@/lib/crm/listing-activity";
 
 type Tab = "rp" | "marketing" | "activity";
-type EnrichedMessage = ListingAgentMessage & { name: string; brokerage: string | null; phone: string | null; email: string | null };
 
 export default async function ListingDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> }) {
   const { id } = await params;
@@ -40,7 +40,7 @@ export default async function ListingDetailPage({ params, searchParams }: { para
 
   const detail = await getListingDetail(id);
   if (!detail) notFound();
-  const { listing, agents: agentsRaw, sends, priceChanges, messages, documents } = detail;
+  const { listing, agents: agentsRaw, sends, priceChanges, statusChanges, messages, documents, pageEvents } = detail;
   // Collapse buyer-ref duplicates for every RP list Caitlyn sees. Activity
   // still uses the raw rows so a message tied to a non-canonical listing_agent
   // id keeps its name.
@@ -64,10 +64,10 @@ export default async function ListingDetailPage({ params, searchParams }: { para
     photoUrls = photoPaths.map((p) => supabase.storage.from("listing-photos").getPublicUrl(p).data.publicUrl);
   }
 
-  let enrichedMessages: EnrichedMessage[] = [];
+  let enrichedMessages: ListingAgentTouch[] = [];
   if (activeTab === "activity") {
     const agentById = new Map(agentsRaw.map((a) => [a.id, a]));
-    enrichedMessages = messages.map((m) => {
+    const base = messages.map((m) => {
       const la = m.listing_agent_id ? agentById.get(m.listing_agent_id) : null;
       const meta = (m.metadata ?? {}) as { name?: string; brokerage?: string };
       return {
@@ -76,8 +76,24 @@ export default async function ListingDetailPage({ params, searchParams }: { para
         brokerage: la?.brokerage ?? meta.brokerage ?? null,
         phone: la?.phone ?? null,
         email: la?.email ?? null,
+        alreadyPartner: false,
       };
     });
+    const supabase = await createClient();
+    const { data: contacts } = await supabase.from("contacts").select("phone, secondary_phone, email").eq("archived", false);
+    const partnerPhones = new Set<string>();
+    const partnerEmails = new Set<string>();
+    for (const contact of contacts ?? []) {
+      const phone = normalizePhone(contact.phone);
+      const secondary = normalizePhone(contact.secondary_phone);
+      if (phone) partnerPhones.add(phone);
+      if (secondary) partnerPhones.add(secondary);
+      if (contact.email) partnerEmails.add(contact.email.trim().toLowerCase());
+    }
+    enrichedMessages = base.map((m) => ({
+      ...m,
+      alreadyPartner: Boolean((m.phone && partnerPhones.has(normalizePhone(m.phone) ?? "")) || (m.email && partnerEmails.has(m.email.trim().toLowerCase()))),
+    }));
   }
 
   const tabs: { key: Tab; label: string }[] = [
@@ -87,7 +103,7 @@ export default async function ListingDetailPage({ params, searchParams }: { para
   ];
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6">
+    <div className="mx-auto w-full max-w-[1400px] px-4 py-6 lg:px-8 lg:py-8">
       <Link href="/listings" className="flex items-center gap-1 text-sm font-medium text-neutral-500 hover:text-neutral-700">
         <ChevronLeft size={16} /> Listings
       </Link>
@@ -226,7 +242,15 @@ export default async function ListingDetailPage({ params, searchParams }: { para
           </div>
         )}
         {activeTab === "activity" && (
-          <ActivityTab listingId={listing.id} listingAddress={listing.address} listingCreatedAt={listing.created_at} priceChanges={priceChanges} sends={sends} messages={enrichedMessages} />
+          <ActivityTab
+            listingId={listing.id}
+            listingCreatedAt={listing.created_at}
+            statusChanges={statusChanges}
+            priceChanges={priceChanges}
+            sends={sends}
+            messages={enrichedMessages}
+            pageEvents={pageEvents}
+          />
         )}
       </div>
     </div>

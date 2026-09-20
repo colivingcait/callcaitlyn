@@ -13,16 +13,26 @@ import type { DealSide, PropertyType } from "@/types/database";
 // brand-new 'won' row with no contact_id, so historical deals count
 // toward this year's KW/KWRI caps without needing a full contact record
 // re-created for each one.
-export function AddPastDealModal({ onClose }: { onClose: () => void }) {
+export function AddPastDealModal({
+  onClose,
+  initialAddress,
+  initialSalePrice,
+  pending = false,
+}: {
+  onClose: () => void;
+  initialAddress?: string;
+  initialSalePrice?: number | null;
+  pending?: boolean;
+}) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [clientName, setClientName] = useState("");
   const [closedAt, setClosedAt] = useState(todayLocalDateInput());
-  const [address, setAddress] = useState("");
+  const [address, setAddress] = useState(initialAddress ?? "");
   const [propertyType, setPropertyType] = useState<PropertyType | "">("");
-  const [side, setSide] = useState<DealSide | "">("");
-  const [salePrice, setSalePrice] = useState("");
+  const [side, setSide] = useState<DealSide | "">(pending ? "seller" : "");
+  const [salePrice, setSalePrice] = useState(initialSalePrice != null ? String(initialSalePrice) : "");
   const [grossCommission, setGrossCommission] = useState("");
   const [referralPct, setReferralPct] = useState("");
   const [miscFee, setMiscFee] = useState("");
@@ -54,8 +64,9 @@ export function AddPastDealModal({ onClose }: { onClose: () => void }) {
       owner_id: user.id,
       contact_id: null,
       client_name: clientName || null,
-      status: "won",
+      status: pending ? "pending" : "won",
       closed_at: dateInputToAppIso(closedAt),
+      expected_closing_date: pending ? dateInputToAppIso(closedAt) : null,
       address: address || null,
       property_type: propertyType || null,
       side: side || null,
@@ -91,13 +102,15 @@ export function AddPastDealModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
       <div className="max-h-[90vh] w-full overflow-y-auto rounded-t-2xl bg-white p-5 shadow-xl sm:max-w-md sm:rounded-2xl">
         <div className="flex items-start justify-between">
-          <p className="font-serif text-xl font-semibold text-neutral-900">Add past deal</p>
+          <p className="font-serif text-xl font-semibold text-neutral-900">{pending ? "Add commissions" : "Add past deal"}</p>
           <button onClick={onClose} className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100">
             <X size={18} />
           </button>
         </div>
         <p className="mt-0.5 text-sm text-neutral-500">
-          For deals that closed before this CRM was tracking them — not linked to a contact record.
+          {pending
+            ? "Prompt for commissions on this under-contract listing — a prompt, not automatic."
+            : "For deals that closed before this CRM was tracking them — not linked to a contact record."}
         </p>
 
         <div className="mt-4 space-y-3">
@@ -110,7 +123,7 @@ export function AddPastDealModal({ onClose }: { onClose: () => void }) {
             <Input id="past-address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main St" />
           </div>
           <div>
-            <Label htmlFor="past-closed-at">Closing date</Label>
+            <Label htmlFor="past-closed-at">{pending ? "Expected closing date" : "Closing date"}</Label>
             <Input id="past-closed-at" type="date" value={closedAt} onChange={(e) => setClosedAt(e.target.value)} />
           </div>
           <div className="grid grid-cols-2 gap-3">

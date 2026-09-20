@@ -1,70 +1,52 @@
-import { listWonDeals, listPendingDeals } from "@/lib/data/commissions";
-import { computeDeals, summarizeDeals, listCapYears, resolveCapYearQuery } from "@/lib/crm/commission";
+import Link from "next/link";
+import { Download } from "lucide-react";
+import { listWonDeals, listPendingDeals, listUnderContractListings } from "@/lib/data/commissions";
+import { computeDeals } from "@/lib/crm/commission";
+import { commissionKpis, resolveCommissionPeriod, visibleCommissionRows } from "@/lib/crm/commission-period";
 import { CommissionTable } from "@/components/commissions/CommissionTable";
-import { CommissionStats } from "@/components/commissions/CommissionStats";
-import { CapYearToggle } from "@/components/commissions/CapYearToggle";
+import { CommissionKpis } from "@/components/commissions/CommissionKpis";
+import { PeriodFilter } from "@/components/commissions/PeriodFilter";
 import { AddPastDealButton } from "@/components/commissions/AddPastDealButton";
 import { BulkImportButton } from "@/components/commissions/BulkImportButton";
 
 export default async function CommissionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ year?: string }>;
+  searchParams: Promise<{ period?: string }>;
 }) {
   const params = await searchParams;
-  const [wonDeals, pendingDeals] = await Promise.all([listWonDeals(), listPendingDeals()]);
-
-  // Won and pending are walked together, in date order, so a pending
-  // deal's projected KW/KWRI fee reflects exactly how much cap room prior
-  // deals in the same commission year already used - computing only the
-  // visible year in isolation, or only won deals, would get this wrong.
+  const period = resolveCommissionPeriod(params.period);
+  const [wonDeals, pendingDeals, ucListings] = await Promise.all([listWonDeals(), listPendingDeals(), listUnderContractListings()]);
   const computed = computeDeals([...wonDeals, ...pendingDeals]);
-
-  const years = listCapYears([...wonDeals, ...pendingDeals]);
-  const currentYear = resolveCapYearQuery(params.year, years);
-  const visible = computed.filter((d) => d.capYear === currentYear);
-  const won = visible.filter((d) => d.status === "won");
-  const pending = visible.filter((d) => d.status === "pending");
-  const stats = summarizeDeals(won);
+  const rows = visibleCommissionRows(computed, ucListings, period);
+  const kpis = commissionKpis(rows);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-5 px-4 py-6">
-      <div className="flex items-start justify-between gap-3">
+    <div className="mx-auto w-full max-w-[1400px] px-4 py-6 lg:px-8 lg:py-8">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="font-serif text-2xl font-semibold text-neutral-900">Commissions</h1>
-          <p className="mt-0.5 text-sm text-neutral-500">
-            Auto-filled from your closed deals — KW, KWRI, FMLS, and TC are calculated for you; referral, misc, and
-            OZ come from what you entered on each deal.
-          </p>
+          <h1 className="font-serif text-[32px] font-semibold leading-9 tracking-[-0.03em] text-neutral-900 lg:text-[40px]">Commissions</h1>
+          <p className="mt-1.5 text-[15px] text-neutral-500">Period filter scopes the tiles and the table. Export matches what you see.</p>
         </div>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <PeriodFilter current={period} />
+          <Link
+            href={`/api/commissions/export?period=${period}`}
+            className="inline-flex h-10 items-center gap-1.5 rounded-full border border-[#eadfd6] bg-white px-3.5 text-[13px] font-semibold text-neutral-800"
+          >
+            <Download size={14} /> Export
+          </Link>
           <BulkImportButton />
           <AddPastDealButton />
         </div>
       </div>
 
-      <CapYearToggle years={years} current={currentYear} />
-      <CommissionStats
-        stats={stats}
-        pendingKw={pending.reduce((s, d) => s + d.kwFee, 0)}
-        pendingKwri={pending.reduce((s, d) => s + d.kwriFee, 0)}
-        pendingNetCommission={pending.reduce((s, d) => s + d.netCommission, 0)}
-      />
+      <div className="mt-6">
+        <CommissionKpis kpis={kpis} />
+      </div>
 
-      {pending.length > 0 && (
-        <div>
-          <h2 className="mb-1 text-sm font-semibold text-neutral-700">Under contract (projected)</h2>
-          <p className="mb-3 text-xs text-neutral-400">
-            Not closed yet — these numbers show what each deal would owe based on cap room used so far, and
-            aren&apos;t counted in the totals above until they actually close.
-          </p>
-          <CommissionTable deals={pending} pending mobileLabel="Under contract" />
-        </div>
-      )}
-
-      <div>
-        <h2 className="mb-3 text-sm font-semibold text-neutral-700">Deals this commission year</h2>
-        <CommissionTable deals={won} mobileLabel="Closed this year" />
+      <div className="mt-5">
+        <CommissionTable rows={rows} />
       </div>
     </div>
   );
