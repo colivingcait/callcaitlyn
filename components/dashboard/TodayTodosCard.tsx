@@ -94,8 +94,20 @@ export function TodayTodosCard({ tasks, cadenceDues }: { tasks: WorklistTask[]; 
                 >
                   <Check size={12} className="opacity-0" />
                 </button>
-                <p className="min-w-0 flex-1 truncate text-[15px] text-neutral-800">{task.title}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[15px] text-neutral-800">{task.title}</p>
+                  {task.followUpAudienceLabel && <p className="truncate text-[13px] text-neutral-400">{task.followUpAudienceLabel}</p>}
+                </div>
                 {due && <span className="shrink-0 text-[13px] font-medium text-[#c45c4a]">{due === "Today" ? "Due today" : due}</span>}
+                {task.followUpTextHref && (
+                  <Link
+                    href={task.followUpTextHref}
+                    data-today-control="todo-followup-text"
+                    className="inline-flex h-9 shrink-0 items-center rounded-xl bg-[#c45c4a] px-3 text-[13px] font-semibold text-white"
+                  >
+                    Text &amp; Next
+                  </Link>
+                )}
               </li>
             );
           })}

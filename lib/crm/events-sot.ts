@@ -34,23 +34,85 @@ export function parseCampaignIdsParam(raw: string | null | undefined): string[] 
   ];
 }
 
-export function firstTimerCountForEvent(event: FirstTimerEvent, pastEvents: FirstTimerEvent[]): number {
-  if (event.hasEnded) {
-    return event.people.filter((person) => person.attended && person.attendanceNumber === 1).length;
-  }
+export function isFirstTimerPerson(
+  person: FirstTimerPerson,
+  event: Pick<FirstTimerEvent, "series" | "hasEnded">,
+  pastEvents: FirstTimerEvent[],
+): boolean {
+  if (event.hasEnded) return person.attended && person.attendanceNumber === 1;
   const everAttended = new Set<string>();
   for (const past of pastEvents) {
     if (past.series !== event.series) continue;
-    for (const person of past.people) {
-      if (person.attended) everAttended.add(person.contactId);
+    for (const row of past.people) {
+      if (row.attended) everAttended.add(row.contactId);
     }
   }
-  return event.people.filter((person) => person.registered && !everAttended.has(person.contactId)).length;
+  return person.registered && !everAttended.has(person.contactId);
+}
+
+export function firstTimerCountForEvent(event: FirstTimerEvent, pastEvents: FirstTimerEvent[]): number {
+  return event.people.filter((person) => isFirstTimerPerson(person, event, pastEvents)).length;
 }
 
 export function attachFirstTimerCounts<T extends FirstTimerEvent>(events: T[]): (T & { firstTimerCount: number })[] {
   const past = events.filter((event) => event.hasEnded);
   return events.map((event) => ({ ...event, firstTimerCount: firstTimerCountForEvent(event, past) }));
+}
+
+export function withFirstTimerFlags<T extends FirstTimerEvent>(
+  events: T[],
+): (T & { people: (T["people"][number] & { isFirstTimer: boolean })[] })[] {
+  const past = events.filter((event) => event.hasEnded);
+  return events.map((event) => ({
+    ...event,
+    people: event.people.map((person) => ({ ...person, isFirstTimer: isFirstTimerPerson(person, event, past) })),
+  }));
+}
+
+// Past-event roster chips (Nico / Caitlyn locked): All · Checked in ·
+// No-show · Registered · First-timers. Default past workflow is Checked
+// in so no-shows stay out until she flips the filter.
+export type RosterStatusFilter = "all" | "checked_in" | "no_show" | "registered" | "first_timers";
+
+export type RosterFilterPerson = {
+  registered: boolean;
+  attended: boolean;
+  isFirstTimer?: boolean;
+};
+
+export function defaultRosterFilter(hasEnded: boolean): RosterStatusFilter {
+  return hasEnded ? "checked_in" : "all";
+}
+
+export function matchesRosterFilter(person: RosterFilterPerson, filter: RosterStatusFilter, hasEnded: boolean): boolean {
+  if (filter === "all") return true;
+  if (filter === "checked_in") return person.attended;
+  if (filter === "no_show") return hasEnded && person.registered && !person.attended;
+  if (filter === "registered") return person.registered && !person.attended;
+  return Boolean(person.isFirstTimer);
+}
+
+export function rosterFilterCounts(people: RosterFilterPerson[], hasEnded: boolean): Record<RosterStatusFilter, number> {
+  return {
+    all: people.length,
+    checked_in: people.filter((person) => person.attended).length,
+    no_show: hasEnded ? people.filter((person) => person.registered && !person.attended).length : 0,
+    registered: people.filter((person) => person.registered && !person.attended).length,
+    first_timers: people.filter((person) => person.isFirstTimer).length,
+  };
+}
+
+export function peopleMatchingRosterFilter<T extends RosterFilterPerson>(
+  people: T[],
+  filter: RosterStatusFilter,
+  hasEnded: boolean,
+): T[] {
+  return people.filter((person) => matchesRosterFilter(person, filter, hasEnded));
+}
+
+export function followUpAudienceFromFilter(filter: RosterStatusFilter, hasEnded: boolean): RosterStatusFilter {
+  if (filter === "all") return hasEnded ? "checked_in" : "registered";
+  return filter;
 }
 
 export function eventsHubStats(

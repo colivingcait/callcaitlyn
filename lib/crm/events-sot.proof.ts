@@ -5,12 +5,18 @@ import { eventCadenceDues } from "./today-v1";
 import {
   attachFirstTimerCounts,
   campaignsBlastHref,
+  defaultRosterFilter,
   eventRosterTextDraft,
   eventsHubStats,
   firstTimerCountForEvent,
+  followUpAudienceFromFilter,
+  isFirstTimerPerson,
+  matchesRosterFilter,
   parseCampaignIdsParam,
   registrantIdsForMessage,
+  rosterFilterCounts,
   rosterStatusLabel,
+  withFirstTimerFlags,
 } from "./events-sot";
 
 const now = new Date("2026-09-19T16:00:00.000Z");
@@ -35,6 +41,16 @@ const upcoming = {
 assert.equal(firstTimerCountForEvent(upcoming, [past]), 1, "hub first-timers are registered who never attended the series");
 assert.equal(firstTimerCountForEvent(past, []), 1, "past first-timers are attendanceNumber === 1");
 assert.equal(attachFirstTimerCounts([upcoming, past])[0]?.firstTimerCount, 1);
+assert.equal(isFirstTimerPerson(past.people[0]!, past, []), true);
+assert.equal(isFirstTimerPerson(upcoming.people[1]!, upcoming, [past]), true);
+assert.equal(withFirstTimerFlags([upcoming, past])[1]?.people[0]?.isFirstTimer, true);
+assert.equal(defaultRosterFilter(true), "checked_in");
+assert.equal(defaultRosterFilter(false), "all");
+assert.equal(matchesRosterFilter({ registered: true, attended: false }, "no_show", true), true);
+assert.equal(matchesRosterFilter({ registered: true, attended: false }, "checked_in", true), false);
+assert.equal(matchesRosterFilter({ registered: true, attended: true, isFirstTimer: true }, "first_timers", true), true);
+assert.equal(followUpAudienceFromFilter("all", true), "checked_in");
+assert.equal(rosterFilterCounts([{ registered: true, attended: true, isFirstTimer: true }, { registered: true, attended: false }], true).checked_in, 1);
 
 assert.equal(campaignsBlastHref(["c1", "c2", "c1"]), "/sequences?ids=" + encodeURIComponent("c1,c2"));
 assert.deepEqual(parseCampaignIdsParam("c1,c2,c1"), ["c1", "c2"]);
@@ -109,6 +125,7 @@ assert.ok(hub.includes("Upcoming"));
 assert.ok(hub.includes("Past"));
 assert.ok(hub.includes("firstTimerCount") || hub.includes("first-timers"));
 assert.ok(hub.includes("first-timers"), "hub cards show first-timers count");
+assert.ok(hub.includes("followUp=1"), "past hub cards can open the follow-up drawer");
 assert.ok(hub.includes("Users"));
 assert.ok(hub.includes("View roster"));
 assert.ok(hub.includes("Message registrants"));
@@ -124,6 +141,14 @@ assert.ok(roster.includes("AddRegistrantButton"));
 assert.ok(roster.includes("MessageRegistrantsModal"));
 assert.ok(roster.includes("Last touch") || roster.includes("lastActivityLabels"));
 assert.ok(roster.includes("event.hasEnded"), "roster no-show UI is gated on hasEnded");
+assert.ok(roster.includes("First-timers"), "past roster chips include First-timers");
+assert.ok(roster.includes("Registered only"));
+assert.ok(roster.includes("defaultRosterFilter"));
+assert.ok(roster.includes("FollowUpTaskDrawer"));
+assert.ok(roster.includes("Create follow-up task"));
+assert.ok(roster.includes("Follow up attendees tomorrow?"));
+assert.equal(roster.includes("Smart list"), false, "do not ship Contacts Smart lists in this Events PR");
+assert.equal(roster.includes("BulkAddToListModal"), false, "Add to list / Smart lists stay out of this PR");
 
 const modal = read("components/events/MessageRegistrantsModal.tsx");
 assert.ok(modal.includes("Text &amp; Next") || modal.includes("Text & Next"));

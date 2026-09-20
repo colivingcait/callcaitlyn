@@ -109,6 +109,14 @@ export function EventsHub({
                         <Users size={18} strokeWidth={1.7} />
                         View roster
                       </Link>
+                      {event.hasEnded && event.counts.attended > 0 && (
+                        <Link
+                          href={`/events/${encodeURIComponent(event.key)}?followUp=1`}
+                          className="inline-flex items-center gap-2 text-[15px] font-medium text-[#c45c4a]"
+                        >
+                          Follow up
+                        </Link>
+                      )}
                       <button
                         type="button"
                         onClick={() => setMessageEvent(event)}

@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { formatLocal } from "@/lib/format-time";
 import { eventHasEnded, eventNoShowCount, eventWalkInCount } from "@/lib/crm/event-ended";
-import { attachFirstTimerCounts } from "@/lib/crm/events-sot";
+import { attachFirstTimerCounts, withFirstTimerFlags } from "@/lib/crm/events-sot";
 import { TEXT_REMINDER_DAYS_BEFORE } from "@/lib/crm/today-v1";
 
 // Same series/keying conventions as lib/data/events-report.ts (kept
@@ -58,6 +58,7 @@ export type RosterPerson = {
   // check-in does. 0 when the contact didn't actually attend (registered
   // only, or attendance not yet marked).
   attendanceNumber: number;
+  isFirstTimer: boolean;
 };
 
 export type EventCounts = { registered: number; attended: number; noShow: number; walkIn: number };
@@ -310,6 +311,7 @@ export async function getEventsData(): Promise<EventsData> {
             registered: bucket.registered.has(id),
             attended: bucket.attended.has(id),
             attendanceNumber: attendanceNumbers.get(id) ?? 0,
+            isFirstTimer: false,
           };
         })
         .filter((p): p is RosterPerson => !!p)
@@ -364,7 +366,9 @@ export async function getEventsData(): Promise<EventsData> {
       };
     });
 
-  const allEvents = attachFirstTimerCounts([...events, ...phantomEntries].sort((a, b) => b.date.localeCompare(a.date)));
+  const allEvents = withFirstTimerFlags(
+    attachFirstTimerCounts([...events, ...phantomEntries].sort((a, b) => b.date.localeCompare(a.date))),
+  );
 
   const nextUp =
     allEvents

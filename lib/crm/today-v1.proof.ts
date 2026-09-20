@@ -129,6 +129,7 @@ assert.ok(todos.includes("Email invite") || todos.includes("row.title"));
 assert.ok(todos.includes("todo-email"));
 assert.ok(todos.includes("todo-text"));
 assert.ok(todos.includes("MessageRegistrantsModal"), "Today Text CTA opens the Events choice modal");
+assert.ok(todos.includes("todo-followup-text"), "event follow-up tasks surface on Today as Text & Next");
 assert.equal(todos.includes("TextBlastModal"), false, "Today Text does not skip the choice modal");
 assert.equal(todos.includes("Nothing on the calendar"), false);
 
