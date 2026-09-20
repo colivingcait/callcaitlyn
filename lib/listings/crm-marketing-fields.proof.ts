@@ -14,6 +14,7 @@ import {
   asListingFinancials,
   asPhotoSource,
   normalizeFinancials,
+  toPublicUnlockFinancials,
 } from "./crm-marketing-fields";
 
 // Local proof that the listing Marketing tab does not throw on missing OM
@@ -61,6 +62,33 @@ const fromString = asListingFinancials(JSON.stringify({ purchase_price: 400000, 
 assert.ok(fromString);
 assert.equal(fromString.purchase_price, "400000");
 assert.equal(fromString.cap_rate, "10.3");
+
+function hasUndefined(value: unknown): boolean {
+  if (value === undefined) return true;
+  if (Array.isArray(value)) return value.some(hasUndefined);
+  if (value && typeof value === "object") return Object.values(value).some(hasUndefined);
+  return false;
+}
+
+const unlockPayload = toPublicUnlockFinancials({
+  purchase_price: "400000",
+  gross_rents: "5123.59",
+  noi: "3434.73",
+  cap_rate: "10.30",
+  dscr: "1.61",
+  cash_on_cash: "19.59",
+  annual: { gross_rents: "61483.07" },
+  occupancy: { rooms: 8, basis: "bed_night", t12_occupancy_pct: 86.34, monthly: [{ month: "2026-09", occupancy_pct: 66 }] },
+} as never);
+assert.equal(unlockPayload.gross_rents, "5123.59");
+assert.equal(unlockPayload.noi, "3434.73");
+assert.equal(unlockPayload.occupancy, undefined);
+assert.equal("occupancy" in unlockPayload, false);
+assert.equal("annual" in unlockPayload, false);
+assert.equal(hasUndefined(unlockPayload), false);
+assert.deepEqual(JSON.parse(JSON.stringify(unlockPayload)), unlockPayload);
+assert.equal(toPublicUnlockFinancials(null).gross_rents, "");
+assert.equal(hasUndefined(toPublicUnlockFinancials(null)), false);
 
 assert.deepEqual(asImprovements(null), []);
 assert.deepEqual(asImprovements(undefined), []);

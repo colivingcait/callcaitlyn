@@ -7,8 +7,8 @@ import { notifyNewLead } from "@/lib/push/send-push";
 import { sendGmailMessage, textToHtml } from "@/lib/google/send-email";
 import { sendQuoText } from "@/lib/quo/send-message";
 import { LISTING_DOCUMENT_LABELS } from "@/lib/listings/documents";
-import { asListingFinancials, normalizeFinancials } from "@/lib/listings/crm-marketing-fields";
-import type { ListingFinancials } from "@/types/database";
+import { toPublicUnlockFinancials } from "@/lib/listings/crm-marketing-fields";
+import type { ActivitySource, ListingFinancials } from "@/types/database";
 
 const OWNER_ID = process.env.CRM_OWNER_USER_ID;
 // She wants offer terms on her own phone, not only in the CRM - same
@@ -68,6 +68,39 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null
   return Promise.race([promise, new Promise<null>((resolve) => setTimeout(() => resolve(null), ms))]);
 }
 
+// upsertActivity throws on any insert error that is not a unique
+// violation — including check_violation (23514). Public OM writes
+// source=listing_page; if live activities_source_check was last rewritten
+// without that value (0063, before 0074), the insert throws and #38's
+// catch returns "Could not unlock. Try again." site_form is in every
+// rewrite of that constraint, so the Investor Lead still gets a durable
+// timeline row when listing_page is rejected.
+async function recordUnlockActivity(
+  admin: ReturnType<typeof createAdminClient>,
+  contactId: string,
+  listingId: string,
+  nickname: string,
+) {
+  const fields = {
+    type: "note" as const,
+    direction: "none" as const,
+    occurred_at: new Date().toISOString(),
+    body: `Unlocked financials on ${nickname}`,
+    metadata: { listing_id: listingId },
+  };
+  const key = `${listingId}:${contactId}`;
+  const sources: ActivitySource[] = ["listing_page", "site_form"];
+  for (const source of sources) {
+    try {
+      const activity = await upsertActivity(admin, OWNER_ID!, contactId, source, "listing_unlock_key", key, fields);
+      if (activity?.id) return activity;
+    } catch (err) {
+      console.error("unlockListingFinancials activity failed", source, err);
+    }
+  }
+  return null;
+}
+
 // The underwriting gate: name + phone or email, in place, no navigation.
 // Real financials are fetched here and returned to the client only on
 // success - the locked page's HTML never contains them (see
@@ -95,13 +128,7 @@ export async function unlockListingFinancials(
     const tagged = await addTagByName(admin, OWNER_ID, contact.id, "Investor Lead");
     if (!tagged) return { ok: false, error: "Could not save this lead. Try again." };
 
-    const activity = await upsertActivity(admin, OWNER_ID, contact.id, "listing_page", "listing_unlock_key", `${listing.id}:${contact.id}`, {
-      type: "note",
-      direction: "none",
-      occurred_at: new Date().toISOString(),
-      body: `Unlocked financials on ${nickname}`,
-      metadata: { listing_id: listing.id },
-    });
+    const activity = await recordUnlockActivity(admin, contact.id, listing.id, nickname);
     if (!activity?.id) return { ok: false, error: "Could not save this lead. Try again." };
 
     const { data: documents } = await admin.from("listing_documents").select("doc_type, storage_path").eq("listing_id", listing.id);
@@ -147,7 +174,13 @@ export async function unlockListingFinancials(
       8000,
     );
 
-    const financials = asListingFinancials(listing.financials) ?? normalizeFinancials(null);
+    let financials: ListingFinancials;
+    try {
+      financials = toPublicUnlockFinancials(listing.financials);
+    } catch (err) {
+      console.error("unlockListingFinancials financials failed", err);
+      financials = toPublicUnlockFinancials(null);
+    }
     return { ok: true, financials, workbookUrl };
   } catch (err) {
     console.error("unlockListingFinancials failed", err);

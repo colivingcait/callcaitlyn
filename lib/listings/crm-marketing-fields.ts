@@ -30,6 +30,32 @@ export function asListingFinancials(value: unknown): ListingFinancials | null {
   return normalizeFinancials(raw as ListingFinancials);
 }
 
+function unlockField(value: string | undefined): string {
+  return value == null ? "" : String(value);
+}
+
+// Public unlock return only. The gated UI reads these keys; occupancy /
+// annual / sidecar extras stay on the listing row and must not cross the
+// server-action boundary (optional fields become `undefined` after #38/#39
+// and are not needed to reveal the lock).
+export function toPublicUnlockFinancials(value: unknown): ListingFinancials {
+  const financials = asListingFinancials(value) ?? normalizeFinancials(null);
+  return {
+    t12: [],
+    scenarios: [],
+    noi: unlockField(financials.noi),
+    cap_rate: unlockField(financials.cap_rate),
+    dscr: unlockField(financials.dscr),
+    purchase_price: unlockField(financials.purchase_price),
+    gross_rents: unlockField(financials.gross_rents),
+    net_earnings: unlockField(financials.net_earnings),
+    opex: unlockField(financials.opex),
+    projected_debt_service: unlockField(financials.projected_debt_service),
+    net_cash_flow: unlockField(financials.net_cash_flow),
+    cash_on_cash: unlockField(financials.cash_on_cash),
+  };
+}
+
 export function normalizeFinancials(financials: ListingFinancials | null | undefined): ListingFinancials {
   const extras = financials ? { ...financials } : {};
   return hydrateGatedFinancials({

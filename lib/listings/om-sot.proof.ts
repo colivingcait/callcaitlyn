@@ -262,7 +262,8 @@ for (const removed of GATED_REMOVED_FIELDS) {
 const unlock = read("app/listing/[slug]/actions.ts");
 assert.ok(unlock.includes("buyer_workbook"));
 assert.ok(unlock.includes("workbookUrl"));
-assert.ok(unlock.includes("asListingFinancials"));
-assert.ok(unlock.includes("normalizeFinancials(null)"));
+assert.ok(unlock.includes("toPublicUnlockFinancials"));
+assert.ok(unlock.includes("recordUnlockActivity"));
+assert.ok(unlock.includes('"site_form"'));
 
 console.log("om sot: ok");
