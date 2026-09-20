@@ -17,6 +17,7 @@ import { PhotoUploader } from "@/components/listings/PhotoUploader";
 import { PublicPageToggle } from "@/components/listings/PublicPageToggle";
 import { PadsplitScrapeStatus } from "@/components/listings/PadsplitScrapeStatus";
 import { DocumentUploader } from "@/components/listings/DocumentUploader";
+import { ApplyToOmPanel } from "@/components/listings/ApplyToOmPanel";
 import { OmDetailsForm } from "@/components/listings/OmDetailsForm";
 import { FinancialsEditor } from "@/components/listings/FinancialsEditor";
 import { ImprovementsEditor } from "@/components/listings/ImprovementsEditor";
@@ -208,15 +209,18 @@ export default async function ListingDetailPage({ params, searchParams }: { para
               <DocumentUploader listingId={listing.id} documents={documents} />
             </div>
             <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
+              <ApplyToOmPanel listing={listing} />
+            </div>
+            <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
               <h2 className="mb-3 text-base font-semibold text-neutral-900">Offering memorandum details</h2>
-              <OmDetailsForm listing={listing} />
+              <OmDetailsForm key={`om-${listing.updated_at}`} listing={listing} />
             </div>
             <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
               <h2 className="mb-3 text-base font-semibold text-neutral-900">Gated underwriting detail</h2>
-              <FinancialsEditor listingId={listing.id} financials={listing.financials} />
+              <FinancialsEditor key={`fin-${listing.updated_at}`} listingId={listing.id} financials={listing.financials} />
             </div>
             <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
-              <ImprovementsEditor listingId={listing.id} improvements={listing.improvements} />
+              <ImprovementsEditor key={`imp-${listing.updated_at}`} listingId={listing.id} improvements={listing.improvements} />
             </div>
             <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
               <h2 className="mb-3 text-base font-semibold text-neutral-900">PadSplit photos</h2>

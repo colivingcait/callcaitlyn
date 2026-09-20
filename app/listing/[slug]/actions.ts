@@ -6,6 +6,7 @@ import { upsertActivity } from "@/lib/crm/activities";
 import { notifyNewLead } from "@/lib/push/send-push";
 import { sendGmailMessage, textToHtml } from "@/lib/google/send-email";
 import { sendQuoText } from "@/lib/quo/send-message";
+import { LISTING_DOCUMENT_LABELS } from "@/lib/listings/documents";
 import type { ListingFinancials } from "@/types/database";
 
 const OWNER_ID = process.env.CRM_OWNER_USER_ID;
@@ -17,7 +18,9 @@ const OWNER_PHONE = "+16788848494";
 // keep working indefinitely.
 const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7;
 
-const DOC_LABELS: Record<string, string> = { earnings_statement: "Earnings statement", t12: "T12" };
+// Includes buyer_workbook so the post-unlock signed packet lists the xlsx
+// alongside earnings_statement / t12. Do not overload those two slots.
+const DOC_LABELS: Record<string, string> = LISTING_DOCUMENT_LABELS;
 
 type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -99,9 +102,21 @@ export async function unlockListingFinancials(
     if (signed?.signedUrl) links.push(`${DOC_LABELS[doc.doc_type] ?? doc.doc_type}: ${signed.signedUrl}`);
   }
 
+  const packetNames = (documents ?? [])
+    .map((doc) => DOC_LABELS[doc.doc_type] ?? doc.doc_type)
+    .filter((label, i, arr) => arr.indexOf(label) === i);
+  const packetPhrase =
+    packetNames.length === 0
+      ? "source documents"
+      : packetNames.length === 1
+        ? packetNames[0]
+        : packetNames.length === 2
+          ? `${packetNames[0]} and ${packetNames[1]}`
+          : `${packetNames.slice(0, -1).join(", ")}, and ${packetNames[packetNames.length - 1]}`;
+
   const messageBody =
     links.length > 0
-      ? `Hi${firstName ? ` ${firstName}` : ""}! Here's the T12 and earnings statement for ${nickname}.\n\n${links.join("\n")}\n\nLet me know if you have any questions.\n\nCaitlyn Verdugo with KW Metro Atl`
+      ? `Hi${firstName ? ` ${firstName}` : ""}! Here's the ${packetPhrase} for ${nickname}.\n\n${links.join("\n")}\n\nLet me know if you have any questions.\n\nCaitlyn Verdugo with KW Metro Atl`
       : `Hi${firstName ? ` ${firstName}` : ""}! Thanks for unlocking the numbers on ${nickname} — I'll follow up shortly with the source documents.\n\nCaitlyn Verdugo with KW Metro Atl`;
 
   if (email) await sendGmailMessage(admin, OWNER_ID, email, `Financials — ${nickname}`, textToHtml(messageBody));

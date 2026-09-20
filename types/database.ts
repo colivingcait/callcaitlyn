@@ -285,14 +285,38 @@ export interface Listing {
   updated_at: string;
 }
 
+export type ListingFinancialsT12Line = { label: string; value: string; subtotal?: boolean };
+export type ListingFinancialsScenario = {
+  label: string;
+  coc: string;
+  cash_in: string;
+  debt_service: string;
+  cash_flow: string;
+  dscr?: string;
+  loan_amount?: string;
+};
+
+// Gated underwriting JSONB. Public OM never reads these exact figures —
+// only the four band_* display strings. Extra keys from an Apply-to-OM
+// sidecar (meta, deal_key, etc.) are preserved at runtime.
 export type ListingFinancials = {
-  t12: { label: string; value: string; subtotal?: boolean }[];
+  t12: ListingFinancialsT12Line[];
   noi: string;
   cap_rate: string;
   vacancy_pct?: string;
-  scenarios: { label: string; coc: string; cash_in: string; debt_service: string; cash_flow: string }[];
   occupancy_summary?: string;
+  platform_fees?: string;
+  pm_fees?: string;
+  expense_load_pct?: string;
+  dscr?: string;
+  purchase_price?: string;
+  scenarios: ListingFinancialsScenario[];
+  meta?: unknown;
+  deal_key?: string;
+  buyer_workbook_filename?: string;
 };
+
+export type ListingDocumentType = "earnings_statement" | "t12" | "buyer_workbook";
 
 export type ListingImprovement = { item: string; year: string; cost: string };
 
@@ -306,8 +330,6 @@ export interface ListingOccupancySnapshot {
   total_rooms: number | null;
   captured_at: string;
 }
-
-export type ListingDocumentType = "earnings_statement" | "t12";
 
 export interface ListingDocument {
   id: string;

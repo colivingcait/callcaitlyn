@@ -13,6 +13,8 @@ import { sendGmailMessage } from "@/lib/google/send-email";
 import { draftToHtml } from "@/lib/crm/merge-fields";
 import { baseUrl } from "@/lib/crm/sequences";
 import { generateUniqueListingSlug } from "@/lib/listings/public-slug";
+import { LISTING_DOCUMENT_TYPES } from "@/lib/listings/documents";
+import { parseOmSidecarJson, planOmSidecarApply } from "@/lib/listings/om-sidecar";
 import { phonesMatch } from "@/lib/phone";
 import type { ListingStatus, ListingDocumentType, ListingFinancials, ListingImprovement } from "@/types/database";
 
@@ -576,6 +578,7 @@ export async function addListingDocument(listingId: string, docType: ListingDocu
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Not signed in" };
+  if (!LISTING_DOCUMENT_TYPES.includes(docType)) return { ok: false, error: "Unknown document type" };
 
   const { data: existing } = await supabase
     .from("listing_documents")
@@ -688,6 +691,56 @@ export async function updateListingOmFields(
   if (error) return { ok: false, error: error.message };
 
   revalidatePath(`/listings/${listingId}`);
+  return { ok: true };
+}
+
+// Vera sidecar JSON → existing OM columns + financials jsonb. Preview/diff
+// lives in ApplyToOmPanel; this re-parses on the server so a bad payload
+// cannot write. listing_hints only overwrite non-empty identity fields
+// when overwriteHints is set.
+export async function applyOmSidecarToListing(
+  listingId: string,
+  rawJson: string,
+  options: { overwriteHints?: boolean } = {},
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  const parsed = parseOmSidecarJson(rawJson);
+  if (!parsed.ok) return { ok: false, error: parsed.error };
+
+  const { data: listing } = await supabase
+    .from("listings")
+    .select(
+      "nickname, om_number, submarket, total_rooms, band_gross_rent, band_expense_load, band_cash_on_cash, band_cap_rate, financials, improvements, public_slug",
+    )
+    .eq("id", listingId)
+    .maybeSingle();
+  if (!listing) return { ok: false, error: "Listing not found" };
+
+  const plan = planOmSidecarApply(parsed.sidecar, listing, { overwriteHints: options.overwriteHints });
+  const patch: Record<string, unknown> = {
+    financials: plan.patch.financials,
+    updated_at: new Date().toISOString(),
+  };
+  if (plan.patch.nickname !== undefined) patch.nickname = plan.patch.nickname;
+  if (plan.patch.om_number !== undefined) patch.om_number = plan.patch.om_number;
+  if (plan.patch.submarket !== undefined) patch.submarket = plan.patch.submarket;
+  if (plan.patch.total_rooms !== undefined) patch.total_rooms = plan.patch.total_rooms;
+  if (plan.patch.band_gross_rent !== undefined) patch.band_gross_rent = plan.patch.band_gross_rent;
+  if (plan.patch.band_expense_load !== undefined) patch.band_expense_load = plan.patch.band_expense_load;
+  if (plan.patch.band_cash_on_cash !== undefined) patch.band_cash_on_cash = plan.patch.band_cash_on_cash;
+  if (plan.patch.band_cap_rate !== undefined) patch.band_cap_rate = plan.patch.band_cap_rate;
+  if (plan.patch.improvements !== undefined) patch.improvements = plan.patch.improvements;
+
+  const { error } = await supabase.from("listings").update(patch).eq("id", listingId);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/listings/${listingId}`);
+  if (listing.public_slug) revalidatePath(`/listing/${listing.public_slug}`);
   return { ok: true };
 }
 

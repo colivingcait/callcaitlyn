@@ -13,14 +13,38 @@ export function daysInputValue(n: number | string | null | undefined, fallback: 
 }
 
 export function normalizeFinancials(financials: ListingFinancials | null | undefined): ListingFinancials {
+  const extras = financials ? { ...financials } : {};
   return {
+    ...extras,
     t12: Array.isArray(financials?.t12) ? financials.t12 : [],
     noi: financials?.noi ?? "",
     cap_rate: financials?.cap_rate ?? "",
     vacancy_pct: financials?.vacancy_pct ?? "",
     occupancy_summary: financials?.occupancy_summary ?? "",
+    platform_fees: financials?.platform_fees ?? "",
+    pm_fees: financials?.pm_fees ?? "",
+    expense_load_pct: financials?.expense_load_pct ?? "",
+    dscr: financials?.dscr ?? "",
+    purchase_price: financials?.purchase_price ?? "",
     scenarios: Array.isArray(financials?.scenarios) ? financials.scenarios : [],
   };
+}
+
+export function financialsHaveContent(data: ListingFinancials | null | undefined): boolean {
+  if (!data) return false;
+  return (
+    (data.t12 ?? []).length > 0 ||
+    Boolean(data.noi) ||
+    Boolean(data.cap_rate) ||
+    Boolean(data.vacancy_pct) ||
+    Boolean(data.occupancy_summary) ||
+    Boolean(data.platform_fees) ||
+    Boolean(data.pm_fees) ||
+    Boolean(data.expense_load_pct) ||
+    Boolean(data.dscr) ||
+    Boolean(data.purchase_price) ||
+    (data.scenarios ?? []).length > 0
+  );
 }
 
 export function asImprovements(value: ListingImprovement[] | null | undefined): ListingImprovement[] {

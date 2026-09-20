@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "deal_key": "candace",
+  "listing_hints": {
+    "nickname": "Candace",
+    "om_number": "",
+    "submarket": "Atlanta metro",
+    "rooms": 8
+  },
+  "public_bands": {
+    "band_gross_rent": "$60k–$65k TTM collected",
+    "band_expense_load": "15–20% of gross",
+    "band_cash_on_cash": "18–22% @ 20% down / 7% / 30yr DSCR",
+    "band_cap_rate": "10–11%"
+  },
+  "financials": {
+    "t12": [
+      { "label": "Gross collected (PadSplit, cash)", "value": "61483.07", "subtotal": false },
+      { "label": "Platform fees (booking + service)", "value": "-8178.18", "subtotal": false },
+      { "label": "Net to host", "value": "53304.89", "subtotal": true },
+      { "label": "Utilities", "value": "-5279.86", "subtotal": false },
+      { "label": "Repairs & maintenance", "value": "-4704.43", "subtotal": false },
+      { "label": "Insurance", "value": "-570.90", "subtotal": false },
+      { "label": "Property management", "value": "-1075.00", "subtotal": false },
+      { "label": "Admin & other", "value": "-457.99", "subtotal": false },
+      { "label": "Total operating expenses", "value": "-12088.18", "subtotal": true },
+      { "label": "NOI", "value": "41216.71", "subtotal": true }
+    ],
+    "noi": "41216.71",
+    "cap_rate": "10.30",
+    "vacancy_pct": "13.7",
+    "occupancy_summary": "TTM bed-night occupancy 86.3% (8 rooms). Soft months: Jun ~57.5%, Sep in-flight ~66%.",
+    "platform_fees": "8178.18",
+    "pm_fees": "1075.00",
+    "expense_load_pct": "19.7",
+    "dscr": "1.61",
+    "purchase_price": "400000",
+    "scenarios": [
+      {
+        "label": "20% down / 7% / 30yr DSCR",
+        "coc": "19.59",
+        "cash_in": "80000",
+        "debt_service": "25547.62",
+        "cash_flow": "15669.10",
+        "dscr": "1.61",
+        "loan_amount": "320000"
+      },
+      {
+        "label": "All-cash",
+        "coc": "10.30",
+        "cash_in": "400000",
+        "debt_service": "0",
+        "cash_flow": "41216.71",
+        "dscr": "",
+        "loan_amount": "0"
+      }
+    ]
+  },
+  "improvements": [],
+  "documents": {
+    "buyer_workbook": "Candace_OM_Financials_TTM.xlsx"
+  },
+  "meta": {
+    "period": "TTM 2025-10 to 2026-09",
+    "gross_basis": "collected_only",
+    "occupancy_basis": "bed_night",
+    "notes": [
+      "Platform fees are PadSplit booking+service; separate from PM.",
+      "Owner opex ledger thin for Aug–Sep 2026.",
+      "Sep PadSplit earnings in-flight.",
+      "Closing costs not modeled."
+    ]
+  }
+}
