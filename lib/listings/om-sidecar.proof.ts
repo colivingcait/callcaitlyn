@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  GATED_UI_FIELDS,
   OM_SIDECAR_SCHEMA_VERSION,
+  PUBLIC_UI_FIELDS,
   parseOmSidecar,
   parseOmSidecarJson,
   planOmSidecarApply,
@@ -13,13 +15,15 @@ import {
 // bands + financials JSONB shape. No Supabase. Run with:
 //   npx tsx lib/listings/om-sidecar.proof.ts
 
-const fixture = JSON.parse(readFileSync(join(process.cwd(), "lib/listings/fixtures/candace_om_sidecar_v1.json"), "utf8"));
+const fixture = JSON.parse(readFileSync(join(process.cwd(), "lib/listings/fixtures/candace_om_sidecar_v2.json"), "utf8"));
+const fixtureV1 = JSON.parse(readFileSync(join(process.cwd(), "lib/listings/fixtures/candace_om_sidecar_v1.json"), "utf8"));
 
 const emptyListing: ListingOmSnapshot = {
   nickname: null,
   om_number: null,
   submarket: null,
   total_rooms: null,
+  padsplit_url: null,
   band_gross_rent: null,
   band_expense_load: null,
   band_cash_on_cash: null,
@@ -28,7 +32,15 @@ const emptyListing: ListingOmSnapshot = {
   improvements: null,
 };
 
-assert.equal(OM_SIDECAR_SCHEMA_VERSION, 1);
+assert.equal(OM_SIDECAR_SCHEMA_VERSION, 2);
+assert.deepEqual(
+  PUBLIC_UI_FIELDS.map((f) => f.label),
+  fixture.field_map.public_ui,
+);
+assert.deepEqual(
+  GATED_UI_FIELDS.map((f) => f.label),
+  fixture.field_map.gated_ui,
+);
 
 const parsed = parseOmSidecar(fixture);
 if (!parsed.ok) throw new Error(parsed.error);
@@ -42,10 +54,11 @@ assert.equal(plan.patch.nickname, "Candace");
 assert.equal(plan.patch.om_number, undefined, "empty om_number must not overwrite");
 assert.equal(plan.patch.submarket, "Atlanta metro");
 assert.equal(plan.patch.total_rooms, 8);
-assert.equal(plan.patch.band_gross_rent, "$60k–$65k TTM collected");
-assert.equal(plan.patch.band_expense_load, "15–20% of gross");
-assert.equal(plan.patch.band_cash_on_cash, "18–22% @ 20% down / 7% / 30yr DSCR");
-assert.equal(plan.patch.band_cap_rate, "10–11%");
+assert.equal(plan.patch.padsplit_url, "https://www.padsplit.com/rooms-for-rent/listing/8299");
+assert.equal(plan.patch.band_gross_rent, "$5.0–5.5k/mo");
+assert.equal(plan.patch.band_expense_load, "high-teens%");
+assert.equal(plan.patch.band_cash_on_cash, "high-teens to low-20s%");
+assert.equal(plan.patch.band_cap_rate, "low-10s%");
 
 const fin = plan.patch.financials;
 assert.equal(fin.t12.length, 10);
@@ -100,7 +113,7 @@ assert.equal(protectedPlan.patch.nickname, undefined);
 assert.equal(protectedPlan.patch.submarket, undefined);
 assert.equal(protectedPlan.patch.total_rooms, undefined);
 assert.equal(protectedPlan.protectedCount >= 3, true);
-assert.equal(protectedPlan.patch.band_gross_rent, "$60k–$65k TTM collected");
+assert.equal(protectedPlan.patch.band_gross_rent, "$5.0–5.5k/mo");
 assert.equal((protectedPlan.patch.financials as { keep_me?: string }).keep_me, "yes", "unknown existing financials keys must survive ingest");
 
 const overwritePlan = planOmSidecarApply(parsed.sidecar, filled, { overwriteHints: true });
@@ -115,13 +128,21 @@ const withImprovements: ListingOmSnapshot = {
 const clearImprovements = planOmSidecarApply(parsed.sidecar, withImprovements);
 assert.equal(clearImprovements.patch.improvements, null);
 
-const v2 = parseOmSidecar({ ...fixture, schema_version: 2 });
-assert.equal(v2.ok, false);
-if (!v2.ok) assert.match(v2.error, /Unsupported sidecar schema_version 2/);
+const v1 = parseOmSidecar(fixtureV1);
+assert.equal(v1.ok, true, "schema_version 1 still hydrates");
+if (v1.ok) {
+  const v1Plan = planOmSidecarApply(v1.sidecar, emptyListing);
+  assert.equal(v1Plan.patch.band_gross_rent, "$60k–$65k TTM collected");
+  assert.equal(v1Plan.patch.financials.padsplit_fees, "8178.18");
+}
+
+const v3 = parseOmSidecar({ ...fixture, schema_version: 3 });
+assert.equal(v3.ok, false);
+if (!v3.ok) assert.match(v3.error, /Unsupported sidecar schema_version 3/);
 
 const v2dot = parseOmSidecarJson(JSON.stringify({ schema_version: "2.1", financials: {} }));
 assert.equal(v2dot.ok, false);
-if (!v2dot.ok) assert.match(v2dot.error, /Unsupported sidecar schema_version 2\.1/);
+if (!v2dot.ok) assert.match(v2dot.error, /schema_version.*2\.1/);
 
 const missing = parseOmSidecarJson('{"financials":{"noi":"1"}}');
 assert.equal(missing.ok, false);

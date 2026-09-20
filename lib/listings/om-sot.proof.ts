@@ -19,7 +19,8 @@ assert.equal(extractPadsplitListingId("12345"), "12345");
 assert.equal(extractPadsplitListingId("https://www.padsplit.com/rooms-for-rent/listing/98765"), "98765");
 assert.equal(extractPadsplitListingId("https://www.padsplit.com/rooms-for-rent/listing/98765/westside"), "98765");
 assert.equal(extractPadsplitListingId(""), "");
-assert.equal(padsplitListingUrlFromInput("12345"), "https://www.padsplit.com/rooms-for-rent/listing/12345");
+assert.equal(padsplitListingUrlFromInput("8299"), "https://www.padsplit.com/rooms-for-rent/listing/8299");
+assert.equal(extractPadsplitListingId("8299"), "8299");
 assert.equal(padsplitListingUrlFromInput("https://www.padsplit.com/rooms-for-rent/listing/12345"), "https://www.padsplit.com/rooms-for-rent/listing/12345");
 assert.equal(padsplitListingUrlFromInput(""), null);
 

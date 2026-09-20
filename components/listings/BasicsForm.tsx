@@ -103,10 +103,10 @@ export function BasicsForm({ listing }: { listing: Listing }) {
             value={padsplitListingId}
             onChange={(e) => handlePadsplitIdChange(e.target.value)}
             className={inputClass}
-            placeholder="12345"
+            placeholder="8299"
           />
           <p className="mt-1 text-xs text-neutral-400">
-            The number from the PadSplit URL — not the full link. Occupancy, pricing, and photos are pulled from{" "}
+            PadSplit house/listing ID (the number in the URL, e.g. Candace 8299) — not the full link. Occupancy, pricing, and photos are pulled from{" "}
             {builtUrl ? (
               <span className="break-all text-neutral-500">{builtUrl}</span>
             ) : (

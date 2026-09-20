@@ -1,8 +1,20 @@
 import { z } from "zod";
 import type { ListingFinancials, ListingImprovement } from "@/types/database";
 import { normalizeFinancials } from "@/lib/listings/crm-marketing-fields";
+import { padsplitListingUrlFromInput } from "@/lib/listings/padsplit-url";
+import { GATED_UNDERWRITING_FIELDS } from "@/lib/listings/gated-underwriting";
 
-export const OM_SIDECAR_SCHEMA_VERSION = 1;
+export const OM_SIDECAR_SCHEMA_VERSION = 2;
+export const OM_SIDECAR_ACCEPTED_VERSIONS = [1, 2] as const;
+
+export const PUBLIC_UI_FIELDS = [
+  { key: "band_gross_rent", label: "Gross Rents" },
+  { key: "band_expense_load", label: "Operating Expenses" },
+  { key: "band_cash_on_cash", label: "Cash-on-cash" },
+  { key: "band_cap_rate", label: "Cap rate" },
+] as const;
+
+export const GATED_UI_FIELDS = GATED_UNDERWRITING_FIELDS;
 
 const stringish = z.union([z.string(), z.number()]).transform((value) => String(value));
 const optionalStringish = z
@@ -44,6 +56,7 @@ const listingHintsSchema = z
     om_number: z.string().optional(),
     submarket: z.string().optional(),
     rooms: z.union([z.number(), z.string()]).optional(),
+    padsplit_house_id: z.union([z.number(), z.string()]).optional(),
   })
   .passthrough();
 
@@ -80,8 +93,9 @@ const financialsSchema = z
 
 export const omSidecarV1Schema = z
   .object({
-    schema_version: z.union([z.literal(1), z.literal("1")]),
+    schema_version: z.union([z.literal(1), z.literal("1"), z.literal(2), z.literal("2")]),
     deal_key: z.string().optional(),
+    padsplit_house_id: z.union([z.number(), z.string()]).optional(),
     listing_hints: listingHintsSchema.optional(),
     public_bands: publicBandsSchema.optional(),
     financials: financialsSchema,
@@ -93,6 +107,7 @@ export const omSidecarV1Schema = z
       .passthrough()
       .optional(),
     meta: z.unknown().optional(),
+    field_map: z.unknown().optional(),
   })
   .passthrough();
 
@@ -107,6 +122,7 @@ export type ListingOmSnapshot = {
   om_number: string | null;
   submarket: string | null;
   total_rooms: number | null;
+  padsplit_url: string | null;
   band_gross_rent: string | null;
   band_expense_load: string | null;
   band_cash_on_cash: string | null;
@@ -131,6 +147,7 @@ export type OmApplyPatch = {
   om_number?: string | null;
   submarket?: string | null;
   total_rooms?: number | null;
+  padsplit_url?: string | null;
   band_gross_rent?: string | null;
   band_expense_load?: string | null;
   band_cash_on_cash?: string | null;
@@ -168,11 +185,8 @@ function displayValue(value: unknown): string {
 
 function parseSchemaVersion(raw: unknown): { major: number; raw: unknown } | { error: string } {
   if (raw == null || raw === "") return { error: "Missing schema_version." };
-  if (typeof raw === "number" && Number.isFinite(raw)) return { major: Math.trunc(raw), raw };
-  if (typeof raw === "string") {
-    const major = Number(raw.trim().split(".")[0]);
-    if (Number.isFinite(major)) return { major, raw };
-  }
+  if (typeof raw === "number" && Number.isInteger(raw)) return { major: raw, raw };
+  if (typeof raw === "string" && /^\d+$/.test(raw.trim())) return { major: Number(raw.trim()), raw };
   return { error: `Invalid schema_version ${JSON.stringify(raw)}.` };
 }
 
@@ -182,10 +196,10 @@ export function parseOmSidecar(input: unknown): OmSidecarParseResult {
   }
   const version = parseSchemaVersion((input as { schema_version?: unknown }).schema_version);
   if ("error" in version) return { ok: false, error: version.error };
-  if (version.major !== OM_SIDECAR_SCHEMA_VERSION) {
+  if (version.major !== 1 && version.major !== 2) {
     return {
       ok: false,
-      error: `Unsupported sidecar schema_version ${String(version.raw)}. This CRM accepts version ${OM_SIDECAR_SCHEMA_VERSION}.`,
+      error: `Unsupported sidecar schema_version ${String(version.raw)}. This CRM accepts versions ${OM_SIDECAR_ACCEPTED_VERSIONS.join(" and ")} (current ${OM_SIDECAR_SCHEMA_VERSION}).`,
     };
   }
   const parsed = omSidecarV1Schema.safeParse(input);
@@ -251,12 +265,33 @@ function mergeFinancials(existing: ListingFinancials | null | undefined, sidecar
   return normalizeFinancials(merged);
 }
 
+function sidecarPadsplitHouseId(sidecar: OmSidecarV1): string | null {
+  const raw = sidecar.padsplit_house_id ?? sidecar.listing_hints?.padsplit_house_id;
+  if (raw == null || raw === "") return null;
+  const id = String(raw).trim();
+  if (!/^\d+$/.test(id)) return null;
+  return id;
+}
+
 export function planOmSidecarApply(sidecar: OmSidecarV1, current: ListingOmSnapshot, options: { overwriteHints?: boolean } = {}): OmApplyPlan {
   const overwriteHints = options.overwriteHints === true;
   const changes: OmApplyChange[] = [];
   const patch: OmApplyPatch = {
     financials: mergeFinancials(current.financials, sidecar),
   };
+
+  const houseId = sidecarPadsplitHouseId(sidecar);
+  const padsplitUrl = padsplitListingUrlFromInput(houseId);
+  if (padsplitUrl && !sameText(current.padsplit_url, padsplitUrl)) {
+    patch.padsplit_url = padsplitUrl;
+    changes.push({
+      path: "padsplit_url",
+      label: "PadSplit listing ID",
+      before: displayValue(current.padsplit_url),
+      after: displayValue(padsplitUrl),
+      group: "hints",
+    });
+  }
 
   const bands = sidecar.public_bands ?? {};
   const bandPairs: { path: keyof ListingOmSnapshot & `band_${string}`; label: string; incoming?: string }[] = [

@@ -140,19 +140,19 @@ export function OmDetailsForm({ listing }: { listing: Listing }) {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className={labelClass}>Gross Rents</label>
-            <input value={bandGrossRent} onChange={(e) => setBandGrossRent(e.target.value)} className={inputClass} placeholder="$8k–$10k/mo" />
+            <input value={bandGrossRent} onChange={(e) => setBandGrossRent(e.target.value)} className={inputClass} placeholder="$5.0–5.5k/mo" />
           </div>
           <div>
             <label className={labelClass}>Operating Expenses</label>
-            <input value={bandExpenseLoad} onChange={(e) => setBandExpenseLoad(e.target.value)} className={inputClass} placeholder="mid-30s %" />
+            <input value={bandExpenseLoad} onChange={(e) => setBandExpenseLoad(e.target.value)} className={inputClass} placeholder="high-teens%" />
           </div>
           <div>
             <label className={labelClass}>Cash-on-cash</label>
-            <input value={bandCashOnCash} onChange={(e) => setBandCashOnCash(e.target.value)} className={inputClass} placeholder="30%+" />
+            <input value={bandCashOnCash} onChange={(e) => setBandCashOnCash(e.target.value)} className={inputClass} placeholder="high-teens to low-20s%" />
           </div>
           <div>
             <label className={labelClass}>Cap rate</label>
-            <input value={bandCapRate} onChange={(e) => setBandCapRate(e.target.value)} className={inputClass} placeholder="13–15%" />
+            <input value={bandCapRate} onChange={(e) => setBandCapRate(e.target.value)} className={inputClass} placeholder="low-10s%" />
           </div>
         </div>
       </div>
