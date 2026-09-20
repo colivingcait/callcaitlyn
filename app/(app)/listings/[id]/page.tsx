@@ -210,7 +210,7 @@ export default async function ListingDetailPage({ params, searchParams }: { para
                 lastScrapedAt={listing.last_scraped_at}
                 lastScrapeError={listing.last_scrape_error}
               />
-              <DocumentUploader listingId={listing.id} documents={documents} />
+              <DocumentUploader listingId={listing.id} listingNickname={listing.nickname} documents={documents} />
             </div>
             <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
               <ApplyToOmPanel listingId={listing.id} listing={listing} />

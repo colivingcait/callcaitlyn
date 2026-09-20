@@ -4,10 +4,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { findOrCreateContact, addTagByName } from "@/lib/crm/find-or-create-contact";
 import { upsertActivity } from "@/lib/crm/activities";
 import { notifyNewLead } from "@/lib/push/send-push";
-import { sendGmailMessage, textToHtml } from "@/lib/google/send-email";
 import { sendQuoText } from "@/lib/quo/send-message";
-import { LISTING_DOCUMENT_LABELS } from "@/lib/listings/documents";
 import { toPublicUnlockFinancials } from "@/lib/listings/crm-marketing-fields";
+import { workbookDownloadPath } from "@/lib/listings/workbook-filename";
 import type { ActivitySource, ListingFinancials } from "@/types/database";
 
 const OWNER_ID = process.env.CRM_OWNER_USER_ID;
@@ -19,10 +18,8 @@ const OWNER_PHONE = "+16788848494";
 // keep working indefinitely.
 const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7;
 
-// buyer_workbook is the post-unlock download. Older earnings_statement /
-// t12 rows may still exist; they are only sent if no workbook is uploaded.
-const DOC_LABELS: Record<string, string> = LISTING_DOCUMENT_LABELS;
-
+// buyer_workbook is the on-page post-unlock download only. Do not email
+// or text the workbook — public unlock stays on this page.
 type ActionResult = { ok: true } | { ok: false; error: string };
 
 async function findPublicListing(slug: string) {
@@ -117,7 +114,7 @@ export async function unlockListingFinancials(
     if (!listing) return { ok: false, error: "This listing isn't available anymore" };
     const nickname = listing.nickname || listing.address;
 
-    const { contact, name, firstName, phone, email } = await captureContact(
+    const { contact, name, phone, email } = await captureContact(
       admin,
       input,
       `Listing page — ${nickname}`,
@@ -132,45 +129,15 @@ export async function unlockListingFinancials(
     if (!activity?.id) return { ok: false, error: "Could not save this lead. Try again." };
 
     const { data: documents } = await admin.from("listing_documents").select("doc_type, storage_path").eq("listing_id", listing.id);
-    const allDocs = documents ?? [];
-    const workbookDocs = allDocs.filter((doc) => doc.doc_type === "buyer_workbook");
-    const packet = workbookDocs.length > 0 ? workbookDocs : allDocs;
-    const links: string[] = [];
-    let workbookUrl: string | null = null;
-    for (const doc of packet) {
-      const { data: signed } = await admin.storage.from("listing-documents").createSignedUrl(doc.storage_path, SIGNED_URL_TTL_SECONDS);
-      if (!signed?.signedUrl) continue;
-      links.push(`${DOC_LABELS[doc.doc_type] ?? doc.doc_type}: ${signed.signedUrl}`);
-      if (doc.doc_type === "buyer_workbook" && !workbookUrl) workbookUrl = signed.signedUrl;
-    }
-
-    const packetNames = packet
-      .map((doc) => DOC_LABELS[doc.doc_type] ?? doc.doc_type)
-      .filter((label, i, arr) => arr.indexOf(label) === i);
-    const packetPhrase =
-      packetNames.length === 0
-        ? "buyer workbook"
-        : packetNames.length === 1
-          ? packetNames[0]
-          : packetNames.length === 2
-            ? `${packetNames[0]} and ${packetNames[1]}`
-            : `${packetNames.slice(0, -1).join(", ")}, and ${packetNames[packetNames.length - 1]}`;
-
-    const messageBody =
-      links.length > 0
-        ? `Hi${firstName ? ` ${firstName}` : ""}! Here's the ${packetPhrase} for ${nickname}.\n\n${links.join("\n")}\n\nLet me know if you have any questions.\n\nCaitlyn Verdugo with KW Metro Atl`
-        : `Hi${firstName ? ` ${firstName}` : ""}! Thanks for unlocking the numbers on ${nickname} — I'll follow up shortly with the buyer workbook.\n\nCaitlyn Verdugo with KW Metro Atl`;
+    const workbook = (documents ?? []).find((doc) => doc.doc_type === "buyer_workbook");
+    const workbookUrl = workbook ? workbookDownloadPath(slug, SIGNED_URL_TTL_SECONDS) : null;
 
     await withTimeout(
-      Promise.allSettled([
-        notifyNewLead(admin, OWNER_ID, {
-          title: name || email || phone,
-          body: `Unlocked financials on ${nickname}`,
-          url: `/contacts/${contact.id}`,
-        }),
-        email ? sendGmailMessage(admin, OWNER_ID, email, `Financials — ${nickname}`, textToHtml(messageBody)) : Promise.resolve(null),
-        phone ? sendQuoText(phone, messageBody) : Promise.resolve(null),
-      ]),
+      notifyNewLead(admin, OWNER_ID, {
+        title: name || email || phone,
+        body: `Unlocked financials on ${nickname}`,
+        url: `/contacts/${contact.id}`,
+      }),
       8000,
     );
 
@@ -205,6 +172,7 @@ export async function submitListingOffer(
     dd: string;
     closing: string;
     notes: string;
+    unsureTerms?: boolean;
   },
 ): Promise<ActionResult> {
   if (!OWNER_ID) return { ok: false, error: "Not configured" };
@@ -223,29 +191,38 @@ export async function submitListingOffer(
   const { data: hotStage } = await admin.from("pipeline_stages").select("id").eq("owner_id", OWNER_ID).eq("name", "Hot / Ready").maybeSingle();
   if (hotStage) await admin.from("contacts").update({ stage_id: hotStage.id }).eq("id", contact.id);
 
-  const termsLines = [
-    `Offer on ${nickname}`,
-    input.price && `Price: ${input.price}`,
-    input.emd && `EMD: ${input.emd}`,
-    input.entity && `Entity: ${input.entity}`,
-    input.financing && `Financing: ${input.financing}`,
-    input.dd && `Due diligence: ${input.dd}`,
-    input.closing && `Target closing: ${input.closing}`,
-    input.notes && `Notes: ${input.notes}`,
-  ].filter(Boolean);
+  const unsureTerms = input.unsureTerms === true;
+  const termsLines = unsureTerms
+    ? [`Offer interest on ${nickname}`, "Unsure about offer terms", input.entity && `Entity: ${input.entity}`, input.notes && `Notes: ${input.notes}`].filter(Boolean)
+    : [
+        `Offer on ${nickname}`,
+        input.price && `Price: ${input.price}`,
+        input.emd && `EMD: ${input.emd}`,
+        input.entity && `Entity: ${input.entity}`,
+        input.financing && `Financing: ${input.financing}`,
+        input.dd && `Due diligence: ${input.dd}`,
+        input.closing && `Target closing: ${input.closing}`,
+        input.notes && `Notes: ${input.notes}`,
+      ].filter(Boolean);
 
   await upsertActivity(admin, OWNER_ID, contact.id, "listing_page", "listing_offer_key", `${listing.id}:${contact.id}:${Date.now()}`, {
     type: "note",
     direction: "none",
     occurred_at: new Date().toISOString(),
     body: termsLines.join(" — "),
-    metadata: { listing_id: listing.id, offer: input },
+    metadata: { listing_id: listing.id, offer: { ...input, unsureTerms } },
   });
 
   // Unmistakable from the notification alone that this needs a call right
   // away, not just "another lead" - distinct from unlockListingFinancials's
   // notification wording on purpose.
-  await notifyNewLead(admin, OWNER_ID, { title: "OFFER INTEREST", body: `${name} submitted an offer on ${nickname} — call now`, url: `/contacts/${contact.id}` });
+  await notifyNewLead(admin, OWNER_ID, {
+    title: "OFFER INTEREST",
+    body: unsureTerms
+      ? `${name} is interested in ${nickname} — unsure about terms, call now`
+      : `${name} submitted an offer on ${nickname} — call now`,
+    url: `/contacts/${contact.id}`,
+  });
   await sendQuoText(OWNER_PHONE, termsLines.join("\n"));
 
   return { ok: true };

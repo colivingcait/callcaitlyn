@@ -224,6 +224,23 @@ if (cashflowAlias.ok) {
   assert.equal(mapped.net_cash_flow, "1305.76", "net_cashflow alias hydrates net_cash_flow");
 }
 
+const annualCashflowAlias = parseOmSidecar({
+  schema_version: 2,
+  financials: {
+    noi: "3434.73",
+    projected_debt_service: "2128.97",
+    net_cashflow: "15669.09",
+    annual: { net_cash_flow: "15669.09" },
+    t12: [],
+    scenarios: [],
+  },
+});
+assert.equal(annualCashflowAlias.ok, true);
+if (annualCashflowAlias.ok) {
+  const mapped = planOmSidecarApply(annualCashflowAlias.sidecar, emptyListing).patch.financials;
+  assert.equal(mapped.net_cash_flow, "1305.76", "annual net_cashflow becomes monthly NCF");
+}
+
 const documents = readFileSync(join(process.cwd(), "lib/listings/documents.ts"), "utf8");
 assert.ok(documents.includes('buyer_workbook: "Vera\'s buyer workbook"'));
 assert.ok(documents.includes("earnings_statement"));
@@ -236,9 +253,10 @@ assert.ok(uploader.includes("MARKETING_UPLOAD_TYPES"));
 assert.equal(uploader.includes("LISTING_DOCUMENT_TYPES"), false, "Marketing uploader must not iterate the full DB enum");
 
 const unlock = readFileSync(join(process.cwd(), "app/listing/[slug]/actions.ts"), "utf8");
-assert.ok(unlock.includes("LISTING_DOCUMENT_LABELS"));
 assert.ok(unlock.includes("buyer_workbook"));
 assert.ok(unlock.includes("workbookUrl"));
+assert.ok(unlock.includes("workbookDownloadPath"));
+assert.equal(unlock.includes("sendGmailMessage"), false);
 
 const marketing = readFileSync(join(process.cwd(), "app/(app)/listings/[id]/page.tsx"), "utf8");
 assert.ok(marketing.includes("ApplyToOmPanel"));

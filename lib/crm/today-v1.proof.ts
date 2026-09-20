@@ -81,6 +81,8 @@ const todayHome = read("components/dashboard/TodayHome.tsx");
 assert.ok(todayHome.includes("Here&apos;s who needs you today."));
 assert.ok(todayHome.includes("TextAndNextDialer"));
 assert.ok(todayHome.includes("TodayBookingRequestCard"));
+assert.ok(todayHome.includes("TodayAbandonedBookingCard"));
+assert.ok(todayHome.includes("abandonedBookings"));
 assert.ok(todayHome.includes("needs-you") || todayHome.includes("Needs you"));
 assert.ok(todayHome.includes("TodayTodosCard"));
 assert.ok(todayHome.includes("upcomingCrmEvents"));

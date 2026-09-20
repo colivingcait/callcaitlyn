@@ -1,6 +1,7 @@
 import { TodaySearch } from "@/components/dashboard/mobile/TodaySearch";
 import { TodayPipelineOverview } from "@/components/dashboard/TodayPipelineOverview";
 import { TextAndNextDialer } from "@/components/dashboard/TextAndNextDialer";
+import { TodayAbandonedBookingCard } from "@/components/dashboard/TodayAbandonedBookingCard";
 import { TodayBookingRequestCard } from "@/components/dashboard/TodayBookingRequestCard";
 import { TodayUpcomingEvents } from "@/components/dashboard/TodayUpcomingEvents";
 import { TodayTodosCard } from "@/components/dashboard/TodayTodosCard";
@@ -45,6 +46,9 @@ export function TodayHome({
         <h2 className={TODAY_LABEL}>Needs you</h2>
         {today.bookingRequests.map((request) => (
           <TodayBookingRequestCard key={request.id} request={request} />
+        ))}
+        {today.abandonedBookings.map((request) => (
+          <TodayAbandonedBookingCard key={request.id} request={request} />
         ))}
         <div data-today-home="spotlight" className="contents">
           <TextAndNextDialer leads={leads} />

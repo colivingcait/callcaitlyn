@@ -80,6 +80,14 @@ const unlockPayload = toPublicUnlockFinancials({
   annual: { gross_rents: "61483.07" },
   occupancy: { rooms: 8, basis: "bed_night", t12_occupancy_pct: 86.34, monthly: [{ month: "2026-09", occupancy_pct: 66 }] },
 } as never);
+const annualNcf = toPublicUnlockFinancials({
+  noi: "3434.73",
+  projected_debt_service: "2128.97",
+  net_cash_flow: "15669.09",
+  annual: { net_cash_flow: "15669.09" },
+} as never);
+assert.equal(annualNcf.net_cash_flow, "1305.76", "annual gated NCF unlocks as monthly");
+
 assert.equal(unlockPayload.gross_rents, "5123.59");
 assert.equal(unlockPayload.noi, "3434.73");
 assert.equal(unlockPayload.occupancy, undefined);
