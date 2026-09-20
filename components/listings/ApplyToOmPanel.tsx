@@ -31,7 +31,7 @@ function snapshot(listing: Listing) {
   };
 }
 
-export function ApplyToOmPanel({ listing }: { listing: Listing }) {
+export function ApplyToOmPanel({ listingId, listing }: { listingId: string; listing: Listing }) {
   const router = useRouter();
   const [raw, setRaw] = useState("");
   const [fileName, setFileName] = useState("");
@@ -61,7 +61,11 @@ export function ApplyToOmPanel({ listing }: { listing: Listing }) {
     setSaving(true);
     setSaved(false);
     setError("");
-    const result = await applyOmSidecarToListing(listing.id, raw, { overwriteHints });
+    const result = await applyOmSidecarToListing({
+      listingId,
+      rawJson: raw,
+      overwriteHints,
+    });
     setSaving(false);
     if (!result.ok) {
       setError(result.error);
