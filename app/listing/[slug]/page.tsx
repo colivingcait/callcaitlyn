@@ -252,12 +252,12 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                       {listing.last_scraped_at
                         ? ` — last pulled ${new Date(listing.last_scraped_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" })} ET`
                         : ""}
-                      . This is what the house is doing right now, which is not always what a trailing twelve months shows.
+                      . This is what the house is doing right now, which is not always what a T12 shows.
                     </p>
                   </div>
 
                   <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 18, flexWrap: "wrap", paddingTop: 34 }}>
-                    <p style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontSize: 22, color: "#211c19" }}>Trailing twelve months</p>
+                    <p style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontSize: 22, color: "#211c19" }}>T12</p>
                     {trendSummary && <p style={{ margin: 0, fontSize: 13, color: "#574f47" }}>{trendSummary}</p>}
                   </div>
                   <div className="om-occupancy-chart" style={{ marginTop: 22 }}>
