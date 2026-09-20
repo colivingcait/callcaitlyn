@@ -97,11 +97,15 @@ assert.ok(publicData.includes("listingLiveOccupancy"));
 const unlock = readFileSync(join(process.cwd(), "app/listing/[slug]/actions.ts"), "utf8");
 assert.ok(unlock.includes('addTagByName(admin, OWNER_ID, contact.id, "Investor Lead")'));
 assert.ok(unlock.includes("if (!tagged)"));
+assert.ok(unlock.includes("recordUnlockActivity"));
 assert.ok(unlock.includes("if (!activity?.id)"));
 assert.ok(unlock.includes("skipQuoSync: true"));
+assert.ok(unlock.includes("listing_page"));
+assert.ok(unlock.includes("site_form"), "listing_page check_violation must fall back to a source that exists on live");
 assert.match(unlock, /return \{ ok: true, financials, workbookUrl \}/);
 const taggedIdx = unlock.indexOf("if (!tagged)");
 const okIdx = unlock.lastIndexOf("return { ok: true, financials, workbookUrl }");
 assert.ok(taggedIdx > 0 && taggedIdx < okIdx, "Investor Lead tag must land before unlock returns ok");
+assert.ok(unlock.includes("toPublicUnlockFinancials"));
 
 console.log("occupancy: ok");

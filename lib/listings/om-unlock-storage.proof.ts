@@ -88,6 +88,8 @@ const actions = readFileSync(join(root, "app/listing/[slug]/actions.ts"), "utf8"
 assert.ok(actions.includes("Investor Lead"));
 assert.ok(actions.includes("if (!tagged)"));
 assert.ok(actions.includes("Could not save this lead"));
+assert.ok(actions.includes("recordUnlockActivity"));
+assert.ok(actions.includes("toPublicUnlockFinancials"));
 
 const ctx = readFileSync(join(root, "components/listings/om/UnlockContext.tsx"), "utf8");
 assert.ok(ctx.includes("applyUnlock"));
