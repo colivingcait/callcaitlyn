@@ -13,8 +13,6 @@ import {
 import { CommissionTable } from "@/components/commissions/CommissionTable";
 import { CommissionKpis } from "@/components/commissions/CommissionKpis";
 import { PeriodFilter } from "@/components/commissions/PeriodFilter";
-import { AddPastDealButton } from "@/components/commissions/AddPastDealButton";
-import { BulkImportButton } from "@/components/commissions/BulkImportButton";
 
 export default async function CommissionsPage({
   searchParams,
@@ -35,9 +33,9 @@ export default async function CommissionsPage({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-[28px] font-semibold leading-8 tracking-[-0.03em] text-neutral-900 lg:text-[32px]">Commissions</h1>
+            <h1 className="font-display text-[28px] font-semibold leading-8 tracking-[-0.03em] text-neutral-900 lg:text-[32px]">Commissions</h1>
             <span className="inline-flex items-center gap-1.5 text-[12px] text-neutral-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
+              <span className="h-1.5 w-1.5 rounded-full bg-[#c45c4a]" />
               period filter
             </span>
           </div>
@@ -54,16 +52,11 @@ export default async function CommissionsPage({
       </div>
 
       <div className="mt-8">
-        <CommissionKpis kpis={kpis} />
+        <CommissionKpis kpis={kpis} period={period} />
       </div>
 
       <div className="mt-8">
         <CommissionTable rows={rows} rangeLabel={rangeLabel} />
-      </div>
-
-      <div className="mt-4 flex flex-wrap items-center gap-3 text-[13px] text-neutral-400">
-        <BulkImportButton />
-        <AddPastDealButton />
       </div>
     </div>
   );

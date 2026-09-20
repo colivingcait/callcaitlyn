@@ -7,7 +7,7 @@ import { COMMISSION_PERIODS, type CommissionPeriod } from "@/lib/crm/commission-
 export function PeriodFilter({ current }: { current: CommissionPeriod }) {
   const router = useRouter();
   return (
-    <label className="inline-flex items-center gap-2 rounded-lg border border-[#eadfd6] bg-white px-3 py-1.5 text-[13px] text-neutral-700">
+    <label className="inline-flex items-center gap-2 rounded-full border border-[#eadfd6] bg-white px-3 py-1.5 text-[13px] text-neutral-700">
       <CalendarDays size={14} className="text-neutral-400" />
       <select
         value={current}

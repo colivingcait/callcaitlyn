@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   commissionExportFilename,
+  commissionKpiComparisonLabel,
   commissionKpis,
   commissionPeriodRangeLabel,
   commissionPeriodBounds,
@@ -123,6 +124,10 @@ assert.ok(page.includes("/api/commissions/export?period="));
 assert.ok(page.includes("rangeLabel") || page.includes("commissionPeriodRangeLabel"));
 assert.ok(page.includes("resolveCommissionPeriod"));
 assert.equal(page.includes("CapYearToggle"), false, "period filter replaces the year tabs as the primary chrome");
+assert.equal(page.includes("BulkImportButton"), false, "Bulk import is parked — not on the Commissions page");
+assert.equal(page.includes("AddPastDealButton"), false, "Add past deal is parked — not on the Commissions page");
+assert.equal(commissionKpiComparisonLabel("this_month"), "vs last month");
+assert.equal(commissionKpiComparisonLabel("this_quarter"), "vs last quarter");
 
 const table = read("components/commissions/CommissionTable.tsx");
 assert.ok(table.includes("Showing"), "table footer states the filtered period");
@@ -131,8 +136,16 @@ assert.ok(table.includes("Split %"));
 assert.ok(table.includes("Your net"));
 assert.ok(table.includes("CommissionPromptButton"));
 assert.ok(table.includes("StatusChip"));
-assert.ok(read("components/commissions/CommissionPromptButton.tsx").includes("Commissions prompt"));
+assert.ok(table.includes("SideChip"));
+assert.ok(table.includes("StageChip"));
+assert.ok(table.includes("Clock"), "Pending status uses a clock");
+assert.ok(table.includes("DealRowActions") === false, "pencil/x row actions are not on the SoT table");
 assert.equal(table.includes("Fee breakdown"), false, "tight table, not the 18-column fee strip");
+
+const prompt = read("components/commissions/CommissionPromptButton.tsx");
+assert.ok(prompt.includes("Commission prompt"), "UC prompt is text, not an award button");
+assert.ok(prompt.includes("Sparkles"), "prompt keeps a small icon beside the text");
+assert.equal(prompt.includes("rounded-full"), false, "prompt is not a heavy standalone button");
 
 const kpisUi = read("components/commissions/CommissionKpis.tsx");
 assert.ok(kpisUi.includes("Gross GCI"));
@@ -140,6 +153,9 @@ assert.ok(kpisUi.includes("Net after splits"));
 assert.ok(kpisUi.includes("pendingAmount"));
 assert.ok(kpisUi.includes("paidAmount"));
 assert.ok(kpisUi.includes("lg:grid-cols-4"));
+assert.ok(kpisUi.includes("commissionKpiComparisonLabel") || kpisUi.includes("vs last month"));
+assert.ok(kpisUi.includes("rounded-full"), "Pending KPI uses the mock dot treatment");
+assert.ok(kpisUi.includes("Check"), "Paid KPI uses check treatment");
 
 const periodUi = read("components/commissions/PeriodFilter.tsx");
 assert.ok(periodUi.includes("<select") || periodUi.includes("select"), "period filter is a dropdown, not chip tabs");
