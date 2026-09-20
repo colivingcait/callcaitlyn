@@ -16,7 +16,7 @@ export const GATED_REMOVED_FIELDS = ["pm_fees", "expense_load_pct", "occupancy_s
 
 export type GatedUnderwritingKey = (typeof GATED_UNDERWRITING_FIELDS)[number]["key"];
 
-function firstNonEmpty(...values: Array<string | null | undefined>): string {
+function firstNonEmpty(...values: Array<string | number | null | undefined>): string {
   for (const value of values) {
     if (value != null && String(value).trim() !== "") return String(value);
   }
@@ -24,7 +24,10 @@ function firstNonEmpty(...values: Array<string | null | undefined>): string {
 }
 
 function t12Value(t12: ListingFinancialsT12Line[] | undefined, pattern: RegExp): string | undefined {
-  return (t12 ?? []).find((line) => pattern.test(line.label ?? ""))?.value;
+  const line = (t12 ?? []).find((row) => pattern.test(row.label ?? ""));
+  if (!line) return undefined;
+  const value = (line as ListingFinancialsT12Line & { amount?: string | number }).value ?? (line as { amount?: string | number }).amount;
+  return value == null ? undefined : String(value);
 }
 
 // Fill the gated OM keys from explicit sidecar/JSONB fields, then from

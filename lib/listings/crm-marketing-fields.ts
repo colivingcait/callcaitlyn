@@ -13,6 +13,22 @@ export function daysInputValue(n: number | string | null | undefined, fallback: 
   return String(value);
 }
 
+// Server-action / JSONB reads can come back as a string or a number-heavy
+// object. Always land on the same ListingFinancials shape the gate renders.
+export function asListingFinancials(value: unknown): ListingFinancials | null {
+  if (value == null || value === "") return null;
+  let raw: unknown = value;
+  if (typeof raw === "string") {
+    try {
+      raw = JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+  if (typeof raw !== "object") return null;
+  return normalizeFinancials(raw as ListingFinancials);
+}
+
 export function normalizeFinancials(financials: ListingFinancials | null | undefined): ListingFinancials {
   const extras = financials ? { ...financials } : {};
   return hydrateGatedFinancials({

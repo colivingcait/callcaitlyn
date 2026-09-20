@@ -70,10 +70,15 @@ assert.ok(omPage.includes("GROSS RENTS"));
 assert.ok(omPage.includes("OPERATING EXPENSES"));
 assert.ok(omPage.includes("CASH-ON-CASH"));
 assert.ok(omPage.includes("CAP RATE"));
+assert.ok(omPage.includes("om-fin-overview"), "financial overview must use the 2×2 class, not auto-fit");
+assert.equal(omPage.includes('cellGridStyle("repeat(auto-fit, minmax(min(200px, 100%), 1fr))")'), false);
+assert.ok(omPage.includes("UnlockedProvider slug={slug}"));
 
 const omCss = read("app/listing/om.css");
 assert.equal(omCss.includes("#process"), false);
 assert.equal(omCss.includes("om-process"), false);
+assert.ok(omCss.includes(".om-fin-overview"));
+assert.ok(omCss.includes("repeat(2, minmax(0, 1fr))"));
 
 const publicCopy = read("lib/listings/public-copy.ts");
 assert.equal(publicCopy.includes("finiteDays"), false);
@@ -86,10 +91,18 @@ assert.equal(nav.includes("PROCESS"), false);
 const gate = read("components/listings/om/FinancialGate.tsx");
 assert.ok(gate.includes("GATED_UNDERWRITING_FIELDS"));
 assert.ok(gate.includes("workbookUrl"));
+assert.ok(gate.includes("writeOmUnlock"));
+assert.ok(gate.includes("applyUnlock"));
+assert.equal(gate.includes("setUnlocked(true)"), false, "unlock must persist payload, not flip a boolean alone");
 assert.equal(gate.includes("Financing scenarios"), false);
 assert.equal(gate.includes("financials.t12"), false);
 assert.equal(gate.includes("PM fees"), false);
 assert.equal(gate.includes("Occupancy summary"), false);
+
+const unlockCtx = read("components/listings/om/UnlockContext.tsx");
+assert.ok(unlockCtx.includes("writeOmUnlock"));
+assert.ok(unlockCtx.includes("readOmUnlock"));
+assert.ok(unlockCtx.includes("slug"));
 
 assert.deepEqual(
   GATED_UNDERWRITING_FIELDS.map((f) => f.path),
@@ -106,5 +119,7 @@ for (const removed of GATED_REMOVED_FIELDS) {
 const unlock = read("app/listing/[slug]/actions.ts");
 assert.ok(unlock.includes("buyer_workbook"));
 assert.ok(unlock.includes("workbookUrl"));
+assert.ok(unlock.includes("asListingFinancials"));
+assert.ok(unlock.includes("normalizeFinancials(null)"));
 
 console.log("om sot: ok");

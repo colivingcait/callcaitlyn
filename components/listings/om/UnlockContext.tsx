@@ -1,16 +1,51 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from "react";
+import {
+  readOmUnlock,
+  subscribeOmUnlock,
+  writeOmUnlock,
+  type OmUnlockPayload,
+} from "@/lib/listings/om-unlock-storage";
+import type { ListingFinancials } from "@/types/database";
 
-// Shared between FinancialGate (sets it on a successful unlock) and
-// MobileActionBar (reads it to swap "UNLOCK FINANCIALS" for "SUBMIT AN
-// OFFER") - they're siblings under the server-rendered page, so a tiny
-// context is simpler than lifting real financial data through props.
-const UnlockedContext = createContext<{ unlocked: boolean; setUnlocked: (v: boolean) => void } | null>(null);
+// Shared between FinancialGate (writes the unlock payload) and
+// MobileActionBar (reads unlocked to swap "UNLOCK FINANCIALS" for "SUBMIT AN
+// OFFER"). State lives here — not in the gate leaf — because the listing
+// server page remounts that leaf after the unlock server action refreshes.
+const EMPTY = { unlocked: false as const, financials: null, workbookUrl: null };
 
-export function UnlockedProvider({ children }: { children: React.ReactNode }) {
-  const [unlocked, setUnlocked] = useState(false);
-  return <UnlockedContext.Provider value={{ unlocked, setUnlocked }}>{children}</UnlockedContext.Provider>;
+type UnlockedContextValue = {
+  unlocked: boolean;
+  financials: ListingFinancials | null;
+  workbookUrl: string | null;
+  applyUnlock: (payload: OmUnlockPayload) => void;
+};
+
+const UnlockedContext = createContext<UnlockedContextValue | null>(null);
+
+export function UnlockedProvider({ slug, children }: { slug: string; children: React.ReactNode }) {
+  const payload = useSyncExternalStore(
+    (onStoreChange) => subscribeOmUnlock(slug, onStoreChange),
+    () => readOmUnlock(slug) ?? EMPTY,
+    () => EMPTY,
+  );
+
+  const applyUnlock = useCallback((next: OmUnlockPayload) => {
+    writeOmUnlock(slug, next);
+  }, [slug]);
+
+  const value = useMemo<UnlockedContextValue>(
+    () => ({
+      unlocked: payload.unlocked === true,
+      financials: payload.financials,
+      workbookUrl: payload.workbookUrl,
+      applyUnlock,
+    }),
+    [payload, applyUnlock],
+  );
+
+  return <UnlockedContext.Provider value={value}>{children}</UnlockedContext.Provider>;
 }
 
 export function useUnlocked() {
