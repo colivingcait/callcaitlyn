@@ -1,4 +1,4 @@
-// Hand-written types matching supabase/migrations (through 0075).
+// Hand-written types matching supabase/migrations (through 0076).
 // If you use the Supabase CLI later, you can replace this with
 // `supabase gen types typescript` output.
 
