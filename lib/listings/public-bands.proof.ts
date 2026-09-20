@@ -21,7 +21,8 @@ assert.equal(formatPublicBand("high-teens%"), "~19%");
 assert.equal(formatPublicBand("high-teens to low-20s%"), "~20%");
 assert.equal(formatPublicBand("low-10s%"), "~10%");
 
-assert.equal(formatPublicBand("$60k–$65k T12 collected"), "~$65,000 T12 collected");
+assert.equal(formatPublicBand("$60k–$65k T12 collected"), "~$65,000 collected");
+assert.equal(formatPublicBand("~$65,000 T12 collected"), "~$65,000 collected");
 assert.equal(formatPublicBand("15–20% of gross"), "~18%");
 assert.equal(formatPublicBand("18–22% @ 20% down / 7% / 30yr DSCR"), "~20%");
 assert.equal(formatPublicBand("10–11%"), "~10%");

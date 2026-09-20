@@ -207,11 +207,11 @@ export function t12OccupancySummary(
     const low = filled.length > 0 ? Math.min(...filled.map((p) => p.pct)) : Math.round(occupancy.t12_occupancy_pct);
     const rooms = occupancy.rooms;
     const avg = Math.round(occupancy.t12_occupancy_pct * 100) / 100;
-    return rooms ? `T12 ${avg}% · low ${low}% · ${rooms} rooms · bed-night` : `T12 ${avg}% · low ${low}% · bed-night`;
+    return rooms ? `${avg}% average · low ${low}% · ${rooms} rooms` : `${avg}% average · low ${low}%`;
   }
   if (filled.length === 0) return null;
   const avg = Math.round(filled.reduce((sum, p) => sum + p.pct, 0) / filled.length);
   const low = Math.min(...filled.map((p) => p.pct));
   const rooms = occupancy?.rooms;
-  return rooms ? `T12 ${avg}% · low ${low}% · ${rooms} rooms` : `T12 ${avg}% · low ${low}%`;
+  return rooms ? `${avg}% average · low ${low}% · ${rooms} rooms` : `${avg}% average · low ${low}%`;
 }

@@ -187,7 +187,7 @@ export function FinancialGate({
               <div style={{ textAlign: "center", maxWidth: "42ch" }}>
                 <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.2em", color: "#a33a29" }}>LINE-ITEM DETAIL LOCKED</p>
                 <p style={{ margin: "12px 0 0", fontFamily: "var(--font-om-serif)", fontSize: 23, lineHeight: 1.3, color: "#211c19" }}>
-                  Monthly rents, expenses, debt service, CapEx, and the buyer workbook open on this page.
+                  Monthly rents, expenses, debt service, and CapEx open on this page.
                 </p>
               </div>
             </div>
@@ -198,8 +198,7 @@ export function FinancialGate({
               <div style={{ maxWidth: "46ch" }}>
                 <p style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontSize: 22, color: "#f4f1ec" }}>Open the numbers</p>
                 <p style={{ margin: "8px 0 0", fontSize: 14, lineHeight: 1.65, color: "#cdc4ba" }}>
-                  Detail unlocks right here — no inbox trip, no waiting on a reply. Figures are T12 monthly averages; the
-                  workbook has it month by month.
+                  Detail unlocks right here — no inbox trip, no waiting on a reply. Figures are monthly averages.
                 </p>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 380 }}>
@@ -241,7 +240,7 @@ export function FinancialGate({
           </form>
         </div>
         <p style={{ margin: "14px 0 0", fontSize: 13, lineHeight: 1.6, color: "#574f47" }}>
-          Unlock reveals rents, expenses, debt service, CapEx, and the workbook.
+          Unlock reveals rents, expenses, debt service, and CapEx.
         </p>
       </div>
     );
@@ -266,7 +265,7 @@ export function FinancialGate({
     <div style={{ marginTop: 32 }} aria-live="polite">
       <div style={{ display: "flex", alignItems: "center", gap: 10, border: "1px solid #a33a29", background: "#fdf3f2", padding: "13px 18px" }}>
         <span style={{ width: 6, height: 6, borderRadius: 999, background: "#cc4a37" }} />
-        <p style={{ margin: 0, fontSize: 13, color: "#8a2c1e" }}>Unlocked. The line items and the buyer workbook are below.</p>
+        <p style={{ margin: 0, fontSize: 13, color: "#8a2c1e" }}>Unlocked. The line items are below.</p>
       </div>
 
       {ratioCards.length > 0 && financials && (
@@ -282,7 +281,7 @@ export function FinancialGate({
 
       {monthlyRows.length > 0 && financials && (
         <>
-          <p style={{ margin: "26px 0 0", fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#6b6259" }}>MONTHLY AVERAGE · T12</p>
+          <p style={{ margin: "26px 0 0", fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#6b6259" }}>MONTHLY AVERAGES</p>
           <div style={{ marginTop: 14, background: "#fffdfa", border: "1px solid #e4ddd2" }}>
             {monthlyRows.map((field, i) => (
               <div
@@ -304,7 +303,7 @@ export function FinancialGate({
             ))}
           </div>
           <p style={{ margin: "14px 0 0", fontSize: 13, lineHeight: 1.65, color: "#574f47", maxWidth: "62ch" }}>
-            Every figure above is a T12 monthly average. Month-by-month detail is in the buyer workbook.
+            Every figure above is a monthly average. Month-by-month detail is in the download.
           </p>
         </>
       )}
@@ -318,7 +317,7 @@ export function FinancialGate({
           <div style={{ flex: "1 1 260px", minWidth: 0 }}>
             <p style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 21, color: "#f4f1ec" }}>Download the full workbook</p>
             <p style={{ margin: "8px 0 0", fontSize: 14, lineHeight: 1.65, color: "#cdc4ba" }}>
-              Rent roll, T12, and the scenario tabs behind these numbers.
+              Rent roll, monthly history, and the scenarios behind these numbers.
             </p>
           </div>
           <a
