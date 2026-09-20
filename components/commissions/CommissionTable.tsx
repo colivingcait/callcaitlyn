@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { Building2, Check } from "lucide-react";
+import { Building2, Check, Clock, Home, Tag, User } from "lucide-react";
 import { formatLocal } from "@/lib/format-time";
 import { formatCurrency, formatPercent, cn } from "@/lib/utils";
-import { DealRowActions } from "@/components/commissions/DealRowActions";
 import { CommissionPromptButton } from "@/components/commissions/CommissionPromptButton";
 import type { CommissionRow } from "@/lib/crm/commission-period";
 
@@ -43,12 +42,11 @@ export function CommissionTable({ rows, rangeLabel }: { rows: CommissionRow[]; r
                 <td className="py-3.5 pr-3">
                   <AddressCell row={row} />
                 </td>
-                <td className="px-3 py-3.5 text-neutral-600">{row.side}</td>
                 <td className="px-3 py-3.5">
-                  <span className="inline-flex items-center gap-1 text-neutral-600">
-                    {row.stage === "Closed" && <Check size={13} className="text-emerald-600" />}
-                    {row.stage}
-                  </span>
+                  <SideChip side={row.side} />
+                </td>
+                <td className="px-3 py-3.5">
+                  <StageChip stage={row.stage} />
                 </td>
                 <td className="whitespace-nowrap px-3 py-3.5 text-neutral-800">{formatCurrency(row.gci)}</td>
                 <td className="whitespace-nowrap px-3 py-3.5 text-neutral-800">{formatPercent(row.splitPct, 0)}</td>
@@ -73,13 +71,12 @@ export function CommissionTable({ rows, rangeLabel }: { rows: CommissionRow[]; r
 }
 
 function AddressCell({ row }: { row: CommissionRow }) {
-  const title = (
-    <span className="font-medium text-neutral-900">{row.address}</span>
-  );
+  const title = <span className="font-medium text-neutral-900">{row.address}</span>;
+  const Icon = row.listingId ? Building2 : Home;
   return (
     <div className="flex items-start gap-2.5">
-      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#f7f1ea] text-neutral-400">
-        <Building2 size={14} />
+      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#f3e4dc] text-[#c45c4a]">
+        <Icon size={14} />
       </span>
       <div className="min-w-0">
         {row.listingId ? (
@@ -99,40 +96,76 @@ function AddressCell({ row }: { row: CommissionRow }) {
   );
 }
 
-function StatusChip({ status }: { status: "Pending" | "Paid" }) {
+function pillClass(tone: "cream" | "terracotta" | "green") {
+  return cn(
+    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-medium",
+    tone === "cream" && "bg-[#f3e4dc] text-neutral-700",
+    tone === "terracotta" && "bg-[#f8efe4] text-[#c45c4a]",
+    tone === "green" && "bg-[#e8f5e9] text-[#2e7d32]",
+  );
+}
+
+function SideChip({ side }: { side: CommissionRow["side"] }) {
+  if (side === "—") return <span className="text-neutral-400">—</span>;
   return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 text-[13px] font-medium",
-        status === "Paid" ? "text-emerald-700" : "text-brand-700",
-      )}
-    >
-      <span className={cn("h-1.5 w-1.5 rounded-full", status === "Paid" ? "bg-emerald-500" : "bg-brand-500")} />
-      {status}
+    <span className={pillClass("cream")}>
+      {side === "List" ? <Tag size={11} /> : <User size={11} />}
+      {side}
+    </span>
+  );
+}
+
+function StageChip({ stage }: { stage: CommissionRow["stage"] }) {
+  if (stage === "Closed") {
+    return (
+      <span className={pillClass("green")}>
+        <Check size={12} strokeWidth={2.4} />
+        Closed
+      </span>
+    );
+  }
+  return <span className={pillClass("terracotta")}>UC</span>;
+}
+
+function StatusChip({ status }: { status: "Pending" | "Paid" }) {
+  if (status === "Paid") {
+    return (
+      <span className={pillClass("green")}>
+        <Check size={12} strokeWidth={2.4} />
+        Paid
+      </span>
+    );
+  }
+  return (
+    <span className={pillClass("terracotta")}>
+      <Clock size={12} />
+      Pending
     </span>
   );
 }
 
 function RowActions({ row }: { row: CommissionRow }) {
+  if (!row.needsPrompt) return null;
   return (
-    <div className="flex items-center justify-end gap-2">
-      {row.needsPrompt && (
-        <CommissionPromptButton
-          deal={row.deal}
-          listing={row.listingId ? { id: row.listingId, address: row.address, list_price: row.listPrice ?? null } : undefined}
-        />
-      )}
-      {row.deal && <DealRowActions deal={row.deal} />}
+    <div className="flex items-center justify-end">
+      <CommissionPromptButton
+        deal={row.deal}
+        listing={row.listingId ? { id: row.listingId, address: row.address, list_price: row.listPrice ?? null } : undefined}
+      />
     </div>
   );
 }
 
 function CommissionCard({ row }: { row: CommissionRow }) {
   return (
-    <div className="rounded-2xl bg-white p-3.5 shadow-card">
+    <div className="rounded-2xl border border-[#eadfd6] bg-[#fffbf8] p-3.5">
       <div className="flex items-start justify-between gap-2">
         <AddressCell row={row} />
         <StatusChip status={row.status} />
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        <SideChip side={row.side} />
+        <StageChip stage={row.stage} />
       </div>
       <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
         <div>
@@ -149,9 +182,7 @@ function CommissionCard({ row }: { row: CommissionRow }) {
         </div>
       </div>
       <div className="mt-3 flex items-center justify-between gap-2">
-        <p className="text-sm text-neutral-400">
-          {row.side} · {row.stage} · Due {row.dueDate ? formatLocal(row.dueDate, "MMM d, yyyy") : "—"}
-        </p>
+        <p className="text-sm text-neutral-400">Due {row.dueDate ? formatLocal(row.dueDate, "MMM d, yyyy") : "—"}</p>
         <RowActions row={row} />
       </div>
     </div>

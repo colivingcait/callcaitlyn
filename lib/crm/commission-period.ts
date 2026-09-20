@@ -139,6 +139,13 @@ export function percentDelta(current: number, previous: number): number | null {
   return ((current - previous) / previous) * 100;
 }
 
+export function commissionKpiComparisonLabel(period: CommissionPeriod): string {
+  if (period === "this_month" || period === "last_month") return "vs last month";
+  if (period === "this_quarter") return "vs last quarter";
+  if (period === "this_year") return "vs last year";
+  return "vs last period";
+}
+
 export function isoInPeriod(iso: string | null | undefined, period: CommissionPeriod, now = new Date()): boolean {
   return isoInBounds(iso, commissionPeriodBounds(period, now));
 }

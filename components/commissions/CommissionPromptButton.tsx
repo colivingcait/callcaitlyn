@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Sparkles } from "lucide-react";
 import { DealCelebrationModal } from "@/components/contacts/DealCelebrationModal";
 import { AddPastDealModal } from "@/components/commissions/AddPastDealModal";
 import type { Deal } from "@/types/database";
@@ -19,9 +20,10 @@ export function CommissionPromptButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="text-[12px] font-medium text-neutral-400 hover:text-brand-700"
+        className="inline-flex items-center gap-1 whitespace-nowrap text-[12px] font-medium text-[#c45c4a] hover:text-[#8a2c1e]"
       >
-        Commissions prompt
+        Commission prompt
+        <Sparkles size={12} />
       </button>
       {open && deal && (
         <DealCelebrationModal
