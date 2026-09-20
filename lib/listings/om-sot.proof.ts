@@ -109,6 +109,14 @@ for (const block of scrapeUpdates) {
 }
 
 const omPage = read("app/listing/[slug]/page.tsx");
+assert.ok(omPage.includes("CAITLYN_HEADSHOT_SRC"), "public OM contact card uses the shared Caitlyn headshot path");
+assert.ok(omPage.includes("YOUR CONTACT FOR THIS OFFERING"));
+assert.equal(
+  omPage.includes('repeating-linear-gradient(135deg, #322a25'),
+  false,
+  "Caitlyn contact card must not use the dark stripe placeholder",
+);
+assert.ok(omPage.includes('transformOrigin: "center 14%"'), "standing portrait is face-cropped in the 84×104 slot");
 assert.equal(omPage.includes("Process & timeline"), false);
 assert.ok(omPage.includes('id="process"'));
 assert.ok(omPage.includes("om-process"));
