@@ -13,7 +13,6 @@ import { AgentsList } from "@/components/listings/AgentsList";
 import { AgentComposer } from "@/components/listings/AgentComposer";
 import { SendsList } from "@/components/listings/SendsList";
 import { BasicsForm } from "@/components/listings/BasicsForm";
-import { PhotoUploader } from "@/components/listings/PhotoUploader";
 import { PublicPageToggle } from "@/components/listings/PublicPageToggle";
 import { PadsplitScrapeStatus } from "@/components/listings/PadsplitScrapeStatus";
 import { DocumentUploader } from "@/components/listings/DocumentUploader";
@@ -21,7 +20,7 @@ import { ApplyToOmPanel } from "@/components/listings/ApplyToOmPanel";
 import { OmDetailsForm } from "@/components/listings/OmDetailsForm";
 import { FinancialsEditor } from "@/components/listings/FinancialsEditor";
 import { ImprovementsEditor } from "@/components/listings/ImprovementsEditor";
-import { PhotoExcludeManager } from "@/components/listings/PhotoExcludeManager";
+import { ListingPhotosPanel } from "@/components/listings/ListingPhotosPanel";
 import { baseUrl } from "@/lib/crm/sequences";
 import { MarketingGraphics } from "@/components/listings/MarketingGraphics";
 import { CopyBlocks } from "@/components/listings/CopyBlocks";
@@ -32,12 +31,12 @@ import { listingFieldCopy } from "@/lib/listings/public-copy";
 import { normalizePhone } from "@/lib/phone";
 import type { ListingAgentTouch } from "@/lib/crm/listing-activity";
 
-type Tab = "rp" | "marketing" | "activity";
+type Tab = "rp" | "marketing" | "photos" | "activity";
 
 export default async function ListingDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> }) {
   const { id } = await params;
   const { tab } = await searchParams;
-  const activeTab: Tab = tab === "marketing" ? "marketing" : tab === "activity" ? "activity" : "rp";
+  const activeTab: Tab = tab === "marketing" ? "marketing" : tab === "photos" ? "photos" : tab === "activity" ? "activity" : "rp";
 
   const detail = await getListingDetail(id);
   if (!detail) notFound();
@@ -67,7 +66,7 @@ export default async function ListingDetailPage({ params, searchParams }: { para
 
   const photoPaths = asUrlList(listing.photo_paths);
   let photoUrls: string[] = [];
-  if (activeTab === "marketing" && photoPaths.length > 0) {
+  if ((activeTab === "marketing" || activeTab === "photos") && photoPaths.length > 0) {
     const supabase = await createClient();
     photoUrls = photoPaths.map((p) => supabase.storage.from("listing-photos").getPublicUrl(p).data.publicUrl);
   }
@@ -107,6 +106,7 @@ export default async function ListingDetailPage({ params, searchParams }: { para
   const tabs: { key: Tab; label: string }[] = [
     { key: "rp", label: "Reverse prospecting" },
     { key: "marketing", label: "Marketing" },
+    { key: "photos", label: "Photos" },
     { key: "activity", label: "Activity" },
   ];
 
@@ -192,9 +192,13 @@ export default async function ListingDetailPage({ params, searchParams }: { para
           <div className="space-y-4">
             <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
               <BasicsForm listing={listing} />
-              <div className="mt-4">
-                <PhotoUploader listingId={listing.id} photoUrls={photoUrls} photoPaths={photoPaths} />
-              </div>
+              <p className="mt-4 text-sm text-neutral-500">
+                Public OM photos live on the{" "}
+                <Link href={`/listings/${listing.id}?tab=photos`} className="font-medium text-brand-700 hover:underline">
+                  Photos
+                </Link>{" "}
+                tab.
+              </p>
             </div>
             <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px] space-y-4">
               <h2 className="text-base font-semibold text-neutral-900">Public listing page</h2>
@@ -223,10 +227,6 @@ export default async function ListingDetailPage({ params, searchParams }: { para
               <ImprovementsEditor key={`imp-${listing.updated_at}`} listingId={listing.id} improvements={listing.improvements} />
             </div>
             <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
-              <h2 className="mb-3 text-base font-semibold text-neutral-900">PadSplit photos</h2>
-              <PhotoExcludeManager listingId={listing.id} photos={asPhotoList(listing.padsplit_photos)} excludedUrls={asUrlList(listing.excluded_photo_urls)} />
-            </div>
-            <div className="rounded-2xl border border-[#ebe9e7] bg-white p-[18px]">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-base font-semibold text-neutral-900">Graphics</h2>
                 <span className="text-sm text-neutral-500">Rendered here · download as PNG</span>
@@ -250,6 +250,18 @@ export default async function ListingDetailPage({ params, searchParams }: { para
               </p>
             </div>
           </div>
+        )}
+        {activeTab === "photos" && (
+          <ListingPhotosPanel
+            listingId={listing.id}
+            photoSource={listing.photo_source}
+            heroPhotoUrl={listing.hero_photo_url}
+            photoUrls={photoUrls}
+            photoPaths={photoPaths}
+            padsplitPhotos={asPhotoList(listing.padsplit_photos)}
+            padsplitGallery={asPhotoList(listing.padsplit_gallery)}
+            excludedUrls={asUrlList(listing.excluded_photo_urls)}
+          />
         )}
         {activeTab === "activity" && (
           <ActivityTab

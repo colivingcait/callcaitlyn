@@ -1,4 +1,4 @@
-import type { ListingFinancials, ListingImprovement, PadsplitPhoto } from "@/types/database";
+import type { ListingFinancials, ListingImprovement, ListingPhotoSource, PadsplitPhoto } from "@/types/database";
 import { gatedFinancialsHaveValues, hydrateGatedFinancials } from "@/lib/listings/gated-underwriting";
 
 // CRM marketing-tab defaults. Same integers as migration 0073, used when a
@@ -86,4 +86,8 @@ export function asPhotoList(value: PadsplitPhoto[] | null | undefined): Padsplit
 
 export function asUrlList(value: string[] | null | undefined): string[] {
   return Array.isArray(value) ? value : [];
+}
+
+export function asPhotoSource(value: unknown): ListingPhotoSource {
+  return value === "padsplit" ? "padsplit" : "manual";
 }

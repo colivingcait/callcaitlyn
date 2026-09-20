@@ -1,4 +1,4 @@
-// Hand-written types matching supabase/migrations (through 0076).
+// Hand-written types matching supabase/migrations (through 0078).
 // If you use the Supabase CLI later, you can replace this with
 // `supabase gen types typescript` output.
 
@@ -227,6 +227,8 @@ export interface Contact {
 
 export type ListingStatus = "coming_soon" | "active" | "under_contract" | "closed";
 
+export type ListingPhotoSource = "manual" | "padsplit";
+
 export interface Listing {
   id: string;
   owner_id: string;
@@ -244,6 +246,9 @@ export interface Listing {
   story: string | null;
   zillow_url: string | null;
   photo_paths: string[];
+  photo_source: ListingPhotoSource;
+  hero_photo_url: string | null;
+  padsplit_gallery: PadsplitPhoto[] | null;
   public_slug: string | null;
   padsplit_url: string | null;
   occupied_rooms: number | null;

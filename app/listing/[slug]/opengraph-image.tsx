@@ -14,7 +14,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   // Nickname only - the address is never shown anywhere on this listing's
   // public surface, including its own link preview.
   const nickname = listing ? listing.nickname || "PadSplit Listing" : "Listing";
-  const photo = listing ? (listing.photos[0]?.url ?? listing.photoUrls[0] ?? null) : null;
+  const photo = listing ? (listing.coverPhotoUrl ?? listing.photos[0]?.url ?? listing.photoUrls[0] ?? null) : null;
   const specs = listing
     ? [listing.beds != null && listing.baths != null ? `${listing.beds} bd / ${listing.baths} ba` : null, listing.property_type].filter(Boolean).join(" · ")
     : null;

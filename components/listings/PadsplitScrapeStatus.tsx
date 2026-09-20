@@ -29,7 +29,7 @@ export function PadsplitScrapeStatus({
           {occupiedRooms != null && totalRooms != null ? `${occupiedRooms}/${totalRooms} rooms occupied` : "Not scraped yet"}
           {lastScrapedAt && ` · last checked ${relativeTime(lastScrapedAt)}`}
         </p>
-        <p className="mt-0.5 text-xs text-neutral-400">Refreshes automatically twice a day.</p>
+        <p className="mt-0.5 text-xs text-neutral-400">Occupancy and pricing refresh twice a day. Public photos stay on the Photos tab.</p>
         {lastScrapeError && <p className="mt-1 text-xs text-red-600">{lastScrapeError}</p>}
       </div>
       {padsplitUrl && (

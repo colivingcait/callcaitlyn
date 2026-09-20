@@ -15,9 +15,10 @@
  * block this from Vercel's own serverless IPs the same way it blocks
  * sandboxed dev/agent environments. Writes straight to Supabase's
  * `listings` table (occupied_rooms, total_rooms, price_low, price_high,
- * padsplit_photo_urls, last_scraped_at, last_scrape_error) - there's no
- * intermediate JSON file, since the CRM's public listing pages already
- * read this table directly.
+ * padsplit_photo_urls, padsplit_photos, last_scraped_at, last_scrape_error)
+ * - the raw photo cache is only for CRM "Pull from PadSplit". Never write
+ * photo_source, hero_photo_url, or padsplit_gallery — those are the
+ * curated public gallery and must survive the daily occupancy refresh.
  *
  * On failure for a listing, only last_scraped_at/last_scrape_error are
  * updated - the real occupancy/price/photo data already on the row is
@@ -251,6 +252,8 @@ for (const listing of listings) {
   const now = new Date().toISOString();
 
   if (result.ok) {
+    // Occupancy / pricing / raw scrape cache only. Do not touch
+    // photo_source, hero_photo_url, or padsplit_gallery.
     await supabase
       .from("listings")
       .update({

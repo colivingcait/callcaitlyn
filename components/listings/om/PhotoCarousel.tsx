@@ -34,17 +34,20 @@ export function PhotoCarousel({
   nickname,
   eyebrow,
   summary,
+  coverUrl,
 }: {
   photos: PadsplitPhoto[];
   nickname: string;
   eyebrow: string;
   summary: string | null;
+  coverUrl?: string | null;
 }) {
   const [photoMode, setPhotoMode] = useState(false);
   const [index, setIndex] = useState(0);
   const thumbsRef = useRef<HTMLDivElement>(null);
   const count = photos.length;
-  const cover = photos[0];
+  // Cover is a pin, not a reorder — photo-mode stays in curated order.
+  const cover = (coverUrl && photos.find((photo) => photo.url === coverUrl)) || photos[0];
   const current = photos[index] ?? cover;
 
   useEffect(() => {
@@ -72,7 +75,7 @@ export function PhotoCarousel({
     setIndex(((i % count) + count) % count);
   };
 
-  const coverUrl = cover?.url;
+  const coverImageUrl = cover?.url;
   const counter = `${String(index + 1).padStart(2, "0")} / ${String(Math.max(count, 1)).padStart(2, "0")}`;
 
   return (
@@ -84,7 +87,7 @@ export function PhotoCarousel({
         minHeight: 520,
         transition: "height 260ms cubic-bezier(0.33,1,0.68,1)",
         backgroundColor: "#211c19",
-        backgroundImage: !photoMode && coverUrl ? `url(${JSON.stringify(coverUrl)})` : undefined,
+        backgroundImage: !photoMode && coverImageUrl ? `url(${JSON.stringify(coverImageUrl)})` : undefined,
         backgroundSize: "cover",
         backgroundPosition: "center 62%",
       }}

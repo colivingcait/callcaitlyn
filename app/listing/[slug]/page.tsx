@@ -140,7 +140,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
           </p>
         </div>
 
-        <PhotoCarousel photos={listing.photos} nickname={nickname} eyebrow={eyebrow} summary={story} />
+        <PhotoCarousel photos={listing.photos} coverUrl={listing.coverPhotoUrl} nickname={nickname} eyebrow={eyebrow} summary={story} />
 
         <div className="om-stats-wrap om-gutter" style={{ background: "#211c19", color: "#f4f1ec", padding: "0 28px 34px" }}>
           <div className="om-stats" style={{ margin: "0 auto", maxWidth: 1180, display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", borderTop: "1px solid #3a322c" }}>

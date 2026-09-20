@@ -16,7 +16,8 @@ import { generateUniqueListingSlug } from "@/lib/listings/public-slug";
 import { LISTING_DOCUMENT_TYPES } from "@/lib/listings/documents";
 import { planOwnedOmSidecarApply, type OmApplyListingRow } from "@/lib/listings/om-apply";
 import { phonesMatch } from "@/lib/phone";
-import type { ListingStatus, ListingDocumentType, ListingFinancials, ListingImprovement } from "@/types/database";
+import { importablePadsplitPhotos } from "@/lib/listings/padsplit-photos";
+import type { ListingDocumentType, ListingFinancials, ListingImprovement, ListingPhotoSource, ListingStatus, PadsplitPhoto } from "@/types/database";
 
 const PREVIEW_AGENT = { name: "Jamie Agent" };
 
@@ -479,7 +480,7 @@ export async function addListingPhoto(listingId: string, path: string): Promise<
   const { error } = await supabase.from("listings").update({ photo_paths: [...listing.photo_paths, path] }).eq("id", listingId);
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath(`/listings/${listingId}`);
+  await revalidateListingPhotoSurfaces(supabase, listingId);
   return { ok: true };
 }
 
@@ -490,17 +491,17 @@ export async function removeListingPhoto(listingId: string, path: string): Promi
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Not signed in" };
 
-  const { data: listing } = await supabase.from("listings").select("photo_paths").eq("id", listingId).maybeSingle();
+  const { data: listing } = await supabase.from("listings").select("photo_paths, hero_photo_url").eq("id", listingId).maybeSingle();
   if (!listing) return { ok: false, error: "Listing not found" };
 
-  const { error } = await supabase
-    .from("listings")
-    .update({ photo_paths: listing.photo_paths.filter((p: string) => p !== path) })
-    .eq("id", listingId);
+  const patch: Record<string, unknown> = { photo_paths: listing.photo_paths.filter((p: string) => p !== path) };
+  if (heroMatchesRemoved(listing.hero_photo_url, path)) patch.hero_photo_url = null;
+
+  const { error } = await supabase.from("listings").update(patch).eq("id", listingId);
   if (error) return { ok: false, error: error.message };
 
   await supabase.storage.from("listing-photos").remove([path]);
-  revalidatePath(`/listings/${listingId}`);
+  await revalidateListingPhotoSurfaces(supabase, listingId);
   return { ok: true };
 }
 
@@ -783,6 +784,137 @@ export async function updateExcludedPhotos(listingId: string, excludedUrls: stri
   const { error } = await supabase.from("listings").update({ excluded_photo_urls: excludedUrls }).eq("id", listingId);
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath(`/listings/${listingId}`);
+  await revalidateListingPhotoSurfaces(supabase, listingId);
   return { ok: true };
+}
+
+async function revalidateListingPhotoSurfaces(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  listingId: string,
+): Promise<void> {
+  revalidatePath(`/listings/${listingId}`);
+  const { data } = await supabase.from("listings").select("public_slug").eq("id", listingId).maybeSingle();
+  if (data?.public_slug) {
+    revalidatePath(`/listing/${data.public_slug}`);
+    revalidatePath("/listing");
+  }
+}
+
+function sameMembers(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  const counts = new Map<string, number>();
+  for (const value of a) counts.set(value, (counts.get(value) ?? 0) + 1);
+  for (const value of b) {
+    const next = (counts.get(value) ?? 0) - 1;
+    if (next < 0) return false;
+    counts.set(value, next);
+  }
+  return true;
+}
+
+function heroMatchesRemoved(hero: string | null | undefined, path: string): boolean {
+  if (!hero) return false;
+  if (hero === path) return true;
+  try {
+    return decodeURIComponent(new URL(hero).pathname).includes(path);
+  } catch {
+    return hero.includes(path);
+  }
+}
+
+export async function updateListingPhotoSource(listingId: string, photoSource: ListingPhotoSource): Promise<ActionResult> {
+  if (photoSource !== "manual" && photoSource !== "padsplit") return { ok: false, error: "Unknown photo source" };
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  const { error } = await supabase.from("listings").update({ photo_source: photoSource }).eq("id", listingId);
+  if (error) return { ok: false, error: error.message };
+
+  await revalidateListingPhotoSurfaces(supabase, listingId);
+  return { ok: true };
+}
+
+export async function updateListingHeroPhoto(listingId: string, heroPhotoUrl: string | null): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  const { error } = await supabase.from("listings").update({ hero_photo_url: heroPhotoUrl }).eq("id", listingId);
+  if (error) return { ok: false, error: error.message };
+
+  await revalidateListingPhotoSurfaces(supabase, listingId);
+  return { ok: true };
+}
+
+export async function updateListingPhotoOrder(listingId: string, photoPaths: string[]): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  const { data: listing } = await supabase.from("listings").select("photo_paths").eq("id", listingId).maybeSingle();
+  if (!listing) return { ok: false, error: "Listing not found" };
+  if (!sameMembers(listing.photo_paths ?? [], photoPaths)) return { ok: false, error: "Photo order must keep the same uploads" };
+
+  const { error } = await supabase.from("listings").update({ photo_paths: photoPaths }).eq("id", listingId);
+  if (error) return { ok: false, error: error.message };
+
+  await revalidateListingPhotoSurfaces(supabase, listingId);
+  return { ok: true };
+}
+
+export async function updatePadsplitGallery(listingId: string, gallery: PadsplitPhoto[]): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  const { data: listing } = await supabase.from("listings").select("padsplit_gallery").eq("id", listingId).maybeSingle();
+  if (!listing) return { ok: false, error: "Listing not found" };
+  const current = Array.isArray(listing.padsplit_gallery) ? listing.padsplit_gallery.map((p: PadsplitPhoto) => p.url) : [];
+  const next = gallery.map((p) => p.url);
+  if (!sameMembers(current, next)) return { ok: false, error: "Reorder must keep the curated PadSplit set" };
+
+  const { error } = await supabase.from("listings").update({ padsplit_gallery: gallery }).eq("id", listingId);
+  if (error) return { ok: false, error: error.message };
+
+  await revalidateListingPhotoSurfaces(supabase, listingId);
+  return { ok: true };
+}
+
+// One-shot copy of current scrape interiors into the curated gallery.
+// Daily scrape keeps writing padsplit_photos; it never overwrites this.
+export async function pullPadsplitGallery(listingId: string): Promise<ActionResult<{ count: number }>> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  const { data: listing } = await supabase.from("listings").select("padsplit_photos, hero_photo_url").eq("id", listingId).maybeSingle();
+  if (!listing) return { ok: false, error: "Listing not found" };
+
+  const gallery = importablePadsplitPhotos(listing);
+  if (gallery.length === 0) return { ok: false, error: "No interior PadSplit photos to pull yet" };
+
+  const heroStillPresent = gallery.some((p) => p.url === listing.hero_photo_url);
+  const { error } = await supabase
+    .from("listings")
+    .update({
+      padsplit_gallery: gallery,
+      photo_source: "padsplit",
+      hero_photo_url: heroStillPresent ? listing.hero_photo_url : null,
+    })
+    .eq("id", listingId);
+  if (error) return { ok: false, error: error.message };
+
+  await revalidateListingPhotoSurfaces(supabase, listingId);
+  return { ok: true, count: gallery.length };
 }

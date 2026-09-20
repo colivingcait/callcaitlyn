@@ -10,6 +10,7 @@ import {
   daysInputValue,
   financialsHaveContent,
   asListingFinancials,
+  asPhotoSource,
   normalizeFinancials,
 } from "./crm-marketing-fields";
 
@@ -69,6 +70,9 @@ assert.deepEqual(asPhotoList(null), []);
 assert.deepEqual(asPhotoList(undefined), []);
 assert.deepEqual(asUrlList(null), []);
 assert.deepEqual(asUrlList(undefined), []);
+assert.equal(asPhotoSource("padsplit"), "padsplit");
+assert.equal(asPhotoSource("manual"), "manual");
+assert.equal(asPhotoSource(undefined), "manual");
 assert.throws(() => {
   const listing: { dd_days?: number | null } = {};
   listing.dd_days!.toString();
@@ -104,7 +108,10 @@ assert.ok(improvements.includes("asImprovements(improvements)"));
 const page = read("app/(app)/listings/[id]/page.tsx");
 assert.ok(page.includes("ApplyToOmPanel"));
 assert.ok(page.includes("listingId={listing.id}"));
+assert.ok(page.includes("ListingPhotosPanel"));
+assert.ok(page.includes("tab=photos"));
 assert.ok(page.includes("asPhotoList(listing.padsplit_photos)"));
+assert.ok(page.includes("asPhotoList(listing.padsplit_gallery)"));
 assert.ok(page.includes("asUrlList(listing.excluded_photo_urls)"));
 assert.ok(page.includes("asUrlList(listing.photo_paths)"));
 assert.equal(page.includes("onSend="), false, "no function props from the listing server page into client components");
