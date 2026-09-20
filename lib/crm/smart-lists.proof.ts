@@ -174,6 +174,7 @@ const workspace = read("components/contacts/ContactsWorkspace.tsx");
 assert.ok(workspace.includes("ContactsListTabs"));
 assert.ok(workspace.includes("SmartListBuilder"));
 assert.ok(workspace.includes("SmartListsRail"));
+assert.ok(workspace.includes("compact={smartView}"));
 assert.equal(workspace.includes("Attendance"), false, "no Events roster UI on Contacts smart lists");
 
 const builder = read("components/contacts/SmartListBuilder.tsx");

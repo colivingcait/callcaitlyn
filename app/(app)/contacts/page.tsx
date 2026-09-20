@@ -75,7 +75,13 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
       <div className="sticky top-0 z-10 bg-[#f7f1ea] pt-8 pb-3">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="font-display text-[32px] font-semibold leading-9 tracking-[-0.03em] text-neutral-900">
+            <h1
+              className={
+                smartView
+                  ? "font-serif text-[32px] font-semibold leading-9 tracking-[-0.03em] text-[#c45c4a]"
+                  : "font-display text-[32px] font-semibold leading-9 tracking-[-0.03em] text-neutral-900"
+              }
+            >
               {smartView ? (activeSegment?.name ?? "Smart List Builder") : "Contacts"}
             </h1>
             <p className="mt-1.5 text-[15px] leading-[22px] text-neutral-600">

@@ -100,6 +100,7 @@ export function ContactsWorkspace({
             eventNames={eventNames}
             registeredEventNames={registeredEventNames}
             panel
+            compact={smartView}
             filtersOpen={filtersOpen}
             onFiltersOpenChange={(open) => {
               setFiltersOpen(open);

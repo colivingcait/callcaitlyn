@@ -96,6 +96,8 @@ const filters = read("components/contacts/ContactFilters.tsx");
 assert.ok(filters.includes("flex flex-wrap"), "filters wrap");
 assert.equal(filters.includes("overflow-x-auto"), false, "no sideways chip scroll");
 assert.ok(filters.includes("ActiveFilterTags"), "filters tags");
+assert.ok(filters.includes("Search name, email, phone"), "v2 search stays on All contacts");
+assert.ok(filters.includes("compact"), "smart lists can hide search without removing the control");
 
 const tagsUi = read("components/contacts/ActiveFilterTags.tsx");
 assert.ok(tagsUi.includes("flex flex-wrap"), "tags wrap");
