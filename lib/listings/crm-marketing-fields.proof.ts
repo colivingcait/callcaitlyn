@@ -9,6 +9,7 @@ import {
   asUrlList,
   daysInputValue,
   financialsHaveContent,
+  asListingFinancials,
   normalizeFinancials,
 } from "./crm-marketing-fields";
 
@@ -50,6 +51,13 @@ assert.equal((partial as { keep_me?: string }).keep_me, "yes");
 assert.equal(financialsHaveContent(partial), true);
 assert.equal(financialsHaveContent(emptyFinancials), false);
 assert.equal(financialsHaveContent(normalizeFinancials({ purchase_price: "400000" } as never)), true);
+assert.equal(asListingFinancials(null), null);
+assert.equal(asListingFinancials(""), null);
+assert.equal(asListingFinancials("not-json"), null);
+const fromString = asListingFinancials(JSON.stringify({ purchase_price: 400000, cap_rate: 10.3 }));
+assert.ok(fromString);
+assert.equal(fromString.purchase_price, "400000");
+assert.equal(fromString.cap_rate, "10.3");
 
 assert.deepEqual(asImprovements(null), []);
 assert.deepEqual(asImprovements(undefined), []);

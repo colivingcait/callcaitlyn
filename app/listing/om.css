@@ -61,6 +61,16 @@ main {
 #seller {
   scroll-margin-top: 80px;
 }
+
+/* Financial overview is always 2×2 so Cap Rate cannot hang under a 3-up
+   auto-fit row. Property detail keeps auto-fit; this class is overview-only. */
+.om-fin-overview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.om-fin-overview > div {
+  min-width: 0;
+}
 .om-header-menu,
 .om-header-drawer {
   display: none;
@@ -131,6 +141,9 @@ main {
     padding-left: 0 !important;
     padding-right: 0 !important;
     border-right: none !important;
+  }
+  .om-fin-overview > div {
+    padding: 20px 12px 22px !important;
   }
   .om-capex-row {
     grid-template-columns: minmax(0, 1fr) auto !important;

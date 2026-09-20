@@ -4,8 +4,8 @@ import { useState } from "react";
 import { unlockListingFinancials } from "@/app/listing/[slug]/actions";
 import { useUnlocked } from "./UnlockContext";
 import { GATED_UNDERWRITING_FIELDS, gatedFinancialsHaveValues } from "@/lib/listings/gated-underwriting";
-import { normalizeFinancials } from "@/lib/listings/crm-marketing-fields";
-import type { ListingFinancials } from "@/types/database";
+import { asListingFinancials, normalizeFinancials } from "@/lib/listings/crm-marketing-fields";
+import { writeOmUnlock } from "@/lib/listings/om-unlock-storage";
 
 // Purely illustrative rows for the locked/blurred teaser - NOT derived from
 // this listing's real financials in any way. The locked page's HTML never
@@ -29,9 +29,7 @@ const inputStyle: React.CSSProperties = {
 };
 
 export function FinancialGate({ slug, omNumber }: { slug: string; omNumber: string }) {
-  const { unlocked, setUnlocked } = useUnlocked();
-  const [financials, setFinancials] = useState<ListingFinancials | null>(null);
-  const [workbookUrl, setWorkbookUrl] = useState<string | null>(null);
+  const { unlocked, financials, workbookUrl, applyUnlock } = useUnlocked();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -50,9 +48,16 @@ export function FinancialGate({ slug, omNumber }: { slug: string; omNumber: stri
       setError(result.error);
       return;
     }
-    setFinancials(result.financials ? normalizeFinancials(result.financials) : null);
-    setWorkbookUrl(result.workbookUrl ?? null);
-    setUnlocked(true);
+    // Write storage first (module-level) so a remount during/after the
+    // server-action refresh still sees the payload. applyUnlock notifies
+    // the surviving provider in this tab.
+    const next = {
+      unlocked: true as const,
+      financials: asListingFinancials(result.financials) ?? (result.financials ? normalizeFinancials(result.financials) : null),
+      workbookUrl: result.workbookUrl ?? null,
+    };
+    writeOmUnlock(slug, next);
+    applyUnlock(next);
   }
 
   if (!unlocked) {

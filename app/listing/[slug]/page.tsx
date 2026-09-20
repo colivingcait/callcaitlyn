@@ -97,7 +97,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
   const cellGridStyle = (cols: string): React.CSSProperties => ({ display: "grid", gridTemplateColumns: cols });
 
   return (
-    <UnlockedProvider>
+    <UnlockedProvider slug={slug}>
       <div className="om-page" style={{ fontFamily: "var(--font-om-sans), Archivo, ui-sans-serif, system-ui, sans-serif", background: "#f4f1ec", minHeight: "100dvh", color: "#211c19" }}>
         <header data-om-noprint style={{ position: "sticky", top: 0, zIndex: 30, background: "#211c19", borderBottom: "1px solid #332b26" }}>
           <div className="om-header-inner" style={{ margin: "0 auto", maxWidth: 1180, padding: "0 28px", display: "flex", alignItems: "center", gap: 24, height: 62 }}>
@@ -227,7 +227,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
               <section id="financials">
                 {sectionHead("Financial overview", "02")}
                 {(listing.band_gross_rent || listing.band_expense_load || listing.band_cash_on_cash || listing.band_cap_rate) && (
-                  <div className="om-cells" style={cellGridStyle("repeat(auto-fit, minmax(min(200px, 100%), 1fr))")}>
+                  <div className="om-fin-overview">
                     {[
                       { label: "GROSS RENTS", value: listing.band_gross_rent, caption: "All rooms at in-place weekly rates." },
                       { label: "OPERATING EXPENSES", value: listing.band_expense_load, caption: "Utilities, cleaning, platform fees, taxes, reserves." },
@@ -235,8 +235,15 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                       { label: "CAP RATE", value: listing.band_cap_rate, caption: "On in-place income." },
                     ]
                       .filter((c) => c.value)
-                      .map((cell, i, arr) => (
-                        <div key={cell.label} style={{ padding: i === 0 ? "24px 24px 26px 0" : i === arr.length - 1 ? "24px 0 26px 24px" : "24px", borderBottom: "1px solid #ddd6cc", borderRight: i === arr.length - 1 ? undefined : "1px solid #ddd6cc" }}>
+                      .map((cell, i) => (
+                        <div
+                          key={cell.label}
+                          style={{
+                            padding: i % 2 === 0 ? "24px 24px 26px 0" : "24px 0 26px 24px",
+                            borderBottom: "1px solid #ddd6cc",
+                            borderRight: i % 2 === 0 ? "1px solid #ddd6cc" : undefined,
+                          }}
+                        >
                           <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.14em", color: "#6b6259" }}>{cell.label}</p>
                           <p style={{ margin: "14px 0 0", fontFamily: "var(--font-om-serif)", fontSize: 34, lineHeight: 1, color: "#211c19" }}>{cell.value}</p>
                           <p style={{ margin: "10px 0 0", fontSize: 13, lineHeight: 1.55, color: "#574f47" }}>{cell.caption}</p>

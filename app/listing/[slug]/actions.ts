@@ -7,7 +7,7 @@ import { notifyNewLead } from "@/lib/push/send-push";
 import { sendGmailMessage, textToHtml } from "@/lib/google/send-email";
 import { sendQuoText } from "@/lib/quo/send-message";
 import { LISTING_DOCUMENT_LABELS } from "@/lib/listings/documents";
-import { normalizeFinancials } from "@/lib/listings/crm-marketing-fields";
+import { asListingFinancials, normalizeFinancials } from "@/lib/listings/crm-marketing-fields";
 import type { ListingFinancials } from "@/types/database";
 
 const OWNER_ID = process.env.CRM_OWNER_USER_ID;
@@ -129,7 +129,7 @@ export async function unlockListingFinancials(
   if (email) await sendGmailMessage(admin, OWNER_ID, email, `Financials — ${nickname}`, textToHtml(messageBody));
   if (phone) await sendQuoText(phone, messageBody);
 
-  const financials = listing.financials ? normalizeFinancials(listing.financials as ListingFinancials) : undefined;
+  const financials = asListingFinancials(listing.financials) ?? normalizeFinancials(null);
   return { ok: true, financials, workbookUrl };
 }
 
