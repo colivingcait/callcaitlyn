@@ -10,6 +10,8 @@ import { MobileActionBar } from "@/components/listings/om/MobileActionBar";
 import { UnlockedProvider } from "@/components/listings/om/UnlockContext";
 import { OmHeaderNav } from "@/components/listings/om/OmHeaderNav";
 import { publicListingCopy } from "@/lib/listings/public-copy";
+import { asListingFinancials } from "@/lib/listings/crm-marketing-fields";
+import { occupancyFromFinancials, occupancyTrendHasSidecarData, t12OccupancySummary } from "@/lib/listings/occupancy";
 
 // Occupancy changes daily and a listing can be unpublished at any time -
 // this must never be served from a stale build-time cache.
@@ -49,10 +51,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!listing) return { title: "Offering Memorandum", description: "Caitlyn Verdugo with KW Metro Atl" };
 
   const nickname = nicknameOf(listing);
-  const occupancy = listing.occupied_rooms != null && listing.total_rooms != null ? `${listing.occupied_rooms}/${listing.total_rooms} rooms occupied` : null;
+  const occupancy = listing.liveOccupied != null && listing.liveTotal != null ? `${listing.liveOccupied}/${listing.liveTotal} rooms occupied` : null;
   return {
     title: nickname,
-    description: [formatCurrency(listing.list_price), listing.total_rooms ? `${listing.total_rooms} rooms` : null, occupancy].filter(Boolean).join(" · "),
+    description: [formatCurrency(listing.list_price), listing.liveTotal ? `${listing.liveTotal} rooms` : null, occupancy].filter(Boolean).join(" · "),
   };
 }
 
@@ -74,9 +76,11 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
   const omNumber = listing.om_number || "OM";
   const eyebrow = ["OFFERING MEMORANDUM", publicListingCopy(listing.submarket), "COLIVING"].filter(Boolean).join(" · ");
 
-  const perRoom = listing.list_price && listing.total_rooms ? formatCurrency(Math.round(listing.list_price / listing.total_rooms)) : null;
-  const hasOccupancy = listing.occupied_rooms != null && listing.total_rooms != null;
-  const occupancyPct = hasOccupancy ? Math.round((listing.occupied_rooms! / listing.total_rooms!) * 100) : null;
+  const liveOccupied = listing.liveOccupied;
+  const liveTotal = listing.liveTotal;
+  const perRoom = listing.list_price && liveTotal ? formatCurrency(Math.round(listing.list_price / liveTotal)) : null;
+  const hasOccupancy = liveOccupied != null && liveTotal != null;
+  const occupancyPct = hasOccupancy ? Math.round((liveOccupied / liveTotal) * 100) : null;
   const hasPriceRange = listing.price_low != null && listing.price_high != null;
   const specs = [
     listing.beds != null ? `${listing.beds}` : null,
@@ -104,11 +108,9 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
     { label: "CAP RATE", value: listing.band_cap_rate, caption: "On in-place income." },
   ].filter((c) => c.value);
 
-  const trendValues = listing.occupancyTrend.filter((p) => p.total != null);
-  const trendSummary =
-    trendValues.length > 0
-      ? `Average ${Math.round(trendValues.reduce((sum, p) => sum + p.pct, 0) / trendValues.length)}% · low ${Math.min(...trendValues.map((p) => p.pct))}% · never below ${Math.min(...trendValues.map((p) => p.occupied ?? 0))} of ${listing.total_rooms ?? "?"} rooms`
-      : null;
+  const sidecarOccupancy = occupancyFromFinancials(asListingFinancials(listing.financials));
+  const hasT12 = occupancyTrendHasSidecarData(listing.occupancyTrend);
+  const trendSummary = t12OccupancySummary(sidecarOccupancy, listing.occupancyTrend);
 
   const otherListings = (await getPublicListings()).filter((l) => l.public_slug !== slug).slice(0, 3);
 
@@ -179,7 +181,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
               <p style={{ margin: "10px 0 0", fontFamily: "var(--font-om-serif)", fontSize: 36, lineHeight: 1, color: "#f4f1ec" }}>
                 {hasOccupancy ? (
                   <>
-                    {listing.occupied_rooms} <span style={{ fontSize: 20, color: "#a39a8e" }}>of {listing.total_rooms}</span>
+                    {liveOccupied} <span style={{ fontSize: 20, color: "#a39a8e" }}>of {liveTotal}</span>
                   </>
                 ) : (
                   "—"
@@ -238,13 +240,13 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                     </div>
                     <div style={{ marginTop: 16, display: "flex", alignItems: "flex-end", gap: 30, flexWrap: "wrap" }}>
                       <p style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 50, lineHeight: 1.06, color: "#211c19", whiteSpace: "nowrap" }}>
-                        {listing.occupied_rooms} <span style={{ fontSize: 25, fontWeight: 400, color: "#6b6259" }}>of {listing.total_rooms} rooms</span>
+                        {liveOccupied} <span style={{ fontSize: 25, fontWeight: 400, color: "#6b6259" }}>of {liveTotal} rooms</span>
                       </p>
                       <p style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 36, lineHeight: 1, color: "#a33a29" }}>{occupancyPct}%</p>
                     </div>
                     <div style={{ marginTop: 18, display: "flex", gap: 5 }}>
-                      {Array.from({ length: listing.total_rooms ?? 0 }, (_, i) => (
-                        <span key={i} style={{ flex: 1, height: 8, background: i < (listing.occupied_rooms ?? 0) ? "#cc4a37" : "#e4ddd2" }} />
+                      {Array.from({ length: liveTotal ?? 0 }, (_, i) => (
+                        <span key={i} style={{ flex: 1, height: 8, background: i < (liveOccupied ?? 0) ? "#cc4a37" : "#e4ddd2" }} />
                       ))}
                     </div>
                     <p style={{ margin: "18px 0 0", fontSize: 14, lineHeight: 1.7, color: "#574f47", maxWidth: "62ch" }}>
@@ -279,8 +281,9 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                     </div>
                   </div>
                   <p style={{ margin: "16px 0 0", fontSize: 13, lineHeight: 1.6, color: "#574f47", maxWidth: "74ch" }}>
-                    Occupancy and photos on this page are scraped from the property&apos;s live PadSplit listing and refreshed every day. Nothing here is a
-                    projection.
+                    {hasT12
+                      ? "T12 occupancy is from Vera's buyer workbook (bed-night). The live count above is today's PadSplit snapshot."
+                      : "T12 occupancy comes from Vera's buyer workbook. Apply the sidecar to populate this chart. The live count above is today's PadSplit snapshot."}
                   </p>
                 </section>
               )}
@@ -374,7 +377,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                     <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.18em", color: "#6b6259" }}>MORE OF CAITLYN&apos;S LISTINGS</p>
                     {otherListings.map((l) => {
                       const cover = l.coverPhotoUrl;
-                      const occ = l.occupied_rooms != null && l.total_rooms != null ? `${l.occupied_rooms}/${l.total_rooms} occupied` : "Coming soon";
+                      const occ = l.liveOccupied != null && l.liveTotal != null ? `${l.liveOccupied}/${l.liveTotal} occupied` : "Coming soon";
                       return (
                         <Link
                           key={l.id}
@@ -391,7 +394,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                           <div style={{ minWidth: 0 }}>
                             <p style={{ margin: 0, fontWeight: 500, fontSize: 16, color: "#211c19" }}>{publicListingCopy(l.nickname) || publicListingCopy(l.property_type) || "Listing"}</p>
                             <p style={{ margin: "5px 0 0", fontSize: 13, color: "#574f47" }}>
-                              {formatCurrency(l.list_price)} · {l.total_rooms ?? "?"} rooms · {occ}
+                              {formatCurrency(l.list_price)} · {l.liveTotal ?? "?"} rooms · {occ}
                             </p>
                           </div>
                         </Link>
@@ -499,7 +502,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
           </div>
         </div>
 
-        <MobileActionBar priceLabel={formatCurrency(listing.list_price) ?? ""} occupancyLabel={hasOccupancy ? `${listing.occupied_rooms} of ${listing.total_rooms} occupied · ${listing.total_rooms} rooms` : ""} />
+        <MobileActionBar priceLabel={formatCurrency(listing.list_price) ?? ""} occupancyLabel={hasOccupancy ? `${liveOccupied} of ${liveTotal} occupied · ${liveTotal} rooms` : ""} />
       </div>
     </UnlockedProvider>
   );

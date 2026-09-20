@@ -93,6 +93,9 @@ assert.ok(scrape.includes("EXTERIOR_PHOTO_RE"));
 assert.ok(scrape.includes("isExteriorPhoto"));
 assert.ok(scrape.includes("interiorUrls"));
 assert.ok(scrape.includes("padsplit_gallery"), "scrape must document that curated gallery is off-limits");
+assert.ok(scrape.includes("bedrooms"), "scrape must read PadSplit bedrooms, not only totalRoomsCount");
+assert.ok(scrape.includes("occupancyRoomsFromFinancials"));
+assert.ok(scrape.includes("listing.beds"));
 const scrapeUpdates = [...scrape.matchAll(/\.update\(\{[\s\S]*?\}\)/g)].map((m) => m[0]);
 assert.ok(scrapeUpdates.length >= 2);
 for (const block of scrapeUpdates) {
@@ -128,6 +131,13 @@ assert.equal(
 );
 assert.ok(omPage.includes('alignSelf: "stretch"'));
 assert.ok(omPage.includes("UnlockedProvider slug={slug}"));
+assert.ok(omPage.includes("liveOccupied"));
+assert.ok(omPage.includes(">T12<") || omPage.includes("T12</p>"));
+assert.equal(omPage.includes("Trailing twelve months"), false, "occupancy chart label is T12");
+assert.ok(omPage.includes("occupancyTrendFromSidecar") === false);
+assert.ok(omPage.includes("buyer workbook"));
+assert.ok(read("lib/listings/public-data.ts").includes("occupancyTrendFromSidecar"));
+assert.equal(read("lib/listings/public-data.ts").includes("listing_occupancy_snapshots"), false, "T12 chart must not read PadSplit snapshots");
 assert.ok(omPage.includes("PhotoCarousel"));
 assert.ok(omPage.includes("VIEW PHOTOS") === false, "VIEW PHOTOS lives on the hero client, not the server page");
 

@@ -331,6 +331,25 @@ export type ListingFinancials = {
   meta?: unknown;
   deal_key?: string;
   buyer_workbook_filename?: string;
+  // Vera sidecar occupancy — public T12 chart SoT. Not gated underwriting.
+  occupancy?: ListingOccupancy;
+};
+
+export type ListingOccupancyMonth = {
+  month: string;
+  days_in_month?: number;
+  occupied_bed_nights?: number;
+  available_bed_nights?: number;
+  occupancy_pct: number;
+  vacancy_pct?: number;
+  in_flight?: boolean;
+};
+
+export type ListingOccupancy = {
+  rooms?: number;
+  basis?: string;
+  t12_occupancy_pct?: number;
+  monthly?: ListingOccupancyMonth[];
 };
 
 export type ListingDocumentType = "earnings_statement" | "t12" | "buyer_workbook";

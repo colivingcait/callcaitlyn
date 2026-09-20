@@ -198,13 +198,19 @@ async function scrapeListing(context, listing) {
     const photos = [...interiors, ...exteriors].slice(0, 24);
     const interiorUrls = interiors.map((p) => p.url);
 
-    const totalRooms = typeof property.totalRoomsCount === "number" ? property.totalRoomsCount : null;
+    const listedTotal = typeof property.totalRoomsCount === "number" ? property.totalRoomsCount : null;
+    // PadSplit's bedrooms is the house bed count (Gresham Park Eight: 8).
+    // totalRoomsCount is listed-room inventory and can be smaller (that
+    // house: 6). Occupancy override from Vera sidecar occupancy.rooms wins.
+    const houseBedrooms = parseRoomCount(property.bedrooms);
+    const overrideTotal = occupancyRoomsFromFinancials(listing.financials) ?? parseRoomCount(listing.beds);
     // `rooms` only lists CURRENTLY AVAILABLE rooms - confirmed empty on a
     // real fully-booked property (isFullyBooked: true, rooms: []), not a
-    // parsing failure. Occupied = total minus whatever's currently open.
+    // parsing failure. Occupied = house/override total minus open rooms.
     const availableRooms = Array.isArray(property.rooms) ? property.rooms : [];
-    const occupiedRooms =
-      totalRooms == null ? null : property.isFullyBooked ? totalRooms : Math.max(totalRooms - availableRooms.length, 0);
+    const availableCount = property.isFullyBooked ? 0 : availableRooms.length;
+    const totalRooms = overrideTotal ?? houseBedrooms ?? listedTotal;
+    const occupiedRooms = totalRooms == null ? null : Math.max(totalRooms - availableCount, 0);
 
     // roomMinPrice is the property-level floor across whatever's currently
     // available (0 is PadSplit's sentinel for "nothing available," not a
@@ -227,9 +233,23 @@ async function scrapeListing(context, listing) {
   }
 }
 
+function parseRoomCount(value) {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) return Math.round(value);
+  if (typeof value === "string" && value.trim()) {
+    const n = Number(value.trim());
+    if (Number.isFinite(n) && n > 0) return Math.round(n);
+  }
+  return null;
+}
+
+function occupancyRoomsFromFinancials(financials) {
+  if (!financials || typeof financials !== "object") return null;
+  return parseRoomCount(financials.occupancy?.rooms);
+}
+
 const { data: listings, error: fetchError } = await supabase
   .from("listings")
-  .select("id, address, padsplit_url")
+  .select("id, address, padsplit_url, beds, financials")
   .eq("owner_id", OWNER_ID)
   .not("padsplit_url", "is", null);
 

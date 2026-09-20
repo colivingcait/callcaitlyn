@@ -124,16 +124,16 @@ export function FinancialGate({
     setSubmitting(true);
     setError("");
     const form = new FormData(e.currentTarget);
-    const result = await unlockListingFinancials(slug, {
-      name: String(form.get("name") ?? ""),
-      phone: String(form.get("phone") ?? ""),
-      email: String(form.get("email") ?? ""),
-    });
-    setSubmitting(false);
-    if (!result.ok) {
-      setError(result.error);
-      return;
-    }
+    try {
+      const result = await unlockListingFinancials(slug, {
+        name: String(form.get("name") ?? ""),
+        phone: String(form.get("phone") ?? ""),
+        email: String(form.get("email") ?? ""),
+      });
+      if (!result || result.ok !== true) {
+        setError(result && "error" in result && result.error ? result.error : "Could not unlock. Try again.");
+        return;
+      }
     // Write storage first (module-level) so a remount during/after the
     // server-action refresh still sees the payload. applyUnlock notifies
     // the surviving provider in this tab.
@@ -142,9 +142,14 @@ export function FinancialGate({
       financials: asListingFinancials(result.financials) ?? (result.financials ? normalizeFinancials(result.financials) : null),
       workbookUrl: result.workbookUrl ?? null,
     };
-    writeOmUnlock(slug, next);
-    applyUnlock(next);
-    requestAnimationFrame(scrollToFinancials);
+      writeOmUnlock(slug, next);
+      applyUnlock(next);
+      requestAnimationFrame(scrollToFinancials);
+    } catch {
+      setError("Could not unlock. Try again.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   if (!unlocked) {
