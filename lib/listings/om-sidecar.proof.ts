@@ -70,6 +70,7 @@ assert.equal(fin.gross_rents, "61483.07");
 assert.equal(fin.net_earnings, "53304.89");
 assert.equal(fin.opex, "12088.18");
 assert.equal(fin.projected_debt_service, "25547.62");
+assert.equal(fin.net_cash_flow, "15669.09");
 assert.equal(fin.cash_on_cash, "19.59");
 assert.equal(fin.scenarios.length, 1);
 assert.equal(fin.scenarios[0].label, "20% down / 7% / 30yr DSCR");

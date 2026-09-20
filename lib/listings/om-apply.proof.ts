@@ -78,9 +78,11 @@ async function runApplyCases() {
     gross_rents?: string;
     net_earnings?: string;
     opex?: string;
+    net_cash_flow?: string;
     buyer_workbook_filename?: string;
   };
   assert.equal(financials.noi, "41216.71");
+  assert.equal(financials.net_cash_flow, "15669.09");
   assert.equal(Array.isArray(financials.t12) && financials.t12.length, 7);
   assert.equal(financials.deal_key, "candace");
   assert.equal(financials.padsplit_fees, "8178.18");

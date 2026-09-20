@@ -48,6 +48,7 @@ export function normalizeFinancials(financials: ListingFinancials | null | undef
     net_earnings: financials?.net_earnings ?? "",
     opex: financials?.opex ?? "",
     projected_debt_service: financials?.projected_debt_service ?? "",
+    net_cash_flow: financials?.net_cash_flow ?? "",
     cash_on_cash: financials?.cash_on_cash ?? "",
     scenarios: Array.isArray(financials?.scenarios) ? financials.scenarios : [],
   });
@@ -58,12 +59,14 @@ export function financialsHaveContent(data: ListingFinancials | null | undefined
   return (
     gatedFinancialsHaveValues(data) ||
     (data.t12 ?? []).length > 0 ||
+    Boolean(data.purchase_price) ||
     Boolean(data.noi) ||
     Boolean(data.vacancy_pct) ||
     Boolean(data.occupancy_summary) ||
     Boolean(data.platform_fees) ||
     Boolean(data.pm_fees) ||
     Boolean(data.expense_load_pct) ||
+    Boolean(data.net_cash_flow) ||
     (data.scenarios ?? []).length > 0
   );
 }

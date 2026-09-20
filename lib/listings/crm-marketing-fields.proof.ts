@@ -93,7 +93,7 @@ assert.ok(photos.includes("new Set(asUrlList(excludedUrls))"));
 
 const financials = read("components/listings/FinancialsEditor.tsx");
 assert.ok(financials.includes("normalizeFinancials(financials)"));
-assert.ok(financials.includes("GATED_UNDERWRITING_FIELDS"));
+assert.ok(financials.includes("GATED_EDITOR_FIELDS"));
 assert.equal(financials.includes("Occupancy summary"), false);
 assert.equal(financials.includes("PM fees"), false);
 assert.equal(financials.includes("T12 line items"), false);

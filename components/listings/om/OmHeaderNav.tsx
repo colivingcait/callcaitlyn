@@ -1,15 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { useUnlocked } from "./UnlockContext";
 
 const LINKS = [
   { href: "#property", label: "PROPERTY" },
-  { href: "#financials", label: "FINANCIALS" },
   { href: "#occupancy", label: "OCCUPANCY" },
+  { href: "#financials", label: "FINANCIALS" },
+  { href: "#process", label: "PROCESS" },
 ] as const;
 
 export function OmHeaderNav() {
   const [open, setOpen] = useState(false);
+  const { unlocked } = useUnlocked();
+  const ctaHref = unlocked ? "#offer" : "#unlock";
+  const ctaLabel = unlocked ? "SUBMIT AN OFFER" : "UNLOCK FINANCIALS";
 
   return (
     <>
@@ -21,11 +26,11 @@ export function OmHeaderNav() {
         ))}
       </nav>
       <a
-        href="#unlock"
+        href={ctaHref}
         className="om-hover-fill om-header-cta"
         style={{ flex: "0 0 auto", whiteSpace: "nowrap", border: "1px solid #cc4a37", background: "#cc4a37", padding: "9px 18px", fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", color: "#fff" }}
       >
-        UNLOCK FINANCIALS
+        {ctaLabel}
       </a>
       <button
         type="button"
@@ -62,12 +67,12 @@ export function OmHeaderNav() {
             </a>
           ))}
           <a
-            href="#unlock"
+            href={ctaHref}
             onClick={() => setOpen(false)}
             className="om-hover-fill"
-            style={{ marginTop: 8, display: "block", textAlign: "center", border: "1px solid #cc4a37", background: "#cc4a37", padding: "12px 16px", fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", color: "#fff" }}
+            style={{ marginTop: 8, display: "block", textAlign: "center", border: "1px solid #cc4a37", background: "#cc4a37", padding: "12px 16px", fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", color: "#fff", whiteSpace: "nowrap" }}
           >
-            UNLOCK FINANCIALS
+            {ctaLabel}
           </a>
         </div>
       )}

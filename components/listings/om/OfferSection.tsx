@@ -82,7 +82,7 @@ export function OfferSection({ slug, nickname, omNumber }: { slug: string; nickn
             setSent(false);
           }}
           className="om-hover-fill-border"
-          style={{ marginTop: 28, border: "1px solid #cc4a37", background: "#cc4a37", padding: "18px 40px", fontSize: 14, fontWeight: 600, letterSpacing: "0.12em", color: "#fff", cursor: "pointer" }}
+          style={{ marginTop: 28, border: "1px solid #cc4a37", background: "#cc4a37", padding: "18px 40px", fontSize: 14, fontWeight: 600, letterSpacing: "0.12em", color: "#fff", cursor: "pointer", whiteSpace: "nowrap" }}
         >
           SUBMIT AN OFFER
         </button>
