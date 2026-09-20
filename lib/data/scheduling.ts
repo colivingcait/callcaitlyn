@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { ABANDONED_BOOKING_STAGES, ABANDONMENT_DELAY_MS } from "@/lib/crm/booking-abandonment";
 import type { SchedulingSettings, BookingRequest, WeeklyHours } from "@/types/database";
 
 const DEFAULT_WEEKLY_HOURS: WeeklyHours = {
@@ -85,7 +86,24 @@ export async function listAbandonedBookingSessions(): Promise<BookingRequestWith
   const { data } = await supabase
     .from("booking_requests")
     .select("*, contacts(first_name, last_name)")
-    .in("stage", ["info", "time_selected"])
+    .in("stage", [...ABANDONED_BOOKING_STAGES])
+    .order("created_at", { ascending: false })
+    .limit(30);
+
+  return (data ?? []).map(withContactName);
+}
+
+// Today / notify: only after 10 minutes sitting incomplete on the CRM
+// Booking screen. Completing (pending+) drops the stage so the card
+// clears even if the nudge already fired.
+export async function listAbandonedBookingFollowUps(): Promise<BookingRequestWithContact[]> {
+  const supabase = await createClient();
+  const cutoff = new Date(Date.now() - ABANDONMENT_DELAY_MS).toISOString();
+  const { data } = await supabase
+    .from("booking_requests")
+    .select("*, contacts(first_name, last_name)")
+    .in("stage", [...ABANDONED_BOOKING_STAGES])
+    .lte("created_at", cutoff)
     .order("created_at", { ascending: false })
     .limit(30);
 

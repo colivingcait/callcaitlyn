@@ -5,7 +5,7 @@ import { filterByQueue } from "@/lib/crm/contact-queue-filter";
 import { listContacts } from "@/lib/data/contacts";
 import { listNewLeadsQueue } from "@/lib/data/new-leads";
 import { listWonDeals, listPendingDeals } from "@/lib/data/commissions";
-import { listPendingBookingRequests, listUpcomingApprovedBookingRequests } from "@/lib/data/scheduling";
+import { listAbandonedBookingFollowUps, listPendingBookingRequests, listUpcomingApprovedBookingRequests } from "@/lib/data/scheduling";
 import { computeDeals, summarizeDeals, capYearKey, capYearStart, KW_CAP } from "@/lib/crm/commission";
 import { isTodayWorkContact } from "@/lib/crm/today-eligible";
 import { listConversations } from "@/lib/data/messages";
@@ -283,7 +283,7 @@ export async function getTodayData() {
   const { data: stagesData } = await supabase.from("pipeline_stages").select("*").order("sort_order", { ascending: true });
   const stages = (stagesData ?? []) as PipelineStage[];
 
-  const [calls, repliesOwedResult, myTasks, registeredNoFollowUp, statStrip, commissionYear, newLeads, bookingRequests, quietLeads, spamConversations, upcomingMeetings, crmEvents] =
+  const [calls, repliesOwedResult, myTasks, registeredNoFollowUp, statStrip, commissionYear, newLeads, bookingRequests, abandonedBookings, quietLeads, spamConversations, upcomingMeetings, crmEvents] =
     await Promise.all([
       getCallsGroup(),
       getRepliesOwedGroup(),
@@ -293,6 +293,7 @@ export async function getTodayData() {
       getCommissionYearSummary(),
       listNewLeadsQueue(),
       listPendingBookingRequests(),
+      listAbandonedBookingFollowUps(),
       getQuietLeadsGroup(),
       listConversations({ spam: true }),
       listUpcomingApprovedBookingRequests(),
@@ -332,6 +333,7 @@ export async function getTodayData() {
     newLeads: newLeads.contacts,
     newLeadsError: newLeads.error,
     bookingRequests,
+    abandonedBookings,
     quietLeads,
     spamFilteredCount: spamConversations.length,
     calendar,

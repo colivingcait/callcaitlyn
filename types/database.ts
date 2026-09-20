@@ -907,6 +907,7 @@ export interface BookingRequest {
   submitted_at: string | null;
   decided_at: string | null;
   reminder_sent_at: string | null;
+  abandonment_notified_at?: string | null;
   proposed_starts_at: string | null;
   proposed_ends_at: string | null;
   propose_token: string | null;

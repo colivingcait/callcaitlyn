@@ -31,6 +31,7 @@ export function countTodayOpenItems(today: {
   newLeads: { id: string }[];
   registeredNoFollowUp: { id: string }[];
   bookingRequests: { contact_id: string | null }[];
+  abandonedBookings?: { contact_id: string | null }[];
   quietLeads?: { id: string }[];
 }): number {
   return countDistinctPeople(
@@ -40,6 +41,7 @@ export function countTodayOpenItems(today: {
     today.newLeads.map((c) => c.id),
     today.registeredNoFollowUp.map((c) => c.id),
     today.bookingRequests.map((r) => r.contact_id),
+    (today.abandonedBookings ?? []).map((r) => r.contact_id),
     (today.quietLeads ?? []).map((c) => c.id),
   );
 }

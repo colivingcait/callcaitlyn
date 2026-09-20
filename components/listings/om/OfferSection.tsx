@@ -14,6 +14,7 @@ export function OfferSection({ slug, nickname, omNumber }: { slug: string; nickn
   const [sent, setSent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [unsureTerms, setUnsureTerms] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -44,17 +45,19 @@ export function OfferSection({ slug, nickname, omNumber }: { slug: string; nickn
     setSubmitting(true);
     setError("");
     const form = new FormData(e.currentTarget);
+    const unsure = form.get("unsure_terms") === "on";
     const result = await submitListingOffer(slug, {
       name: String(form.get("name") ?? ""),
       phone: String(form.get("phone") ?? ""),
       email: String(form.get("email") ?? ""),
       entity: String(form.get("entity") ?? ""),
-      price: String(form.get("price") ?? ""),
-      emd: String(form.get("emd") ?? ""),
-      financing: String(form.get("financing") ?? ""),
-      dd: String(form.get("dd") ?? ""),
-      closing: String(form.get("closing") ?? ""),
-      notes: String(form.get("notes") ?? ""),
+      price: unsure ? "" : String(form.get("price") ?? ""),
+      emd: unsure ? "" : String(form.get("emd") ?? ""),
+      financing: unsure ? "" : String(form.get("financing") ?? ""),
+      dd: unsure ? "" : String(form.get("dd") ?? ""),
+      closing: unsure ? "" : String(form.get("closing") ?? ""),
+      notes: unsure ? "" : String(form.get("notes") ?? ""),
+      unsureTerms: unsure,
     });
     setSubmitting(false);
     if (!result.ok) {
@@ -80,6 +83,7 @@ export function OfferSection({ slug, nickname, omNumber }: { slug: string; nickn
           onClick={() => {
             setOpen(true);
             setSent(false);
+            setUnsureTerms(false);
           }}
           className="om-hover-fill-border"
           style={{ marginTop: 28, border: "1px solid #cc4a37", background: "#cc4a37", padding: "18px 40px", fontSize: 14, fontWeight: 600, letterSpacing: "0.12em", color: "#fff", cursor: "pointer", whiteSpace: "nowrap" }}
@@ -157,8 +161,21 @@ export function OfferSection({ slug, nickname, omNumber }: { slug: string; nickn
                     <label htmlFor="loi-entity" style={boxedLabel}>Buying entity</label>
                     <input id="loi-entity" name="entity" className="om-input-boxed" style={boxedInput} />
                   </div>
+                  <label htmlFor="loi-unsure" style={{ display: "flex", alignItems: "flex-start", gap: 10, marginTop: 4, cursor: "pointer" }}>
+                    <input
+                      id="loi-unsure"
+                      name="unsure_terms"
+                      type="checkbox"
+                      checked={unsureTerms}
+                      onChange={(e) => setUnsureTerms(e.target.checked)}
+                      style={{ marginTop: 3, width: 16, height: 16, accentColor: "#cc4a37" }}
+                    />
+                    <span style={{ fontSize: 14, lineHeight: 1.45, color: "#2e2823" }}>Unsure about offer terms</span>
+                  </label>
                 </div>
 
+                {!unsureTerms && (
+                <>
                 <p style={{ margin: "26px 0 0", fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#6b6259" }}>YOUR TERMS</p>
                 <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 16 }}>
                   <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
@@ -213,6 +230,8 @@ export function OfferSection({ slug, nickname, omNumber }: { slug: string; nickn
                     />
                   </div>
                 </div>
+                </>
+                )}
 
                 {error && <p style={{ margin: "16px 0 0", fontSize: 13, color: "#a33a29" }}>{error}</p>}
 

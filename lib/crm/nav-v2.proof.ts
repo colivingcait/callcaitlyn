@@ -42,7 +42,9 @@ assert.equal(moreSheet.includes("New task"), false);
 
 const todayHome = read("components/dashboard/TodayHome.tsx");
 assert.ok(todayHome.includes("TodayBookingRequestCard"));
+assert.ok(todayHome.includes("TodayAbandonedBookingCard"));
 assert.ok(todayHome.includes("bookingRequests"));
+assert.ok(todayHome.includes("abandonedBookings"));
 assert.ok(todayHome.includes("Needs you") || todayHome.includes("needs-you"));
 assert.equal(todayHome.includes("onAdvance="), false);
 

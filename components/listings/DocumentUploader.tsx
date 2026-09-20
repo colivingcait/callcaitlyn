@@ -6,12 +6,21 @@ import { FileText, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { addListingDocument, removeListingDocument } from "@/app/(app)/listings/actions";
 import { LISTING_DOCUMENT_ACCEPT, LISTING_DOCUMENT_LABELS, MARKETING_UPLOAD_TYPES } from "@/lib/listings/documents";
+import { workbookDownloadFilename, workbookStoragePath } from "@/lib/listings/workbook-filename";
 import type { ListingDocument, ListingDocumentType } from "@/types/database";
 
 // Upload slot is buyer_workbook only. earnings_statement / t12 remain on
 // the DB enum and storage paths, but Marketing no longer offers them.
-// Unlock still signs buyer_workbook as the post-gate download.
-export function DocumentUploader({ listingId, documents }: { listingId: string; documents: ListingDocument[] }) {
+// Unlock offers buyer_workbook as the on-page post-gate download only.
+export function DocumentUploader({
+  listingId,
+  listingNickname,
+  documents,
+}: {
+  listingId: string;
+  listingNickname?: string | null;
+  documents: ListingDocument[];
+}) {
   const router = useRouter();
   const [uploading, setUploading] = useState<ListingDocumentType | null>(null);
   const [error, setError] = useState("");
@@ -25,8 +34,9 @@ export function DocumentUploader({ listingId, documents }: { listingId: string; 
     setError("");
 
     const supabase = createClient();
-    const path = `${listingId}/${docType}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-    const { error: uploadError } = await supabase.storage.from("listing-documents").upload(path, file);
+    const filename = workbookDownloadFilename({ nickname: listingNickname, storedName: file.name });
+    const path = workbookStoragePath(listingId, filename);
+    const { error: uploadError } = await supabase.storage.from("listing-documents").upload(path, file, { upsert: true });
     if (uploadError) {
       setError(uploadError.message);
     } else {
@@ -46,7 +56,7 @@ export function DocumentUploader({ listingId, documents }: { listingId: string; 
   return (
     <div>
       <p className="mb-1.5 text-sm font-medium text-neutral-700">Buyer workbook</p>
-      <p className="mb-2 text-xs text-neutral-400">Vera&apos;s workbook is emailed and texted after unlock, and offered as a download on the public OM.</p>
+      <p className="mb-2 text-xs text-neutral-400">Offered as a download on the public OM after unlock. Not emailed or texted.</p>
       <div className="grid grid-cols-1 gap-2">
         {MARKETING_UPLOAD_TYPES.map((docType) => {
           const doc = byType.get(docType);

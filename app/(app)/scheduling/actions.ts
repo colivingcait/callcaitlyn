@@ -274,5 +274,6 @@ export async function cancelAbandonedSession(requestId: string) {
   if (error) return { ok: false as const, error: error.message };
 
   revalidatePath("/scheduling");
+  revalidatePath("/");
   return { ok: true as const };
 }

@@ -6,7 +6,7 @@ import { useUnlocked } from "./UnlockContext";
 import {
   GATED_RATIO_FIELDS,
   GATED_UNDERWRITING_FIELDS,
-  formatMonthlyAverage,
+  displayGatedMonthlyAverage,
   gatedFinancialsHaveValues,
 } from "@/lib/listings/gated-underwriting";
 import { asListingFinancials, normalizeFinancials, visibleImprovements } from "@/lib/listings/crm-marketing-fields";
@@ -22,6 +22,7 @@ const TEASER_ROWS = GATED_UNDERWRITING_FIELDS.map((field) => ({
   value: "$X,XXX",
 }));
 
+const omValueStyle: React.CSSProperties = { fontFamily: "var(--font-om-serif)", fontSize: 34, lineHeight: 1, color: "#211c19" };
 const labelStyle: React.CSSProperties = { display: "block", fontSize: 12, fontWeight: 500, letterSpacing: "0.14em", color: "#a39a8e" };
 const inputStyle: React.CSSProperties = {
   marginTop: 8,
@@ -273,7 +274,7 @@ export function FinancialGate({
           {ratioCards.map((field) => (
             <div key={field.key} style={{ background: "#fffdfa", border: "1px solid #e4ddd2", borderTop: "2px solid #cc4a37", padding: "18px 18px 20px" }}>
               <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.14em", color: "#6b6259" }}>{field.omLabel}</p>
-              <p style={{ margin: "12px 0 0", fontFamily: "var(--font-om-serif)", fontSize: 34, lineHeight: 1, color: "#211c19" }}>{financials[field.key]}</p>
+              <p style={{ margin: "12px 0 0", ...omValueStyle }}>{financials[field.key]}</p>
             </div>
           ))}
         </div>
@@ -283,7 +284,9 @@ export function FinancialGate({
         <>
           <p style={{ margin: "26px 0 0", fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#6b6259" }}>MONTHLY AVERAGES</p>
           <div style={{ marginTop: 14, background: "#fffdfa", border: "1px solid #e4ddd2" }}>
-            {monthlyRows.map((field, i) => (
+            {monthlyRows.map((field, i) => {
+              const isNcf = field.key === "net_cash_flow";
+              return (
               <div
                 key={field.key}
                 style={{
@@ -291,16 +294,19 @@ export function FinancialGate({
                   alignItems: "baseline",
                   justifyContent: "space-between",
                   gap: 20,
-                  padding: "15px 20px",
-                  borderBottom: i < monthlyRows.length - 1 ? "1px solid #ece5da" : undefined,
+                  padding: isNcf ? "18px 20px" : "15px 20px",
+                  borderBottom: i < monthlyRows.length - 1 && !isNcf ? "1px solid #ece5da" : undefined,
+                  borderTop: isNcf ? "2px solid #211c19" : undefined,
+                  background: isNcf ? "#f7f1ea" : undefined,
                 }}
               >
-                <span style={{ fontSize: 15, lineHeight: 1.4, color: "#574f47" }}>{field.label}</span>
-                <span style={{ fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 22, lineHeight: 1, color: "#211c19", whiteSpace: "nowrap" }}>
-                  {formatMonthlyAverage(financials[field.key], { signed: field.key === "net_cash_flow" })}
+                <span style={{ fontSize: 15, lineHeight: 1.4, color: isNcf ? "#211c19" : "#574f47", fontWeight: isNcf ? 600 : undefined }}>{field.label}</span>
+                <span style={{ ...omValueStyle, whiteSpace: "nowrap" }}>
+                  {displayGatedMonthlyAverage(financials, field.key)}
                 </span>
               </div>
-            ))}
+              );
+            })}
           </div>
           <p style={{ margin: "14px 0 0", fontSize: 13, lineHeight: 1.65, color: "#574f47", maxWidth: "62ch" }}>
             Every figure above is a monthly average. Month-by-month detail is in the download.

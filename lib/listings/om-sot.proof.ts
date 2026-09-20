@@ -8,6 +8,8 @@ import {
   GATED_REMOVED_FIELDS,
   GATED_UNDERWRITING_FIELDS,
   formatMonthlyAverage,
+  displayGatedMonthlyAverage,
+  monthlyizeNetCashFlow,
   annualToMonthlyString,
   GATED_MONTHLY_DOLLAR_FIELDS,
 } from "./gated-underwriting";
@@ -171,7 +173,10 @@ assert.ok(nav.includes("UNLOCK FINANCIALS"));
 const gate = read("components/listings/om/FinancialGate.tsx");
 assert.ok(gate.includes("GATED_UNDERWRITING_FIELDS"));
 assert.ok(gate.includes("GATED_RATIO_FIELDS"));
-assert.ok(gate.includes("formatMonthlyAverage"));
+assert.ok(gate.includes("displayGatedMonthlyAverage"));
+assert.ok(gate.includes("omValueStyle"));
+assert.ok(gate.includes("isNcf"));
+assert.equal(gate.includes("fontWeight: 600, fontSize: 22"), false, "monthly $ must match ratio-card value font, not the huge bold serif");
 assert.ok(gate.includes("workbookUrl"));
 assert.ok(gate.includes("writeOmUnlock"));
 assert.ok(gate.includes("applyUnlock"));
@@ -239,6 +244,16 @@ assert.equal(formatMonthlyAverage("1305.76"), "$1,306");
 assert.equal(formatMonthlyAverage("61483.07"), "$61,483", "gated $ are already monthly — do not divide again");
 assert.equal(annualToMonthlyString("61483.07"), "5123.59");
 assert.equal(annualToMonthlyString("15669.09"), "1305.76");
+assert.equal(monthlyizeNetCashFlow("15669.09", { noi: "3434.73", debtService: "2128.97", annualCashFlow: "15669.09" }), "1305.76");
+assert.equal(monthlyizeNetCashFlow("1305.76", { noi: "3434.73", debtService: "2128.97" }), "1305.76");
+assert.equal(monthlyizeNetCashFlow("703.12", { noi: "2832.09", debtService: "2128.97" }), "703.12");
+assert.equal(
+  displayGatedMonthlyAverage(
+    { t12: [], scenarios: [], noi: "3434.73", projected_debt_service: "2128.97", net_cash_flow: "15669.09", cap_rate: "" } as never,
+    "net_cash_flow",
+  ),
+  "$1,306",
+);
 
 const unlockCtx = read("components/listings/om/UnlockContext.tsx");
 assert.ok(unlockCtx.includes("writeOmUnlock"));
@@ -262,8 +277,18 @@ for (const removed of GATED_REMOVED_FIELDS) {
 const unlock = read("app/listing/[slug]/actions.ts");
 assert.ok(unlock.includes("buyer_workbook"));
 assert.ok(unlock.includes("workbookUrl"));
+assert.ok(unlock.includes("workbookDownloadPath"));
 assert.ok(unlock.includes("toPublicUnlockFinancials"));
 assert.ok(unlock.includes("recordUnlockActivity"));
 assert.ok(unlock.includes('"site_form"'));
+assert.equal(unlock.includes("sendGmailMessage"), false, "do not email the workbook");
+assert.equal(unlock.includes("I'll follow up shortly with the buyer workbook"), false);
+assert.equal(unlock.includes("Here's the"), false, "do not text workbook links");
+
+const offer = read("components/listings/om/OfferSection.tsx");
+assert.ok(offer.includes("Unsure about offer terms"));
+assert.ok(offer.includes("unsure_terms"));
+assert.ok(offer.includes("unsureTerms"));
+assert.ok(read("app/listing/[slug]/actions.ts").includes("unsureTerms"));
 
 console.log("om sot: ok");

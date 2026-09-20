@@ -57,6 +57,45 @@ function parseNumeric(value: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+function nearlyEqual(a: number, b: number, rel = 0.02): boolean {
+  if (a === b) return true;
+  const scale = Math.max(Math.abs(a), Math.abs(b), 1);
+  return Math.abs(a - b) <= Math.max(1, scale * rel);
+}
+
+// Vera Apply contract: gated flats are monthly. Some sidecars still put
+// the annual total on `net_cashflow` / `net_cash_flow` (Candace 15669.09
+// vs monthly 1305.76). Detect that and store/display the monthly figure
+// so NCF ≈ monthly NOI − monthly DS.
+export function monthlyizeNetCashFlow(
+  value: string | null | undefined,
+  context?: { noi?: string | null; debtService?: string | null; annualCashFlow?: string | null },
+): string {
+  if (value == null || String(value).trim() === "") return "";
+  const n = parseNumeric(String(value));
+  if (n == null) return String(value);
+
+  const noi = context?.noi != null && String(context.noi).trim() !== "" ? parseNumeric(String(context.noi)) : null;
+  const ds =
+    context?.debtService != null && String(context.debtService).trim() !== ""
+      ? parseNumeric(String(context.debtService))
+      : null;
+  const annual =
+    context?.annualCashFlow != null && String(context.annualCashFlow).trim() !== ""
+      ? parseNumeric(String(context.annualCashFlow))
+      : null;
+  const expectedMonthly = noi != null && ds != null ? noi - ds : null;
+
+  const looksAnnual =
+    (annual != null && nearlyEqual(Math.abs(n), Math.abs(annual))) ||
+    (expectedMonthly != null && nearlyEqual(Math.abs(n), Math.abs(expectedMonthly) * 12)) ||
+    (noi != null && Math.abs(noi) > 0 && Math.abs(n) > Math.abs(noi) * 2.5);
+
+  if (!looksAnnual) return String(value);
+  if (expectedMonthly != null) return String(Math.round(expectedMonthly * 100) / 100);
+  return String(Math.round((n / 12) * 100) / 100);
+}
+
 export const GATED_MONTHLY_DOLLAR_FIELDS = [
   "gross_rents",
   "net_earnings",
@@ -94,6 +133,19 @@ export function hydrateGatedFinancials(data: ListingFinancials): ListingFinancia
   const t12 = data.t12 ?? [];
   const scenario = data.scenarios?.[0];
   const extras = data as ListingFinancials & { net_cashflow?: string };
+  const annual = data.annual;
+  const noi = firstNonEmpty(data.noi, annualToMonthlyString(t12Value(t12, /^noi$|net\s+operating\s+income/i)));
+  const projectedDebtService = firstNonEmpty(
+    data.projected_debt_service,
+    annualToMonthlyString(scenario?.debt_service),
+    annualToMonthlyString(t12Value(t12, /debt\s+service/i)),
+  );
+  const rawCashFlow = firstNonEmpty(
+    data.net_cash_flow,
+    extras.net_cashflow,
+    annualToMonthlyString(t12Value(t12, /cash\s+flow/i)),
+    annualToMonthlyString(scenario?.cash_flow),
+  );
   return {
     ...data,
     purchase_price: firstNonEmpty(data.purchase_price),
@@ -101,22 +153,32 @@ export function hydrateGatedFinancials(data: ListingFinancials): ListingFinancia
     padsplit_fees: firstNonEmpty(data.padsplit_fees, data.platform_fees, t12Value(t12, /platform\s+fee|padsplit\s+fee/i)),
     net_earnings: firstNonEmpty(data.net_earnings, annualToMonthlyString(t12Value(t12, /net\s+to\s+host|net\s+earnings/i)), data.noi),
     opex: firstNonEmpty(data.opex, annualToMonthlyString(t12Value(t12, /total\s+operating\s+expenses|^opex$|operating\s+expenses/i))),
-    noi: firstNonEmpty(data.noi, annualToMonthlyString(t12Value(t12, /^noi$|net\s+operating\s+income/i))),
-    projected_debt_service: firstNonEmpty(
-      data.projected_debt_service,
-      annualToMonthlyString(scenario?.debt_service),
-      annualToMonthlyString(t12Value(t12, /debt\s+service/i)),
-    ),
-    net_cash_flow: firstNonEmpty(
-      data.net_cash_flow,
-      extras.net_cashflow,
-      annualToMonthlyString(t12Value(t12, /cash\s+flow/i)),
-      annualToMonthlyString(scenario?.cash_flow),
-    ),
+    noi,
+    projected_debt_service: projectedDebtService,
+    net_cash_flow: monthlyizeNetCashFlow(rawCashFlow, {
+      noi,
+      debtService: projectedDebtService,
+      annualCashFlow: firstNonEmpty(annual?.net_cash_flow, annual?.net_cashflow),
+    }),
     cash_on_cash: firstNonEmpty(data.cash_on_cash, scenario?.coc),
     cap_rate: firstNonEmpty(data.cap_rate),
     dscr: firstNonEmpty(data.dscr, scenario?.dscr),
   };
+}
+
+export function displayGatedMonthlyAverage(
+  financials: ListingFinancials,
+  key: GatedUnderwritingKey,
+): string {
+  const raw = financials[key];
+  const value =
+    key === "net_cash_flow"
+      ? monthlyizeNetCashFlow(raw, {
+          noi: financials.noi,
+          debtService: financials.projected_debt_service,
+        })
+      : raw;
+  return formatMonthlyAverage(value, { signed: key === "net_cash_flow" });
 }
 
 export function gatedFinancialsHaveValues(data: ListingFinancials | null | undefined): boolean {
