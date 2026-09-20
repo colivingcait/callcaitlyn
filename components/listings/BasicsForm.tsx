@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateListingBasics } from "@/app/(app)/listings/actions";
+import { extractPadsplitListingId, padsplitListingUrlFromInput, PADSPLIT_LISTING_URL_BASE } from "@/lib/listings/padsplit-url";
 import type { Listing } from "@/types/database";
 
 export function BasicsForm({ listing }: { listing: Listing }) {
@@ -15,10 +16,19 @@ export function BasicsForm({ listing }: { listing: Listing }) {
   const [propertyType, setPropertyType] = useState(listing.property_type ?? "");
   const [mlsNumber, setMlsNumber] = useState(listing.mls_number ?? "");
   const [zillowUrl, setZillowUrl] = useState(listing.zillow_url ?? "");
-  const [padsplitUrl, setPadsplitUrl] = useState(listing.padsplit_url ?? "");
+  const [padsplitListingId, setPadsplitListingId] = useState(() => extractPadsplitListingId(listing.padsplit_url));
   const [story, setStory] = useState(listing.story ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  function handlePadsplitIdChange(raw: string) {
+    const extracted = extractPadsplitListingId(raw);
+    if (extracted && raw.trim() !== extracted) {
+      setPadsplitListingId(extracted);
+      return;
+    }
+    setPadsplitListingId(raw.replace(/[^\d]/g, ""));
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -32,7 +42,7 @@ export function BasicsForm({ listing }: { listing: Listing }) {
       propertyType: propertyType || null,
       mlsNumber: mlsNumber || null,
       zillowUrl: zillowUrl || null,
-      padsplitUrl: padsplitUrl || null,
+      padsplitUrl: padsplitListingUrlFromInput(padsplitListingId),
       story: story || null,
     });
     setSaving(false);
@@ -42,6 +52,7 @@ export function BasicsForm({ listing }: { listing: Listing }) {
   }
 
   const inputClass = "w-full rounded-xl border border-neutral-200 px-3 py-2 text-[15px]";
+  const builtUrl = padsplitListingUrlFromInput(padsplitListingId);
 
   return (
     <div>
@@ -86,15 +97,25 @@ export function BasicsForm({ listing }: { listing: Listing }) {
           <p className="mt-1 text-xs text-neutral-400">Dropped into agent texts so they can tap through and see the photos.</p>
         </div>
         <div className="sm:col-span-3">
-          <label className="mb-1 block text-sm font-medium text-neutral-700">PadSplit listing URL</label>
+          <label className="mb-1 block text-sm font-medium text-neutral-700">PadSplit listing ID</label>
           <input
-            type="url"
-            value={padsplitUrl}
-            onChange={(e) => setPadsplitUrl(e.target.value)}
+            inputMode="numeric"
+            value={padsplitListingId}
+            onChange={(e) => handlePadsplitIdChange(e.target.value)}
             className={inputClass}
-            placeholder="https://www.padsplit.com/rooms-for-rent/listing/..."
+            placeholder="8299"
           />
-          <p className="mt-1 text-xs text-neutral-400">Occupancy, pricing, and photos are pulled from here automatically once a day.</p>
+          <p className="mt-1 text-xs text-neutral-400">
+            PadSplit house/listing ID (the number in the URL, e.g. Candace 8299) — not the full link. Occupancy, pricing, and photos are pulled from{" "}
+            {builtUrl ? (
+              <span className="break-all text-neutral-500">{builtUrl}</span>
+            ) : (
+              <>
+                {PADSPLIT_LISTING_URL_BASE}/<span className="text-neutral-500">ID</span>
+              </>
+            )}{" "}
+            automatically once a day.
+          </p>
         </div>
       </div>
       <div className="mt-3">

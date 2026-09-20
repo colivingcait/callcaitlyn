@@ -1,0 +1,118 @@
+{
+  "schema_version": 2,
+  "deal_key": "candace",
+  "padsplit_house_id": "8299",
+  "listing_hints": {
+    "nickname": "Candace",
+    "om_number": "",
+    "submarket": "Atlanta metro",
+    "rooms": 8
+  },
+  "public_bands": {
+    "band_gross_rent": "$5.0\u20135.5k/mo",
+    "band_expense_load": "high-teens%",
+    "band_cash_on_cash": "high-teens to low-20s%",
+    "band_cap_rate": "low-10s%"
+  },
+  "financials": {
+    "purchase_price": "400000",
+    "gross_rents": "61483.07",
+    "padsplit_fees": "8178.18",
+    "net_earnings": "53304.89",
+    "opex": "12088.18",
+    "projected_debt_service": "25547.62",
+    "cash_on_cash": "19.59",
+    "cap_rate": "10.30",
+    "dscr": "1.61",
+    "noi": "41216.71",
+    "t12": [
+      {
+        "label": "Gross rents (collected)",
+        "value": "61483.07",
+        "subtotal": false
+      },
+      {
+        "label": "PadSplit fees",
+        "value": "-8178.18",
+        "subtotal": false
+      },
+      {
+        "label": "Net earnings",
+        "value": "53304.89",
+        "subtotal": true
+      },
+      {
+        "label": "Operating expenses",
+        "value": "-12088.18",
+        "subtotal": false
+      },
+      {
+        "label": "NOI",
+        "value": "41216.71",
+        "subtotal": true
+      },
+      {
+        "label": "Projected debt service",
+        "value": "-25547.62",
+        "subtotal": false
+      },
+      {
+        "label": "Cash flow after debt",
+        "value": "15669.09",
+        "subtotal": true
+      }
+    ],
+    "scenarios": [
+      {
+        "label": "20% down / 7% / 30yr DSCR",
+        "coc": "19.59",
+        "cash_in": "80000",
+        "debt_service": "25547.62",
+        "cash_flow": "15669.09",
+        "dscr": "1.61",
+        "loan_amount": "320000"
+      }
+    ]
+  },
+  "improvements": [],
+  "documents": {
+    "buyer_workbook": "Candace_OM_Complete.xlsx"
+  },
+  "meta": {
+    "period": "T12 2025-10 to 2026-09",
+    "gross_basis": "collected_only",
+    "notes": [
+      "PadSplit house id 8299 (from export Property ID).",
+      "Public bands are imprecise Candace-derived ranges (not the generic 30%+ / 13\u201315% style examples).",
+      "Gated UI fields per Marketing SoT: purchase_price, gross_rents, padsplit_fees, net_earnings, opex, projected_debt_service, cash_on_cash, cap_rate, dscr + workbook.",
+      "platform fees \u2260 PM; PM rolled into opex total for gated display.",
+      "Sep 2026 in-flight; Aug\u2013Sep opex thin."
+    ]
+  },
+  "field_map": {
+    "public_ui": [
+      "public_bands.band_gross_rent",
+      "public_bands.band_expense_load",
+      "public_bands.band_cash_on_cash",
+      "public_bands.band_cap_rate"
+    ],
+    "gated_ui": [
+      "financials.purchase_price",
+      "financials.gross_rents",
+      "financials.padsplit_fees",
+      "financials.net_earnings",
+      "financials.opex",
+      "financials.projected_debt_service",
+      "financials.cash_on_cash",
+      "financials.cap_rate",
+      "financials.dscr"
+    ],
+    "gated_removed": [
+      "pm_fees",
+      "expense_load_pct",
+      "occupancy_summary",
+      "vacancy_pct"
+    ],
+    "padsplit_url": "CRM builds from padsplit_house_id only"
+  }
+}

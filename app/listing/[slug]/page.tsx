@@ -9,7 +9,7 @@ import { SellerAnalysisForm } from "@/components/listings/om/SellerAnalysisForm"
 import { MobileActionBar } from "@/components/listings/om/MobileActionBar";
 import { UnlockedProvider } from "@/components/listings/om/UnlockContext";
 import { OmHeaderNav } from "@/components/listings/om/OmHeaderNav";
-import { publicListingCopy, finiteDays } from "@/lib/listings/public-copy";
+import { publicListingCopy } from "@/lib/listings/public-copy";
 
 // Occupancy changes daily and a listing can be unpublished at any time -
 // this must never be served from a stale build-time cache.
@@ -54,8 +54,6 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
   const publicDescription = publicListingCopy(listing.public_description);
   const omNumber = listing.om_number || "OM";
   const eyebrow = ["OFFERING MEMORANDUM", publicListingCopy(listing.submarket), "COLIVING"].filter(Boolean).join(" · ");
-  const ddDays = finiteDays(listing.dd_days);
-  const sellerSupportDays = finiteDays(listing.seller_support_days);
 
   const perRoom = listing.list_price && listing.total_rooms ? formatCurrency(Math.round(listing.list_price / listing.total_rooms)) : null;
   const hasOccupancy = listing.occupied_rooms != null && listing.total_rooms != null;
@@ -86,7 +84,6 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
       ? `Average ${Math.round(trendValues.reduce((sum, p) => sum + p.pct, 0) / trendValues.length)}% · low ${Math.min(...trendValues.map((p) => p.pct))}% · never below ${Math.min(...trendValues.map((p) => p.occupied ?? 0))} of ${listing.total_rooms ?? "?"} rooms`
       : null;
 
-  const showCapex = !!(listing.improvements && listing.improvements.length > 0);
   const otherListings = (await getPublicListings()).filter((l) => l.public_slug !== slug).slice(0, 3);
 
   const sectionHead = (title: string, numeral: string, extra?: React.ReactNode) => (
@@ -158,7 +155,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                 </p>
               </div>
               <div style={{ padding: "22px 26px 26px", borderRight: "1px solid #3a322c" }}>
-                <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#a39a8e" }}>CAP RATE BAND</p>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#a39a8e" }}>CAP RATE</p>
                 <p style={{ margin: "12px 0 0", fontFamily: "var(--font-om-serif)", fontSize: 38, lineHeight: 1, color: "#f4f1ec" }}>
                   {listing.band_cap_rate || (
                     <a href="#unlock" className="om-hover-light" style={{ color: "inherit", fontSize: 22, letterSpacing: "0.04em" }}>
@@ -229,12 +226,13 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
 
               <section id="financials">
                 {sectionHead("Financial overview", "02")}
-                {(listing.band_gross_rent || listing.band_expense_load || listing.band_cash_on_cash) && (
+                {(listing.band_gross_rent || listing.band_expense_load || listing.band_cash_on_cash || listing.band_cap_rate) && (
                   <div className="om-cells" style={cellGridStyle("repeat(auto-fit, minmax(min(200px, 100%), 1fr))")}>
                     {[
-                      { label: "GROSS SCHEDULED RENT", value: listing.band_gross_rent, caption: "All rooms at in-place weekly rates." },
-                      { label: "EXPENSE LOAD", value: listing.band_expense_load, caption: "Utilities, cleaning, platform fees, taxes, reserves." },
-                      { label: "LEVERED CASH-ON-CASH", value: listing.band_cash_on_cash, caption: "Conventional financing, current rates." },
+                      { label: "GROSS RENTS", value: listing.band_gross_rent, caption: "All rooms at in-place weekly rates." },
+                      { label: "OPERATING EXPENSES", value: listing.band_expense_load, caption: "Utilities, cleaning, platform fees, taxes, reserves." },
+                      { label: "CASH-ON-CASH", value: listing.band_cash_on_cash, caption: "Conventional financing, current rates." },
+                      { label: "CAP RATE", value: listing.band_cap_rate, caption: "On in-place income." },
                     ]
                       .filter((c) => c.value)
                       .map((cell, i, arr) => (
@@ -247,12 +245,12 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                   </div>
                 )}
                 <p style={{ margin: "22px 0 0", fontSize: 14, lineHeight: 1.7, color: "#574f47", maxWidth: "70ch" }}>
-                  {listing.band_gross_rent || listing.band_expense_load || listing.band_cash_on_cash
+                  {listing.band_gross_rent || listing.band_expense_load || listing.band_cash_on_cash || listing.band_cap_rate
                     ? "The asking price reflects both local comparable sales and the income the asset produces — coliving houses are underwritten on revenue per room, not on the price-per-square-foot of the street alone."
                     : "Line-item rent, expenses, and cap rate are locked until you share a name and a phone or email. Nothing here is a projection — it is the seller’s underwriting, unlocked on this page."}
                 </p>
                 <div id="unlock" style={{ paddingTop: 6 }}>
-                  <FinancialGate slug={slug} omNumber={omNumber} showCapex={showCapex} improvements={listing.improvements} />
+                  <FinancialGate slug={slug} omNumber={omNumber} />
                 </div>
               </section>
 
@@ -384,7 +382,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                 <div>
                   <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.18em", color: "#6b6259" }}>MORE OF CAITLYN&apos;S LISTINGS</p>
                   {otherListings.map((l) => {
-                    const cover = l.padsplit_photo_urls?.[0] ?? l.photoUrls[0] ?? null;
+                    const cover = l.coverPhotoUrl;
                     const occ = l.occupied_rooms != null && l.total_rooms != null ? `${l.occupied_rooms}/${l.total_rooms} occupied` : "Coming soon";
                     return (
                       <Link
@@ -429,36 +427,6 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 72, paddingTop: 72 }}>
-            <section id="process">
-              {sectionHead("Process & timeline", "05")}
-              <div className="om-process" style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
-                {[
-                  { numeral: "I", title: "Unlock the financials", body: "Detail opens on this page; the T12 and earnings statement follow by text and email." },
-                  { numeral: "II", title: "Review & submit an offer", body: "Run the numbers yourself, then send your terms." },
-                  {
-                    numeral: "III",
-                    title: "Tour & inspections",
-                    body: ddDays
-                      ? `Both during a ${ddDays}-day due diligence period, so the members living here aren't disrupted before there's a contract.`
-                      : "Tour and inspections happen during due diligence, so the members living here aren't disrupted before there's a contract.",
-                  },
-                  {
-                    numeral: "IV",
-                    title: "Transaction & hand off",
-                    body: sellerSupportDays
-                      ? `Rooms, furniture, and listings transfer in place, with ${sellerSupportDays} days of seller support.`
-                      : "Rooms, furniture, and listings transfer in place, with seller support after closing.",
-                  },
-                ].map((step, i) => (
-                  <div key={step.numeral} style={{ padding: i === 3 ? "24px 0 26px 26px" : i === 0 ? "24px 26px 26px 0" : "24px 26px 26px", borderBottom: "1px solid #ddd6cc", borderRight: i === 3 ? undefined : "1px solid #ddd6cc" }}>
-                    <p style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontSize: 30, lineHeight: 1, color: "#cc4a37" }}>{step.numeral}</p>
-                    <p style={{ margin: "14px 0 0", fontSize: 14, fontWeight: 600, color: "#211c19" }}>{step.title}</p>
-                    <p style={{ margin: "7px 0 0", fontSize: 14, lineHeight: 1.65, color: "#574f47" }}>{step.body}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
-
             <OfferSection slug={slug} nickname={nickname} omNumber={omNumber} />
 
             {listing.show_seller_section && (

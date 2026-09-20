@@ -49,6 +49,7 @@ export function snapshotListingForOmApply(row: OmApplyListingRow): ListingOmSnap
     om_number: row.om_number ?? null,
     submarket: row.submarket ?? null,
     total_rooms: row.total_rooms ?? null,
+    padsplit_url: row.padsplit_url ?? null,
     band_gross_rent: row.band_gross_rent ?? null,
     band_expense_load: row.band_expense_load ?? null,
     band_cash_on_cash: row.band_cash_on_cash ?? null,
@@ -86,6 +87,7 @@ export function omApplyWritePatch(planPatch: OmApplyPatch): Record<string, unkno
   if (planPatch.band_expense_load !== undefined) patch.band_expense_load = planPatch.band_expense_load;
   if (planPatch.band_cash_on_cash !== undefined) patch.band_cash_on_cash = planPatch.band_cash_on_cash;
   if (planPatch.band_cap_rate !== undefined) patch.band_cap_rate = planPatch.band_cap_rate;
+  if (planPatch.padsplit_url !== undefined) patch.padsplit_url = planPatch.padsplit_url;
   if (planPatch.improvements !== undefined) patch.improvements = planPatch.improvements;
   return patch;
 }

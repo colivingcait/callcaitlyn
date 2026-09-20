@@ -4,15 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateExcludedPhotos } from "@/app/(app)/listings/actions";
 import { asPhotoList, asUrlList } from "@/lib/listings/crm-marketing-fields";
+import { isExteriorPadsplitPhoto } from "@/lib/listings/padsplit-photos";
 import type { PadsplitPhoto } from "@/types/database";
 
-const EXTERIOR = /exterior|front|back|yard|street|curb|driveway|porch|roof|outside/i;
-
-// The public page auto-filters exterior shots by category (withheld at the
-// seller's request), but the regex will miss things - this is the manual
-// override on top, per the client's explicit requirement. Every scraped
-// photo is shown here with its auto-filter result, so she can see what got
-// dropped and why, and override any individual one either direction.
+// The public page auto-filters exterior shots (category, tags, alt/title,
+// filename — see lib/listings/padsplit-photos.ts). This is the manual
+// override on top. Every scraped photo is shown here with its auto-filter
+// result, so she can see what got dropped and why, and override any
+// individual one either direction.
 export function PhotoExcludeManager({ listingId, photos, excludedUrls }: { listingId: string; photos: PadsplitPhoto[] | null; excludedUrls: string[] | null }) {
   const router = useRouter();
   const safePhotos = asPhotoList(photos);
@@ -37,7 +36,7 @@ export function PhotoExcludeManager({ listingId, photos, excludedUrls }: { listi
       <p className="mb-2 text-xs text-neutral-500">{saving ? "Saving…" : "Uncheck a photo to keep it off the public page."}</p>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {safePhotos.map((photo) => {
-          const autoFiltered = EXTERIOR.test(photo.category ?? "");
+          const autoFiltered = isExteriorPadsplitPhoto(photo);
           const isExcluded = excluded.has(photo.url) || autoFiltered;
           return (
             <label key={photo.url} className="relative block cursor-pointer overflow-hidden rounded-xl border border-neutral-200">

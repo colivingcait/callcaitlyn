@@ -5,24 +5,17 @@ import { useRouter } from "next/navigation";
 import { FileText, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { addListingDocument, removeListingDocument } from "@/app/(app)/listings/actions";
-import { LISTING_DOCUMENT_ACCEPT, LISTING_DOCUMENT_LABELS, LISTING_DOCUMENT_TYPES } from "@/lib/listings/documents";
+import { LISTING_DOCUMENT_ACCEPT, LISTING_DOCUMENT_LABELS, MARKETING_UPLOAD_TYPES } from "@/lib/listings/documents";
 import type { ListingDocument, ListingDocumentType } from "@/types/database";
 
-// Mirrors PhotoUploader's shape (upload straight to storage from the
-// browser, then record the path), but against the private
-// "listing-documents" bucket and typed by doc type instead of a bare
-// photo_paths array. earnings_statement + t12 are the original packet
-// slots; buyer_workbook is the post-unlock xlsx — a third slot, not an
-// overload of those two. Unlock serves a signed URL for every row.
+// Upload slot is buyer_workbook only. earnings_statement / t12 remain on
+// the DB enum and storage paths, but Marketing no longer offers them.
+// Unlock still signs buyer_workbook as the post-gate download.
 export function DocumentUploader({ listingId, documents }: { listingId: string; documents: ListingDocument[] }) {
   const router = useRouter();
   const [uploading, setUploading] = useState<ListingDocumentType | null>(null);
   const [error, setError] = useState("");
-  const fileInputs = {
-    earnings_statement: useRef<HTMLInputElement>(null),
-    t12: useRef<HTMLInputElement>(null),
-    buyer_workbook: useRef<HTMLInputElement>(null),
-  };
+  const fileInput = useRef<HTMLInputElement>(null);
   const byType = new Map(documents.map((d) => [d.doc_type, d]));
 
   async function handleFile(docType: ListingDocumentType, e: React.ChangeEvent<HTMLInputElement>) {
@@ -41,8 +34,7 @@ export function DocumentUploader({ listingId, documents }: { listingId: string; 
     }
 
     setUploading(null);
-    const input = fileInputs[docType].current;
-    if (input) input.value = "";
+    if (fileInput.current) fileInput.current.value = "";
     router.refresh();
   }
 
@@ -53,10 +45,10 @@ export function DocumentUploader({ listingId, documents }: { listingId: string; 
 
   return (
     <div>
-      <p className="mb-1.5 text-sm font-medium text-neutral-700">Financial documents</p>
-      <p className="mb-2 text-xs text-neutral-400">Sent automatically (email + text) to anyone who requests the packet on the public page.</p>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        {LISTING_DOCUMENT_TYPES.map((docType) => {
+      <p className="mb-1.5 text-sm font-medium text-neutral-700">Buyer workbook</p>
+      <p className="mb-2 text-xs text-neutral-400">Vera&apos;s workbook is emailed and texted after unlock, and offered as a download on the public OM.</p>
+      <div className="grid grid-cols-1 gap-2">
+        {MARKETING_UPLOAD_TYPES.map((docType) => {
           const doc = byType.get(docType);
           return (
             <div key={docType} className="flex items-center justify-between gap-2 rounded-xl border border-neutral-200 px-3 py-2.5">
@@ -75,7 +67,7 @@ export function DocumentUploader({ listingId, documents }: { listingId: string; 
                 )}
                 <button
                   type="button"
-                  onClick={() => fileInputs[docType].current?.click()}
+                  onClick={() => fileInput.current?.click()}
                   disabled={uploading === docType}
                   className="rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs font-semibold text-neutral-700 disabled:opacity-50"
                 >
@@ -83,7 +75,7 @@ export function DocumentUploader({ listingId, documents }: { listingId: string; 
                 </button>
               </div>
               <input
-                ref={fileInputs[docType]}
+                ref={fileInput}
                 type="file"
                 accept={LISTING_DOCUMENT_ACCEPT[docType]}
                 className="hidden"

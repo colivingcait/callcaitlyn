@@ -629,7 +629,8 @@ export async function removeListingDocument(listingId: string, docType: ListingD
 // Every field the public offering-memorandum page shows beyond what
 // BasicsForm already covers - identity (since the address is never shown
 // there), property detail, the public description, the four "band" display
-// strings, co-listing agent, and process terms.
+// strings, and co-listing agent. Process terms (dd_days / seller_support)
+// are no longer edited from Marketing.
 export async function updateListingOmFields(
   listingId: string,
   input: {

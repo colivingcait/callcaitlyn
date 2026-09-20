@@ -6,7 +6,6 @@ const LINKS = [
   { href: "#property", label: "PROPERTY" },
   { href: "#financials", label: "FINANCIALS" },
   { href: "#occupancy", label: "OCCUPANCY" },
-  { href: "#process", label: "PROCESS" },
 ] as const;
 
 export function OmHeaderNav() {

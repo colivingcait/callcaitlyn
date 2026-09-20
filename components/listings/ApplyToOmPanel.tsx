@@ -26,6 +26,7 @@ function snapshot(listing: Listing) {
     band_expense_load: listing.band_expense_load,
     band_cash_on_cash: listing.band_cash_on_cash,
     band_cap_rate: listing.band_cap_rate,
+    padsplit_url: listing.padsplit_url,
     financials: listing.financials,
     improvements: listing.improvements,
   };

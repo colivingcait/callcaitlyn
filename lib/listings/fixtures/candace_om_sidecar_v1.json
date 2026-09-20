@@ -31,10 +31,16 @@
     "vacancy_pct": "13.7",
     "occupancy_summary": "TTM bed-night occupancy 86.3% (8 rooms). Soft months: Jun ~57.5%, Sep in-flight ~66%.",
     "platform_fees": "8178.18",
+    "padsplit_fees": "8178.18",
     "pm_fees": "1075.00",
     "expense_load_pct": "19.7",
     "dscr": "1.61",
     "purchase_price": "400000",
+    "gross_rents": "61483.07",
+    "net_earnings": "53304.89",
+    "opex": "-12088.18",
+    "projected_debt_service": "25547.62",
+    "cash_on_cash": "19.59",
     "scenarios": [
       {
         "label": "20% down / 7% / 30yr DSCR",

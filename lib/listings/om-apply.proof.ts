@@ -20,7 +20,7 @@ function read(rel: string) {
   return readFileSync(join(root, rel), "utf8");
 }
 
-const fixtureRaw = readFileSync(join(root, "lib/listings/fixtures/candace_om_sidecar_v1.json"), "utf8");
+const fixtureRaw = readFileSync(join(root, "lib/listings/fixtures/candace_om_sidecar_v2.json"), "utf8");
 
 const CANDACE_ID = "c0a1dace-0000-4000-8000-000000000001";
 const WRONG_ID = "00000000-0000-4000-8000-000000000099";
@@ -32,6 +32,7 @@ const candace: OmApplyListingRow = {
   om_number: "OM-CANDACE",
   submarket: null,
   total_rooms: null,
+  padsplit_url: null,
   band_gross_rent: null,
   band_expense_load: null,
   band_cash_on_cash: null,
@@ -64,14 +65,29 @@ async function runApplyCases() {
   assert.equal(applied.ok, true, "apply-with-listing-id must succeed");
   assert.equal(applied.listingId, CANDACE_ID, "writes must target listings.id UUID");
   assert.equal(applied.publicSlug, "candace");
-  assert.equal(applied.patch.band_gross_rent, "$60k–$65k TTM collected");
-  assert.equal(applied.patch.band_expense_load, "15–20% of gross");
-  assert.equal(applied.patch.band_cash_on_cash, "18–22% @ 20% down / 7% / 30yr DSCR");
-  assert.equal(applied.patch.band_cap_rate, "10–11%");
-  const financials = applied.patch.financials as { noi?: string; t12?: unknown[]; deal_key?: string };
+  assert.equal(applied.patch.band_gross_rent, "$5.0–5.5k/mo");
+  assert.equal(applied.patch.band_expense_load, "high-teens%");
+  assert.equal(applied.patch.band_cash_on_cash, "high-teens to low-20s%");
+  assert.equal(applied.patch.band_cap_rate, "low-10s%");
+  assert.equal(applied.patch.padsplit_url, "https://www.padsplit.com/rooms-for-rent/listing/8299");
+  const financials = applied.patch.financials as {
+    noi?: string;
+    t12?: unknown[];
+    deal_key?: string;
+    padsplit_fees?: string;
+    gross_rents?: string;
+    net_earnings?: string;
+    opex?: string;
+    buyer_workbook_filename?: string;
+  };
   assert.equal(financials.noi, "41216.71");
-  assert.equal(Array.isArray(financials.t12) && financials.t12.length, 10);
+  assert.equal(Array.isArray(financials.t12) && financials.t12.length, 7);
   assert.equal(financials.deal_key, "candace");
+  assert.equal(financials.padsplit_fees, "8178.18");
+  assert.equal(financials.gross_rents, "61483.07");
+  assert.equal(financials.net_earnings, "53304.89");
+  assert.equal(financials.opex, "12088.18");
+  assert.equal(financials.buyer_workbook_filename, "Candace_OM_Complete.xlsx");
   assert.equal(applied.patch.nickname, "Candace");
   assert.equal(applied.patch.submarket, "Atlanta metro");
   assert.equal(applied.patch.total_rooms, 8);

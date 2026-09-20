@@ -1,20 +1,11 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Listing, PadsplitPhoto } from "@/types/database";
+import { interiorPhotos, listingCoverPhotoUrl } from "@/lib/listings/padsplit-photos";
+
+export { interiorPhotos, listingCoverPhotoUrl } from "@/lib/listings/padsplit-photos";
 
 const OWNER_ID = process.env.CRM_OWNER_USER_ID;
-
-// Exterior shots are withheld from the public OM page at the seller's
-// request, even though the scraper pulls everything PadSplit has. This is
-// an auto-filter, not the whole story - excluded_photo_urls is the manual
-// override for whatever this regex misses (or a specific interior shot she
-// wants pulled for some other reason).
-const EXTERIOR = /exterior|front|back|yard|street|curb|driveway|porch|roof|outside/i;
-
-export function interiorPhotos(listing: Pick<Listing, "padsplit_photos" | "excluded_photo_urls">): PadsplitPhoto[] {
-  const excluded = new Set(listing.excluded_photo_urls ?? []);
-  return (listing.padsplit_photos ?? []).filter((p) => !excluded.has(p.url)).filter((p) => !EXTERIOR.test(p.category ?? ""));
-}
 
 export type OccupancyTrendPoint = { label: string; pct: number; occupied: number | null; total: number | null };
 
@@ -91,7 +82,9 @@ export async function getPublicListing(slug: string): Promise<PublicListing | nu
   return { ...listing, photoUrls, photos, occupancyTrend };
 }
 
-export async function getPublicListings(): Promise<(Listing & { photoUrls: string[] })[]> {
+export type PublicListingCard = Listing & { photoUrls: string[]; coverPhotoUrl: string | null };
+
+export async function getPublicListings(): Promise<PublicListingCard[]> {
   if (!OWNER_ID) return [];
   const admin = createAdminClient();
   const { data: listings } = await admin
@@ -102,8 +95,12 @@ export async function getPublicListings(): Promise<(Listing & { photoUrls: strin
     .neq("status", "closed")
     .order("created_at", { ascending: false });
 
-  return (listings ?? []).map((listing) => ({
-    ...listing,
-    photoUrls: (listing.photo_paths as string[]).map((p) => admin.storage.from("listing-photos").getPublicUrl(p).data.publicUrl),
-  }));
+  return (listings ?? []).map((listing) => {
+    const photoUrls = (listing.photo_paths as string[]).map((p) => admin.storage.from("listing-photos").getPublicUrl(p).data.publicUrl);
+    return {
+      ...listing,
+      photoUrls,
+      coverPhotoUrl: listingCoverPhotoUrl(listing, photoUrls),
+    };
+  });
 }

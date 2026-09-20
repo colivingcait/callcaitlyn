@@ -296,9 +296,13 @@ export type ListingFinancialsScenario = {
   loan_amount?: string;
 };
 
-// Gated underwriting JSONB. Public OM never reads these exact figures —
-// only the four band_* display strings. Extra keys from an Apply-to-OM
-// sidecar (meta, deal_key, etc.) are preserved at runtime.
+// Gated underwriting JSONB. Public OM never reads these exact figures
+// until unlock; the locked page only shows the four band_* strings.
+// Canonical gated keys (purchase_price, gross_rents, padsplit_fees,
+// net_earnings, opex, projected_debt_service, cash_on_cash, cap_rate,
+// dscr) are what the post-unlock UI renders. Older aliases (platform_fees,
+// noi, t12, scenarios) stay so Apply-to-OM / Vera JSON can hydrate the
+// gated keys without new columns. Extra sidecar keys are preserved.
 export type ListingFinancials = {
   t12: ListingFinancialsT12Line[];
   noi: string;
@@ -306,10 +310,16 @@ export type ListingFinancials = {
   vacancy_pct?: string;
   occupancy_summary?: string;
   platform_fees?: string;
+  padsplit_fees?: string;
   pm_fees?: string;
   expense_load_pct?: string;
   dscr?: string;
   purchase_price?: string;
+  gross_rents?: string;
+  net_earnings?: string;
+  opex?: string;
+  projected_debt_service?: string;
+  cash_on_cash?: string;
   scenarios: ListingFinancialsScenario[];
   meta?: unknown;
   deal_key?: string;
@@ -320,7 +330,13 @@ export type ListingDocumentType = "earnings_statement" | "t12" | "buyer_workbook
 
 export type ListingImprovement = { item: string; year: string; cost: string };
 
-export type PadsplitPhoto = { url: string; category: string | null };
+export type PadsplitPhoto = {
+  url: string;
+  category: string | null;
+  alt?: string | null;
+  title?: string | null;
+  tags?: string[] | null;
+};
 
 export interface ListingOccupancySnapshot {
   id: string;

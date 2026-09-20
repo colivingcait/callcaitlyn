@@ -7,6 +7,7 @@ import { notifyNewLead } from "@/lib/push/send-push";
 import { sendGmailMessage, textToHtml } from "@/lib/google/send-email";
 import { sendQuoText } from "@/lib/quo/send-message";
 import { LISTING_DOCUMENT_LABELS } from "@/lib/listings/documents";
+import { normalizeFinancials } from "@/lib/listings/crm-marketing-fields";
 import type { ListingFinancials } from "@/types/database";
 
 const OWNER_ID = process.env.CRM_OWNER_USER_ID;
@@ -18,8 +19,8 @@ const OWNER_PHONE = "+16788848494";
 // keep working indefinitely.
 const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7;
 
-// Includes buyer_workbook so the post-unlock signed packet lists the xlsx
-// alongside earnings_statement / t12. Do not overload those two slots.
+// buyer_workbook is the post-unlock download. Older earnings_statement /
+// t12 rows may still exist; they are only sent if no workbook is uploaded.
 const DOC_LABELS: Record<string, string> = LISTING_DOCUMENT_LABELS;
 
 type ActionResult = { ok: true } | { ok: false; error: string };
@@ -68,7 +69,7 @@ async function captureContact(
 export async function unlockListingFinancials(
   slug: string,
   input: { name: string; phone: string; email: string },
-): Promise<ActionResult & { financials?: ListingFinancials }> {
+): Promise<ActionResult & { financials?: ListingFinancials; workbookUrl?: string | null }> {
   if (!OWNER_ID) return { ok: false, error: "Not configured" };
   if (!input.phone.trim() && !input.email.trim()) return { ok: false, error: "Enter a phone number or email" };
 
@@ -96,18 +97,24 @@ export async function unlockListingFinancials(
   });
 
   const { data: documents } = await admin.from("listing_documents").select("doc_type, storage_path").eq("listing_id", listing.id);
+  const allDocs = documents ?? [];
+  const workbookDocs = allDocs.filter((doc) => doc.doc_type === "buyer_workbook");
+  const packet = workbookDocs.length > 0 ? workbookDocs : allDocs;
   const links: string[] = [];
-  for (const doc of documents ?? []) {
+  let workbookUrl: string | null = null;
+  for (const doc of packet) {
     const { data: signed } = await admin.storage.from("listing-documents").createSignedUrl(doc.storage_path, SIGNED_URL_TTL_SECONDS);
-    if (signed?.signedUrl) links.push(`${DOC_LABELS[doc.doc_type] ?? doc.doc_type}: ${signed.signedUrl}`);
+    if (!signed?.signedUrl) continue;
+    links.push(`${DOC_LABELS[doc.doc_type] ?? doc.doc_type}: ${signed.signedUrl}`);
+    if (doc.doc_type === "buyer_workbook" && !workbookUrl) workbookUrl = signed.signedUrl;
   }
 
-  const packetNames = (documents ?? [])
+  const packetNames = packet
     .map((doc) => DOC_LABELS[doc.doc_type] ?? doc.doc_type)
     .filter((label, i, arr) => arr.indexOf(label) === i);
   const packetPhrase =
     packetNames.length === 0
-      ? "source documents"
+      ? "buyer workbook"
       : packetNames.length === 1
         ? packetNames[0]
         : packetNames.length === 2
@@ -117,12 +124,13 @@ export async function unlockListingFinancials(
   const messageBody =
     links.length > 0
       ? `Hi${firstName ? ` ${firstName}` : ""}! Here's the ${packetPhrase} for ${nickname}.\n\n${links.join("\n")}\n\nLet me know if you have any questions.\n\nCaitlyn Verdugo with KW Metro Atl`
-      : `Hi${firstName ? ` ${firstName}` : ""}! Thanks for unlocking the numbers on ${nickname} — I'll follow up shortly with the source documents.\n\nCaitlyn Verdugo with KW Metro Atl`;
+      : `Hi${firstName ? ` ${firstName}` : ""}! Thanks for unlocking the numbers on ${nickname} — I'll follow up shortly with the buyer workbook.\n\nCaitlyn Verdugo with KW Metro Atl`;
 
   if (email) await sendGmailMessage(admin, OWNER_ID, email, `Financials — ${nickname}`, textToHtml(messageBody));
   if (phone) await sendQuoText(phone, messageBody);
 
-  return { ok: true, financials: (listing.financials as ListingFinancials | null) ?? undefined };
+  const financials = listing.financials ? normalizeFinancials(listing.financials as ListingFinancials) : undefined;
+  return { ok: true, financials, workbookUrl };
 }
 
 // The offer modal: not a contract, just terms she can call to confirm.
