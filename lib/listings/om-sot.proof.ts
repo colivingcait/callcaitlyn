@@ -60,15 +60,28 @@ assert.ok(scrape.includes("interiorUrls"));
 
 const omPage = read("app/listing/[slug]/page.tsx");
 assert.equal(omPage.includes("Process & timeline"), false);
+assert.equal(omPage.includes("Process"), false);
 assert.equal(omPage.includes('id="process"'), false);
+assert.equal(omPage.includes("om-process"), false);
 assert.equal(omPage.includes("dd_days"), false);
+assert.equal(omPage.includes("seller_support"), false);
+assert.equal(omPage.includes("finiteDays"), false);
 assert.ok(omPage.includes("GROSS RENTS"));
 assert.ok(omPage.includes("OPERATING EXPENSES"));
 assert.ok(omPage.includes("CASH-ON-CASH"));
 assert.ok(omPage.includes("CAP RATE"));
 
+const omCss = read("app/listing/om.css");
+assert.equal(omCss.includes("#process"), false);
+assert.equal(omCss.includes("om-process"), false);
+
+const publicCopy = read("lib/listings/public-copy.ts");
+assert.equal(publicCopy.includes("finiteDays"), false);
+assert.equal(publicCopy.includes("due-diligence"), false);
+
 const nav = read("components/listings/om/OmHeaderNav.tsx");
 assert.equal(nav.includes("#process"), false);
+assert.equal(nav.includes("PROCESS"), false);
 
 const gate = read("components/listings/om/FinancialGate.tsx");
 assert.ok(gate.includes("GATED_UNDERWRITING_FIELDS"));
