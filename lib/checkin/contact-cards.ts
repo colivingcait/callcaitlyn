@@ -1,3 +1,4 @@
+import { CAITLYN_HEADSHOT_SRC } from "@/lib/brand/caitlyn";
 import type { EventSeriesKey } from "@/lib/crm/nearest-event";
 
 // Shared between the QR check-in success screen (app/checkin/[series]/
@@ -27,7 +28,7 @@ export type ContactCard = {
 export const CAITLYN_CARD: ContactCard = {
   name: "Caitlyn Verdugo",
   role: "Realtor | Investor, Keller Williams Metro Atlanta",
-  photo: "/images/checkin/caitlyn.jpg",
+  photo: CAITLYN_HEADSHOT_SRC,
   phone: "(678) 884-8494",
   email: "cv.sellshomes@gmail.com",
   bookingUrl: "/book",

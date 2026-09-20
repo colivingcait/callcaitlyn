@@ -10,6 +10,7 @@ import { QuickAddMenu } from "./QuickAddMenu";
 import { countFor as countForCounts } from "@/lib/nav/countFor";
 import { cn } from "@/lib/utils";
 import { BrandWordmark } from "@/components/brand/BrandWordmark";
+import { CAITLYN_HEADSHOT_SRC } from "@/lib/brand/caitlyn";
 
 export type { NavCounts };
 
@@ -27,9 +28,21 @@ export function Sidebar({ userEmail, counts = {} }: { userEmail?: string | null;
 
   return (
     <aside className="hidden w-[220px] shrink-0 flex-col border-r border-[#eadfd6] bg-[#f7f1ea] px-3 py-[22px] lg:flex">
-      <div className="px-2.5 pb-[22px]">
-        <BrandWordmark />
-        {userEmail && <p className="mt-0.5 truncate text-sm text-neutral-400">{userEmail}</p>}
+      <div className="flex items-center gap-2.5 px-2.5 pb-[22px]">
+        {/* Same public file check-in already serves. Face sits high in the
+            1080 square, so object-position keeps the crop on her head. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={CAITLYN_HEADSHOT_SRC}
+          alt="Caitlyn Verdugo"
+          width={36}
+          height={36}
+          className="h-9 w-9 shrink-0 rounded-full object-cover object-[center_18%] ring-1 ring-[#eadfd6]"
+        />
+        <div className="min-w-0">
+          <BrandWordmark />
+          {userEmail && <p className="mt-0.5 truncate text-sm text-neutral-400">{userEmail}</p>}
+        </div>
       </div>
 
       <button
