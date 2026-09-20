@@ -207,7 +207,7 @@ export function OfferSection({ slug, nickname, omNumber }: { slug: string; nickn
                       id="loi-notes"
                       name="notes"
                       rows={3}
-                      placeholder="Inspection, appraisal, proof of funds attached, questions on the T12…"
+                      placeholder="Inspection, appraisal, proof of funds attached, questions on the numbers…"
                       className="om-input-boxed"
                       style={{ ...boxedInput, lineHeight: 1.6, resize: "vertical" }}
                     />

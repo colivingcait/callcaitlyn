@@ -11,7 +11,7 @@ import { UnlockedProvider } from "@/components/listings/om/UnlockContext";
 import { OmHeaderNav } from "@/components/listings/om/OmHeaderNav";
 import { publicListingCopy } from "@/lib/listings/public-copy";
 import { asListingFinancials } from "@/lib/listings/crm-marketing-fields";
-import { occupancyFromFinancials, occupancyTrendHasSidecarData, t12OccupancySummary } from "@/lib/listings/occupancy";
+import { occupancyFromFinancials, t12OccupancySummary } from "@/lib/listings/occupancy";
 import { formatPublicBand } from "@/lib/listings/public-bands";
 
 // Occupancy changes daily and a listing can be unpublished at any time -
@@ -24,7 +24,7 @@ const OWNER_EMAIL = "cv.sellshomes@gmail.com";
 const PROCESS_STEPS = [
   {
     title: "Review the offering",
-    body: "Everything on this page, plus the line-item underwriting and buyer workbook once you unlock. Questions get answered before you write anything.",
+    body: "Everything on this page, plus the line-item underwriting once you unlock. Questions get answered before you write anything.",
   },
   {
     title: "Make an offer",
@@ -110,7 +110,6 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
   ].filter((c) => c.value);
 
   const sidecarOccupancy = occupancyFromFinancials(asListingFinancials(listing.financials));
-  const hasT12 = occupancyTrendHasSidecarData(listing.occupancyTrend);
   const trendSummary = t12OccupancySummary(sidecarOccupancy, listing.occupancyTrend);
 
   const otherListings = (await getPublicListings()).filter((l) => l.public_slug !== slug).slice(0, 3);
@@ -251,19 +250,18 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                       ))}
                     </div>
                     <p style={{ margin: "18px 0 0", fontSize: 14, lineHeight: 1.7, color: "#574f47", maxWidth: "62ch" }}>
-                      Scraped from the property&apos;s live PadSplit listing
                       {listing.last_scraped_at
-                        ? ` — last pulled ${new Date(listing.last_scraped_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" })} ET`
-                        : ""}
-                      . This is what the house is doing right now, which is not always what a T12 shows.
+                        ? `Last updated ${new Date(listing.last_scraped_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" })} ET from the property's live PadSplit listing.`
+                        : "Current occupancy from the property's live PadSplit listing."}
                     </p>
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 18, flexWrap: "wrap", paddingTop: 34 }}>
-                    <p style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontSize: 22, color: "#211c19" }}>T12</p>
-                    {trendSummary && <p style={{ margin: 0, fontSize: 13, color: "#574f47" }}>{trendSummary}</p>}
-                  </div>
-                  <div className="om-occupancy-chart" style={{ marginTop: 22 }}>
+                  {trendSummary && (
+                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 18, flexWrap: "wrap", paddingTop: 34 }}>
+                      <p style={{ margin: 0, fontSize: 13, color: "#574f47" }}>{trendSummary}</p>
+                    </div>
+                  )}
+                  <div className="om-occupancy-chart" style={{ marginTop: trendSummary ? 22 : 34 }}>
                     <div className="om-occupancy-chart-inner" style={{ display: "grid", gridTemplateColumns: "repeat(12, minmax(0,1fr))", gap: 5, alignItems: "end", height: 132 }}>
                       {listing.occupancyTrend.map((month, i) => (
                         <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 9, height: "100%", justifyContent: "flex-end" }}>
@@ -281,11 +279,6 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                       ))}
                     </div>
                   </div>
-                  <p style={{ margin: "16px 0 0", fontSize: 13, lineHeight: 1.6, color: "#574f47", maxWidth: "74ch" }}>
-                    {hasT12
-                      ? "T12 occupancy is from Vera's buyer workbook (bed-night). The live count above is today's PadSplit snapshot."
-                      : "T12 occupancy comes from Vera's buyer workbook. Apply the sidecar to populate this chart. The live count above is today's PadSplit snapshot."}
-                  </p>
                 </section>
               )}
 
