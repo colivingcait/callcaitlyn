@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   commissionExportFilename,
   commissionKpis,
+  commissionPeriodRangeLabel,
   commissionPeriodBounds,
   dealPayStatus,
   dealPeriodDate,
@@ -105,6 +106,8 @@ const kpis = commissionKpis(rows);
 assert.equal(kpis.paidCount, 1);
 assert.ok(kpis.pendingCount >= 2);
 assert.equal(kpis.grossGci, 12000);
+assert.equal(kpis.paidAmount, 12000);
+assert.ok(commissionPeriodRangeLabel("this_month", now).includes("September"));
 
 const csv = exportCommissionRows(rows);
 assert.ok(csv.startsWith("Address/deal,Side,Stage,GCI,Split %,Your net,Status,Due date"));
@@ -117,10 +120,12 @@ assert.ok(page.includes("max-w-[1400px]"), "Commissions is a desktop page, not a
 assert.ok(page.includes("PeriodFilter"));
 assert.ok(page.includes("CommissionKpis"));
 assert.ok(page.includes("/api/commissions/export?period="));
+assert.ok(page.includes("rangeLabel") || page.includes("commissionPeriodRangeLabel"));
 assert.ok(page.includes("resolveCommissionPeriod"));
 assert.equal(page.includes("CapYearToggle"), false, "period filter replaces the year tabs as the primary chrome");
 
 const table = read("components/commissions/CommissionTable.tsx");
+assert.ok(table.includes("Showing"), "table footer states the filtered period");
 assert.ok(table.includes("Address/deal"));
 assert.ok(table.includes("Split %"));
 assert.ok(table.includes("Your net"));
@@ -132,7 +137,12 @@ assert.equal(table.includes("Fee breakdown"), false, "tight table, not the 18-co
 const kpisUi = read("components/commissions/CommissionKpis.tsx");
 assert.ok(kpisUi.includes("Gross GCI"));
 assert.ok(kpisUi.includes("Net after splits"));
+assert.ok(kpisUi.includes("pendingAmount"));
+assert.ok(kpisUi.includes("paidAmount"));
 assert.ok(kpisUi.includes("lg:grid-cols-4"));
+
+const periodUi = read("components/commissions/PeriodFilter.tsx");
+assert.ok(periodUi.includes("<select") || periodUi.includes("select"), "period filter is a dropdown, not chip tabs");
 
 const exportRoute = read("app/api/commissions/export/route.ts");
 assert.ok(exportRoute.includes("resolveCommissionPeriod"));

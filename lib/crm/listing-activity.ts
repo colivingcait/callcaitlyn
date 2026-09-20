@@ -1,5 +1,7 @@
-import { formatCurrency } from "@/lib/utils";
+import { formatCompactCurrency } from "@/lib/utils";
 import { STATUS_LABEL } from "@/lib/listings/status";
+import { APP_TIMEZONE, formatLocal } from "@/lib/format-time";
+import { fromZonedTime } from "date-fns-tz";
 import type { ListingAgentMessage, ListingPriceChange, ListingSend, ListingStatus } from "@/types/database";
 
 export const RP_AUDIENCE_LABEL: Record<string, string> = {
@@ -84,6 +86,24 @@ function statusLabel(status: ListingStatus | null | undefined): string {
   return STATUS_LABEL[status] ?? status;
 }
 
+export function inboundChannelTitle(channel: ListingAgentMessage["channel"]): string {
+  if (channel === "call") return "Agent inbound call";
+  if (channel === "email") return "Agent inbound email";
+  return "Agent inbound text";
+}
+
+export function timelineWhenLabel(iso: string, now = new Date()): string {
+  const day = formatLocal(iso, "yyyy-MM-dd");
+  const today = formatLocal(now, "yyyy-MM-dd");
+  const time = formatLocal(iso, "h:mm a");
+  const dayStart = fromZonedTime(`${day}T00:00:00`, APP_TIMEZONE).getTime();
+  const todayStart = fromZonedTime(`${today}T00:00:00`, APP_TIMEZONE).getTime();
+  const diffDays = Math.round((todayStart - dayStart) / 86_400_000);
+  if (diffDays === 0) return `Today, ${time}`;
+  if (diffDays === 1) return `Yesterday, ${time}`;
+  return `${formatLocal(iso, "MMM d")}, ${time}`;
+}
+
 export function buildListingTimeline(input: {
   listingId: string;
   listingCreatedAt: string;
@@ -103,12 +123,13 @@ export function buildListingTimeline(input: {
   });
 
   for (const change of input.statusChanges) {
-    const from = change.old_status ? statusLabel(change.old_status) : null;
+    const next = statusLabel(change.new_status);
     events.push({
       key: `status:${change.id}`,
       kind: "status",
       when: change.occurred_at,
-      title: from ? `Status · ${from} → ${statusLabel(change.new_status)}` : `Status · ${statusLabel(change.new_status)}`,
+      title: `Status changed to ${next}`,
+      detail: next,
     });
   }
 
@@ -117,34 +138,32 @@ export function buildListingTimeline(input: {
       key: `price:${price.id}`,
       kind: "price",
       when: price.occurred_at,
-      title: `Price · ${formatCurrency(price.old_price)} → ${formatCurrency(price.new_price)}`,
+      title: `Price edited from ${formatCompactCurrency(price.old_price)} to ${formatCompactCurrency(price.new_price)}`,
     });
   }
 
   for (const send of input.sends) {
     if (send.status === "canceled") continue;
-    const audience = rpAudienceLabel(send.audience);
     events.push({
       key: `send:${send.id}`,
       kind: "rp_blast",
       when: send.created_at,
-      title: `RP blast sent · ${rpBlastTemplateName(send)}`,
-      detail: audience,
+      title: "RP blast sent",
+      detail: `Template: ${rpBlastTemplateName(send)}`,
       href: rpBlastHref(input.listingId, send.id),
-      hrefLabel: audience,
+      hrefLabel: "View Agents",
     });
   }
 
   for (const message of input.messages) {
     if (message.direction !== "inbound") continue;
-    const channel = lastChannelLabel(message.channel).toLowerCase();
     const brokerage = message.brokerage?.trim() || null;
     events.push({
       key: `inbound:${message.id}`,
       kind: "inbound_agent",
       when: message.occurred_at,
-      title: brokerage ? `Inbound ${channel} · ${message.name} · ${brokerage}` : `Inbound ${channel} · ${message.name}`,
-      detail: message.body?.trim() || undefined,
+      title: inboundChannelTitle(message.channel),
+      detail: [message.name, brokerage].filter(Boolean).join(" · ") || undefined,
       callBackPhone: message.phone,
       agentName: message.name,
       brokerage,
@@ -157,16 +176,16 @@ export function buildListingTimeline(input: {
         key: `unlock:${lead.id}`,
         kind: "investor_unlock",
         when: lead.occurred_at,
-        title: `Investor unlocked · ${lead.name}`,
-        detail: "Public OM unlock",
+        title: "Investor unlocked property",
+        detail: lead.name,
       });
     } else {
       events.push({
         key: `offer:${lead.id}`,
         kind: "offer",
         when: lead.occurred_at,
-        title: `Offer terms submitted · ${lead.name}`,
-        detail: lead.body ?? undefined,
+        title: "Offer terms submitted",
+        detail: lead.name,
       });
     }
   }

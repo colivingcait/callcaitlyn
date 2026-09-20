@@ -19,7 +19,7 @@ export function CommissionPromptButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-full bg-[#f7f1ea] px-2.5 py-1 text-[12px] font-semibold text-brand-700 hover:bg-brand-100"
+        className="text-[12px] font-medium text-neutral-400 hover:text-brand-700"
       >
         Commissions prompt
       </button>

@@ -3,50 +3,59 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRightLeft, Phone, Send, Tag, Unlock, FileSignature, CircleCheck, UserPlus } from "lucide-react";
+import { Phone, CircleCheck } from "lucide-react";
 import { openQuoCall } from "@/lib/quo/call-link";
 import { promoteAgentToContact } from "@/app/(app)/listings/actions";
 import { formatLocal } from "@/lib/format-time";
-import { buildAgentRail, buildListingTimeline, type ListingAgentTouch, type ListingPageLeadEvent, type ListingStatusChange, type ListingTimelineEvent } from "@/lib/crm/listing-activity";
+import {
+  buildAgentRail,
+  buildListingTimeline,
+  timelineWhenLabel,
+  type ListingAgentTouch,
+  type ListingPageLeadEvent,
+  type ListingStatusChange,
+  type ListingTimelineEvent,
+} from "@/lib/crm/listing-activity";
 import type { ListingPriceChange, ListingSend } from "@/types/database";
 
-const TIMELINE_ICON: Record<ListingTimelineEvent["kind"], React.ElementType> = {
-  status: ArrowRightLeft,
-  price: Tag,
-  rp_blast: Send,
-  inbound_agent: Phone,
-  investor_unlock: Unlock,
-  offer: FileSignature,
-  created: ArrowRightLeft,
-};
+function TimelineRow({ event, last }: { event: ListingTimelineEvent; last: boolean }) {
+  const when = timelineWhenLabel(event.when);
+  const inboundMeta = [event.detail, formatLocal(event.when, "h:mm a")].filter(Boolean).join(" · ");
 
-function TimelineRow({ event }: { event: ListingTimelineEvent }) {
-  const Icon = TIMELINE_ICON[event.kind];
   return (
-    <div className="flex items-start gap-3 border-b border-[#eadfd6] px-4 py-3.5 last:border-b-0">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f7f1ea] text-brand-700">
-        <Icon size={15} />
-      </span>
+    <li className="relative flex gap-4 pb-8 last:pb-0">
+      {!last && <span className="absolute left-[5px] top-3 bottom-0 w-px bg-[#e7ddd4]" />}
+      <span className="relative z-10 mt-1.5 h-[11px] w-[11px] shrink-0 rounded-full border-2 border-[#c9b8aa] bg-white" />
       <div className="min-w-0 flex-1">
-        <p className="font-semibold text-neutral-900">{event.title}</p>
-        {event.detail && <p className="mt-0.5 text-sm text-neutral-500">{event.detail}</p>}
-        {event.href && (
-          <Link href={event.href} className="mt-1 inline-block text-sm font-semibold text-brand-700 hover:underline">
-            {event.hrefLabel ?? "View audience"}
-          </Link>
-        )}
-        {event.kind === "inbound_agent" && event.callBackPhone && (
-          <button
-            type="button"
-            onClick={() => openQuoCall(event.callBackPhone!)}
-            className="mt-2 inline-flex items-center gap-1.5 rounded-[10px] border border-[#eadfd6] bg-white px-3 py-1.5 text-sm font-semibold text-neutral-800"
-          >
-            <Phone size={14} className="text-brand-600" /> Call back
-          </button>
-        )}
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[15px] font-semibold leading-5 text-neutral-900">{event.title}</p>
+            {event.kind === "inbound_agent" ? (
+              inboundMeta && <p className="mt-1 text-[13px] leading-5 text-neutral-500">{inboundMeta}</p>
+            ) : (
+              <>
+                {event.detail && <p className="mt-1 text-[13px] leading-5 text-neutral-500">{event.detail}</p>}
+                {event.href && (
+                  <Link href={event.href} className="mt-1 inline-block text-[13px] font-medium text-brand-600 underline-offset-2 hover:underline">
+                    {event.hrefLabel ?? "View Agents"}
+                  </Link>
+                )}
+                <p className="mt-1 text-[13px] leading-5 text-neutral-400">{when}</p>
+              </>
+            )}
+          </div>
+          {event.kind === "inbound_agent" && event.callBackPhone && (
+            <button
+              type="button"
+              onClick={() => openQuoCall(event.callBackPhone!)}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#eadfd6] bg-white px-3 py-1.5 text-[13px] font-medium text-neutral-700"
+            >
+              <Phone size={13} className="text-neutral-400" /> Call back
+            </button>
+          )}
+        </div>
       </div>
-      <time className="shrink-0 text-sm text-neutral-400">{formatLocal(event.when, "MMM d, h:mm a")}</time>
-    </div>
+    </li>
   );
 }
 
@@ -83,19 +92,15 @@ function AgentRailRow({
   }
 
   return (
-    <div className="border-b border-[#eadfd6] px-4 py-3.5 last:border-b-0">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="font-semibold text-neutral-900">{row.name}</p>
-          <p className="mt-0.5 text-sm text-neutral-500">
-            {[row.brokerage, row.lastChannel].filter(Boolean).join(" · ")}
-          </p>
-        </div>
-        <span className="shrink-0 rounded-full bg-[#f7f1ea] px-2.5 py-0.5 text-xs font-semibold text-brand-700">{row.lastChannel}</span>
+    <div className="border-b border-[#f0e7df] py-4 last:border-b-0 last:pb-0 first:pt-0">
+      <div className="flex items-start justify-between gap-4">
+        <p className="text-[15px] font-semibold text-neutral-900">{row.name}</p>
+        <p className="text-right text-[13px] text-neutral-500">{row.brokerage ?? "—"}</p>
       </div>
-      <div className="mt-2.5">
+      <p className="mt-0.5 text-right text-[13px] text-neutral-400">Last: {row.lastChannel}</p>
+      <div className="mt-3">
         {promoted ? (
-          <p className="flex items-center gap-1.5 text-sm text-emerald-700">
+          <p className="flex items-center justify-center gap-1.5 rounded-lg bg-[#f3ece6] py-2.5 text-[13px] font-semibold text-emerald-700">
             <CircleCheck size={14} /> Referral partner
           </p>
         ) : (
@@ -103,9 +108,9 @@ function AgentRailRow({
             type="button"
             onClick={promote}
             disabled={promoting}
-            className="inline-flex items-center gap-1.5 rounded-[10px] bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+            className="w-full rounded-lg bg-brand-600 py-2.5 text-[13px] font-semibold text-white disabled:opacity-50"
           >
-            <UserPlus size={13} /> {promoting ? "Adding…" : "Add as Referral Partner"}
+            {promoting ? "Adding…" : "Add as Referral Partner"}
           </button>
         )}
         {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
@@ -144,29 +149,28 @@ export function ActivityTab({
   const railRows = buildAgentRail(messages);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.85fr)] lg:items-start lg:gap-6">
-      <section className="rounded-2xl border border-[#eadfd6] bg-white">
-        <div className="border-b border-[#eadfd6] px-4 py-4">
-          <h2 className="text-base font-semibold text-neutral-900">Timeline</h2>
-          <p className="mt-0.5 text-sm text-neutral-500">Newest first · status, price, RP, inbound, unlocks, offers</p>
-        </div>
+    <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)] lg:gap-16">
+      <section>
         {timeline.length === 0 ? (
-          <p className="px-4 py-8 text-[15px] text-neutral-400">Nothing recorded yet.</p>
+          <p className="text-[15px] text-neutral-400">Nothing recorded yet.</p>
         ) : (
-          timeline.map((event) => <TimelineRow key={event.key} event={event} />)
+          <ol>
+            {timeline.map((event, index) => (
+              <TimelineRow key={event.key} event={event} last={index === timeline.length - 1} />
+            ))}
+          </ol>
         )}
       </section>
 
-      <aside className="rounded-2xl border border-[#eadfd6] bg-white lg:sticky lg:top-6">
-        <div className="border-b border-[#eadfd6] px-4 py-4">
-          <h2 className="text-base font-semibold text-neutral-900">Agent activity</h2>
-          <p className="mt-0.5 text-sm text-neutral-500">Not a contact until you add them as a referral partner.</p>
+      <aside className="rounded-2xl bg-white px-6 py-5 shadow-card">
+        <h2 className="text-[17px] font-semibold text-neutral-900">Agent activity</h2>
+        <div className="mt-4">
+          {railRows.length === 0 ? (
+            <p className="py-6 text-[15px] text-neutral-400">No agent calls or texts yet.</p>
+          ) : (
+            railRows.map((row) => <AgentRailRow key={row.key} row={row} listingId={listingId} onChanged={() => router.refresh()} />)
+          )}
         </div>
-        {railRows.length === 0 ? (
-          <p className="px-4 py-8 text-[15px] text-neutral-400">No agent calls or texts yet.</p>
-        ) : (
-          railRows.map((row) => <AgentRailRow key={row.key} row={row} listingId={listingId} onChanged={() => router.refresh()} />)
-        )}
       </aside>
     </div>
   );

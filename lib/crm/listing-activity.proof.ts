@@ -109,12 +109,12 @@ const timeline = buildListingTimeline({
 });
 
 assert.equal(timeline[0]?.kind, "inbound_agent", "newest first");
-assert.ok(timeline.some((e) => e.kind === "status" && e.title.includes("Active → Under contract")));
-assert.ok(timeline.some((e) => e.kind === "price" && e.title.includes("479,000") && e.title.includes("465,000")));
-assert.ok(timeline.some((e) => e.kind === "rp_blast" && e.title.includes("Coming Soon intro") && e.href?.includes("#listing-send-send-1")));
-assert.ok(timeline.some((e) => e.kind === "inbound_agent" && e.title.includes("Jamie Lee") && e.callBackPhone === "4045551212"));
-assert.ok(timeline.some((e) => e.kind === "investor_unlock" && e.title.includes("Alex Rivera")));
-assert.ok(timeline.some((e) => e.kind === "offer" && e.title.includes("Offer terms submitted")));
+assert.ok(timeline.some((e) => e.kind === "status" && e.title === "Status changed to Under contract"));
+assert.ok(timeline.some((e) => e.kind === "price" && e.title === "Price edited from $479k to $465k"));
+assert.ok(timeline.some((e) => e.kind === "rp_blast" && e.title === "RP blast sent" && e.detail?.includes("Coming Soon intro") && e.hrefLabel === "View Agents"));
+assert.ok(timeline.some((e) => e.kind === "inbound_agent" && e.title === "Agent inbound call" && e.detail?.includes("Jamie Lee") && e.callBackPhone === "4045551212"));
+assert.ok(timeline.some((e) => e.kind === "investor_unlock" && e.title === "Investor unlocked property"));
+assert.ok(timeline.some((e) => e.kind === "offer" && e.title === "Offer terms submitted"));
 assert.equal(timeline.filter((e) => e.kind === "inbound_agent").length, 1, "outbound agent texts are not timeline inbound events");
 
 const rail = buildAgentRail(messages);
@@ -137,6 +137,10 @@ const tab = read("components/listings/ActivityTab.tsx");
 assert.ok(tab.includes("lg:grid-cols-"), "Activity is two-col on desktop");
 assert.ok(tab.includes("Call back"));
 assert.ok(tab.includes("Add as Referral Partner"));
+assert.ok(tab.includes("Last:"));
+assert.ok(tab.includes("View Agents") || tab.includes("hrefLabel"));
+assert.equal(tab.includes("Newest first"), false, "mock timeline has no card header");
+assert.equal(tab.includes(">Timeline<"), false);
 assert.equal(tab.includes("Add to contacts as Referral Partner"), false);
 assert.ok(tab.includes("buildListingTimeline"));
 assert.ok(tab.includes("buildAgentRail"));

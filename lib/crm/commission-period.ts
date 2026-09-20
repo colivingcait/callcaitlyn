@@ -1,6 +1,6 @@
 import { fromZonedTime } from "date-fns-tz";
 import { APP_TIMEZONE, formatLocal } from "@/lib/format-time";
-import { formatCurrency, formatPercent, fullName } from "@/lib/utils";
+import { formatCurrency, formatPercent, fullName, PROPERTY_TYPE_LABELS } from "@/lib/utils";
 import type { Deal, DealSide, DealStatus } from "@/types/database";
 import type { DealComputedFields } from "@/lib/crm/commission";
 import type { DealWithContact } from "@/lib/data/commissions";
@@ -18,6 +18,7 @@ export const COMMISSION_PERIODS: { key: CommissionPeriod; label: string }[] = [
 export type CommissionRow = {
   id: string;
   address: string;
+  subtitle?: string | null;
   side: "Buy" | "List" | "—";
   stage: "UC" | "Closed";
   gci: number | null;
@@ -34,8 +35,12 @@ export type CommissionRow = {
 export type CommissionKpis = {
   grossGci: number;
   netAfterSplits: number;
+  pendingAmount: number;
+  paidAmount: number;
   pendingCount: number;
   paidCount: number;
+  gciDeltaPct: number | null;
+  netDeltaPct: number | null;
 };
 
 export type UnderContractListing = {
@@ -62,7 +67,9 @@ export function commissionPeriodBounds(period: CommissionPeriod, now = new Date(
   if (period === "all") return { start: null, end: null };
   const [year, month] = formatLocal(now, "yyyy-MM-dd").split("-").map(Number);
   if (period === "this_month") {
-    return { start: startOfLocalDay(ymd(year, month, 1)), end: null };
+    const nextYear = month === 12 ? year + 1 : year;
+    const nextMonth = month === 12 ? 1 : month + 1;
+    return { start: startOfLocalDay(ymd(year, month, 1)), end: startOfLocalDay(ymd(nextYear, nextMonth, 1)) };
   }
   if (period === "last_month") {
     const previousYear = month === 1 ? year - 1 : year;
@@ -71,19 +78,69 @@ export function commissionPeriodBounds(period: CommissionPeriod, now = new Date(
   }
   if (period === "this_quarter") {
     const quarterStartMonth = Math.floor((month - 1) / 3) * 3 + 1;
-    return { start: startOfLocalDay(ymd(year, quarterStartMonth, 1)), end: null };
+    const nextQuarterMonth = quarterStartMonth + 3;
+    const endYear = nextQuarterMonth > 12 ? year + 1 : year;
+    const endMonth = nextQuarterMonth > 12 ? nextQuarterMonth - 12 : nextQuarterMonth;
+    return { start: startOfLocalDay(ymd(year, quarterStartMonth, 1)), end: startOfLocalDay(ymd(endYear, endMonth, 1)) };
   }
-  return { start: startOfLocalDay(ymd(year, 1, 1)), end: null };
+  return { start: startOfLocalDay(ymd(year, 1, 1)), end: startOfLocalDay(ymd(year + 1, 1, 1)) };
+}
+
+export function previousCommissionPeriod(period: CommissionPeriod, now = new Date()): CommissionPeriod | null {
+  if (period === "this_month") return "last_month";
+  if (period === "all") return null;
+  return period;
+}
+
+export function previousPeriodBounds(period: CommissionPeriod, now = new Date()): { start: Date | null; end: Date | null } {
+  if (period === "this_month") return commissionPeriodBounds("last_month", now);
+  if (period === "last_month") {
+    const last = commissionPeriodBounds("last_month", now);
+    if (!last.start) return { start: null, end: null };
+    const [year, month] = formatLocal(last.start, "yyyy-MM-dd").split("-").map(Number);
+    const previousYear = month === 1 ? year - 1 : year;
+    const previousMonth = month === 1 ? 12 : month - 1;
+    return { start: startOfLocalDay(ymd(previousYear, previousMonth, 1)), end: last.start };
+  }
+  if (period === "this_quarter") {
+    const current = commissionPeriodBounds("this_quarter", now);
+    if (!current.start) return { start: null, end: null };
+    const [year, month] = formatLocal(current.start, "yyyy-MM-dd").split("-").map(Number);
+    const previousMonth = month === 1 ? 10 : month - 3;
+    const previousYear = month === 1 ? year - 1 : year;
+    return { start: startOfLocalDay(ymd(previousYear, previousMonth, 1)), end: current.start };
+  }
+  if (period === "this_year") {
+    const [year] = formatLocal(now, "yyyy-MM-dd").split("-").map(Number);
+    return { start: startOfLocalDay(ymd(year - 1, 1, 1)), end: startOfLocalDay(ymd(year, 1, 1)) };
+  }
+  return { start: null, end: null };
+}
+
+export function isoInBounds(iso: string | null | undefined, bounds: { start: Date | null; end: Date | null }): boolean {
+  if (!iso) return !bounds.start && !bounds.end;
+  const time = new Date(iso).getTime();
+  if (Number.isNaN(time)) return false;
+  if (bounds.start && time < bounds.start.getTime()) return false;
+  if (bounds.end && time >= bounds.end.getTime()) return false;
+  return true;
+}
+
+export function commissionPeriodRangeLabel(period: CommissionPeriod, now = new Date()): string {
+  if (period === "all") return "all time";
+  const { start, end } = commissionPeriodBounds(period, now);
+  if (!start) return COMMISSION_PERIODS.find((p) => p.key === period)?.label ?? period;
+  const lastDay = end ? new Date(end.getTime() - 1) : now;
+  return `${formatLocal(start, "MMMM d")} – ${formatLocal(lastDay, "MMMM d, yyyy")}`;
+}
+
+export function percentDelta(current: number, previous: number): number | null {
+  if (previous === 0) return current === 0 ? 0 : null;
+  return ((current - previous) / previous) * 100;
 }
 
 export function isoInPeriod(iso: string | null | undefined, period: CommissionPeriod, now = new Date()): boolean {
-  if (!iso) return period === "all";
-  const { start, end } = commissionPeriodBounds(period, now);
-  const time = new Date(iso).getTime();
-  if (Number.isNaN(time)) return false;
-  if (start && time < start.getTime()) return false;
-  if (end && time >= end.getTime()) return false;
-  return true;
+  return isoInBounds(iso, commissionPeriodBounds(period, now));
 }
 
 export function dealPeriodDate(deal: Pick<Deal, "status" | "closed_at" | "expected_closing_date">): string {
@@ -119,6 +176,7 @@ export function toCommissionRow(deal: DealWithContact & DealComputedFields): Com
   return {
     id: deal.id,
     address: deal.address || name || "Untitled deal",
+    subtitle: deal.property_type ? PROPERTY_TYPE_LABELS[deal.property_type] ?? deal.property_type : name && deal.address ? name : null,
     side: dealSideLabel(deal.side),
     stage: dealStageLabel(deal.status),
     gci: deal.gross_commission,
@@ -135,6 +193,7 @@ export function listingPromptRow(listing: UnderContractListing): CommissionRow {
   return {
     id: `listing:${listing.id}`,
     address: listing.address,
+    subtitle: "Listing",
     side: "List",
     stage: "UC",
     gci: null,
@@ -171,14 +230,31 @@ export function visibleCommissionRows(
   });
 }
 
-export function commissionKpis(rows: CommissionRow[]): CommissionKpis {
+export function commissionKpis(rows: CommissionRow[], previousRows: CommissionRow[] = []): CommissionKpis {
   const paid = rows.filter((row) => row.status === "Paid");
+  const pending = rows.filter((row) => row.status === "Pending");
+  const previousPaid = previousRows.filter((row) => row.status === "Paid");
+  const grossGci = rows.reduce((sum, row) => sum + (row.gci ?? 0), 0);
+  const netAfterSplits = paid.reduce((sum, row) => sum + row.net, 0);
+  const previousGross = previousRows.reduce((sum, row) => sum + (row.gci ?? 0), 0);
+  const previousNet = previousPaid.reduce((sum, row) => sum + row.net, 0);
   return {
-    grossGci: paid.reduce((sum, row) => sum + (row.gci ?? 0), 0),
-    netAfterSplits: paid.reduce((sum, row) => sum + row.net, 0),
-    pendingCount: rows.filter((row) => row.status === "Pending").length,
+    grossGci,
+    netAfterSplits,
+    pendingAmount: pending.reduce((sum, row) => sum + (row.gci ?? 0), 0),
+    paidAmount: paid.reduce((sum, row) => sum + (row.gci ?? 0), 0),
+    pendingCount: pending.length,
     paidCount: paid.length,
+    gciDeltaPct: previousRows.length ? percentDelta(grossGci, previousGross) : null,
+    netDeltaPct: previousRows.length ? percentDelta(netAfterSplits, previousNet) : null,
   };
+}
+
+export function rowsInBounds(
+  deals: (DealWithContact & DealComputedFields)[],
+  bounds: { start: Date | null; end: Date | null },
+): CommissionRow[] {
+  return deals.filter((deal) => isoInBounds(dealPeriodDate(deal), bounds)).map(toCommissionRow);
 }
 
 export function exportCommissionRows(rows: CommissionRow[]): string {

@@ -86,6 +86,12 @@ export function formatCurrency(value: number | null | undefined) {
   return `$${Math.round(value).toLocaleString()}`;
 }
 
+export function formatCompactCurrency(value: number | null | undefined) {
+  if (value == null) return "—";
+  if (Math.abs(value) >= 1000) return `$${Math.round(value / 1000)}k`;
+  return formatCurrency(value);
+}
+
 export function formatPercent(value: number | null | undefined, digits = 1) {
   if (value == null) return "—";
   return `${value.toFixed(digits)}%`;

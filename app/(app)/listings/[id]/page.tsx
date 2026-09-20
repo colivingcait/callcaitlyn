@@ -5,7 +5,7 @@ import { getListingDetail, getSendProgress } from "@/lib/data/listings";
 import { collapseListingAgents } from "@/lib/crm/agent-identity";
 import { fetchListingAgentTextRecency } from "@/lib/data/listing-outbound-texts";
 import { createClient } from "@/lib/supabase/server";
-import { formatCurrency, cn } from "@/lib/utils";
+import { formatCompactCurrency, formatCurrency, cn } from "@/lib/utils";
 import { STATUS_LABEL } from "@/lib/listings/status";
 import { ListingStatusMenu } from "@/components/listings/ListingStatusMenu";
 import { ImportAgentsPanel } from "@/components/listings/ImportAgentsPanel";
@@ -56,6 +56,13 @@ export default async function ListingDetailPage({ params, searchParams }: { para
   const specs = [listing.beds != null && listing.baths != null ? `${listing.beds} bd / ${listing.baths} ba` : null, listingFieldCopy(listing.property_type), listing.sqft ? `${listing.sqft.toLocaleString()} sqft` : null]
     .filter(Boolean)
     .join(" · ");
+  const chromeMeta = [
+    listing.list_price != null ? formatCompactCurrency(listing.list_price) : null,
+    listing.beds != null && listing.baths != null ? `${listing.beds}bd/${listing.baths}ba` : null,
+    listingFieldCopy(listing.property_type),
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   const photoPaths = asUrlList(listing.photo_paths);
   let photoUrls: string[] = [];
@@ -104,29 +111,28 @@ export default async function ListingDetailPage({ params, searchParams }: { para
 
   return (
     <div className="mx-auto w-full max-w-[1400px] px-4 py-6 lg:px-8 lg:py-8">
-      <Link href="/listings" className="flex items-center gap-1 text-sm font-medium text-neutral-500 hover:text-neutral-700">
+      <Link href="/listings" className="flex items-center gap-1 text-[13px] font-medium text-neutral-400 hover:text-neutral-700">
         <ChevronLeft size={16} /> Listings
       </Link>
-      <div className="mt-2 flex items-start justify-between gap-3">
-        <div>
-          <h1 className="font-serif text-2xl font-semibold text-neutral-900">{listing.address}</h1>
-          <p className="mt-0.5 text-[15px] text-neutral-500">
-            {formatCurrency(listing.list_price)}
-            {specs ? ` · ${specs}` : ""} · {STATUS_LABEL[listing.status]}
-            {listing.mls_number ? ` · ${listing.mls_number}` : ""}
-          </p>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+        <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+          <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-neutral-900 lg:text-[24px]">{listing.address}</h1>
+          {chromeMeta && <p className="text-[14px] text-neutral-400">· {chromeMeta}</p>}
         </div>
-        <ListingStatusMenu listingId={listing.id} status={listing.status} />
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="rounded-full border border-[#eadfd6] bg-white px-3 py-1.5 text-[13px] font-medium text-neutral-700">{STATUS_LABEL[listing.status]}</span>
+          <ListingStatusMenu listingId={listing.id} status={listing.status} />
+        </div>
       </div>
 
-      <div className="mt-4 flex gap-1 border-b border-neutral-200">
+      <div className="mt-6 flex gap-8 border-b border-[#eadfd6]">
         {tabs.map((t) => (
           <Link
             key={t.key}
             href={`/listings/${listing.id}?tab=${t.key}`}
             className={cn(
-              "border-b-2 px-3 py-2.5 text-sm font-medium",
-              activeTab === t.key ? "border-brand-600 text-brand-700" : "border-transparent text-neutral-500 hover:text-neutral-700",
+              "border-b-2 px-0 py-3 text-[15px] font-medium",
+              activeTab === t.key ? "border-brand-600 text-brand-700" : "border-transparent text-neutral-400 hover:text-neutral-700",
             )}
           >
             {t.label}
@@ -134,7 +140,7 @@ export default async function ListingDetailPage({ params, searchParams }: { para
         ))}
       </div>
 
-      <div className="mt-4">
+      <div className="mt-8">
         {activeTab === "rp" && (() => {
           const notContacted = agents.filter((a) => a.state === "not_contacted").length;
           const contacted = agents.filter((a) => a.state === "emailed" || a.state === "texted" || a.state === "replied").length;

@@ -1,22 +1,26 @@
-import Link from "next/link";
-import { cn } from "@/lib/utils";
+"use client";
+
+import { useRouter } from "next/navigation";
+import { CalendarDays } from "lucide-react";
 import { COMMISSION_PERIODS, type CommissionPeriod } from "@/lib/crm/commission-period";
 
 export function PeriodFilter({ current }: { current: CommissionPeriod }) {
+  const router = useRouter();
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {COMMISSION_PERIODS.map((period) => (
-        <Link
-          key={period.key}
-          href={`/commissions?period=${period.key}`}
-          className={cn(
-            "flex h-10 items-center rounded-full border px-3.5 text-[13px] font-medium",
-            period.key === current ? "border-transparent bg-brand-600 text-white" : "border-[#eadfd6] bg-white text-neutral-600",
-          )}
-        >
-          {period.label}
-        </Link>
-      ))}
-    </div>
+    <label className="inline-flex items-center gap-2 rounded-lg border border-[#eadfd6] bg-white px-3 py-1.5 text-[13px] text-neutral-700">
+      <CalendarDays size={14} className="text-neutral-400" />
+      <select
+        value={current}
+        onChange={(e) => router.push(`/commissions?period=${e.target.value}`)}
+        className="bg-transparent text-[13px] font-medium text-neutral-800 outline-none"
+        aria-label="Period filter"
+      >
+        {COMMISSION_PERIODS.map((period) => (
+          <option key={period.key} value={period.key}>
+            {period.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
