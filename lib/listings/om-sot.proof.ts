@@ -133,7 +133,7 @@ assert.ok(omCss.includes("#process"));
 assert.ok(omCss.includes("om-process"));
 assert.ok(omCss.includes(".om-fin"));
 assert.ok(omCss.includes("repeat(2, minmax(0, 1fr))"));
-assert.equal(omCss.includes("min-width: 520px"), false, "TTM chart must not clip inside the 492px column");
+assert.equal(omCss.includes("min-width: 520px"), false, "T12 chart must not clip inside the 492px column");
 
 const publicCopy = read("lib/listings/public-copy.ts");
 assert.equal(publicCopy.includes("finiteDays"), false);
@@ -170,7 +170,7 @@ assert.ok(gate.includes("Unlock reveals rents, expenses, debt service, CapEx, an
 assert.ok(gate.includes("visibleImprovements"));
 assert.ok(gate.includes("<CapExCard"));
 assert.ok(gate.indexOf("<CapExCard") < gate.indexOf("DOWNLOAD WORKBOOK"), "CapEx card sits before the workbook");
-assert.equal(gate.includes("TTMETRIC"), false, "do not replace live TTM monthly averages with the mock month-grid");
+assert.equal(gate.includes("T12METRIC"), false, "do not replace live T12 monthly averages with the mock month-grid");
 assert.equal(gate.includes("RESET DEMO"), false);
 
 const omPageGate = read("app/listing/[slug]/page.tsx");

@@ -8,7 +8,7 @@
     "rooms": 8
   },
   "public_bands": {
-    "band_gross_rent": "$60k–$65k TTM collected",
+    "band_gross_rent": "$60k–$65k T12 collected",
     "band_expense_load": "15–20% of gross",
     "band_cash_on_cash": "18–22% @ 20% down / 7% / 30yr DSCR",
     "band_cap_rate": "10–11%"
@@ -29,7 +29,7 @@
     "noi": "41216.71",
     "cap_rate": "10.30",
     "vacancy_pct": "13.7",
-    "occupancy_summary": "TTM bed-night occupancy 86.3% (8 rooms). Soft months: Jun ~57.5%, Sep in-flight ~66%.",
+    "occupancy_summary": "T12 bed-night occupancy 86.3% (8 rooms). Soft months: Jun ~57.5%, Sep in-flight ~66%.",
     "platform_fees": "8178.18",
     "padsplit_fees": "8178.18",
     "pm_fees": "1075.00",
@@ -64,10 +64,10 @@
   },
   "improvements": [],
   "documents": {
-    "buyer_workbook": "Candace_OM_Financials_TTM.xlsx"
+    "buyer_workbook": "Candace_OM_Financials_T12.xlsx"
   },
   "meta": {
-    "period": "TTM 2025-10 to 2026-09",
+    "period": "T12 2025-10 to 2026-09",
     "gross_basis": "collected_only",
     "occupancy_basis": "bed_night",
     "notes": [

@@ -303,7 +303,7 @@ export type ListingFinancialsScenario = {
 
 // Gated underwriting JSONB. Public OM never reads these exact figures
 // until unlock; the locked page only shows the four band_* strings.
-// Canonical gated rows are monthly TTM averages: gross_rents, net_earnings,
+// Canonical gated rows are monthly T12 averages: gross_rents, net_earnings,
 // opex, noi, projected_debt_service, net_cash_flow. Ratios (cash_on_cash,
 // cap_rate, dscr) render as cards. purchase_price stays on the object for
 // CRM / Apply-to-OM but is not a gated row. Older aliases (platform_fees,

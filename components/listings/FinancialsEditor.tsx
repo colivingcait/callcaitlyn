@@ -23,7 +23,7 @@ const PLACEHOLDERS: Record<(typeof GATED_EDITOR_FIELDS)[number]["key"], string> 
 };
 
 // The gated underwriting detail behind the public page's unlock form.
-// Dollar fields here are TTM annual totals (Vera / T12); the public OM
+// Dollar fields here are T12 annual totals (Vera / T12); the public OM
 // renders them as monthly averages. Ratios stay as entered. T12 /
 // scenarios / padsplit fees stay in JSONB when Apply-to-OM writes them
 // so the numbers can hydrate these keys, but they are not edited here.

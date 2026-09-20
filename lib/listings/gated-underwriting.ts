@@ -1,7 +1,7 @@
 import type { ListingFinancials, ListingFinancialsT12Line } from "@/types/database";
 import { formatCurrency } from "@/lib/utils";
 
-// Public OM gated stack after unlock: six monthly TTM averages, in this
+// Public OM gated stack after unlock: six monthly T12 averages, in this
 // order. Ratios are headline cards (GATED_RATIO_FIELDS), not rows.
 // purchase_price stays on the financials object for CRM / Apply-to-OM
 // but is not rendered in the gated table.
@@ -57,7 +57,7 @@ function parseNumeric(value: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-// Stored gated dollars are TTM annual totals (Vera / T12 / scenarios).
+// Stored gated dollars are T12 annual totals (Vera / T12 / scenarios).
 // The public OM renders monthly averages: annual / 12. Candace fixture
 // 61483.07 → $5,124. Expense-like T12 lines can arrive signed; magnitudes
 // display unsigned unless `signed` (net cash flow).
