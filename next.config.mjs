@@ -12,6 +12,16 @@ const nextConfig = {
       dynamic: 0,
     },
   },
+  async headers() {
+    return [
+      {
+        // public/images/checkin/caitlyn.jpg is PNG bytes with a .jpg name.
+        // Extension-based image/jpeg makes WebKit leave the <img> blank.
+        source: "/images/checkin/caitlyn.jpg",
+        headers: [{ key: "Content-Type", value: "image/png" }],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

@@ -1,4 +1,10 @@
 {
+  "headers": [
+    {
+      "source": "/images/checkin/caitlyn.jpg",
+      "headers": [{ "key": "Content-Type", "value": "image/png" }]
+    }
+  ],
   "crons": [
     { "path": "/api/cron/sync-gmail", "schedule": "*/15 * * * *" },
     { "path": "/api/cron/send-sequences", "schedule": "*/15 * * * *" },

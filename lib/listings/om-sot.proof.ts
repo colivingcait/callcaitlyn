@@ -116,7 +116,32 @@ assert.equal(
   false,
   "Caitlyn contact card must not use the dark stripe placeholder",
 );
-assert.ok(omPage.includes('transformOrigin: "center 14%"'), "standing portrait is face-cropped in the 84×104 slot");
+
+const contactStart = omPage.indexOf("YOUR CONTACT FOR THIS OFFERING");
+const contactEnd = omPage.indexOf("BOOK A 20-MINUTE CALL", contactStart);
+assert.ok(contactStart >= 0 && contactEnd > contactStart, "contact card bounds");
+const contactCard = omPage.slice(contactStart, contactEnd);
+assert.ok(contactCard.includes("CAITLYN_HEADSHOT_SRC"), "headshot src is set on the contact card");
+const slotStart = contactCard.indexOf("data-om-contact-photo");
+assert.ok(slotStart >= 0, "photo slot is marked so proofs can isolate it");
+const slotEnd = contactCard.indexOf("</div>", slotStart);
+const photoSlot = contactCard.slice(slotStart, slotEnd);
+assert.ok(photoSlot.includes("CAITLYN_HEADSHOT_SRC"), "headshot src is set on the photo slot");
+assert.ok(photoSlot.includes("backgroundImage"), "slot paints the headshot as its background");
+assert.ok(photoSlot.includes("url(${CAITLYN_HEADSHOT_SRC})"), "background-image reuses CAITLYN_HEADSHOT_SRC");
+assert.equal(photoSlot.includes("repeating-linear-gradient"), false, "no stripe placeholder styles remain on the contact slot when headshot src is set");
+assert.equal(/stripe|placeholder/i.test(photoSlot), false, "no stripe/placeholder classes remain on the contact slot when headshot src is set");
+assert.ok(contactCard.includes('transformOrigin: "center 14%"'), "standing portrait is face-cropped in the 84×104 slot");
+
+const headshotBytes = readFileSync(join(root, "public/images/checkin/caitlyn.jpg"));
+assert.equal(headshotBytes[0], 0x89);
+assert.equal(headshotBytes.toString("ascii", 1, 4), "PNG", "caitlyn.jpg is PNG bytes; must be served as image/png");
+const nextConfig = read("next.config.mjs");
+assert.ok(nextConfig.includes("/images/checkin/caitlyn.jpg"));
+assert.ok(nextConfig.includes('"image/png"') || nextConfig.includes("'image/png'"), "headshot Content-Type override is image/png");
+const vercel = read("vercel.json");
+assert.ok(vercel.includes("/images/checkin/caitlyn.jpg"));
+assert.ok(vercel.includes("image/png"));
 assert.equal(omPage.includes("Process & timeline"), false);
 assert.ok(omPage.includes('id="process"'));
 assert.ok(omPage.includes("om-process"));

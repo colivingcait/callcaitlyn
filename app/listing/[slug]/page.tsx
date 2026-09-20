@@ -314,17 +314,30 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                     <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.18em", color: "#e9a396" }}>YOUR CONTACT FOR THIS OFFERING</p>
                   </div>
                   <div style={{ display: "flex", gap: 14, padding: "16px 20px 0" }}>
-                    {/* Source is a standing 1080 square. Cover alone shows the
-                        whole figure in this 84×104 slot; zoom + origin keeps
-                        it on her face and yellow blazer. */}
-                    <div style={{ flex: "0 0 84px", height: 104, overflow: "hidden", background: "#2a231f" }}>
+                    {/* Paint the headshot as the slot background so a failed
+                        or unpainted <img> cannot leave an empty box.
+                        Source is a standing 1080 square — size + position
+                        keep the 84×104 crop on her face, not the figure. */}
+                    <div
+                      data-om-contact-photo=""
+                      style={{
+                        flex: "0 0 84px",
+                        height: 104,
+                        overflow: "hidden",
+                        position: "relative",
+                        backgroundImage: `url(${CAITLYN_HEADSHOT_SRC})`,
+                        backgroundSize: "155%",
+                        backgroundPosition: "center 14%",
+                        backgroundRepeat: "no-repeat",
+                      }}
+                    >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={CAITLYN_HEADSHOT_SRC}
                         alt="Caitlyn Verdugo"
                         width={84}
                         height={104}
-                        style={{ display: "block", width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.55)", transformOrigin: "center 14%" }}
+                        style={{ position: "relative", zIndex: 1, display: "block", width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 14%", transform: "scale(1.55)", transformOrigin: "center 14%" }}
                       />
                     </div>
                     <div style={{ minWidth: 0 }}>
