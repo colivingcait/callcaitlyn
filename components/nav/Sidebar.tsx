@@ -29,16 +29,19 @@ export function Sidebar({ userEmail, counts = {} }: { userEmail?: string | null;
   return (
     <aside className="hidden w-[220px] shrink-0 flex-col border-r border-[#eadfd6] bg-[#f7f1ea] px-3 py-[22px] lg:flex">
       <div className="flex items-center gap-2.5 px-2.5 pb-[22px]">
-        {/* Same public file check-in already serves. Face sits high in the
-            1080 square, so object-position keeps the crop on her head. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={CAITLYN_HEADSHOT_SRC}
-          alt="Caitlyn Verdugo"
-          width={36}
-          height={36}
-          className="h-9 w-9 shrink-0 rounded-full object-cover object-[center_18%] ring-1 ring-[#eadfd6]"
-        />
+        {/* Source is a standing 1080 square. A 1:1 object-cover would show
+            her whole figure; zoom + origin keeps the circle on her face. */}
+        <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full ring-1 ring-[#eadfd6]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={CAITLYN_HEADSHOT_SRC}
+            alt="Caitlyn Verdugo"
+            width={36}
+            height={36}
+            className="h-full w-full object-cover"
+            style={{ transform: "scale(2.4)", transformOrigin: "center 16%" }}
+          />
+        </div>
         <div className="min-w-0">
           <BrandWordmark />
           {userEmail && <p className="mt-0.5 truncate text-sm text-neutral-400">{userEmail}</p>}

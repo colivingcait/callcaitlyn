@@ -36,6 +36,7 @@ assert.equal(sidebar.includes("moreGroups.map"), false);
 assert.equal(sidebar.includes("Also today"), false);
 assert.ok(sidebar.includes("CAITLYN_HEADSHOT_SRC"), "sidebar avatar uses the shared Caitlyn headshot path");
 assert.ok(sidebar.includes("rounded-full"), "sidebar avatar stays circular");
+assert.ok(sidebar.includes('transformOrigin: "center 16%"'), "sidebar zooms the standing portrait onto her face");
 assert.equal(sidebar.includes("initials("), false, "sidebar does not fall back to initials");
 
 const headshot = read("lib/brand/caitlyn.ts");
