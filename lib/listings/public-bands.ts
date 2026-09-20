@@ -11,8 +11,8 @@ const PHRASE_TO_TILDE: Record<string, string> = {
   "low-10s%": "~10%",
   "low-teens%": "~12%",
   "mid-teens%": "~15%",
-  "$60k–$65k t12 collected": "~$65,000 T12 collected",
-  "$60k-$65k t12 collected": "~$65,000 T12 collected",
+  "$60k–$65k t12 collected": "~$65,000 collected",
+  "$60k-$65k t12 collected": "~$65,000 collected",
   "15–20% of gross": "~18%",
   "15-20% of gross": "~18%",
   "18–22% @ 20% down / 7% / 30yr dscr": "~20%",
@@ -76,7 +76,9 @@ export function formatPublicBand(value: string | null | undefined): string | nul
   if (value == null) return null;
   const trimmed = value.trim();
   if (!trimmed) return null;
-  if (trimmed.startsWith("~")) return trimmed.replace(/[\u2013\u2014]/g, "–").replace(/\s+/g, " ");
+  if (trimmed.startsWith("~")) {
+    return trimmed.replace(/[\u2013\u2014]/g, "–").replace(/\s+/g, " ").replace(/\sT12\b/gi, "");
+  }
 
   const mapped = PHRASE_TO_TILDE[foldBand(trimmed)];
   if (mapped) return mapped;

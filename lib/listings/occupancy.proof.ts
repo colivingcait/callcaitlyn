@@ -61,9 +61,10 @@ assert.equal(trend[8].pct, 58);
 assert.equal(trend[11].pct, 66);
 assert.equal(trend[11].inFlight, true);
 const summary = t12OccupancySummary(occupancy, trend);
-assert.ok(summary?.includes("T12 86.34%"));
+assert.ok(summary?.includes("86.34% average"));
 assert.ok(summary?.includes("8 rooms"));
-assert.ok(summary?.includes("bed-night"));
+assert.equal(summary?.includes("T12"), false);
+assert.equal(summary?.includes("bed-night"), false);
 
 const fixture = JSON.parse(readFileSync(join(process.cwd(), "lib/listings/fixtures/candace_om_sidecar_v2.json"), "utf8"));
 const parsed = parseOmSidecar(fixture);

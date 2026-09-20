@@ -138,7 +138,7 @@ const v1 = parseOmSidecar(fixtureV1);
 assert.equal(v1.ok, true, "schema_version 1 still hydrates");
 if (v1.ok) {
   const v1Plan = planOmSidecarApply(v1.sidecar, emptyListing);
-  assert.equal(v1Plan.patch.band_gross_rent, "~$65,000 T12 collected");
+  assert.equal(v1Plan.patch.band_gross_rent, "~$65,000 collected");
   assert.equal(v1Plan.patch.financials.padsplit_fees, "8178.18");
 }
 
