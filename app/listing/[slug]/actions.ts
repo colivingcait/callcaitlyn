@@ -44,6 +44,7 @@ async function captureContact(
   admin: ReturnType<typeof createAdminClient>,
   input: { name: string; phone?: string; email?: string },
   leadSource: string,
+  options: { skipQuoSync?: boolean } = {},
 ) {
   const name = input.name.trim();
   const phone = (input.phone ?? "").trim();
@@ -57,9 +58,14 @@ async function captureContact(
     lastName: lastNameParts.join(" ") || null,
     leadSource,
     contactType: "investor",
+    skipQuoSync: options.skipQuoSync,
   });
 
   return { contact, name, firstName, phone, email };
+}
+
+async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+  return Promise.race([promise, new Promise<null>((resolve) => setTimeout(() => resolve(null), ms))]);
 }
 
 // The underwriting gate: name + phone or email, in place, no navigation.
@@ -73,64 +79,80 @@ export async function unlockListingFinancials(
   if (!OWNER_ID) return { ok: false, error: "Not configured" };
   if (!input.phone.trim() && !input.email.trim()) return { ok: false, error: "Enter a phone number or email" };
 
-  const { admin, listing } = await findPublicListing(slug);
-  if (!listing) return { ok: false, error: "This listing isn't available anymore" };
-  const nickname = listing.nickname || listing.address;
+  try {
+    const { admin, listing } = await findPublicListing(slug);
+    if (!listing) return { ok: false, error: "This listing isn't available anymore" };
+    const nickname = listing.nickname || listing.address;
 
-  const { contact, name, firstName, phone, email } = await captureContact(admin, input, `Listing page — ${nickname}`);
-  if (!contact) return { ok: false, error: "Enter a valid phone number or email" };
+    const { contact, name, firstName, phone, email } = await captureContact(
+      admin,
+      input,
+      `Listing page — ${nickname}`,
+      { skipQuoSync: true },
+    );
+    if (!contact) return { ok: false, error: "Enter a valid phone number or email" };
 
-  await addTagByName(admin, OWNER_ID, contact.id, "Investor Lead");
+    const tagged = await addTagByName(admin, OWNER_ID, contact.id, "Investor Lead");
+    if (!tagged) return { ok: false, error: "Could not save this lead. Try again." };
 
-  await upsertActivity(admin, OWNER_ID, contact.id, "listing_page", "listing_unlock_key", `${listing.id}:${contact.id}`, {
-    type: "note",
-    direction: "none",
-    occurred_at: new Date().toISOString(),
-    body: `Unlocked financials on ${nickname}`,
-    metadata: { listing_id: listing.id },
-  });
+    const activity = await upsertActivity(admin, OWNER_ID, contact.id, "listing_page", "listing_unlock_key", `${listing.id}:${contact.id}`, {
+      type: "note",
+      direction: "none",
+      occurred_at: new Date().toISOString(),
+      body: `Unlocked financials on ${nickname}`,
+      metadata: { listing_id: listing.id },
+    });
+    if (!activity?.id) return { ok: false, error: "Could not save this lead. Try again." };
 
-  await notifyNewLead(admin, OWNER_ID, {
-    title: name || email || phone,
-    body: `Unlocked financials on ${nickname}`,
-    url: `/contacts/${contact.id}`,
-  });
+    const { data: documents } = await admin.from("listing_documents").select("doc_type, storage_path").eq("listing_id", listing.id);
+    const allDocs = documents ?? [];
+    const workbookDocs = allDocs.filter((doc) => doc.doc_type === "buyer_workbook");
+    const packet = workbookDocs.length > 0 ? workbookDocs : allDocs;
+    const links: string[] = [];
+    let workbookUrl: string | null = null;
+    for (const doc of packet) {
+      const { data: signed } = await admin.storage.from("listing-documents").createSignedUrl(doc.storage_path, SIGNED_URL_TTL_SECONDS);
+      if (!signed?.signedUrl) continue;
+      links.push(`${DOC_LABELS[doc.doc_type] ?? doc.doc_type}: ${signed.signedUrl}`);
+      if (doc.doc_type === "buyer_workbook" && !workbookUrl) workbookUrl = signed.signedUrl;
+    }
 
-  const { data: documents } = await admin.from("listing_documents").select("doc_type, storage_path").eq("listing_id", listing.id);
-  const allDocs = documents ?? [];
-  const workbookDocs = allDocs.filter((doc) => doc.doc_type === "buyer_workbook");
-  const packet = workbookDocs.length > 0 ? workbookDocs : allDocs;
-  const links: string[] = [];
-  let workbookUrl: string | null = null;
-  for (const doc of packet) {
-    const { data: signed } = await admin.storage.from("listing-documents").createSignedUrl(doc.storage_path, SIGNED_URL_TTL_SECONDS);
-    if (!signed?.signedUrl) continue;
-    links.push(`${DOC_LABELS[doc.doc_type] ?? doc.doc_type}: ${signed.signedUrl}`);
-    if (doc.doc_type === "buyer_workbook" && !workbookUrl) workbookUrl = signed.signedUrl;
+    const packetNames = packet
+      .map((doc) => DOC_LABELS[doc.doc_type] ?? doc.doc_type)
+      .filter((label, i, arr) => arr.indexOf(label) === i);
+    const packetPhrase =
+      packetNames.length === 0
+        ? "buyer workbook"
+        : packetNames.length === 1
+          ? packetNames[0]
+          : packetNames.length === 2
+            ? `${packetNames[0]} and ${packetNames[1]}`
+            : `${packetNames.slice(0, -1).join(", ")}, and ${packetNames[packetNames.length - 1]}`;
+
+    const messageBody =
+      links.length > 0
+        ? `Hi${firstName ? ` ${firstName}` : ""}! Here's the ${packetPhrase} for ${nickname}.\n\n${links.join("\n")}\n\nLet me know if you have any questions.\n\nCaitlyn Verdugo with KW Metro Atl`
+        : `Hi${firstName ? ` ${firstName}` : ""}! Thanks for unlocking the numbers on ${nickname} — I'll follow up shortly with the buyer workbook.\n\nCaitlyn Verdugo with KW Metro Atl`;
+
+    await withTimeout(
+      Promise.allSettled([
+        notifyNewLead(admin, OWNER_ID, {
+          title: name || email || phone,
+          body: `Unlocked financials on ${nickname}`,
+          url: `/contacts/${contact.id}`,
+        }),
+        email ? sendGmailMessage(admin, OWNER_ID, email, `Financials — ${nickname}`, textToHtml(messageBody)) : Promise.resolve(null),
+        phone ? sendQuoText(phone, messageBody) : Promise.resolve(null),
+      ]),
+      8000,
+    );
+
+    const financials = asListingFinancials(listing.financials) ?? normalizeFinancials(null);
+    return { ok: true, financials, workbookUrl };
+  } catch (err) {
+    console.error("unlockListingFinancials failed", err);
+    return { ok: false, error: "Could not unlock. Try again." };
   }
-
-  const packetNames = packet
-    .map((doc) => DOC_LABELS[doc.doc_type] ?? doc.doc_type)
-    .filter((label, i, arr) => arr.indexOf(label) === i);
-  const packetPhrase =
-    packetNames.length === 0
-      ? "buyer workbook"
-      : packetNames.length === 1
-        ? packetNames[0]
-        : packetNames.length === 2
-          ? `${packetNames[0]} and ${packetNames[1]}`
-          : `${packetNames.slice(0, -1).join(", ")}, and ${packetNames[packetNames.length - 1]}`;
-
-  const messageBody =
-    links.length > 0
-      ? `Hi${firstName ? ` ${firstName}` : ""}! Here's the ${packetPhrase} for ${nickname}.\n\n${links.join("\n")}\n\nLet me know if you have any questions.\n\nCaitlyn Verdugo with KW Metro Atl`
-      : `Hi${firstName ? ` ${firstName}` : ""}! Thanks for unlocking the numbers on ${nickname} — I'll follow up shortly with the buyer workbook.\n\nCaitlyn Verdugo with KW Metro Atl`;
-
-  if (email) await sendGmailMessage(admin, OWNER_ID, email, `Financials — ${nickname}`, textToHtml(messageBody));
-  if (phone) await sendQuoText(phone, messageBody);
-
-  const financials = asListingFinancials(listing.financials) ?? normalizeFinancials(null);
-  return { ok: true, financials, workbookUrl };
 }
 
 // The offer modal: not a contract, just terms she can call to confirm.

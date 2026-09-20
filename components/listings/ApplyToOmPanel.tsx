@@ -9,12 +9,13 @@ import type { Listing } from "@/types/database";
 const GROUP_LABEL: Record<OmApplyChangeGroup, string> = {
   bands: "Public bands",
   financials: "Gated financials",
+  occupancy: "T12 occupancy",
   hints: "Listing hints",
   improvements: "Improvements",
   documents: "Documents",
 };
 
-const GROUP_ORDER: OmApplyChangeGroup[] = ["bands", "financials", "hints", "improvements", "documents"];
+const GROUP_ORDER: OmApplyChangeGroup[] = ["bands", "financials", "occupancy", "hints", "improvements", "documents"];
 
 function snapshot(listing: Listing) {
   return {

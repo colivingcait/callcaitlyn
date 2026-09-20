@@ -74,6 +74,11 @@
       }
     ]
   },
+  "occupancy": {
+    "rooms": 8,
+    "basis": "bed_night",
+    "t12_occupancy_pct": 86.34
+  },
   "improvements": [],
   "documents": {
     "buyer_workbook": "Candace_OM_Complete.xlsx"
@@ -111,6 +116,7 @@
       "occupancy_summary",
       "vacancy_pct"
     ],
-    "padsplit_url": "CRM builds from padsplit_house_id only"
+    "padsplit_url": "CRM builds from padsplit_house_id only",
+    "occupancy": "occupancy.monthly"
   }
 }

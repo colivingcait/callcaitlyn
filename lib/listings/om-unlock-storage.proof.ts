@@ -81,6 +81,13 @@ const root = process.cwd();
 const gate = readFileSync(join(root, "components/listings/om/FinancialGate.tsx"), "utf8");
 assert.ok(gate.includes("writeOmUnlock(slug, next)"));
 assert.equal(gate.includes("useState<ListingFinancials"), false, "financials must not live only in the remounted gate leaf");
+assert.ok(gate.includes("result.ok !== true"));
+assert.ok(gate.includes("finally"));
+
+const actions = readFileSync(join(root, "app/listing/[slug]/actions.ts"), "utf8");
+assert.ok(actions.includes("Investor Lead"));
+assert.ok(actions.includes("if (!tagged)"));
+assert.ok(actions.includes("Could not save this lead"));
 
 const ctx = readFileSync(join(root, "components/listings/om/UnlockContext.tsx"), "utf8");
 assert.ok(ctx.includes("applyUnlock"));

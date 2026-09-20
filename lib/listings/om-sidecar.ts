@@ -3,6 +3,7 @@ import type { ListingFinancials, ListingImprovement } from "@/types/database";
 import { normalizeFinancials } from "@/lib/listings/crm-marketing-fields";
 import { padsplitListingUrlFromInput } from "@/lib/listings/padsplit-url";
 import { GATED_REMOVED_FIELDS, GATED_UNDERWRITING_FIELDS } from "@/lib/listings/gated-underwriting";
+import { parseListingOccupancy, parseRoomCount } from "@/lib/listings/occupancy";
 
 export const OM_SIDECAR_SCHEMA_VERSION = 2;
 export const OM_SIDECAR_ACCEPTED_VERSIONS = [1, 2] as const;
@@ -21,6 +22,7 @@ export const SIDECAR_FIELD_MAP = {
   gated_ui: GATED_UI_FIELDS.map((field) => field.path),
   gated_removed: [...GATED_REMOVED_FIELDS],
   padsplit_url: "CRM builds from padsplit_house_id only",
+  occupancy: "occupancy.monthly",
 } as const;
 
 const stringish = z.union([z.string(), z.number()]).transform((value) => String(value));
@@ -115,6 +117,7 @@ export const omSidecarV1Schema = z
       .passthrough()
       .optional(),
     meta: z.unknown().optional(),
+    occupancy: z.unknown().optional(),
     field_map: z.unknown().optional(),
   })
   .passthrough();
@@ -139,7 +142,7 @@ export type ListingOmSnapshot = {
   improvements: ListingImprovement[] | null;
 };
 
-export type OmApplyChangeGroup = "bands" | "financials" | "hints" | "improvements" | "documents";
+export type OmApplyChangeGroup = "bands" | "financials" | "hints" | "improvements" | "documents" | "occupancy";
 
 export type OmApplyChange = {
   path: string;
@@ -230,10 +233,7 @@ export function parseOmSidecarJson(raw: string): OmSidecarParseResult {
 }
 
 function parseRooms(value: unknown): number | null {
-  if (value == null || value === "") return null;
-  const n = typeof value === "number" ? value : Number(String(value).trim());
-  if (!Number.isFinite(n) || n < 0) return null;
-  return Math.trunc(n);
+  return parseRoomCount(value);
 }
 
 function sameText(a: string | null | undefined, b: string | null | undefined): boolean {
@@ -270,6 +270,9 @@ function mergeFinancials(existing: ListingFinancials | null | undefined, sidecar
   else if (incoming.meta !== undefined) merged.meta = incoming.meta;
   if (sidecar.deal_key) merged.deal_key = sidecar.deal_key;
   if (sidecar.documents?.buyer_workbook) merged.buyer_workbook_filename = sidecar.documents.buyer_workbook;
+
+  const occupancy = parseListingOccupancy(sidecar.occupancy) ?? parseListingOccupancy(incoming.occupancy) ?? parseListingOccupancy(base.occupancy);
+  if (occupancy) merged.occupancy = occupancy;
 
   return normalizeFinancials(merged);
 }
@@ -391,7 +394,8 @@ export function planOmSidecarApply(sidecar: OmSidecarV1, current: ListingOmSnaps
     if (!protectedHint || overwriteHints) patch[hint.path] = incoming;
   }
 
-  const rooms = parseRooms(hints.rooms);
+  const occupancy = parseListingOccupancy(sidecar.occupancy) ?? parseListingOccupancy(patch.financials.occupancy);
+  const rooms = parseRooms(occupancy?.rooms) ?? parseRooms(hints.rooms);
   if (rooms != null && rooms !== current.total_rooms) {
     const protectedHint = current.total_rooms != null;
     changes.push({
@@ -403,6 +407,18 @@ export function planOmSidecarApply(sidecar: OmSidecarV1, current: ListingOmSnaps
       overwriteProtected: protectedHint,
     });
     if (!protectedHint || overwriteHints) patch.total_rooms = rooms;
+  }
+
+  const existingOccupancy = parseListingOccupancy(current.financials?.occupancy);
+  if (occupancy && JSON.stringify(existingOccupancy ?? null) !== JSON.stringify(occupancy)) {
+    patch.financials = { ...patch.financials, occupancy };
+    changes.push({
+      path: "occupancy.monthly",
+      label: "T12 occupancy",
+      before: displayValue(existingOccupancy?.monthly),
+      after: occupancy.monthly?.length ? `${occupancy.monthly.length} months` : displayValue(occupancy),
+      group: "occupancy",
+    });
   }
 
   const buyerWorkbookHint = sidecar.documents?.buyer_workbook?.trim() || null;
