@@ -17,11 +17,30 @@ import { LISTING_DOCUMENT_TYPES } from "@/lib/listings/documents";
 import { planOwnedOmSidecarApply, type OmApplyListingRow } from "@/lib/listings/om-apply";
 import { formatPublicBand } from "@/lib/listings/public-bands";
 import { phonesMatch } from "@/lib/phone";
-import { importablePadsplitPhotos } from "@/lib/listings/padsplit-photos";
+import { fetchPadsplitSnapshot, padsplitGalleryOneShotPatch, padsplitLiveImportPatch } from "@/lib/listings/padsplit-import";
+import { hasCuratedPadsplitGallery, importablePadsplitPhotos } from "@/lib/listings/padsplit-photos";
 import { isListingStatus } from "@/lib/listings/status";
 import type { ListingDocumentType, ListingFinancials, ListingPhotoSource, ListingPublicCategory, ListingStatus, PadsplitPhoto } from "@/types/database";
 
 const PREVIEW_AGENT = { name: "Jamie Agent" };
+
+export const maxDuration = 60;
+
+const PADSPLIT_IMPORT_COLUMNS =
+  "id, padsplit_url, beds, financials, photo_paths, photo_source, padsplit_gallery, padsplit_photos, hero_photo_url, public_slug";
+
+type PadsplitImportRow = {
+  id: string;
+  padsplit_url: string | null;
+  beds: number | null;
+  financials: unknown;
+  photo_paths: string[] | null;
+  photo_source: string | null;
+  padsplit_gallery: PadsplitPhoto[] | null;
+  padsplit_photos: PadsplitPhoto[] | null;
+  hero_photo_url: string | null;
+  public_slug: string | null;
+};
 
 type ActionResult<T extends object = Record<never, never>> = ({ ok: true } & T) | { ok: false; error: string };
 
@@ -70,6 +89,61 @@ export async function createListing(input: {
   return { ok: true, id: data.id as string };
 }
 
+// First save of a PadSplit ID (or a change of ID) imports rooms and photos
+// immediately. Re-saving the same ID only fills a gallery that was never
+// pulled, using the scrape cache when it already has interiors. A curated
+// gallery is not replaced unless the ID itself changed.
+async function importPadsplitAfterUrlSave(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  listingId: string,
+  previousUrl: string | null,
+  nextUrl: string | null,
+): Promise<string | null> {
+  if (!nextUrl) return null;
+  const { data, error } = await supabase.from("listings").select(PADSPLIT_IMPORT_COLUMNS).eq("id", listingId).maybeSingle();
+  if (error || !data) return error?.message ?? "Listing not found";
+  const row = data as PadsplitImportRow;
+  const urlChanged = (previousUrl ?? null) !== nextUrl;
+  const galleryEmpty = !hasCuratedPadsplitGallery(row);
+  if (!urlChanged && !galleryEmpty) return null;
+
+  if (!urlChanged && importablePadsplitPhotos(row).length > 0) {
+    const patch = padsplitGalleryOneShotPatch(row);
+    if (!patch) return null;
+    const { error: updateError } = await supabase.from("listings").update(patch).eq("id", listingId);
+    if (updateError) return updateError.message;
+    await revalidateListingPhotoSurfaces(supabase, listingId);
+    return null;
+  }
+
+  const fetched = await fetchPadsplitSnapshot(nextUrl, { beds: row.beds, financials: row.financials });
+  if (!fetched.ok) {
+    // Same ID: the scrape cache is still this house, so a failed live fetch
+    // can still publish it. A changed ID must not copy the previous house.
+    const fallback = urlChanged ? null : padsplitGalleryOneShotPatch(row);
+    const patch: Record<string, unknown> = fallback ? { ...fallback } : { last_scrape_error: fetched.error };
+    if (!fallback && (row.photo_paths ?? []).length === 0 && row.photo_source !== "padsplit") patch.photo_source = "padsplit";
+    await supabase.from("listings").update(patch).eq("id", listingId);
+    await revalidateListingPhotoSurfaces(supabase, listingId);
+    if (fallback) return null;
+    return `PadSplit ID saved, but the photo import failed: ${fetched.error}. Occupancy still refreshes twice a day.`;
+  }
+
+  const scrapedAt = new Date().toISOString();
+  const patch = padsplitLiveImportPatch(fetched.snapshot, row, { replaceGallery: urlChanged || galleryEmpty, scrapedAt });
+  const { error: updateError } = await supabase.from("listings").update(patch).eq("id", listingId);
+  if (updateError) return updateError.message;
+  await supabase.from("listing_occupancy_snapshots").insert({
+    listing_id: listingId,
+    owner_id: userId,
+    occupied_rooms: fetched.snapshot.occupiedRooms,
+    total_rooms: fetched.snapshot.totalRooms,
+  });
+  await revalidateListingPhotoSurfaces(supabase, listingId);
+  return null;
+}
+
 export async function updateListingBasics(
   listingId: string,
   input: {
@@ -85,12 +159,18 @@ export async function updateListingBasics(
     zillowUrl?: string | null;
     padsplitUrl?: string | null;
   },
-): Promise<ActionResult> {
+  ): Promise<ActionResult<{ importWarning?: string }>> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Not signed in" };
+
+  let previousPadsplitUrl: string | null = null;
+  if (input.padsplitUrl !== undefined) {
+    const { data: currentUrl } = await supabase.from("listings").select("padsplit_url").eq("id", listingId).maybeSingle();
+    previousPadsplitUrl = currentUrl?.padsplit_url ?? null;
+  }
 
   const patch: Record<string, unknown> = {};
   if (input.address !== undefined) patch.address = input.address;
@@ -123,6 +203,11 @@ export async function updateListingBasics(
   revalidatePath(`/listings/${listingId}`);
   revalidatePath("/listing");
   revalidatePath("/listing/map");
+
+  if (input.padsplitUrl !== undefined) {
+    const importWarning = await importPadsplitAfterUrlSave(supabase, user.id, listingId, previousPadsplitUrl, input.padsplitUrl);
+    if (importWarning) return { ok: true, importWarning };
+  }
   return { ok: true };
 }
 
@@ -722,7 +807,7 @@ export async function applyOmSidecarToListing(input: {
   listingId: string;
   rawJson: string;
   overwriteHints?: boolean;
-}): Promise<ActionResult> {
+}): Promise<ActionResult<{ importWarning?: string }>> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -730,12 +815,14 @@ export async function applyOmSidecarToListing(input: {
   if (!user) return { ok: false, error: "Not signed in" };
 
   const listingId = typeof input?.listingId === "string" ? input.listingId : "";
+  let previousPadsplitUrl: string | null = null;
   const result = await planOwnedOmSidecarApply(
     listingId,
     typeof input?.rawJson === "string" ? input.rawJson : "",
     async (column, value) => {
       const { data, error } = await supabase.from("listings").select("*").eq(column, value).eq("owner_id", user.id).maybeSingle();
       if (error) return { listing: null, error: error.message };
+      if (data) previousPadsplitUrl = data.padsplit_url ?? null;
       return { listing: (data as OmApplyListingRow | null) ?? null };
     },
     { overwriteHints: input?.overwriteHints },
@@ -747,6 +834,12 @@ export async function applyOmSidecarToListing(input: {
 
   revalidatePath(`/listings/${result.listingId}`);
   if (result.publicSlug) revalidatePath(`/listing/${result.publicSlug}`);
+
+  if (result.patch.padsplit_url !== undefined) {
+    const nextUrl = typeof result.patch.padsplit_url === "string" ? result.patch.padsplit_url : null;
+    const importWarning = await importPadsplitAfterUrlSave(supabase, user.id, result.listingId, previousPadsplitUrl, nextUrl);
+    if (importWarning) return { ok: true, importWarning };
+  }
   return { ok: true };
 }
 
@@ -887,7 +980,8 @@ export async function updatePadsplitGallery(listingId: string, gallery: Padsplit
 }
 
 // One-shot copy of current scrape interiors into the curated gallery.
-// Daily scrape keeps writing padsplit_photos; it never overwrites this.
+// If the cache is empty, fetch the PadSplit listing now instead of waiting
+// for the twice-daily occupancy cron. A later cron does not overwrite this.
 export async function pullPadsplitGallery(listingId: string): Promise<ActionResult<{ count: number }>> {
   const supabase = await createClient();
   const {
@@ -895,11 +989,21 @@ export async function pullPadsplitGallery(listingId: string): Promise<ActionResu
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Not signed in" };
 
-  const { data: listing } = await supabase.from("listings").select("padsplit_photos, hero_photo_url").eq("id", listingId).maybeSingle();
+  const { data: listing } = await supabase.from("listings").select(PADSPLIT_IMPORT_COLUMNS).eq("id", listingId).maybeSingle();
   if (!listing) return { ok: false, error: "Listing not found" };
+  const row = listing as PadsplitImportRow;
 
-  const gallery = importablePadsplitPhotos(listing);
-  if (gallery.length === 0) return { ok: false, error: "No interior PadSplit photos to pull yet" };
+  if (importablePadsplitPhotos(row).length === 0) {
+    if (!row.padsplit_url) return { ok: false, error: "Add a PadSplit listing ID first" };
+    const warning = await importPadsplitAfterUrlSave(supabase, user.id, listingId, null, row.padsplit_url);
+    if (warning) return { ok: false, error: warning };
+    const { data: after } = await supabase.from("listings").select("padsplit_gallery").eq("id", listingId).maybeSingle();
+    const count = Array.isArray(after?.padsplit_gallery) ? after.padsplit_gallery.length : 0;
+    if (count === 0) return { ok: false, error: "No interior PadSplit photos to pull yet" };
+    return { ok: true, count };
+  }
+
+  const gallery = importablePadsplitPhotos(row);
 
   const heroStillPresent = gallery.some((p) => p.url === listing.hero_photo_url);
   const { error } = await supabase

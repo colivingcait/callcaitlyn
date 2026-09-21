@@ -15,10 +15,11 @@
  * block this from Vercel's own serverless IPs the same way it blocks
  * sandboxed dev/agent environments. Writes straight to Supabase's
  * `listings` table (occupied_rooms, total_rooms, price_low, price_high,
- * padsplit_photo_urls, padsplit_photos, last_scraped_at, last_scrape_error)
- * - the raw photo cache is only for CRM "Pull from PadSplit". Never write
- * photo_source, hero_photo_url, or padsplit_gallery — those are the
- * curated public gallery and must survive the daily occupancy refresh.
+ * padsplit_photo_urls, padsplit_photos, last_scraped_at, last_scrape_error).
+ * That occupancy update never writes photo_source, hero_photo_url, or
+ * padsplit_gallery. If padsplit_gallery is still empty, a separate one-shot
+ * copies interiors into it (and sets photo_source to padsplit when there
+ * are no uploads). A saved gallery and its hero pin are left alone.
  *
  * On failure for a listing, only last_scraped_at/last_scrape_error are
  * updated - the real occupancy/price/photo data already on the row is
@@ -247,9 +248,22 @@ function occupancyRoomsFromFinancials(financials) {
   return parseRoomCount(financials.occupancy?.rooms);
 }
 
+// First time we have interiors and she has not saved a curated gallery.
+// Later runs must not call this — order and hero stay put. Does not write
+// hero_photo_url.
+function oneShotGalleryPatch(listing, photos) {
+  if (Array.isArray(listing.padsplit_gallery) && listing.padsplit_gallery.length > 0) return null;
+  const interiors = (photos || []).filter((photo) => !isExteriorPhoto(photo));
+  if (interiors.length === 0) return null;
+  const uploads = Array.isArray(listing.photo_paths) ? listing.photo_paths : [];
+  const patch = { padsplit_gallery: interiors };
+  if (listing.photo_source !== "padsplit" && uploads.length === 0) patch.photo_source = "padsplit";
+  return patch;
+}
+
 const { data: listings, error: fetchError } = await supabase
   .from("listings")
-  .select("id, address, padsplit_url, beds, financials")
+  .select("id, address, padsplit_url, beds, financials, padsplit_gallery, photo_source, photo_paths")
   .eq("owner_id", OWNER_ID)
   .not("padsplit_url", "is", null);
 
@@ -272,8 +286,8 @@ for (const listing of listings) {
   const now = new Date().toISOString();
 
   if (result.ok) {
-    // Occupancy / pricing / raw scrape cache only. Do not touch
-    // photo_source, hero_photo_url, or padsplit_gallery.
+    // Occupancy / pricing / raw scrape cache only. Gallery one-shot is
+    // separate and only runs when padsplit_gallery is still empty.
     await supabase
       .from("listings")
       .update({
@@ -296,6 +310,12 @@ for (const listing of listings) {
       occupied_rooms: result.occupiedRooms,
       total_rooms: result.totalRooms,
     });
+    const galleryPatch = oneShotGalleryPatch(listing, result.photos);
+    if (galleryPatch) {
+      const { error: galleryError } = await supabase.from("listings").update(galleryPatch).eq("id", listing.id);
+      if (galleryError) console.log(`✗ ${listing.address}: one-shot gallery failed: ${galleryError.message}`);
+      else console.log(`  one-shot PadSplit gallery: ${galleryPatch.padsplit_gallery.length} interiors`);
+    }
     okCount++;
     console.log(`✓ ${listing.address}: ${result.occupiedRooms}/${result.totalRooms} occupied, $${result.priceLow}-$${result.priceHigh}/wk`);
   } else {
