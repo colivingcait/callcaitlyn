@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateListingBasics } from "@/app/(app)/listings/actions";
 import { extractPadsplitListingId, padsplitListingUrlFromInput, PADSPLIT_LISTING_URL_BASE } from "@/lib/listings/padsplit-url";
-import type { Listing } from "@/types/database";
+import type { Listing, ListingPublicCategory } from "@/types/database";
+import { LISTING_PUBLIC_CATEGORIES, PUBLIC_CATEGORY_LABEL } from "@/lib/listings/public-category";
 
 export function BasicsForm({ listing }: { listing: Listing }) {
   const router = useRouter();
@@ -14,6 +15,7 @@ export function BasicsForm({ listing }: { listing: Listing }) {
   const [baths, setBaths] = useState(listing.baths?.toString() ?? "");
   const [sqft, setSqft] = useState(listing.sqft?.toString() ?? "");
   const [propertyType, setPropertyType] = useState(listing.property_type ?? "");
+  const [publicCategory, setPublicCategory] = useState(listing.public_category ?? "");
   const [mlsNumber, setMlsNumber] = useState(listing.mls_number ?? "");
   const [zillowUrl, setZillowUrl] = useState(listing.zillow_url ?? "");
   const [padsplitListingId, setPadsplitListingId] = useState(() => extractPadsplitListingId(listing.padsplit_url));
@@ -40,6 +42,7 @@ export function BasicsForm({ listing }: { listing: Listing }) {
       baths: baths ? Number(baths) : null,
       sqft: sqft ? Number(sqft) : null,
       propertyType: propertyType || null,
+      publicCategory: (publicCategory || null) as ListingPublicCategory | null,
       mlsNumber: mlsNumber || null,
       zillowUrl: zillowUrl || null,
       padsplitUrl: padsplitListingUrlFromInput(padsplitListingId),
@@ -83,6 +86,18 @@ export function BasicsForm({ listing }: { listing: Listing }) {
         <div>
           <label className="mb-1 block text-sm font-medium text-neutral-700">Property type</label>
           <input value={propertyType} onChange={(e) => setPropertyType(e.target.value)} className={inputClass} placeholder="Legal duplex" />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-neutral-700">Public listings tag</label>
+          <select value={publicCategory} onChange={(e) => setPublicCategory(e.target.value)} className={inputClass}>
+            <option value="">Not set</option>
+            {LISTING_PUBLIC_CATEGORIES.map((category) => (
+              <option key={category} value={category}>
+                {PUBLIC_CATEGORY_LABEL[category]}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-neutral-400">Tag on the public /listing board. Coliving cards go to the OM; others go to the Zillow link.</p>
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-neutral-700">MLS number</label>
