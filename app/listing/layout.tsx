@@ -1,4 +1,5 @@
 import { Newsreader, Archivo } from "next/font/google";
+import "leaflet/dist/leaflet.css";
 import "./om.css";
 
 // Deliberate deviation from the rest of the CRM (Inter + Fraunces): this is

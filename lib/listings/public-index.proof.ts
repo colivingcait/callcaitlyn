@@ -119,6 +119,9 @@ const mapPage = read("app/listing/map/page.tsx");
 assert.ok(mapPage.includes('export const dynamic = "force-dynamic"'));
 assert.equal(mapPage.includes("geocode"), false);
 
+const listingLayout = read("app/listing/layout.tsx");
+assert.ok(listingLayout.includes("leaflet/dist/leaflet.css"));
+
 const mapCanvas = read("components/listings/index/ListingsMapCanvas.tsx");
 assert.ok(mapCanvas.includes("leaflet"));
 assert.ok(mapCanvas.includes("openstreetmap.de"));

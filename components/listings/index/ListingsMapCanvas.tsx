@@ -24,7 +24,6 @@ export function ListingsMapCanvas({ listings }: { listings: PublicIndexCard[] })
 
     (async () => {
       const L = (await import("leaflet")).default;
-      await import("leaflet/dist/leaflet.css");
       if (cancelled || !mapEl.current) return;
 
       const pinned = listings
@@ -128,7 +127,7 @@ export function ListingsMapCanvas({ listings }: { listings: PublicIndexCard[] })
                 textAlign: "left",
                 background: "#fffdfa",
                 border: "1px solid #e4ddd2",
-                borderLeft: "3px solid #e4ddd2",
+                borderLeft: selected === index ? "3px solid #cc4a37" : "3px solid #e4ddd2",
                 padding: "14px 16px",
                 cursor: "pointer",
                 color: "#211c19",
