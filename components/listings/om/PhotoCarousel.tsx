@@ -45,6 +45,7 @@ export function PhotoCarousel({
   const [photoMode, setPhotoMode] = useState(false);
   const [index, setIndex] = useState(0);
   const thumbsRef = useRef<HTMLDivElement>(null);
+  const swipeRef = useRef<number | null>(null);
   const count = photos.length;
   // Cover is a pin, not a reorder — photo-mode stays in curated order.
   const cover = (coverUrl && photos.find((photo) => photo.url === coverUrl)) || photos[0];
@@ -77,6 +78,9 @@ export function PhotoCarousel({
 
   const coverImageUrl = cover?.url;
   const counter = `${String(index + 1).padStart(2, "0")} / ${String(Math.max(count, 1)).padStart(2, "0")}`;
+  const mobileEyebrow = eyebrow.replace(/\s*·\s*COLIVING\s*$/i, "");
+  const viewPhotosLabel = "VIEW PHOTOS";
+  const viewPhotosCountLabel = count > 0 ? `VIEW ${count} PHOTOS` : viewPhotosLabel;
 
   return (
     <section
@@ -95,9 +99,15 @@ export function PhotoCarousel({
       {!photoMode && (
         <>
           <div className="om-hero-scrim" style={{ position: "absolute", inset: 0, background: SCRIM }} />
+          {count > 0 && (
+            <p className="om-hero-counter" style={{ margin: 0 }}>
+              {counter}
+            </p>
+          )}
           <div className="om-hero-chrome om-gutter" style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "0 28px 30px" }}>
             <div style={{ margin: "0 auto", maxWidth: 1180 }}>
-              <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.22em", color: "#e9a396" }}>{eyebrow}</p>
+              <p className="om-eyebrow-full" style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.22em", color: "#e9a396" }}>{eyebrow}</p>
+              <p className="om-eyebrow-mobile" style={{ margin: 0, fontSize: 11, fontWeight: 500, letterSpacing: "0.2em", color: "#e9a396" }}>{mobileEyebrow}</p>
               <h1
                 className="om-h1"
                 style={{
@@ -112,13 +122,13 @@ export function PhotoCarousel({
               >
                 {nickname}
               </h1>
-              <div style={{ marginTop: 18, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 18, flexWrap: "wrap" }}>
-                {summary ? <p style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: "#ded6cc" }}>{summary}</p> : <span />}
+              <div className="om-hero-actions" style={{ marginTop: 18, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 18, flexWrap: "wrap" }}>
+                {summary ? <p className="om-hero-summary" style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: "#ded6cc" }}>{summary}</p> : <span className="om-hero-summary" />}
                 {count > 0 && (
                   <button
                     type="button"
                     onClick={() => setPhotoMode(true)}
-                    className="om-hover-fill-border"
+                    className="om-hover-fill-border om-view-photos"
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -133,7 +143,9 @@ export function PhotoCarousel({
                       whiteSpace: "nowrap",
                     }}
                   >
-                    VIEW PHOTOS <span style={{ fontSize: 14, lineHeight: 1 }}>→</span>
+                    <span className="om-view-photos-desktop">{viewPhotosLabel}</span>
+                    <span className="om-view-photos-mobile">{viewPhotosCountLabel}</span>
+                    <span className="om-view-photos-arrow" style={{ fontSize: 14, lineHeight: 1 }}>→</span>
                   </button>
                 )}
               </div>
@@ -143,7 +155,22 @@ export function PhotoCarousel({
       )}
 
       {photoMode && current && (
-        <div data-om-noprint style={{ position: "absolute", inset: 0 }}>
+        <div
+          className="om-photo-sheet"
+          data-om-noprint
+          style={{ position: "absolute", inset: 0 }}
+          onTouchStart={(e) => {
+            swipeRef.current = e.changedTouches[0]?.clientX ?? null;
+          }}
+          onTouchEnd={(e) => {
+            const start = swipeRef.current;
+            swipeRef.current = null;
+            if (start == null || count < 2) return;
+            const dx = (e.changedTouches[0]?.clientX ?? start) - start;
+            if (dx > 40) go(index - 1);
+            else if (dx < -40) go(index + 1);
+          }}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={current.url}
@@ -152,15 +179,15 @@ export function PhotoCarousel({
           />
           {count > 1 && (
             <>
-              <button type="button" onClick={() => go(index - 1)} aria-label="Previous photo" className="om-invert-btn" style={{ ...arrowStyle, left: 18 }}>
+              <button type="button" onClick={() => go(index - 1)} aria-label="Previous photo" className="om-invert-btn om-photo-arrow om-photo-arrow-prev" style={{ ...arrowStyle, left: 18 }}>
                 ←
               </button>
-              <button type="button" onClick={() => go(index + 1)} aria-label="Next photo" className="om-invert-btn" style={{ ...arrowStyle, right: 18 }}>
+              <button type="button" onClick={() => go(index + 1)} aria-label="Next photo" className="om-invert-btn om-photo-arrow om-photo-arrow-next" style={{ ...arrowStyle, right: 18 }}>
                 →
               </button>
             </>
           )}
-          <div style={{ position: "absolute", top: 18, right: 18, display: "flex", alignItems: "center", gap: 10 }}>
+          <div className="om-photo-top" style={{ position: "absolute", top: 18, right: 18, display: "flex", alignItems: "center", gap: 10 }}>
             <p
               style={{
                 margin: 0,
@@ -196,6 +223,7 @@ export function PhotoCarousel({
             </button>
           </div>
           <div
+            className="om-photo-rail"
             style={{
               position: "absolute",
               left: 0,
@@ -233,7 +261,7 @@ export function PhotoCarousel({
                 />
               ))}
             </div>
-            <p style={{ margin: 0, flex: "0 0 auto", fontSize: 12, letterSpacing: "0.1em", color: "#c9c0b6", whiteSpace: "nowrap" }}>
+            <p className="om-photo-hint" style={{ margin: 0, flex: "0 0 auto", fontSize: 12, letterSpacing: "0.1em", color: "#c9c0b6", whiteSpace: "nowrap" }}>
               ESC TO CLOSE · ← → TO BROWSE
             </p>
           </div>

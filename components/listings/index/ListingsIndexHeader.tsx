@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { usePublicSheets } from "@/components/listings/om/PublicSheets";
 
 export function ListingsIndexHeader({
   listingsHref = "/listing#listings",
@@ -11,6 +12,7 @@ export function ListingsIndexHeader({
   soldHref?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const sheets = usePublicSheets();
 
   return (
     <header data-om-noprint style={{ position: "sticky", top: 0, zIndex: 30, background: "#211c19", borderBottom: "1px solid #332b26" }}>
@@ -36,7 +38,7 @@ export function ListingsIndexHeader({
           <a href={listingsHref} className="om-hover-light" style={{ color: "#a39a8e" }}>
             LISTINGS
           </a>
-          <a href={soldHref} className="om-hover-light" style={{ color: "#a39a8e" }}>
+          <a href={soldHref} className="om-hover-light listings-sold-link" style={{ color: "#a39a8e" }}>
             SOLD
           </a>
           <Link
@@ -69,7 +71,7 @@ export function ListingsIndexHeader({
           {open ? "CLOSE" : "MENU"}
         </button>
         {open && (
-          <div id="listings-header-drawer" className="om-header-drawer" style={{ flex: "1 1 100%", padding: "4px 0 8px", display: "flex", flexDirection: "column", gap: 4 }}>
+          <div id="listings-header-drawer" className="om-header-drawer" style={{ flex: "1 1 100%", padding: "4px 0 8px", display: "flex", flexDirection: "column", gap: 2 }}>
             <a
               href={listingsHref}
               onClick={() => setOpen(false)}
@@ -81,30 +83,57 @@ export function ListingsIndexHeader({
             <a
               href={soldHref}
               onClick={() => setOpen(false)}
-              className="om-hover-light"
-              style={{ display: "block", padding: "10px 0", fontSize: 13, fontWeight: 500, letterSpacing: "0.08em", color: "#b6aca2" }}
+              className="om-hover-light listings-sold-link"
+              style={{ display: "block", padding: "11px 0", fontSize: 13, fontWeight: 500, letterSpacing: "0.08em", color: "#b6aca2" }}
             >
               SOLD
             </a>
-            <Link
-              href="/book"
-              onClick={() => setOpen(false)}
-              className="om-hover-fill-border"
-              style={{
-                marginTop: 8,
-                display: "block",
-                textAlign: "center",
-                border: "1px solid #574f47",
-                padding: "12px 16px",
-                fontSize: 12,
-                fontWeight: 600,
-                letterSpacing: "0.1em",
-                color: "#f4f1ec",
-                whiteSpace: "nowrap",
-              }}
-            >
-              BOOK A CALL
-            </Link>
+            {sheets ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  sheets.openBook();
+                }}
+                className="om-hover-fill-border"
+                style={{
+                  marginTop: 8,
+                  display: "block",
+                  textAlign: "center",
+                  border: "1px solid #574f47",
+                  background: "transparent",
+                  padding: "13px 16px",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  letterSpacing: "0.1em",
+                  color: "#f4f1ec",
+                  whiteSpace: "nowrap",
+                  cursor: "pointer",
+                }}
+              >
+                BOOK A CALL
+              </button>
+            ) : (
+              <Link
+                href="/book"
+                onClick={() => setOpen(false)}
+                className="om-hover-fill-border"
+                style={{
+                  marginTop: 8,
+                  display: "block",
+                  textAlign: "center",
+                  border: "1px solid #574f47",
+                  padding: "12px 16px",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  letterSpacing: "0.1em",
+                  color: "#f4f1ec",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                BOOK A CALL
+              </Link>
+            )}
           </div>
         )}
       </div>

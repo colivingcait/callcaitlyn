@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useUnlocked } from "./UnlockContext";
+import { usePublicSheets } from "./PublicSheets";
 
 const LINKS = [
   { href: "#property", label: "PROPERTY" },
@@ -13,6 +14,7 @@ const LINKS = [
 export function OmHeaderNav() {
   const [open, setOpen] = useState(false);
   const { unlocked } = useUnlocked();
+  const sheets = usePublicSheets();
   const ctaHref = unlocked ? "#offer" : "#unlock";
   const ctaLabel = unlocked ? "SUBMIT AN OFFER" : "UNLOCK FINANCIALS";
 
@@ -54,26 +56,40 @@ export function OmHeaderNav() {
         {open ? "CLOSE" : "MENU"}
       </button>
       {open && (
-        <div id="om-header-drawer" className="om-header-drawer" style={{ flex: "1 1 100%", padding: "4px 0 8px", display: "flex", flexDirection: "column", gap: 4 }}>
+        <div id="om-header-drawer" className="om-header-drawer" style={{ flex: "1 1 100%", padding: "4px 0 8px", display: "flex", flexDirection: "column", gap: 2 }}>
           {LINKS.map((link) => (
             <a
               key={link.href}
               href={link.href}
               onClick={() => setOpen(false)}
               className="om-hover-light"
-              style={{ display: "block", padding: "10px 0", fontSize: 13, fontWeight: 500, letterSpacing: "0.08em", color: "#b6aca2" }}
+              style={{ display: "block", padding: "11px 0", fontSize: 13, fontWeight: 500, letterSpacing: "0.08em", color: "#b6aca2", textAlign: "left" }}
             >
               {link.label}
             </a>
           ))}
-          <a
-            href={ctaHref}
-            onClick={() => setOpen(false)}
-            className="om-hover-fill"
-            style={{ marginTop: 8, display: "block", textAlign: "center", border: "1px solid #cc4a37", background: "#cc4a37", padding: "12px 16px", fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", color: "#fff", whiteSpace: "nowrap" }}
-          >
-            {ctaLabel}
-          </a>
+          {unlocked ? (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                sheets?.openOffer();
+              }}
+              className="om-hover-fill"
+              style={{ marginTop: 8, display: "block", textAlign: "center", border: "1px solid #cc4a37", background: "#cc4a37", padding: "13px 16px", fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", color: "#fff", whiteSpace: "nowrap", cursor: "pointer" }}
+            >
+              {ctaLabel}
+            </button>
+          ) : (
+            <a
+              href={ctaHref}
+              onClick={() => setOpen(false)}
+              className="om-hover-fill"
+              style={{ marginTop: 8, display: "block", textAlign: "center", border: "1px solid #cc4a37", background: "#cc4a37", padding: "13px 16px", fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", color: "#fff", whiteSpace: "nowrap" }}
+            >
+              {ctaLabel}
+            </a>
+          )}
         </div>
       )}
     </>

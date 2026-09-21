@@ -7,6 +7,7 @@ import {
   publicListingHref,
 } from "@/lib/listings/public-category";
 import { submarketCentroid } from "@/lib/listings/submarkets";
+import { formatPublicBand } from "@/lib/listings/public-bands";
 import { formatCurrency } from "@/lib/utils";
 import { isPublicAvailableStatus, isPublicUnderContractStatus } from "@/lib/listings/status";
 import type { ListingStatus } from "@/types/database";
@@ -28,6 +29,7 @@ export type PublicIndexSource = {
   beds: number | null;
   baths: number | null;
   sqft: number | null;
+  band_cap_rate?: string | null;
 };
 
 export type PublicIndexCard = {
@@ -43,6 +45,7 @@ export type PublicIndexCard = {
   external: boolean;
   cta: string | null;
   detail: string | null;
+  spec: string;
   lat: number | null;
   lng: number | null;
 };
@@ -90,6 +93,8 @@ export function toPublicIndexCard(listing: PublicIndexSource): PublicIndexCard {
   const link = publicListingHref(listing);
   const centroid = submarketCentroid(listing.submarket);
   const submarket = publicListingCopy(listing.submarket);
+  const cap = formatPublicBand(listing.band_cap_rate);
+  const spec = [underContractDetail(listing), cap ? `${cap} cap` : null].filter(Boolean).join(" · ");
   return {
     id: listing.id,
     name: publicListingCopy(listing.nickname) || "Listing",
@@ -103,6 +108,7 @@ export function toPublicIndexCard(listing: PublicIndexSource): PublicIndexCard {
     external: link?.external ?? false,
     cta: link?.cta ?? null,
     detail: underContractDetail(listing),
+    spec,
     lat: centroid?.lat ?? null,
     lng: centroid?.lng ?? null,
   };

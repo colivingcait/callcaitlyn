@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { submitListingOffer } from "@/app/listing/[slug]/actions";
+import { usePublicSheets } from "./PublicSheets";
 
 const boxedLabel: React.CSSProperties = { display: "block", fontSize: 13, color: "#574f47" };
 const boxedInput: React.CSSProperties = { marginTop: 6, width: "100%", boxSizing: "border-box", border: "1px solid #d5cdc1", background: "#fffdfa", padding: "11px 13px", fontSize: 15, color: "#211c19" };
@@ -10,7 +11,17 @@ const boxedInput: React.CSSProperties = { marginTop: 6, width: "100%", boxSizing
 // this audience is residential/coliving operators, not institutional
 // buyers - the vocabulary throughout is "submit an offer" / "your terms".
 export function OfferSection({ slug, nickname, omNumber }: { slug: string; nickname: string; omNumber: string }) {
-  const [open, setOpen] = useState(false);
+  const sheets = usePublicSheets();
+  const [localOpen, setLocalOpen] = useState(false);
+  const open = sheets ? sheets.offerOpen : localOpen;
+  function setOpen(next: boolean) {
+    if (sheets) {
+      if (next) sheets.openOffer();
+      else sheets.closeOffer();
+      return;
+    }
+    setLocalOpen(next);
+  }
   const [sent, setSent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -70,11 +81,11 @@ export function OfferSection({ slug, nickname, omNumber }: { slug: string; nickn
   return (
     <>
       <section id="offer" data-om-noprint style={{ background: "#211c19", padding: "46px 36px 48px", textAlign: "center" }}>
-        <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.2em", color: "#e9a396" }}>READY TO MOVE</p>
+        <p className="om-offer-eyebrow" style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.2em", color: "#e9a396" }}>READY TO MOVE</p>
         <h2 style={{ margin: "16px auto 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 34, lineHeight: 1.14, color: "#f4f1ec", maxWidth: "24ch" }}>
           Ready to make an offer?
         </h2>
-        <p style={{ margin: "16px auto 0", fontSize: 16, lineHeight: 1.7, color: "#d6cfc5", maxWidth: "56ch" }}>
+        <p className="om-offer-body" style={{ margin: "16px auto 0", fontSize: 16, lineHeight: 1.7, color: "#d6cfc5", maxWidth: "56ch" }}>
           Tell me your price and terms and I&apos;ll call you the same day to walk through them. Nothing here is a contract and nothing goes to the seller
           until we&apos;ve talked.
         </p>
@@ -85,28 +96,29 @@ export function OfferSection({ slug, nickname, omNumber }: { slug: string; nickn
             setSent(false);
             setUnsureTerms(false);
           }}
-          className="om-hover-fill-border"
+          className="om-hover-fill-border om-offer-cta"
           style={{ marginTop: 28, border: "1px solid #cc4a37", background: "#cc4a37", padding: "18px 40px", fontSize: 14, fontWeight: 600, letterSpacing: "0.12em", color: "#fff", cursor: "pointer", whiteSpace: "nowrap" }}
         >
           SUBMIT AN OFFER
         </button>
-        <p style={{ margin: "16px 0 0", fontSize: 13, color: "#a39a8e" }}>Goes straight to Caitlyn — typically a call back within a few hours.</p>
+        <p className="om-offer-note" style={{ margin: "16px 0 0", fontSize: 13, color: "#a39a8e" }}>Goes straight to Caitlyn — typically a call back within a few hours.</p>
       </section>
 
       {open && (
         <div
           role="dialog"
           aria-modal="true"
-          style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(23,19,17,0.62)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "40px 20px", overflow: "auto" }}
+          className="om-offer-backdrop"
+          style={{ position: "fixed", inset: 0, zIndex: 63, background: "rgba(23,19,17,0.62)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "40px 20px", overflow: "auto" }}
           onClick={(e) => {
             if (e.target === e.currentTarget) setOpen(false);
           }}
         >
-          <div ref={panelRef} style={{ width: "100%", maxWidth: 620, background: "#f4f1ec", border: "1px solid #211c19" }}>
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 20, background: "#211c19", padding: "24px 28px" }}>
+          <div ref={panelRef} className="om-offer-panel" style={{ width: "100%", maxWidth: 620, background: "#f4f1ec", border: "1px solid #211c19" }}>
+            <div className="om-offer-head" style={{ display: "flex", alignItems: "flex-start", gap: 20, background: "#211c19", padding: "24px 28px" }}>
               <div style={{ minWidth: 0 }}>
                 <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.18em", color: "#e9a396" }}>YOUR OFFER · {omNumber}</p>
-                <p style={{ margin: "10px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 24, color: "#f4f1ec" }}>{nickname}</p>
+                <p className="om-offer-title" style={{ margin: "10px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 24, color: "#f4f1ec" }}>{nickname}</p>
                 <p style={{ margin: "8px 0 0", fontSize: 13, lineHeight: 1.6, color: "#cdc4ba" }}>Not a contract — just your terms, so we have something specific to talk about.</p>
               </div>
               <button
@@ -140,14 +152,14 @@ export function OfferSection({ slug, nickname, omNumber }: { slug: string; nickn
                 </button>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} style={{ padding: "26px 28px 30px" }}>
+              <form onSubmit={handleSubmit} className="om-offer-form" style={{ padding: "26px 28px 30px" }}>
                 <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#6b6259" }}>YOUR INFORMATION</p>
                 <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 16 }}>
                   <div>
                     <label htmlFor="loi-name" style={boxedLabel}>Name</label>
                     <input id="loi-name" name="name" required className="om-input-boxed" style={boxedInput} />
                   </div>
-                  <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                  <div className="om-offer-pair" style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
                     <div style={{ flex: "1 1 180px" }}>
                       <label htmlFor="loi-phone" style={boxedLabel}>Phone</label>
                       <input id="loi-phone" name="phone" required className="om-input-boxed" style={boxedInput} />
@@ -178,7 +190,7 @@ export function OfferSection({ slug, nickname, omNumber }: { slug: string; nickn
                 <>
                 <p style={{ margin: "26px 0 0", fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#6b6259" }}>YOUR TERMS</p>
                 <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 16 }}>
-                  <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                  <div className="om-offer-pair" style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
                     <div style={{ flex: "1 1 180px" }}>
                       <label htmlFor="loi-price" style={boxedLabel}>Offer price</label>
                       <input id="loi-price" name="price" placeholder="$385,000" className="om-input-boxed" style={boxedInput} />
@@ -188,8 +200,8 @@ export function OfferSection({ slug, nickname, omNumber }: { slug: string; nickn
                       <input id="loi-emd" name="emd" placeholder="$5,000" className="om-input-boxed" style={boxedInput} />
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                    <div style={{ flex: "1 1 170px" }}>
+                  <div className="om-offer-terms" style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                    <div className="om-offer-financing" style={{ flex: "1 1 170px" }}>
                       <label htmlFor="loi-financing" style={boxedLabel}>Financing</label>
                       <select id="loi-financing" name="financing" className="om-input-boxed" style={boxedInput}>
                         <option>Conventional</option>
@@ -235,16 +247,16 @@ export function OfferSection({ slug, nickname, omNumber }: { slug: string; nickn
 
                 {error && <p style={{ margin: "16px 0 0", fontSize: 13, color: "#a33a29" }}>{error}</p>}
 
-                <div style={{ marginTop: 24, display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+                <div className="om-offer-send-row" style={{ marginTop: 24, display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="om-hover-dark"
+                    className="om-hover-dark om-offer-send"
                     style={{ border: "1px solid #cc4a37", background: "#cc4a37", padding: "15px 32px", fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: "#fff", cursor: "pointer" }}
                   >
                     {submitting ? "SENDING…" : "SEND TO CAITLYN"}
                   </button>
-                  <p style={{ margin: 0, flex: "1 1 220px", fontSize: 13, lineHeight: 1.6, color: "#574f47" }}>
+                  <p className="om-offer-send-note" style={{ margin: 0, flex: "1 1 220px", fontSize: 13, lineHeight: 1.6, color: "#574f47" }}>
                     Nothing is binding. Caitlyn will call to confirm your terms before presenting anything.
                   </p>
                 </div>

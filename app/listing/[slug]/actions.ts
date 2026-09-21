@@ -236,6 +236,17 @@ export async function requestSellerAnalysis(input: {
   email: string;
   city: string;
   notes: string;
+  address?: string;
+  beds?: string;
+  baths?: string;
+  timeline?: string;
+  roomsOccupied?: string;
+  grossRents?: string;
+  // Mobile sheet: CONTINUE notifies immediately (stage "contact"). SEND FOR
+  // ANALYSIS updates the same activity (requestId) and notifies again.
+  // A contact-only row with no details follow-up means they abandoned.
+  stage?: "contact" | "details";
+  requestId?: string;
 }): Promise<ActionResult> {
   if (!OWNER_ID) return { ok: false, error: "Not configured" };
   if (!input.name.trim()) return { ok: false, error: "Enter your name" };
@@ -247,16 +258,52 @@ export async function requestSellerAnalysis(input: {
 
   await addTagByName(admin, OWNER_ID, contact.id, "Seller Lead");
 
-  const bodyParts = ["Requested a PadSplit valuation", input.city, input.notes].filter(Boolean);
-  await upsertActivity(admin, OWNER_ID, contact.id, "listing_page", "listing_seller_key", `${contact.id}:${Date.now()}`, {
+  const stage = input.stage;
+  const lead =
+    stage === "details"
+      ? "PadSplit valuation — details"
+      : stage === "contact"
+        ? "PadSplit valuation — contact only, may abandon"
+        : "Requested a PadSplit valuation";
+  const bodyParts = [
+    lead,
+    input.address && `Address: ${input.address}`,
+    input.city && input.city,
+    input.beds && `Beds: ${input.beds}`,
+    input.baths && `Baths: ${input.baths}`,
+    input.timeline && `Timeline: ${input.timeline}`,
+    input.roomsOccupied && `Rooms occupied: ${input.roomsOccupied}`,
+    input.grossRents && `Gross rents: ${input.grossRents}`,
+    input.notes && input.notes,
+  ].filter(Boolean);
+
+  const requestId = input.requestId?.trim() || `${contact.id}:${Date.now()}`;
+  await upsertActivity(admin, OWNER_ID, contact.id, "listing_page", "listing_seller_key", requestId, {
     type: "note",
     direction: "none",
     occurred_at: new Date().toISOString(),
     body: bodyParts.join(" — "),
-    metadata: { city: input.city, notes: input.notes },
+    metadata: {
+      city: input.city,
+      notes: input.notes,
+      address: input.address ?? "",
+      beds: input.beds ?? "",
+      baths: input.baths ?? "",
+      timeline: input.timeline ?? "",
+      roomsOccupied: input.roomsOccupied ?? "",
+      grossRents: input.grossRents ?? "",
+      stage: stage ?? "single",
+    },
   });
 
-  await notifyNewLead(admin, OWNER_ID, { title: name, body: "Wants a PadSplit valuation", url: `/contacts/${contact.id}` });
+  const notice =
+    stage === "details"
+      ? { title: "SELLER ANALYSIS — DETAILS", body: `${name} sent property details for a PadSplit valuation` }
+      : stage === "contact"
+        ? { title: "SELLER ANALYSIS — STARTED", body: `${name} started a PadSplit valuation — contact only, may abandon` }
+        : { title: name, body: "Wants a PadSplit valuation" };
+
+  await notifyNewLead(admin, OWNER_ID, { ...notice, url: `/contacts/${contact.id}` });
 
   return { ok: true };
 }
