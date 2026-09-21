@@ -24,8 +24,6 @@ import type { ListingDocumentType, ListingFinancials, ListingPhotoSource, Listin
 
 const PREVIEW_AGENT = { name: "Jamie Agent" };
 
-export const maxDuration = 60;
-
 const PADSPLIT_IMPORT_COLUMNS =
   "id, padsplit_url, beds, financials, photo_paths, photo_source, padsplit_gallery, padsplit_photos, hero_photo_url, public_slug";
 

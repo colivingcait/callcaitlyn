@@ -30,6 +30,12 @@ import { listingFieldCopy } from "@/lib/listings/public-copy";
 import { normalizePhone } from "@/lib/phone";
 import type { ListingAgentTouch } from "@/lib/crm/listing-activity";
 
+// First-save PadSplit import fetches the listing (up to 20s) inside
+// updateListingBasics / pullPadsplitGallery. That ceiling has to live on
+// this page: a "use server" file can only export async functions, and a
+// Server Action uses the maxDuration of the page that invokes it.
+export const maxDuration = 60;
+
 type Tab = "rp" | "marketing" | "photos" | "activity";
 
 export default async function ListingDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> }) {
