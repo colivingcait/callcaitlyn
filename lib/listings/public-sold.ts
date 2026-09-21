@@ -3,8 +3,10 @@ import { PROPERTY_TYPE_LABELS } from "@/lib/utils";
 import type { DealSide, PropertyType } from "@/types/database";
 
 // Product decision for the Recently sold label:
-// 1. Prefer a closed listing's nickname when the deal address matches that
+// 1. Prefer an archived listing's nickname when the deal address matches that
 //    listing's address (same house, already has a public identity).
+//    Archived listings are not sold cards themselves — the strip stays
+//    deals-based (won deals).
 // 2. Otherwise use the street name from deal.address with the house number
 //    stripped — nickname-style, no street number.
 // Never use client_name, notes, or a full street address.

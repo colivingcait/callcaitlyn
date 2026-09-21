@@ -39,7 +39,7 @@ export async function getPublicListing(slug: string): Promise<PublicListing | nu
     .select("*")
     .eq("owner_id", OWNER_ID)
     .eq("public_slug", slug)
-    .neq("status", "closed")
+    .neq("status", "archived")
     .maybeSingle();
   if (!listing) return null;
 
@@ -66,7 +66,7 @@ export async function getPublicListings(): Promise<PublicListingCard[]> {
     .from("listings")
     .select("*")
     .eq("owner_id", OWNER_ID)
-    .neq("status", "closed")
+    .neq("status", "archived")
     .order("created_at", { ascending: false });
 
   const visible = (listings ?? []).filter((listing) => isPubliclyListed(listing));
@@ -93,7 +93,7 @@ export async function getRecentlySoldPublic(): Promise<PublicSoldEntry[]> {
       .eq("status", "won")
       .order("closed_at", { ascending: false })
       .limit(12),
-    admin.from("listings").select("address, nickname").eq("owner_id", OWNER_ID).eq("status", "closed").not("nickname", "is", null),
+    admin.from("listings").select("address, nickname").eq("owner_id", OWNER_ID).eq("status", "archived").not("nickname", "is", null),
   ]);
 
   const nicknamesByAddress = new Map<string, string>();

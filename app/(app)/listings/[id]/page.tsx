@@ -6,7 +6,6 @@ import { collapseListingAgents } from "@/lib/crm/agent-identity";
 import { fetchListingAgentTextRecency } from "@/lib/data/listing-outbound-texts";
 import { createClient } from "@/lib/supabase/server";
 import { formatCompactCurrency, formatCurrency, cn } from "@/lib/utils";
-import { STATUS_LABEL } from "@/lib/listings/status";
 import { ListingStatusMenu } from "@/components/listings/ListingStatusMenu";
 import { ImportAgentsPanel } from "@/components/listings/ImportAgentsPanel";
 import { AgentsList } from "@/components/listings/AgentsList";
@@ -121,7 +120,6 @@ export default async function ListingDetailPage({ params, searchParams }: { para
           {chromeMeta && <p className="text-[14px] text-neutral-400">· {chromeMeta}</p>}
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <span className="rounded-full border border-[#eadfd6] bg-white px-3 py-1.5 text-[13px] font-medium text-neutral-700">{STATUS_LABEL[listing.status]}</span>
           <ListingStatusMenu listingId={listing.id} status={listing.status} />
         </div>
       </div>

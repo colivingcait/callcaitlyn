@@ -1,5 +1,5 @@
 import { formatCompactCurrency } from "@/lib/utils";
-import { STATUS_LABEL } from "@/lib/listings/status";
+import { listingStatusLabel } from "@/lib/listings/status";
 import { APP_TIMEZONE, formatLocal } from "@/lib/format-time";
 import { fromZonedTime } from "date-fns-tz";
 import type { ListingAgentMessage, ListingPriceChange, ListingSend, ListingStatus } from "@/types/database";
@@ -82,8 +82,7 @@ export function lastChannelLabel(channel: ListingAgentMessage["channel"]): "Call
 }
 
 function statusLabel(status: ListingStatus | null | undefined): string {
-  if (!status) return "Unknown";
-  return STATUS_LABEL[status] ?? status;
+  return listingStatusLabel(status);
 }
 
 export function inboundChannelTitle(channel: ListingAgentMessage["channel"]): string {
