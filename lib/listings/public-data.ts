@@ -69,6 +69,8 @@ export async function getPublicListings(): Promise<PublicListingCard[]> {
     .neq("status", "archived")
     .order("created_at", { ascending: false });
 
+  // Board visibility is status-only (coming soon / active / under contract).
+  // public_slug publishes the dedicated OM; it is not an index opt-in.
   const visible = (listings ?? []).filter((listing) => isPubliclyListed(listing));
   return sortPublicListings(
     visible.map((listing) => {

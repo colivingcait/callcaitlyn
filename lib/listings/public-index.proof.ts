@@ -17,11 +17,13 @@ assert.equal(parsePublicCategory("Co-living"), null, "do not infer the public ta
 assert.equal(parsePublicCategory("co_living"), null);
 assert.equal(parsePublicCategory("Legal duplex"), null);
 
-assert.equal(isPubliclyListed({ status: "active", public_slug: "adair", public_category: "coliving", zillow_url: null }), true);
-assert.equal(isPubliclyListed({ status: "active", public_slug: null, public_category: "airbnb", zillow_url: "https://zillow.com/x" }), true);
-assert.equal(isPubliclyListed({ status: "active", public_slug: null, public_category: "coliving", zillow_url: null }), false);
-assert.equal(isPubliclyListed({ status: "archived", public_slug: "x", public_category: "coliving", zillow_url: null }), false);
-assert.equal(isPubliclyListed({ status: "under_contract", public_slug: "x", public_category: "coliving", zillow_url: null }), true);
+assert.equal(isPubliclyListed({ status: "active" }), true, "public board is status-gated, not public_slug / marketing-page");
+assert.equal(isPubliclyListed({ status: "coming_soon" }), true);
+assert.equal(isPubliclyListed({ status: "under_contract" }), true);
+assert.equal(isPubliclyListed({ status: "archived" }), false);
+assert.equal(isPubliclyListed({ status: "closed" }), false, "legacy closed stays off the public board");
+assert.equal(publicListingHref({ public_category: "coliving", public_slug: null, zillow_url: "https://zillow.com/x" })?.href, "https://zillow.com/x");
+assert.equal(publicListingHref({ public_category: "coliving", public_slug: null, zillow_url: null }), null);
 
 assert.deepEqual(publicListingHref({ public_category: "coliving", public_slug: "adair", zillow_url: "https://zillow.com/x" }), {
   href: "/listing/adair",
@@ -88,7 +90,7 @@ assert.equal(sold?.name.includes("400"), false);
 assert.equal(sold?.name.toLowerCase().includes("client"), false);
 assert.equal(JSON.stringify(sold).includes("client_name"), false);
 
-const card = toPublicIndexCard({
+const cardSource = {
   id: "1",
   nickname: "The Adair",
   property_type: "Legal duplex",
@@ -97,7 +99,7 @@ const card = toPublicIndexCard({
   zillow_url: null,
   submarket: "East Point",
   list_price: 525000,
-  status: "active",
+  status: "active" as const,
   created_at: "2026-09-01T00:00:00Z",
   coverPhotoUrl: null,
   liveOccupied: 6,
@@ -105,7 +107,8 @@ const card = toPublicIndexCard({
   beds: 7,
   baths: 4,
   sqft: 2400,
-});
+};
+const card = toPublicIndexCard(cardSource);
 assert.equal(card.tag, "COLIVING");
 assert.equal(card.tagColor, "#cc4a37");
 assert.equal(card.href, "/listing/the-adair");
@@ -113,10 +116,27 @@ assert.equal(card.lat, 33.6795);
 assert.equal(card.detail, "7 rooms · 6 of 7 occupied");
 assert.equal(card.name, "The Adair");
 
+const noSlugCard = toPublicIndexCard({
+  ...cardSource,
+  public_slug: null,
+  zillow_url: null,
+});
+assert.equal(noSlugCard.href, null, "no slug and no Zillow → still a card, no dead link");
+assert.equal(noSlugCard.name, "The Adair");
+
+const zillowFallback = toPublicIndexCard({
+  ...cardSource,
+  public_slug: null,
+  zillow_url: "https://zillow.com/x",
+});
+assert.equal(zillowFallback.href, "https://zillow.com/x");
+assert.equal(zillowFallback.external, true);
+
 assert.equal(listingsQueryString({ view: "map", foo: "bar" }), "foo=bar");
 
 const indexPage = read("app/listing/page.tsx");
 assert.ok(indexPage.includes('export const dynamic = "force-dynamic"'));
+assert.ok(indexPage.includes("!listing.href"), "cards without a slug/Zillow still render, no dead link");
 assert.equal(indexPage.includes("geocode"), false);
 assert.equal(indexPage.includes("listing.address"), false);
 
@@ -142,10 +162,21 @@ assert.equal(mapCanvas.includes("geocode"), false);
 const publicData = read("lib/listings/public-data.ts");
 assert.ok(publicData.includes("getRecentlySoldPublic"));
 assert.ok(publicData.includes("sortPublicListings"));
+assert.ok(publicData.includes("isPubliclyListed"), "index still status-gates via isPubliclyListed");
 assert.ok(publicData.includes('.neq("status", "archived")'));
 assert.ok(publicData.includes('.eq("status", "archived")'), "sold nicknames may still match archived listings");
 assert.equal(publicData.includes('.eq("status", "closed")'), false);
 assert.equal(publicData.includes("client_name"), false);
+
+const category = read("lib/listings/public-category.ts");
+assert.ok(category.includes("isPublicAvailableStatus"));
+assert.ok(category.includes("isPublicUnderContractStatus"));
+assert.equal(category.includes("listing.public_slug) return true"), false, "public_slug is not a board gate");
+assert.equal(category.includes("listing.zillow_url"), true); // href helper still uses it
+
+const toggle = read("components/listings/PublicPageToggle.tsx");
+assert.ok(toggle.includes("already appear on the public board"));
+assert.ok(toggle.includes("does") && toggle.includes("not hide them"));
 
 const header = read("components/listings/index/ListingsIndexHeader.tsx");
 assert.ok(header.includes("BOOK A CALL"));
