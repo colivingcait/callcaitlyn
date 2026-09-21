@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { getPublicListingsIndex } from "@/lib/listings/public-data";
 import { listingsQueryString } from "@/lib/listings/public-index";
@@ -26,7 +27,7 @@ export default async function PublicListingsMapPage({
       <ListingsIndexHeader />
       <div className="om-gutter" style={{ margin: "0 auto", maxWidth: 1180, padding: "40px 28px 64px" }}>
         <p className="listings-map-phone-note" style={{ margin: "0 0 18px", fontSize: 15, lineHeight: 1.6, color: "#574f47" }}>
-          The map is available on a larger screen. <a href="/listing" style={{ color: "#a33a29", fontWeight: 600 }}>View the listings</a>.
+          The map is available on a larger screen. <Link href="/listing" style={{ color: "#a33a29", fontWeight: 600 }}>View the listings</Link>.
         </p>
         <div className="om-section-head" style={{ display: "flex", alignItems: "baseline", gap: 16, borderBottom: "1px solid #211c19", paddingBottom: 12, flexWrap: "wrap" }}>
           <h1 style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 32, lineHeight: 1, color: "#211c19" }}>Available listings</h1>
