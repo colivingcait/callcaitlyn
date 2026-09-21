@@ -1,19 +1,20 @@
 import Link from "next/link";
 import { Info } from "lucide-react";
 import { getListingsIndex } from "@/lib/data/listings";
-import { STATUS_LABEL, STATUS_COLORS } from "@/lib/listings/status";
+import { LISTING_STATUSES, STATUS_LABEL, isListingStatus, listingStatusColors, listingStatusLabel } from "@/lib/listings/status";
 import { formatCurrency, cn } from "@/lib/utils";
 import { listingFieldCopy } from "@/lib/listings/public-copy";
 import { NewListingButton } from "@/components/listings/NewListingButton";
 import { ListingStatusMenu } from "@/components/listings/ListingStatusMenu";
 import type { ListingStatus } from "@/types/database";
 
-const STATUS_ORDER: ListingStatus[] = ["active", "coming_soon", "under_contract", "closed"];
+const STATUS_ORDER: ListingStatus[] = LISTING_STATUSES;
 
 export default async function ListingsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const { status: statusFilter } = await searchParams;
   const { listings, counts } = await getListingsIndex();
-  const filtered = statusFilter ? listings.filter((l) => l.status === statusFilter) : listings;
+  const activeFilter = isListingStatus(statusFilter) ? statusFilter : undefined;
+  const filtered = activeFilter ? listings.filter((l) => l.status === activeFilter) : listings;
 
   const activeCount = counts.active;
   const comingSoonCount = counts.coming_soon;
@@ -43,7 +44,7 @@ export default async function ListingsPage({ searchParams }: { searchParams: Pro
           href="/listings"
           className={cn(
             "flex h-10 shrink-0 items-center whitespace-nowrap rounded-full px-4 text-sm font-medium",
-            !statusFilter ? "bg-neutral-900 text-white" : "border border-neutral-200 bg-white text-neutral-600",
+            !activeFilter ? "bg-neutral-900 text-white" : "border border-neutral-200 bg-white text-neutral-600",
           )}
         >
           All {listings.length}
@@ -54,7 +55,7 @@ export default async function ListingsPage({ searchParams }: { searchParams: Pro
             href={`/listings?status=${s}`}
             className={cn(
               "flex h-10 shrink-0 items-center whitespace-nowrap rounded-full px-4 text-sm font-medium",
-              statusFilter === s ? "bg-neutral-900 text-white" : "border border-neutral-200 bg-white text-neutral-600",
+              activeFilter === s ? "bg-neutral-900 text-white" : "border border-neutral-200 bg-white text-neutral-600",
             )}
           >
             {STATUS_LABEL[s]} {counts[s]}
@@ -67,7 +68,7 @@ export default async function ListingsPage({ searchParams }: { searchParams: Pro
           <p className="rounded-2xl border border-[#ebe9e7] bg-white px-4 py-8 text-center text-[15px] text-neutral-400">No listings here yet.</p>
         ) : (
           filtered.map((l) => {
-            const colors = STATUS_COLORS[l.status];
+            const colors = listingStatusColors(l.status);
             const specs = [l.beds != null && l.baths != null ? `${l.beds} bd / ${l.baths} ba` : null, listingFieldCopy(l.property_type), l.sqft ? `${l.sqft.toLocaleString()} sqft` : null]
               .filter(Boolean)
               .join(" · ");
@@ -81,7 +82,7 @@ export default async function ListingsPage({ searchParams }: { searchParams: Pro
                         className="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium"
                         style={{ background: colors.bg, color: colors.text }}
                       >
-                        {STATUS_LABEL[l.status]}
+                        {listingStatusLabel(l.status)}
                       </span>
                     </div>
                     <p className="mt-0.5 text-[15px] text-neutral-600">

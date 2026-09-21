@@ -8,6 +8,7 @@ import {
 } from "@/lib/listings/public-category";
 import { submarketCentroid } from "@/lib/listings/submarkets";
 import { formatCurrency } from "@/lib/utils";
+import { isPublicAvailableStatus, isPublicUnderContractStatus } from "@/lib/listings/status";
 import type { ListingStatus } from "@/types/database";
 
 export type PublicIndexSource = {
@@ -62,8 +63,8 @@ export function partitionPublicListings<T extends { status: ListingStatus }>(lis
   const available: T[] = [];
   const underContract: T[] = [];
   for (const listing of listings) {
-    if (listing.status === "under_contract") underContract.push(listing);
-    else if (listing.status === "coming_soon" || listing.status === "active") available.push(listing);
+    if (isPublicUnderContractStatus(listing.status)) underContract.push(listing);
+    else if (isPublicAvailableStatus(listing.status)) available.push(listing);
   }
   return { available, underContract };
 }

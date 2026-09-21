@@ -67,7 +67,7 @@ export function isPubliclyListed(listing: {
   public_category: string | null;
   zillow_url: string | null;
 }): boolean {
-  if (listing.status === "closed") return false;
+  if (listing.status === "archived") return false;
   if (listing.public_slug) return true;
   const category = parsePublicCategory(listing.public_category);
   return Boolean(category && category !== "coliving" && listing.zillow_url);

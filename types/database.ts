@@ -225,7 +225,7 @@ export interface Contact {
   updated_at: string;
 }
 
-export type ListingStatus = "coming_soon" | "active" | "under_contract" | "closed";
+export type ListingStatus = "coming_soon" | "active" | "under_contract" | "archived";
 
 // Public listings-index tag. Separate from `property_type` (free-text OM
 // "PROPERTY TYPE" cell, e.g. "Legal duplex") and from deals.property_type

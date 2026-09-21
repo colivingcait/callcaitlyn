@@ -40,8 +40,10 @@ export async function getListingsIndex(): Promise<ListingsIndexData> {
     };
   });
 
-  const counts: Record<ListingStatus, number> = { coming_soon: 0, active: 0, under_contract: 0, closed: 0 };
-  for (const l of withSummary) counts[l.status]++;
+  const counts: Record<ListingStatus, number> = { coming_soon: 0, active: 0, under_contract: 0, archived: 0 };
+  for (const l of withSummary) {
+    if (l.status in counts) counts[l.status]++;
+  }
 
   return { listings: withSummary, counts };
 }

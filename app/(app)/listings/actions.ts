@@ -18,6 +18,7 @@ import { planOwnedOmSidecarApply, type OmApplyListingRow } from "@/lib/listings/
 import { formatPublicBand } from "@/lib/listings/public-bands";
 import { phonesMatch } from "@/lib/phone";
 import { importablePadsplitPhotos } from "@/lib/listings/padsplit-photos";
+import { isListingStatus } from "@/lib/listings/status";
 import type { ListingDocumentType, ListingFinancials, ListingPhotoSource, ListingPublicCategory, ListingStatus, PadsplitPhoto } from "@/types/database";
 
 const PREVIEW_AGENT = { name: "Jamie Agent" };
@@ -43,6 +44,7 @@ export async function createListing(input: {
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Not signed in" };
   if (!input.address.trim()) return { ok: false, error: "Enter an address" };
+  if (input.status && !isListingStatus(input.status)) return { ok: false, error: "Pick coming soon, active, under contract, or archived" };
 
   const { data, error } = await supabase
     .from("listings")
@@ -125,6 +127,7 @@ export async function updateListingBasics(
 }
 
 export async function updateListingStatus(listingId: string, status: ListingStatus): Promise<ActionResult> {
+  if (!isListingStatus(status)) return { ok: false, error: "Pick coming soon, active, under contract, or archived" };
   const supabase = await createClient();
   const {
     data: { user },

@@ -20,7 +20,8 @@ assert.equal(parsePublicCategory("Legal duplex"), null);
 assert.equal(isPubliclyListed({ status: "active", public_slug: "adair", public_category: "coliving", zillow_url: null }), true);
 assert.equal(isPubliclyListed({ status: "active", public_slug: null, public_category: "airbnb", zillow_url: "https://zillow.com/x" }), true);
 assert.equal(isPubliclyListed({ status: "active", public_slug: null, public_category: "coliving", zillow_url: null }), false);
-assert.equal(isPubliclyListed({ status: "closed", public_slug: "x", public_category: "coliving", zillow_url: null }), false);
+assert.equal(isPubliclyListed({ status: "archived", public_slug: "x", public_category: "coliving", zillow_url: null }), false);
+assert.equal(isPubliclyListed({ status: "under_contract", public_slug: "x", public_category: "coliving", zillow_url: null }), true);
 
 assert.deepEqual(publicListingHref({ public_category: "coliving", public_slug: "adair", zillow_url: "https://zillow.com/x" }), {
   href: "/listing/adair",
@@ -54,9 +55,13 @@ const { available, underContract } = partitionPublicListings([
   { status: "active" as const },
   { status: "coming_soon" as const },
   { status: "under_contract" as const },
+  { status: "archived" as const },
 ]);
 assert.equal(available.length, 2);
 assert.equal(underContract.length, 1);
+assert.equal(available.some((l) => l.status === "archived"), false);
+assert.equal(underContract.some((l) => l.status === "archived"), false);
+assert.deepEqual(available.map((l) => l.status), ["active", "coming_soon"]);
 
 assert.deepEqual(submarketCentroid("EAST POINT"), { lat: 33.6795, lng: -84.4394 });
 assert.deepEqual(submarketCentroid("West Atlanta / Westview"), { lat: 33.754, lng: -84.465 });
@@ -117,6 +122,8 @@ assert.equal(indexPage.includes("listing.address"), false);
 
 const mapPage = read("app/listing/map/page.tsx");
 assert.ok(mapPage.includes('export const dynamic = "force-dynamic"'));
+assert.ok(mapPage.includes("available"), "map uses the available partition only");
+assert.equal(mapPage.includes("underContract"), false);
 assert.equal(mapPage.includes("geocode"), false);
 
 const listingLayout = read("app/listing/layout.tsx");
@@ -135,6 +142,9 @@ assert.equal(mapCanvas.includes("geocode"), false);
 const publicData = read("lib/listings/public-data.ts");
 assert.ok(publicData.includes("getRecentlySoldPublic"));
 assert.ok(publicData.includes("sortPublicListings"));
+assert.ok(publicData.includes('.neq("status", "archived")'));
+assert.ok(publicData.includes('.eq("status", "archived")'), "sold nicknames may still match archived listings");
+assert.equal(publicData.includes('.eq("status", "closed")'), false);
 assert.equal(publicData.includes("client_name"), false);
 
 const header = read("components/listings/index/ListingsIndexHeader.tsx");
