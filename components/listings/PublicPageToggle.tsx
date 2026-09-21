@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { Check, Copy } from "lucide-react";
 import { setListingPublicPage } from "@/app/(app)/listings/actions";
 
-// For a listing with no real MLS/Zillow presence: her own "own Zillow"
-// public marketing page. Turning this on is the entire integration with
-// the existing agent-outreach templates - see setListingPublicPage's
-// comment for why (auto-fills the Zillow field rather than needing the
+// Dedicated OM at /listing/[slug] for a listing that may not have MLS/Zillow.
+// Does not control /listing board visibility (status does). Turning this on
+// is still the integration with agent-outreach templates — see
+// setListingPublicPage (auto-fills the Zillow field rather than needing the
 // template code to know about a second kind of link).
 export function PublicPageToggle({ listingId, publicSlug, appOrigin }: { listingId: string; publicSlug: string | null; appOrigin: string }) {
   const router = useRouter();
@@ -44,7 +44,9 @@ export function PublicPageToggle({ listingId, publicSlug, appOrigin }: { listing
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-neutral-800">Public marketing page</p>
-          <p className="text-xs text-neutral-400">Your own &quot;Zillow&quot; page for listings not on the MLS.</p>
+          <p className="text-xs text-neutral-400">
+            Publishes a dedicated OM at /listing/[slug]. Coming soon, active, and under-contract listings already appear on the public board — this toggle does not hide them.
+          </p>
         </div>
         <button
           type="button"

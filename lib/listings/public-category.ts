@@ -1,4 +1,5 @@
 import type { ListingPublicCategory } from "@/types/database";
+import { isPublicAvailableStatus, isPublicUnderContractStatus } from "@/lib/listings/status";
 
 export const LISTING_PUBLIC_CATEGORIES = ["coliving", "airbnb", "long_term_rental", "primary_residence"] as const;
 
@@ -61,14 +62,6 @@ export function publicListingHref(listing: {
   return null;
 }
 
-export function isPubliclyListed(listing: {
-  status: string;
-  public_slug: string | null;
-  public_category: string | null;
-  zillow_url: string | null;
-}): boolean {
-  if (listing.status === "archived") return false;
-  if (listing.public_slug) return true;
-  const category = parsePublicCategory(listing.public_category);
-  return Boolean(category && category !== "coliving" && listing.zillow_url);
+export function isPubliclyListed(listing: { status: string }): boolean {
+  return isPublicAvailableStatus(listing.status) || isPublicUnderContractStatus(listing.status);
 }
