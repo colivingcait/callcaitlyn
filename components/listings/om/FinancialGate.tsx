@@ -23,8 +23,9 @@ const TEASER_ROWS = GATED_UNDERWRITING_FIELDS.map((field) => ({
 }));
 
 const omValueStyle: React.CSSProperties = { fontFamily: "var(--font-om-serif)", fontSize: 34, lineHeight: 1, color: "#211c19" };
-// Table $ (monthly averages + CapEx COST, including "unknown") — not the 34px
-// overview / ratio-card billboard. Same size/weight/line-height for both.
+// Table numerics (monthly averages + CapEx YEAR + CapEx COST, including
+// "unknown") — Newsreader, not the 34px overview / ratio-card billboard.
+// Same face/weight/size/line-height for every table number.
 const omTableValueStyle: React.CSSProperties = {
   fontFamily: "var(--font-om-serif)",
   fontWeight: 600,
@@ -95,7 +96,7 @@ function CapExCard({ rows }: { rows: ListingImprovement[] }) {
             }}
           >
             <span style={{ fontSize: 15, lineHeight: 1.4, color: "#211c19" }}>{row.item || "—"}</span>
-            <span style={{ fontSize: 15, color: "#574f47" }}>{row.year || "—"}</span>
+            <span style={{ ...omTableValueStyle }}>{row.year || "—"}</span>
             <span
               style={{
                 ...omTableValueStyle,
