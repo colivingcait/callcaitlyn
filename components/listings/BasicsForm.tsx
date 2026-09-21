@@ -22,6 +22,7 @@ export function BasicsForm({ listing }: { listing: Listing }) {
   const [story, setStory] = useState(listing.story ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
 
   function handlePadsplitIdChange(raw: string) {
     const extracted = extractPadsplitListingId(raw);
@@ -35,7 +36,8 @@ export function BasicsForm({ listing }: { listing: Listing }) {
   async function handleSave() {
     setSaving(true);
     setSaved(false);
-    await updateListingBasics(listing.id, {
+    setError("");
+    const result = await updateListingBasics(listing.id, {
       address,
       listPrice: listPrice ? Number(listPrice) : null,
       beds: beds ? Number(beds) : null,
@@ -49,6 +51,11 @@ export function BasicsForm({ listing }: { listing: Listing }) {
       story: story || null,
     });
     setSaving(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    if (result.importWarning) setError(result.importWarning);
     setSaved(true);
     router.refresh();
     setTimeout(() => setSaved(false), 1500);
@@ -124,15 +131,15 @@ export function BasicsForm({ listing }: { listing: Listing }) {
             placeholder="8299"
           />
           <p className="mt-1 text-xs text-neutral-400">
-            PadSplit house/listing ID (the number in the URL, e.g. Candace 8299) — not the full link. Occupancy, pricing, and photos are pulled from{" "}
+            PadSplit house/listing ID (the number in the URL, e.g. Candace 8299) — not the full link. Saving a new ID imports rooms and interior photos once from{" "}
             {builtUrl ? (
               <span className="break-all text-neutral-500">{builtUrl}</span>
             ) : (
               <>
                 {PADSPLIT_LISTING_URL_BASE}/<span className="text-neutral-500">ID</span>
               </>
-            )}{" "}
-            automatically once a day.
+            )}
+            . Occupancy and pricing then refresh twice a day (7am and 7pm Eastern) and do not replace a curated gallery.
           </p>
         </div>
       </div>
@@ -148,6 +155,7 @@ export function BasicsForm({ listing }: { listing: Listing }) {
       >
         {saving ? "Saving…" : saved ? "Saved" : "Save basics"}
       </button>
+      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
     </div>
   );
 }

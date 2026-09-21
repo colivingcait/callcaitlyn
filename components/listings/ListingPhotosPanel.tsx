@@ -18,6 +18,7 @@ export function ListingPhotosPanel({
   photoPaths,
   padsplitPhotos,
   padsplitGallery,
+  padsplitUrl,
   excludedUrls,
 }: {
   listingId: string;
@@ -27,6 +28,7 @@ export function ListingPhotosPanel({
   photoPaths: string[];
   padsplitPhotos: PadsplitPhoto[] | null;
   padsplitGallery: PadsplitPhoto[] | null;
+  padsplitUrl: string | null;
   excludedUrls: string[] | null;
 }) {
   const router = useRouter();
@@ -105,7 +107,7 @@ export function ListingPhotosPanel({
             <button
               type="button"
               onClick={pull}
-              disabled={saving || importableCount === 0}
+              disabled={saving || (importableCount === 0 && !padsplitUrl)}
               className="shrink-0 rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-semibold text-neutral-700 disabled:opacity-50"
             >
               {saving ? "Saving…" : pulled ? "Re-pull from PadSplit" : "Pull from PadSplit"}

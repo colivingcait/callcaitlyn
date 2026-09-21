@@ -255,6 +255,7 @@ export default async function ListingDetailPage({ params, searchParams }: { para
             photoPaths={photoPaths}
             padsplitPhotos={asPhotoList(listing.padsplit_photos)}
             padsplitGallery={asPhotoList(listing.padsplit_gallery)}
+            padsplitUrl={listing.padsplit_url}
             excludedUrls={asUrlList(listing.excluded_photo_urls)}
           />
         )}
