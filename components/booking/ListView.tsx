@@ -5,7 +5,17 @@ import { formatInTimeZone } from "date-fns-tz";
 import { APP_TIMEZONE } from "@/lib/format-time";
 import type { Slot } from "@/lib/crm/booking-availability";
 
-export function ListView({ slots, selected, onSelect }: { slots: Slot[]; selected: string | null; onSelect: (startAt: string) => void }) {
+export function ListView({
+  slots,
+  selected,
+  onSelect,
+  variant = "crm",
+}: {
+  slots: Slot[];
+  selected: string | null;
+  onSelect: (startAt: string) => void;
+  variant?: "crm" | "om";
+}) {
   const groups = useMemo(() => {
     const map = new Map<string, Slot[]>();
     for (const slot of slots) {
@@ -17,7 +27,46 @@ export function ListView({ slots, selected, onSelect }: { slots: Slot[]; selecte
   const dayKeys = [...groups.keys()].sort();
 
   if (dayKeys.length === 0) {
-    return <p className="py-6 text-center text-[15px] text-neutral-500">Nothing open right now — check back soon.</p>;
+    return variant === "om" ? (
+      <p style={{ margin: 0, textAlign: "center", fontSize: 15, color: "#574f47" }}>Nothing open right now — check back soon.</p>
+    ) : (
+      <p className="py-6 text-center text-[15px] text-neutral-500">Nothing open right now — check back soon.</p>
+    );
+  }
+
+  if (variant === "om") {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        {dayKeys.map((key) => (
+          <div key={key}>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#211c19" }}>{formatInTimeZone(`${key}T12:00:00`, APP_TIMEZONE, "EEEE, MMM d")}</p>
+            <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {groups.get(key)!.map((slot) => {
+                const active = selected === slot.startAt;
+                return (
+                  <button
+                    key={slot.startAt}
+                    type="button"
+                    onClick={() => onSelect(slot.startAt)}
+                    style={{
+                      border: active ? "1px solid #cc4a37" : "1px solid #d5cdc1",
+                      background: active ? "#cc4a37" : "#fffdfa",
+                      color: active ? "#fff" : "#574f47",
+                      padding: "10px 12px",
+                      fontSize: 13,
+                      fontWeight: 500,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {formatInTimeZone(slot.startAt, APP_TIMEZONE, "h:mm a")}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   }
 
   return (

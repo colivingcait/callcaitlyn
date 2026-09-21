@@ -9,6 +9,7 @@ import { ListView } from "@/components/booking/ListView";
 import { BOOKING_CONTACT_TYPE_OPTIONS } from "@/lib/crm/booking-form-options";
 import { TIMELINE_LABELS } from "@/lib/utils";
 import { APP_TIMEZONE } from "@/lib/format-time";
+import { OmBookingPanel } from "@/components/listings/om/OmBookingPanel";
 import type { BookingContactType, Timeline } from "@/types/database";
 
 type Step = "info" | "time" | "details" | "done";
@@ -16,11 +17,19 @@ const STEP_NUMBER: Record<Step, number> = { info: 1, time: 2, details: 3, done: 
 
 const inputClass = "mt-1 w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-[15px] text-neutral-900";
 
-export function BookingFlow({ slug }: { slug: string | null }) {
+export function BookingFlow({
+  slug,
+  presentation = "page",
+  onClose,
+}: {
+  slug: string | null;
+  presentation?: "page" | "sheet";
+  onClose?: () => void;
+}) {
   const [data, setData] = useState<BookingFlowData | null | "loading">("loading");
   const [step, setStep] = useState<Step>("info");
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [view, setView] = useState<"calendar" | "list">("calendar");
+  const [view, setView] = useState<"calendar" | "list">(presentation === "sheet" ? "list" : "calendar");
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -85,6 +94,39 @@ export function BookingFlow({ slug }: { slug: string | null }) {
     setSubmitting(false);
     if (result.ok) setStep("done");
     else setError(result.error);
+  }
+
+  if (presentation === "sheet") {
+    return (
+      <OmBookingPanel
+        data={data}
+        step={step}
+        view={view}
+        setView={setView}
+        name={name}
+        setName={setName}
+        phone={phone}
+        setPhone={setPhone}
+        email={email}
+        setEmail={setEmail}
+        selectedSlot={selectedSlot}
+        setSelectedSlot={setSelectedSlot}
+        contactType={contactType}
+        setContactType={setContactType}
+        timeline={timeline}
+        setTimeline={setTimeline}
+        questions={questions}
+        setQuestions={setQuestions}
+        submitting={submitting}
+        error={error}
+        onSubmitInfo={submitInfo}
+        onSubmitTime={submitTime}
+        onSubmitDetails={submitDetails}
+        onBackInfo={() => setStep("info")}
+        onBackTime={() => setStep("time")}
+        onClose={onClose}
+      />
+    );
   }
 
   if (data === "loading") {

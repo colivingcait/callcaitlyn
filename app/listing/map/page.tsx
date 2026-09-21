@@ -22,9 +22,12 @@ export default async function PublicListingsMapPage({
   const { available } = await getPublicListingsIndex();
 
   return (
-    <div className="om-page" style={{ fontFamily: "var(--font-om-sans), Archivo, ui-sans-serif, system-ui, sans-serif", background: "#f4f1ec", color: "#211c19", minHeight: "100dvh", overflowX: "clip" }}>
+    <div className="om-page listings-map-page" style={{ fontFamily: "var(--font-om-sans), Archivo, ui-sans-serif, system-ui, sans-serif", background: "#f4f1ec", color: "#211c19", minHeight: "100dvh", overflowX: "clip" }}>
       <ListingsIndexHeader />
       <div className="om-gutter" style={{ margin: "0 auto", maxWidth: 1180, padding: "40px 28px 64px" }}>
+        <p className="listings-map-phone-note" style={{ margin: "0 0 18px", fontSize: 15, lineHeight: 1.6, color: "#574f47" }}>
+          The map is available on a larger screen. <a href="/listing" style={{ color: "#a33a29", fontWeight: 600 }}>View the listings</a>.
+        </p>
         <div className="om-section-head" style={{ display: "flex", alignItems: "baseline", gap: 16, borderBottom: "1px solid #211c19", paddingBottom: 12, flexWrap: "wrap" }}>
           <h1 style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 32, lineHeight: 1, color: "#211c19" }}>Available listings</h1>
           <ListingsViewToggle active="map" search={search} />
