@@ -113,7 +113,9 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
   const sidecarOccupancy = occupancyFromFinancials(asListingFinancials(listing.financials));
   const trendSummary = t12OccupancySummary(sidecarOccupancy, listing.occupancyTrend);
 
-  const otherListings = (await getPublicListings()).filter((l) => l.public_slug !== slug).slice(0, 3);
+  const otherListings = (await getPublicListings())
+    .filter((l) => l.public_slug && l.public_slug !== slug && (l.public_category === "coliving" || l.public_category == null))
+    .slice(0, 3);
 
   const sectionHead = (title: string, numeral: string, extra?: React.ReactNode) => (
     <div className="om-section-head" style={{ display: "flex", alignItems: "baseline", gap: 16, borderBottom: "1px solid #211c19", paddingBottom: 12, flexWrap: "wrap" }}>

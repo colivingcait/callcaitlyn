@@ -18,7 +18,7 @@ import { planOwnedOmSidecarApply, type OmApplyListingRow } from "@/lib/listings/
 import { formatPublicBand } from "@/lib/listings/public-bands";
 import { phonesMatch } from "@/lib/phone";
 import { importablePadsplitPhotos } from "@/lib/listings/padsplit-photos";
-import type { ListingDocumentType, ListingFinancials, ListingPhotoSource, ListingStatus, PadsplitPhoto } from "@/types/database";
+import type { ListingDocumentType, ListingFinancials, ListingPhotoSource, ListingPublicCategory, ListingStatus, PadsplitPhoto } from "@/types/database";
 
 const PREVIEW_AGENT = { name: "Jamie Agent" };
 
@@ -77,6 +77,7 @@ export async function updateListingBasics(
     baths?: number | null;
     sqft?: number | null;
     propertyType?: string | null;
+    publicCategory?: ListingPublicCategory | null;
     mlsNumber?: string | null;
     story?: string | null;
     zillowUrl?: string | null;
@@ -96,6 +97,7 @@ export async function updateListingBasics(
   if (input.baths !== undefined) patch.baths = input.baths;
   if (input.sqft !== undefined) patch.sqft = input.sqft;
   if (input.propertyType !== undefined) patch.property_type = input.propertyType;
+  if (input.publicCategory !== undefined) patch.public_category = input.publicCategory;
   if (input.mlsNumber !== undefined) patch.mls_number = input.mlsNumber;
   if (input.story !== undefined) patch.story = input.story;
   if (input.zillowUrl !== undefined) patch.zillow_url = input.zillowUrl;
@@ -117,6 +119,8 @@ export async function updateListingBasics(
 
   revalidatePath("/listings");
   revalidatePath(`/listings/${listingId}`);
+  revalidatePath("/listing");
+  revalidatePath("/listing/map");
   return { ok: true };
 }
 
@@ -142,6 +146,8 @@ export async function updateListingStatus(listingId: string, status: ListingStat
 
   revalidatePath("/listings");
   revalidatePath(`/listings/${listingId}`);
+  revalidatePath("/listing");
+  revalidatePath("/listing/map");
   return { ok: true };
 }
 
@@ -694,6 +700,8 @@ export async function updateListingOmFields(
   if (error) return { ok: false, error: error.message };
 
   revalidatePath(`/listings/${listingId}`);
+  revalidatePath("/listing");
+  revalidatePath("/listing/map");
   return { ok: true };
 }
 
@@ -782,6 +790,7 @@ async function revalidateListingPhotoSurfaces(
   if (data?.public_slug) {
     revalidatePath(`/listing/${data.public_slug}`);
     revalidatePath("/listing");
+    revalidatePath("/listing/map");
   }
 }
 

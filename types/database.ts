@@ -227,6 +227,11 @@ export interface Contact {
 
 export type ListingStatus = "coming_soon" | "active" | "under_contract" | "closed";
 
+// Public listings-index tag. Separate from `property_type` (free-text OM
+// "PROPERTY TYPE" cell, e.g. "Legal duplex") and from deals.property_type
+// (CRM enum). Do not infer this at render time from free text.
+export type ListingPublicCategory = "coliving" | "airbnb" | "long_term_rental" | "primary_residence";
+
 export type ListingPhotoSource = "manual" | "padsplit";
 
 export interface Listing {
@@ -241,6 +246,7 @@ export interface Listing {
   baths: number | null;
   sqft: number | null;
   property_type: string | null;
+  public_category: ListingPublicCategory | null;
   mls_number: string | null;
   status: ListingStatus;
   story: string | null;
