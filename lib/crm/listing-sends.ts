@@ -123,7 +123,16 @@ export async function processPendingListingSends(admin: SupabaseClient, ownerId:
           await admin.from("listing_send_recipients").update({ status: "skipped", error: "Duplicate email" }).eq("id", recipient.id);
           continue;
         }
-        const sendResult = await sendGmailMessage(admin, ownerId, agent.email, send.subject || "New listing", draftToHtml(body));
+        // { ok:false } (expired Gmail grant, timeout, API error) stays on this
+        // recipient as failed and the run continues. A throw is the same outcome
+        // so one bad call cannot 500 the cron and abandon the batch.
+        let sendResult: { ok: true; messageId: string } | { ok: false; error: string };
+        try {
+          sendResult = await sendGmailMessage(admin, ownerId, agent.email, send.subject || "New listing", draftToHtml(body));
+        } catch (err) {
+          console.error("Listing Gmail send threw", err);
+          sendResult = { ok: false, error: err instanceof Error && err.message ? err.message : "Gmail send failed" };
+        }
         result = sendResult.ok ? { ok: true } : { ok: false, error: sendResult.error };
         if (result.ok && emailKey) sentEmails.add(emailKey);
       }
