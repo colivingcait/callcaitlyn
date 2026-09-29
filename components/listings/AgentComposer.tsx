@@ -118,35 +118,45 @@ export function AgentComposer({
   async function runTest() {
     setSendingTest(true);
     setTestResult(null);
-    window.localStorage.setItem(channel === "text" ? "listingTestPhone" : "listingTestEmail", testTarget);
-    const result = channel === "text" ? await sendTestListingText(message, testTarget) : await sendTestListingEmail(subject, message, testTarget);
-    setSendingTest(false);
-    setTestResult(result.ok ? "Test sent." : result.error);
+    try {
+      window.localStorage.setItem(channel === "text" ? "listingTestPhone" : "listingTestEmail", testTarget);
+      const result = channel === "text" ? await sendTestListingText(message, testTarget) : await sendTestListingEmail(subject, message, testTarget);
+      setTestResult(result.ok ? "Test sent." : result.error);
+    } catch (e) {
+      setTestResult(e instanceof Error && e.message ? e.message : "Couldn't send the test. Try again.");
+    } finally {
+      setSendingTest(false);
+    }
   }
 
   async function confirmSend() {
     setSending(true);
     setError("");
-    const result = await createListingSend({
-      listingId,
-      channel,
-      subject,
-      message,
-      audience,
-      sendImmediately,
-      listingAgentIds: (channel === "text" ? bucketAgents : uniqueSendable).map((a) => a.id),
-    });
-    setSending(false);
-    if (!result.ok) {
-      setError(result.error);
-      return;
+    try {
+      const result = await createListingSend({
+        listingId,
+        channel,
+        subject,
+        message,
+        audience,
+        sendImmediately,
+        listingAgentIds: (channel === "text" ? bucketAgents : uniqueSendable).map((a) => a.id),
+      });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      if (channel === "text") setLocalQueued((prev) => [...prev, ...bucketAgents.map((a) => a.id)]);
+      setSent(result.recipientCount);
+      setConfirming(false);
+      setMessage("");
+      setSubject("");
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error && e.message ? e.message : "Couldn't send. Try again.");
+    } finally {
+      setSending(false);
     }
-    if (channel === "text") setLocalQueued((prev) => [...prev, ...bucketAgents.map((a) => a.id)]);
-    setSent(result.recipientCount);
-    setConfirming(false);
-    setMessage("");
-    setSubject("");
-    router.refresh();
   }
 
   return (
