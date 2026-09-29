@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp } from "lucide-react";
 import { updateExcludedPhotos, updateListingHeroPhoto, updatePadsplitGallery } from "@/app/(app)/listings/actions";
+import { SortablePhotoGrid } from "@/components/listings/SortablePhotoGrid";
+import { useOrderedItems } from "@/components/listings/useOrderedItems";
 import { asPhotoList, asUrlList } from "@/lib/listings/crm-marketing-fields";
+import { PHOTO_ORDER_SAVE_ERROR, listKey, revertOrderIfSameMembers, shouldReleaseOrderHold } from "@/lib/listings/photo-order";
 import { isExteriorPadsplitPhoto } from "@/lib/listings/padsplit-photos";
 import type { PadsplitPhoto } from "@/types/database";
 
@@ -31,9 +33,16 @@ export function PhotoExcludeManager({
   const safePhotos = asPhotoList(photos);
   const [excluded, setExcluded] = useState(new Set(asUrlList(excludedUrls)));
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [holdKey, setHoldKey] = useState<string | null>(null);
+  const [ordered, setOrdered] = useOrderedItems(safePhotos, holdKey, (photo) => photo.url);
+  if (shouldReleaseOrderHold(holdKey, safePhotos.map((photo) => photo.url), ordered.map((photo) => photo.url))) setHoldKey(null);
+
+  const items = ordered.map((photo) => ({ id: photo.url, photo }));
 
   async function persist(work: () => Promise<unknown>) {
     setSaving(true);
+    setError("");
     await work();
     setSaving(false);
     router.refresh();
@@ -51,52 +60,64 @@ export function PhotoExcludeManager({
     await persist(() => updateListingHeroPhoto(listingId, url));
   }
 
-  async function move(index: number, direction: -1 | 1) {
-    const target = index + direction;
-    if (target < 0 || target >= safePhotos.length) return;
-    const next = [...safePhotos];
-    [next[index], next[target]] = [next[target], next[index]];
-    await persist(() => updatePadsplitGallery(listingId, next));
+  function reorder(next: PadsplitPhoto[]) {
+    const previous = ordered;
+    const nextKey = listKey(next, (photo) => photo.url);
+    setHoldKey(nextKey);
+    setOrdered(next);
+    setSaving(true);
+    setError("");
+    void saveOrder(next, previous, nextKey);
+  }
+
+  async function saveOrder(next: PadsplitPhoto[], previous: PadsplitPhoto[], nextKey: string) {
+    try {
+      const result = await updatePadsplitGallery(listingId, next);
+      if (!result.ok) {
+        setHoldKey((current) => (current === nextKey ? null : current));
+        setOrdered((current) => revertOrderIfSameMembers(current, previous, (photo) => photo.url) ?? current);
+        setError(result.error || PHOTO_ORDER_SAVE_ERROR);
+        return;
+      }
+      router.refresh();
+    } catch {
+      setHoldKey((current) => (current === nextKey ? null : current));
+      setOrdered((current) => revertOrderIfSameMembers(current, previous, (photo) => photo.url) ?? current);
+      setError(PHOTO_ORDER_SAVE_ERROR);
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (safePhotos.length === 0) return <p className="text-xs text-neutral-400">No PadSplit photos scraped yet.</p>;
 
   return (
     <div>
-      <p className="mb-2 text-xs text-neutral-500">{saving ? "Saving…" : "Uncheck a photo to keep it off the public page."}</p>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {safePhotos.map((photo, index) => {
+      <p className="mb-2 text-xs text-neutral-500">
+        {saving
+          ? "Saving…"
+          : canReorder
+            ? "Drag the handle to reorder. Uncheck a photo to keep it off the public page."
+            : "Uncheck a photo to keep it off the public page."}
+      </p>
+      <SortablePhotoGrid
+        items={items}
+        enabled={canReorder}
+        disabled={saving}
+        onReorder={(next) => reorder(next.map((item) => item.photo))}
+        renderOverlay={(item) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={item.photo.url} alt="" draggable={false} className="aspect-square w-full object-cover" />
+        )}
+        renderItem={(item) => {
+          const photo = item.photo;
           const autoFiltered = isExteriorPadsplitPhoto(photo);
           const isExcluded = excluded.has(photo.url) || autoFiltered;
           const isHero = !isExcluded && Boolean(heroUrl) && heroUrl === photo.url;
           return (
-            <div key={photo.url} className="relative overflow-hidden rounded-xl border border-neutral-200">
+            <div className="relative overflow-hidden rounded-xl border border-neutral-200">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={photo.url} alt="" className={`aspect-square w-full object-cover ${isExcluded ? "opacity-40" : ""}`} />
-              <div className="absolute left-1.5 top-1.5 flex gap-1">
-                {canReorder && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => move(index, -1)}
-                      disabled={index === 0 || saving}
-                      aria-label="Move earlier"
-                      className="rounded-md bg-black/60 p-1 text-white disabled:opacity-30"
-                    >
-                      <ArrowUp size={12} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => move(index, 1)}
-                      disabled={index === safePhotos.length - 1 || saving}
-                      aria-label="Move later"
-                      className="rounded-md bg-black/60 p-1 text-white disabled:opacity-30"
-                    >
-                      <ArrowDown size={12} />
-                    </button>
-                  </>
-                )}
-              </div>
+              <img src={photo.url} alt="" draggable={false} className={`aspect-square w-full object-cover ${isExcluded ? "opacity-40" : ""}`} />
               <button
                 type="button"
                 disabled={autoFiltered || excluded.has(photo.url) || saving}
@@ -113,8 +134,9 @@ export function PhotoExcludeManager({
               </label>
             </div>
           );
-        })}
-      </div>
+        }}
+      />
+      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
     </div>
   );
 }
