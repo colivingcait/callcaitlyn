@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { reorderById, revertOrderIfSameMembers, syncIncomingOrder } from "./photo-order";
 import {
   hasCuratedPadsplitGallery,
   importablePadsplitPhotos,
@@ -100,14 +101,56 @@ assert.ok(panel.includes("My uploads"));
 assert.ok(panel.includes("Pull from PadSplit"));
 assert.ok(panel.includes("will not replace this gallery"));
 
+assert.deepEqual(reorderById(["a", "b", "c"], "a", "c"), ["b", "c", "a"]);
+assert.deepEqual(reorderById(["a", "b", "c"], "c", "a"), ["c", "a", "b"]);
+assert.equal(reorderById(["a", "b"], "a", "a"), null);
+assert.equal(reorderById(["a", "b"], "a", null), null);
+assert.equal(reorderById(["a", "b"], "missing", "a"), null);
+
+const start = { items: ["a", "b", "c"], seenKey: "a\u0000b\u0000c" };
+const optimistic = { items: ["b", "a", "c"], seenKey: "a\u0000b\u0000c" };
+assert.equal(syncIncomingOrder(optimistic, ["a", "b", "c"], (id) => id, "b\u0000a\u0000c"), optimistic, "same server props must not wipe an optimistic drag");
+const confirmed = syncIncomingOrder(optimistic, ["b", "a", "c"], (id) => id, "b\u0000a\u0000c");
+assert.deepEqual(confirmed.items, ["b", "a", "c"]);
+assert.equal(confirmed.seenKey, "b\u0000a\u0000c");
+const ignored = syncIncomingOrder({ items: ["c", "b", "a"], seenKey: "a\u0000b\u0000c" }, ["b", "a", "c"], (id) => id, "c\u0000b\u0000a");
+assert.deepEqual(ignored.items, ["c", "b", "a"], "stale refresh must not snap the grid back");
+assert.equal(ignored.seenKey, "b\u0000a\u0000c");
+assert.deepEqual(syncIncomingOrder(optimistic, ["a", "b", "c", "d"], (id) => id, "b\u0000a\u0000c").items, ["a", "b", "c", "d"]);
+assert.deepEqual(syncIncomingOrder(start, ["c", "b", "a"], (id) => id, null).items, ["c", "b", "a"], "a pull with no in-flight reorder still adopts");
+assert.deepEqual(revertOrderIfSameMembers(["b", "a"], ["a", "b"], (id) => id), ["a", "b"]);
+assert.equal(revertOrderIfSameMembers(["a", "b", "c"], ["a", "b"], (id) => id), null);
+
 const exclude = read("components/listings/PhotoExcludeManager.tsx");
 assert.ok(exclude.includes("Set as hero"));
 assert.ok(exclude.includes("updatePadsplitGallery"));
 assert.ok(exclude.includes("new Set(asUrlList(excludedUrls))"));
+assert.ok(exclude.includes("SortablePhotoGrid"));
+assert.ok(exclude.includes("revertOrderIfSameMembers"));
+assert.ok(exclude.includes("PHOTO_ORDER_SAVE_ERROR"));
+assert.equal(exclude.includes("ArrowUp"), false);
+assert.equal(exclude.includes("Move earlier"), false);
 
 const uploader = read("components/listings/PhotoUploader.tsx");
 assert.ok(uploader.includes("Set as hero"));
 assert.ok(uploader.includes("updateListingPhotoOrder"));
+assert.ok(uploader.includes("addListingPhoto"));
+assert.ok(uploader.includes("SortablePhotoGrid"));
+assert.ok(uploader.includes("revertOrderIfSameMembers"));
+assert.ok(uploader.includes("PHOTO_ORDER_SAVE_ERROR"));
+assert.ok(uploader.includes("removeListingPhoto"));
+assert.equal(uploader.includes("ArrowUp"), false);
+assert.equal(uploader.includes("Move earlier"), false);
+
+const grid = read("components/listings/SortablePhotoGrid.tsx");
+assert.ok(grid.includes("MouseSensor"));
+assert.ok(grid.includes("TouchSensor"));
+assert.ok(grid.includes("KeyboardSensor"));
+assert.ok(grid.includes("sortableKeyboardCoordinates"));
+assert.ok(grid.includes("border-dashed"));
+assert.ok(grid.includes("cursor-grab"));
+assert.ok(grid.includes("Drag to reorder"));
+assert.ok(grid.includes("reorderById"));
 
 const carousel = read("components/listings/om/PhotoCarousel.tsx");
 assert.ok(carousel.includes("coverUrl"));
