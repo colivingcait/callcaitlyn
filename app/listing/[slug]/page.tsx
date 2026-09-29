@@ -381,7 +381,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                 )}
                 {projectedOpex && listing.list_price != null && publicFinCells.length > 0 && (
                 <p className="om-fin-explainer" style={{ margin: "22px 0 0", fontSize: 14, lineHeight: 1.7, color: "#574f47", maxWidth: "70ch" }}>
-                  The asking price reflects both local comparable sales and the income the asset produces — coliving houses are underwritten on revenue per room, not on the price-per-square-foot of the street alone.
+                  The asking price reflects both local comparable sales and the income the asset produces — coliving houses are underwritten on both.
                 </p>
                 )}
                 <div id="unlock" style={{ paddingTop: 6 }}>
