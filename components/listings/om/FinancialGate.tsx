@@ -12,6 +12,8 @@ import {
 import { asListingFinancials, normalizeFinancials, visibleImprovements } from "@/lib/listings/crm-marketing-fields";
 import { writeOmUnlock } from "@/lib/listings/om-unlock-storage";
 import { formatCurrency } from "@/lib/utils";
+import { isProjectedGatedField, isProjectedOpex } from "@/lib/listings/data-basis";
+import { DataBasisNote, ProjectedMark } from "@/components/listings/om/DataBasisNote";
 import type { ListingImprovement } from "@/types/database";
 
 // Purely illustrative rows for the locked/blurred teaser - NOT derived from
@@ -118,10 +120,14 @@ export function FinancialGate({
   slug,
   omNumber,
   improvements,
+  dataBasisOpex,
+  dataBasisNote,
 }: {
   slug: string;
   omNumber: string;
   improvements?: ListingImprovement[] | null;
+  dataBasisOpex?: string | null;
+  dataBasisNote?: string | null;
 }) {
   const { unlocked, financials, workbookUrl, applyUnlock } = useUnlocked();
   const [submitting, setSubmitting] = useState(false);
@@ -304,6 +310,7 @@ export function FinancialGate({
   const ratioCards = GATED_RATIO_FIELDS.filter((field) => Boolean(financials?.[field.key]));
   const monthlyRows = GATED_UNDERWRITING_FIELDS.filter((field) => Boolean(financials?.[field.key]));
   const capexRows = visibleImprovements(improvements);
+  const projected = isProjectedOpex(dataBasisOpex);
 
   if (!hasGated && !workbookUrl && capexRows.length === 0) {
     return (
@@ -322,11 +329,16 @@ export function FinancialGate({
         <p style={{ margin: 0, fontSize: 13, color: "#8a2c1e" }}>Unlocked. The line items are below.</p>
       </div>
 
+      {projected && <DataBasisNote note={dataBasisNote} />}
+
       {ratioCards.length > 0 && financials && (
         <div className="om-fin-ratios" style={{ marginTop: 26, display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 14 }}>
           {ratioCards.map((field) => (
             <div key={field.key} style={{ background: "#fffdfa", border: "1px solid #e4ddd2", borderTop: "2px solid #cc4a37", padding: "18px 18px 20px" }}>
-              <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.14em", color: "#6b6259" }}>{field.omLabel}</p>
+              <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.14em", color: "#6b6259" }}>
+                {field.omLabel}
+                {isProjectedGatedField(field.key, dataBasisOpex) ? <ProjectedMark /> : null}
+              </p>
               <p className="om-ratio-value" style={{ margin: "12px 0 0", ...omValueStyle }}>{financials[field.key]}</p>
             </div>
           ))}
@@ -354,7 +366,10 @@ export function FinancialGate({
                   background: isNcf ? "#f7f1ea" : undefined,
                 }}
               >
-                <span style={{ fontSize: 15, lineHeight: 1.4, color: isNcf ? "#211c19" : "#574f47", fontWeight: isNcf ? 600 : undefined }}>{field.label}</span>
+                <span style={{ fontSize: 15, lineHeight: 1.4, color: isNcf ? "#211c19" : "#574f47", fontWeight: isNcf ? 600 : undefined }}>
+                  {field.label}
+                  {isProjectedGatedField(field.key, dataBasisOpex) ? <ProjectedMark /> : null}
+                </span>
                 <span className={isNcf ? "om-ncf-value" : "om-monthly-value"} style={{ ...omTableValueStyle, whiteSpace: "nowrap" }}>
                   {displayGatedMonthlyAverage(financials, field.key)}
                 </span>

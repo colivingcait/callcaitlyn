@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { getPublicListing } from "@/lib/listings/public-data";
 import { publicListingCopy } from "@/lib/listings/public-copy";
 import { formatPublicBand } from "@/lib/listings/public-bands";
+import { isProjectedOpex } from "@/lib/listings/data-basis";
+import { DataBasisNote, ProjectedMark } from "@/components/listings/om/DataBasisNote";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -28,12 +30,13 @@ export default async function OnePagerPage({ params }: { params: Promise<{ slug:
   }
 
   const nickname = publicListingCopy(listing.nickname) || "This PadSplit";
+  const projected = isProjectedOpex(listing.data_basis_opex);
   const bands = [
-    ["Gross rents", formatPublicBand(listing.band_gross_rent)],
-    ["Operating expenses", formatPublicBand(listing.band_expense_load)],
-    ["Cash-on-cash", formatPublicBand(listing.band_cash_on_cash)],
-    ["Cap rate", formatPublicBand(listing.band_cap_rate)],
-  ].filter((row): row is [string, string] => Boolean(row[1]));
+    { label: "Gross rents", value: formatPublicBand(listing.band_gross_rent), projected: false },
+    { label: "Operating expenses", value: formatPublicBand(listing.band_expense_load), projected },
+    { label: "Cash-on-cash", value: formatPublicBand(listing.band_cash_on_cash), projected },
+    { label: "Cap rate", value: formatPublicBand(listing.band_cap_rate), projected },
+  ].filter((row): row is { label: string; value: string; projected: boolean } => Boolean(row.value));
 
   return (
     <main style={{ background: "#f4f1ec", color: "#211c19", minHeight: "100dvh", fontFamily: "var(--font-om-sans), Archivo, sans-serif" }}>
@@ -43,16 +46,22 @@ export default async function OnePagerPage({ params }: { params: Promise<{ slug:
       <article style={{ maxWidth: 720, margin: "0 auto", padding: "36px 28px 64px" }}>
         <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.18em", color: "#a33a29" }}>ONE-PAGER · {listing.om_number || "OM"}</p>
         <h1 style={{ margin: "12px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 40, lineHeight: 1.05 }}>{nickname}</h1>
-        <p style={{ margin: "16px 0 0", fontFamily: "var(--font-om-serif)", fontSize: 28 }}>{formatCurrency(listing.list_price)}</p>
+        {listing.list_price != null && (
+          <p style={{ margin: "16px 0 0", fontFamily: "var(--font-om-serif)", fontSize: 28 }}>{formatCurrency(listing.list_price)}</p>
+        )}
+        {projected && <DataBasisNote note={listing.data_basis_opex_note} />}
         {publicListingCopy(listing.public_description) && (
           <p style={{ margin: "22px 0 0", fontSize: 16, lineHeight: 1.7, color: "#2e2823", maxWidth: "62ch" }}>{publicListingCopy(listing.public_description)}</p>
         )}
         {bands.length > 0 && (
           <div style={{ marginTop: 28, borderTop: "1px solid #211c19" }}>
-            {bands.map(([label, value]) => (
-              <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 16, padding: "12px 0", borderBottom: "1px solid #ece5da" }}>
-                <span style={{ fontSize: 13, letterSpacing: "0.08em", color: "#6b6259" }}>{label.toUpperCase()}</span>
-                <span style={{ fontFamily: "var(--font-om-serif)", fontSize: 20 }}>{value}</span>
+            {bands.map((row) => (
+              <div key={row.label} style={{ display: "flex", justifyContent: "space-between", gap: 16, padding: "12px 0", borderBottom: "1px solid #ece5da" }}>
+                <span style={{ fontSize: 13, letterSpacing: "0.08em", color: "#6b6259" }}>
+                  {row.label.toUpperCase()}
+                  {row.projected ? <ProjectedMark /> : null}
+                </span>
+                <span style={{ fontFamily: "var(--font-om-serif)", fontSize: 20 }}>{row.value}</span>
               </div>
             ))}
           </div>

@@ -18,7 +18,9 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   const specs = listing
     ? [listing.beds != null && listing.baths != null ? `${listing.beds} bd / ${listing.baths} ba` : null, listing.property_type].filter(Boolean).join(" · ")
     : null;
-  const priceLine = listing ? [formatCurrency(listing.list_price), specs].filter(Boolean).join(" · ") : null;
+  const priceLine = listing
+    ? [listing.list_price != null ? formatCurrency(listing.list_price) : null, specs].filter(Boolean).join(" · ") || null
+    : null;
 
   // With a real photo: full-bleed background + dark gradient overlay so
   // white text stays legible over any image. Without one (a listing added

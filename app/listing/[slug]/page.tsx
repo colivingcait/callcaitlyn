@@ -15,6 +15,8 @@ import { publicListingCopy } from "@/lib/listings/public-copy";
 import { asListingFinancials } from "@/lib/listings/crm-marketing-fields";
 import { occupancyFromFinancials, t12OccupancySummary } from "@/lib/listings/occupancy";
 import { formatPublicBand } from "@/lib/listings/public-bands";
+import { isProjectedOpex, showHeroCapRate } from "@/lib/listings/data-basis";
+import { DataBasisNote, ProjectedMark } from "@/components/listings/om/DataBasisNote";
 import { CAITLYN_HEADSHOT_SRC } from "@/lib/brand/caitlyn";
 
 // Occupancy changes daily and a listing can be unpublished at any time -
@@ -62,7 +64,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const occupancy = listing.liveOccupied != null && listing.liveTotal != null ? `${listing.liveOccupied}/${listing.liveTotal} rooms occupied` : null;
   return {
     title: nickname,
-    description: [formatCurrency(listing.list_price), listing.liveTotal ? `${listing.liveTotal} rooms` : null, occupancy].filter(Boolean).join(" · "),
+    description: [listing.list_price != null ? formatCurrency(listing.list_price) : null, listing.liveTotal ? `${listing.liveTotal} rooms` : null, occupancy].filter(Boolean).join(" · "),
   };
 }
 
@@ -109,11 +111,14 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
     { label: "FURNISHINGS", value: listing.furnishings },
   ].filter((c) => c.value);
 
+  const projectedOpex = isProjectedOpex(listing.data_basis_opex);
+  const capBand = formatPublicBand(listing.band_cap_rate);
+  const showHeroCap = showHeroCapRate(listing.data_basis_opex, capBand);
   const publicFinCells = [
-    { label: "GROSS RENTS", value: formatPublicBand(listing.band_gross_rent), caption: "All rooms at in-place weekly rates." },
-    { label: "OPERATING EXPENSES", value: formatPublicBand(listing.band_expense_load), caption: "Utilities, cleaning, platform fees, taxes, reserves." },
-    { label: "CASH-ON-CASH", value: formatPublicBand(listing.band_cash_on_cash), caption: "Conventional financing, current rates." },
-    { label: "CAP RATE", value: formatPublicBand(listing.band_cap_rate), caption: "On in-place income." },
+    { label: "GROSS RENTS", value: formatPublicBand(listing.band_gross_rent), caption: "All rooms at in-place weekly rates.", projected: false },
+    { label: "OPERATING EXPENSES", value: formatPublicBand(listing.band_expense_load), caption: "Utilities, cleaning, platform fees, taxes, reserves.", projected: projectedOpex },
+    { label: "CASH-ON-CASH", value: formatPublicBand(listing.band_cash_on_cash), caption: "Conventional financing, current rates.", projected: projectedOpex },
+    { label: "CAP RATE", value: capBand, caption: "On in-place income.", projected: projectedOpex },
   ].filter((c) => c.value);
 
   const sidecarOccupancy = occupancyFromFinancials(asListingFinancials(listing.financials));
@@ -167,7 +172,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
         <PhotoCarousel photos={listing.photos} coverUrl={listing.coverPhotoUrl} nickname={nickname} eyebrow={eyebrow} summary={story} />
 
         <div className="om-stats-wrap om-gutter" style={{ background: "#211c19", color: "#f4f1ec", padding: "0 28px 34px" }}>
-          <div className="om-stats" style={{ margin: "0 auto", maxWidth: 1180, display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", borderTop: "1px solid #3a322c" }}>
+          <div className="om-stats" style={{ margin: "0 auto", maxWidth: 1180, display: "grid", gridTemplateColumns: showHeroCap ? "repeat(4, minmax(0,1fr))" : "repeat(3, minmax(0,1fr))", borderTop: "1px solid #3a322c" }}>
             <div className="om-stat-asking" style={{ padding: "20px 24px 22px 0", borderRight: "1px solid #3a322c" }}>
               <p className="om-stat-label" style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#a39a8e" }}>ASKING PRICE</p>
               <p className="om-stat-value" style={{ margin: "10px 0 0", fontFamily: "var(--font-om-serif)", fontSize: 36, lineHeight: 1, color: "#f4f1ec" }}>{formatCurrency(listing.list_price)}</p>
@@ -184,17 +189,22 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                   .join(" · ")}
               </p>
             </div>
+            {showHeroCap && (
             <div className="om-stat-cap" style={{ padding: "20px 24px 22px", borderRight: "1px solid #3a322c" }}>
-              <p className="om-stat-label" style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#a39a8e" }}>CAP RATE</p>
+              <p className="om-stat-label" style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#a39a8e" }}>
+                CAP RATE
+                {projectedOpex && capBand ? <ProjectedMark tone="light" /> : null}
+              </p>
               <p className="om-stat-value" style={{ margin: "10px 0 0", fontFamily: "var(--font-om-serif)", fontSize: 36, lineHeight: 1, color: "#f4f1ec" }}>
-                {formatPublicBand(listing.band_cap_rate) || (
+                {capBand || (
                   <a href="#unlock" className="om-hover-light" style={{ color: "inherit", fontSize: 22, letterSpacing: "0.04em" }}>
                     Unlock
                   </a>
                 )}
               </p>
-              <p className="om-stat-caption" style={{ margin: "7px 0 0", fontSize: 13, color: "#b3aaa0" }}>{formatPublicBand(listing.band_cap_rate) ? "On in-place income" : "Share contact info to see the numbers"}</p>
+              <p className="om-stat-caption" style={{ margin: "7px 0 0", fontSize: 13, color: "#b3aaa0" }}>{capBand ? "On in-place income" : "Share contact info to see the numbers"}</p>
             </div>
+            )}
             <div className="om-stat-occ" style={{ padding: "20px 0 22px 24px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ width: 6, height: 6, borderRadius: 999, background: "#e26e5d", boxShadow: "0 0 0 3px rgba(226,110,93,0.22)" }} />
@@ -346,11 +356,15 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
 
               <section id="financials" className="om-block om-block-financials">
                 {sectionHead("Financial overview", "03", "01")}
+                {projectedOpex && <DataBasisNote note={listing.data_basis_opex_note} />}
                 {publicFinCells.length > 0 && (
                   <div className="om-fin" style={{ marginTop: 22, display: "grid", gridTemplateColumns: "repeat(2, minmax(0,1fr))", gap: 14 }}>
                     {publicFinCells.map((cell) => (
                       <div key={cell.label} style={{ background: "#fffdfa", border: "1px solid #e4ddd2", borderTop: "2px solid #211c19", padding: "20px 20px 22px" }}>
-                        <p className="om-fin-label" style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.14em", color: "#6b6259" }}>{cell.label}</p>
+                        <p className="om-fin-label" style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.14em", color: "#6b6259" }}>
+                          {cell.label}
+                          {cell.projected ? <ProjectedMark /> : null}
+                        </p>
                         <p className="om-fin-value" style={{ margin: "14px 0 0", fontFamily: "var(--font-om-serif)", fontSize: 34, lineHeight: 1, color: "#211c19" }}>{cell.value}</p>
                         <p className="om-fin-caption" style={{ margin: "10px 0 0", fontSize: 13, lineHeight: 1.55, color: "#574f47" }}>{cell.caption}</p>
                       </div>
@@ -358,13 +372,26 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                   </div>
                 )}
                 {finFootnote && <p className="om-fin-footnote" style={{ margin: "14px 0 0", fontSize: 13, lineHeight: 1.6, color: "#574f47" }}>{finFootnote}</p>}
+                {!projectedOpex && (
                 <p className="om-fin-explainer" style={{ margin: "22px 0 0", fontSize: 14, lineHeight: 1.7, color: "#574f47", maxWidth: "70ch" }}>
                   {publicFinCells.length > 0
                     ? "The asking price reflects both local comparable sales and the income the asset produces — coliving houses are underwritten on revenue per room, not on the price-per-square-foot of the street alone."
                     : "Line-item rent, expenses, and cap rate are locked until you share a name and a phone or email. Nothing here is a projection — it is the seller’s underwriting, unlocked on this page."}
                 </p>
+                )}
+                {projectedOpex && listing.list_price != null && publicFinCells.length > 0 && (
+                <p className="om-fin-explainer" style={{ margin: "22px 0 0", fontSize: 14, lineHeight: 1.7, color: "#574f47", maxWidth: "70ch" }}>
+                  The asking price reflects both local comparable sales and the income the asset produces — coliving houses are underwritten on revenue per room, not on the price-per-square-foot of the street alone.
+                </p>
+                )}
                 <div id="unlock" style={{ paddingTop: 6 }}>
-                  <FinancialGate slug={slug} omNumber={omNumber} improvements={listing.improvements} />
+                  <FinancialGate
+                    slug={slug}
+                    omNumber={omNumber}
+                    improvements={listing.improvements}
+                    dataBasisOpex={listing.data_basis_opex}
+                    dataBasisNote={listing.data_basis_opex_note}
+                  />
                 </div>
               </section>
             </main>

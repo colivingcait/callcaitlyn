@@ -13,9 +13,10 @@ const GROUP_LABEL: Record<OmApplyChangeGroup, string> = {
   hints: "Listing hints",
   improvements: "Improvements",
   documents: "Documents",
+  basis: "Data basis",
 };
 
-const GROUP_ORDER: OmApplyChangeGroup[] = ["bands", "financials", "occupancy", "hints", "improvements", "documents"];
+const GROUP_ORDER: OmApplyChangeGroup[] = ["basis", "bands", "financials", "occupancy", "hints", "improvements", "documents"];
 
 function snapshot(listing: Listing) {
   return {
@@ -30,6 +31,8 @@ function snapshot(listing: Listing) {
     padsplit_url: listing.padsplit_url,
     financials: listing.financials,
     improvements: listing.improvements,
+    data_basis_opex: listing.data_basis_opex,
+    data_basis_opex_note: listing.data_basis_opex_note,
   };
 }
 

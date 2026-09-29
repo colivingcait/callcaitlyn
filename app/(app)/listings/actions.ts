@@ -16,6 +16,7 @@ import { generateUniqueListingSlug } from "@/lib/listings/public-slug";
 import { LISTING_DOCUMENT_TYPES } from "@/lib/listings/documents";
 import { planOwnedOmSidecarApply, type OmApplyListingRow } from "@/lib/listings/om-apply";
 import { formatPublicBand } from "@/lib/listings/public-bands";
+import { parseDataBasisOpex, parseDataBasisOpexNote, writeListingPatch } from "@/lib/listings/data-basis";
 import { phonesMatch } from "@/lib/phone";
 import { fetchPadsplitSnapshot, padsplitGalleryOneShotPatch, padsplitLiveImportPatch } from "@/lib/listings/padsplit-import";
 import { hasCuratedPadsplitGallery, importablePadsplitPhotos } from "@/lib/listings/padsplit-photos";
@@ -750,6 +751,8 @@ export async function updateListingOmFields(
     ddDays?: number | null;
     sellerSupportDays?: number | null;
     showSellerSection?: boolean;
+    dataBasisOpex?: string | null;
+    dataBasisOpexNote?: string | null;
   },
 ): Promise<ActionResult> {
   const supabase = await createClient();
@@ -781,9 +784,14 @@ export async function updateListingOmFields(
   if (input.ddDays !== undefined) patch.dd_days = input.ddDays;
   if (input.sellerSupportDays !== undefined) patch.seller_support_days = input.sellerSupportDays;
   if (input.showSellerSection !== undefined) patch.show_seller_section = input.showSellerSection;
+  if (input.dataBasisOpex !== undefined) patch.data_basis_opex = parseDataBasisOpex(input.dataBasisOpex);
+  if (input.dataBasisOpexNote !== undefined) patch.data_basis_opex_note = parseDataBasisOpexNote(input.dataBasisOpexNote);
 
-  const { error } = await supabase.from("listings").update(patch).eq("id", listingId);
-  if (error) return { ok: false, error: error.message };
+  const written = await writeListingPatch(
+    async (body) => supabase.from("listings").update(body).eq("id", listingId),
+    patch,
+  );
+  if (written.error) return { ok: false, error: written.error };
 
   revalidatePath(`/listings/${listingId}`);
   revalidatePath("/listing");
@@ -827,8 +835,11 @@ export async function applyOmSidecarToListing(input: {
   );
   if (!result.ok) return result;
 
-  const { error } = await supabase.from("listings").update(result.patch).eq("id", result.listingId);
-  if (error) return { ok: false, error: error.message };
+  const written = await writeListingPatch(
+    async (body) => supabase.from("listings").update(body).eq("id", result.listingId),
+    result.patch,
+  );
+  if (written.error) return { ok: false, error: written.error };
 
   revalidatePath(`/listings/${result.listingId}`);
   if (result.publicSlug) revalidatePath(`/listing/${result.publicSlug}`);
