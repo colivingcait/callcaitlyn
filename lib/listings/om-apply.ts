@@ -4,6 +4,7 @@ import {
   type ListingOmSnapshot,
   type OmApplyPatch,
 } from "./om-sidecar";
+import { parseDataBasisOpex, parseDataBasisOpexNote } from "./data-basis";
 
 // Postgres uuid text form (any variant). Used to decide whether Apply should
 // look up listings.id and STOP, or fall through to public_slug / om_number.
@@ -56,6 +57,8 @@ export function snapshotListingForOmApply(row: OmApplyListingRow): ListingOmSnap
     band_cap_rate: row.band_cap_rate ?? null,
     financials: row.financials ?? null,
     improvements: row.improvements ?? null,
+    data_basis_opex: parseDataBasisOpex(row.data_basis_opex),
+    data_basis_opex_note: parseDataBasisOpexNote(row.data_basis_opex_note),
   };
 }
 
@@ -89,6 +92,8 @@ export function omApplyWritePatch(planPatch: OmApplyPatch): Record<string, unkno
   if (planPatch.band_cap_rate !== undefined) patch.band_cap_rate = planPatch.band_cap_rate;
   if (planPatch.padsplit_url !== undefined) patch.padsplit_url = planPatch.padsplit_url;
   if (planPatch.improvements !== undefined) patch.improvements = planPatch.improvements;
+  if (planPatch.data_basis_opex !== undefined) patch.data_basis_opex = planPatch.data_basis_opex;
+  if (planPatch.data_basis_opex_note !== undefined) patch.data_basis_opex_note = planPatch.data_basis_opex_note;
   return patch;
 }
 

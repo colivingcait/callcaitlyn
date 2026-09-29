@@ -281,6 +281,10 @@ export interface Listing {
   band_expense_load: string | null;
   band_cash_on_cash: string | null;
   band_cap_rate: string | null;
+  // Optional so a row read before migration 0084 still typechecks. Missing
+  // or anything other than 'projected' is actual.
+  data_basis_opex?: "actual" | "projected" | null;
+  data_basis_opex_note?: string | null;
   financials: ListingFinancials | null;
   improvements: ListingImprovement[] | null;
   co_agent_name: string | null;

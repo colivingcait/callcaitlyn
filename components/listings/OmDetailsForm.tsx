@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateListingOmFields } from "@/app/(app)/listings/actions";
+import { DEFAULT_PROJECTED_OPEX_NOTE, parseDataBasisOpex, type DataBasisOpex } from "@/lib/listings/data-basis";
 import type { Listing } from "@/types/database";
 
 const inputClass = "w-full rounded-xl border border-neutral-200 px-3 py-2 text-[15px]";
@@ -31,6 +32,8 @@ export function OmDetailsForm({ listing }: { listing: Listing }) {
   const [bandExpenseLoad, setBandExpenseLoad] = useState(listing.band_expense_load ?? "");
   const [bandCashOnCash, setBandCashOnCash] = useState(listing.band_cash_on_cash ?? "");
   const [bandCapRate, setBandCapRate] = useState(listing.band_cap_rate ?? "");
+  const [dataBasisOpex, setDataBasisOpex] = useState<DataBasisOpex>(parseDataBasisOpex(listing.data_basis_opex));
+  const [dataBasisNote, setDataBasisNote] = useState(listing.data_basis_opex_note ?? "");
   const [coAgentName, setCoAgentName] = useState(listing.co_agent_name ?? "");
   const [coAgentBrokerage, setCoAgentBrokerage] = useState(listing.co_agent_brokerage ?? "");
   const [coAgentPhone, setCoAgentPhone] = useState(listing.co_agent_phone ?? "");
@@ -38,11 +41,13 @@ export function OmDetailsForm({ listing }: { listing: Listing }) {
   const [showSellerSection, setShowSellerSection] = useState(listing.show_seller_section ?? true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleSave() {
     setSaving(true);
     setSaved(false);
-    await updateListingOmFields(listing.id, {
+    setError("");
+    const result = await updateListingOmFields(listing.id, {
       nickname: nickname || null,
       omNumber: omNumber || null,
       submarket: submarket || null,
@@ -63,8 +68,14 @@ export function OmDetailsForm({ listing }: { listing: Listing }) {
       coAgentPhone: coAgentPhone || null,
       coAgentEmail: coAgentEmail || null,
       showSellerSection,
+      dataBasisOpex,
+      dataBasisOpexNote: dataBasisNote,
     });
     setSaving(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
     setSaved(true);
     router.refresh();
     setTimeout(() => setSaved(false), 1500);
@@ -136,6 +147,43 @@ export function OmDetailsForm({ listing }: { listing: Listing }) {
       </div>
 
       <div>
+        <h3 className="mb-2 text-sm font-semibold text-neutral-900">Financial data basis</h3>
+        <p className="mb-2 text-xs text-neutral-500">
+          Actuals leaves the public page as it is. Projections marks operating expenses until the seller T12 is in. Saving keeps a hand change. The next Apply replaces it.
+        </p>
+        <div className="inline-flex rounded-full border border-neutral-200 bg-white p-0.5 text-xs font-medium">
+          {(
+            [
+              ["actual", "Actuals"],
+              ["projected", "Projections (pending seller T12)"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setDataBasisOpex(value)}
+              className={`rounded-full px-3 py-1.5 ${dataBasisOpex === value ? "bg-neutral-900 text-white" : "text-neutral-600"}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {dataBasisOpex === "projected" && (
+          <div className="mt-3">
+            <label className={labelClass}>Buyer note (optional)</label>
+            <textarea
+              value={dataBasisNote}
+              onChange={(e) => setDataBasisNote(e.target.value)}
+              rows={3}
+              className="w-full rounded-xl border border-neutral-200 p-3 text-[15px] leading-6"
+              placeholder={DEFAULT_PROJECTED_OPEX_NOTE}
+            />
+            <p className="mt-1 text-xs text-neutral-500">Leave blank to use the default note on the public page.</p>
+          </div>
+        )}
+      </div>
+
+      <div>
         <h3 className="mb-2 text-sm font-semibold text-neutral-900">Public financial bands (rounded tilde)</h3>
         <p className="mb-2 text-xs text-neutral-500">Single rounded values with a tilde — not min–max ranges. Apply-to-OM fills these from Vera&apos;s sidecar.</p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -180,6 +228,7 @@ export function OmDetailsForm({ listing }: { listing: Listing }) {
       >
         {saving ? "Saving…" : saved ? "Saved" : "Save OM details"}
       </button>
+      {error && <p className="text-sm text-red-600">{error}</p>}
     </div>
   );
 }

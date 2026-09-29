@@ -97,6 +97,8 @@ async function runApplyCases() {
   assert.equal(applied.patch.submarket, "Atlanta metro");
   assert.equal(applied.patch.total_rooms, 8);
   assert.equal("om_number" in applied.patch, false, "empty sidecar om_number must not overwrite");
+  assert.equal(applied.patch.data_basis_opex, "actual");
+  assert.equal(applied.patch.data_basis_opex_note, null);
 
   const missing = await planOwnedOmSidecarApply(WRONG_ID, fixtureRaw, getBy);
   assert.equal(missing.ok, false, "wrong listing id must 404");

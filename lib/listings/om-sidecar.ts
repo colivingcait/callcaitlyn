@@ -5,6 +5,7 @@ import { padsplitListingUrlFromInput } from "@/lib/listings/padsplit-url";
 import { GATED_REMOVED_FIELDS, GATED_UNDERWRITING_FIELDS } from "@/lib/listings/gated-underwriting";
 import { parseListingOccupancy, parseRoomCount } from "@/lib/listings/occupancy";
 import { formatPublicBand } from "@/lib/listings/public-bands";
+import { dataBasisFromSidecar, parseDataBasisOpex, type DataBasisOpex } from "@/lib/listings/data-basis";
 
 export const OM_SIDECAR_SCHEMA_VERSION = 2;
 export const OM_SIDECAR_ACCEPTED_VERSIONS = [1, 2] as const;
@@ -26,7 +27,18 @@ export const SIDECAR_FIELD_MAP = {
   occupancy: "occupancy.monthly",
 } as const;
 
-const stringish = z.union([z.string(), z.number()]).transform((value) => String(value));
+const stringish = z.union([z.string(), z.number(), z.null()]).transform((value) => (value == null ? "" : String(value)));
+// Null is kept (not collapsed to undefined) so Apply can clear a price-dependent
+// field the sidecar explicitly nulled. Omitted stays undefined and keeps the OM value.
+const nullKeepingStringish = z
+  .union([z.string(), z.number(), z.null()])
+  .optional()
+  .transform((value): string | null | undefined => {
+    if (value === undefined) return undefined;
+    if (value === null) return null;
+    return String(value);
+  });
+const optionalBand = z.union([z.string(), z.null()]).optional();
 const optionalStringish = z
   .union([z.string(), z.number(), z.null()])
   .optional()
@@ -72,10 +84,10 @@ const listingHintsSchema = z
 
 const publicBandsSchema = z
   .object({
-    band_gross_rent: z.string().optional(),
-    band_expense_load: z.string().optional(),
-    band_cash_on_cash: z.string().optional(),
-    band_cap_rate: z.string().optional(),
+    band_gross_rent: optionalBand,
+    band_expense_load: optionalBand,
+    band_cash_on_cash: optionalBand,
+    band_cap_rate: optionalBand,
   })
   .passthrough();
 
@@ -83,22 +95,22 @@ const financialsSchema = z
   .object({
     t12: z.array(t12LineSchema).optional(),
     noi: optionalStringish,
-    cap_rate: optionalStringish,
+    cap_rate: nullKeepingStringish,
     vacancy_pct: optionalStringish,
     occupancy_summary: z.string().optional(),
     platform_fees: optionalStringish,
     padsplit_fees: optionalStringish,
     pm_fees: optionalStringish,
     expense_load_pct: optionalStringish,
-    dscr: optionalStringish,
-    purchase_price: optionalStringish,
+    dscr: nullKeepingStringish,
+    purchase_price: nullKeepingStringish,
     gross_rents: optionalStringish,
     net_earnings: optionalStringish,
     opex: optionalStringish,
-    projected_debt_service: optionalStringish,
+    projected_debt_service: nullKeepingStringish,
     net_cash_flow: optionalStringish,
     net_cashflow: optionalStringish,
-    cash_on_cash: optionalStringish,
+    cash_on_cash: nullKeepingStringish,
     annual: z.record(z.unknown()).optional(),
     scenarios: z.array(scenarioSchema).optional(),
   })
@@ -122,6 +134,13 @@ export const omSidecarV1Schema = z
     meta: z.unknown().optional(),
     occupancy: z.unknown().optional(),
     field_map: z.unknown().optional(),
+    data_basis: z
+      .object({
+        opex: z.unknown().optional(),
+        opex_note: z.unknown().optional(),
+      })
+      .passthrough()
+      .nullish(),
   })
   .passthrough();
 
@@ -143,9 +162,11 @@ export type ListingOmSnapshot = {
   band_cap_rate: string | null;
   financials: ListingFinancials | null;
   improvements: ListingImprovement[] | null;
+  data_basis_opex?: string | null;
+  data_basis_opex_note?: string | null;
 };
 
-export type OmApplyChangeGroup = "bands" | "financials" | "hints" | "improvements" | "documents" | "occupancy";
+export type OmApplyChangeGroup = "bands" | "financials" | "hints" | "improvements" | "documents" | "occupancy" | "basis";
 
 export type OmApplyChange = {
   path: string;
@@ -168,6 +189,8 @@ export type OmApplyPatch = {
   band_cap_rate?: string | null;
   financials: ListingFinancials;
   improvements?: ListingImprovement[] | null;
+  data_basis_opex?: DataBasisOpex;
+  data_basis_opex_note?: string | null;
 };
 
 export type OmApplyPlan = {
@@ -243,6 +266,14 @@ function sameText(a: string | null | undefined, b: string | null | undefined): b
   return (a ?? "") === (b ?? "");
 }
 
+const NULL_CLEAR_FINANCIAL_KEYS = ["cap_rate", "cash_on_cash", "projected_debt_service", "purchase_price", "dscr"] as const;
+
+function mergedFinancialString(incoming: unknown, base: unknown): string {
+  if (incoming === null) return "";
+  if (incoming == null) return base == null ? "" : String(base);
+  return String(incoming);
+}
+
 function mergeFinancials(existing: ListingFinancials | null | undefined, sidecar: OmSidecarV1): ListingFinancials {
   const incoming = sidecar.financials as Record<string, unknown>;
   const base = existing ? ({ ...existing } as Record<string, unknown>) : {};
@@ -251,21 +282,21 @@ function mergeFinancials(existing: ListingFinancials | null | undefined, sidecar
     ...incoming,
     t12: Array.isArray(incoming.t12) ? incoming.t12 : Array.isArray(base.t12) ? base.t12 : [],
     noi: incoming.noi ?? base.noi ?? "",
-    cap_rate: incoming.cap_rate ?? base.cap_rate ?? "",
+    cap_rate: mergedFinancialString(incoming.cap_rate, base.cap_rate),
     vacancy_pct: incoming.vacancy_pct ?? base.vacancy_pct ?? "",
     occupancy_summary: incoming.occupancy_summary ?? base.occupancy_summary ?? "",
     platform_fees: incoming.platform_fees ?? base.platform_fees ?? "",
     padsplit_fees: incoming.padsplit_fees ?? incoming.platform_fees ?? base.padsplit_fees ?? base.platform_fees ?? "",
     pm_fees: incoming.pm_fees ?? base.pm_fees ?? "",
     expense_load_pct: incoming.expense_load_pct ?? base.expense_load_pct ?? "",
-    dscr: incoming.dscr ?? base.dscr ?? "",
-    purchase_price: incoming.purchase_price ?? base.purchase_price ?? "",
+    dscr: mergedFinancialString(incoming.dscr, base.dscr),
+    purchase_price: mergedFinancialString(incoming.purchase_price, base.purchase_price),
     gross_rents: incoming.gross_rents ?? base.gross_rents ?? "",
     net_earnings: incoming.net_earnings ?? base.net_earnings ?? "",
     opex: incoming.opex ?? base.opex ?? "",
-    projected_debt_service: incoming.projected_debt_service ?? base.projected_debt_service ?? "",
+    projected_debt_service: mergedFinancialString(incoming.projected_debt_service, base.projected_debt_service),
     net_cash_flow: incoming.net_cash_flow ?? incoming.net_cashflow ?? base.net_cash_flow ?? "",
-    cash_on_cash: incoming.cash_on_cash ?? base.cash_on_cash ?? "",
+    cash_on_cash: mergedFinancialString(incoming.cash_on_cash, base.cash_on_cash),
     annual: incoming.annual ?? base.annual,
     scenarios: Array.isArray(incoming.scenarios) ? incoming.scenarios : Array.isArray(base.scenarios) ? base.scenarios : [],
   } as ListingFinancials;
@@ -278,7 +309,14 @@ function mergeFinancials(existing: ListingFinancials | null | undefined, sidecar
   const occupancy = parseListingOccupancy(sidecar.occupancy) ?? parseListingOccupancy(incoming.occupancy) ?? parseListingOccupancy(base.occupancy);
   if (occupancy) merged.occupancy = occupancy;
 
-  return normalizeFinancials(merged);
+  // Hydrate fills cap / CoC / debt from the first scenario when the flat
+  // field is blank. An explicit null in the sidecar means "not in yet" and
+  // must stay blank so the public page can hide those bands.
+  const normalized = normalizeFinancials(merged);
+  for (const key of NULL_CLEAR_FINANCIAL_KEYS) {
+    if (incoming[key] === null) normalized[key] = "";
+  }
+  return normalized;
 }
 
 function sidecarPadsplitHouseId(sidecar: OmSidecarV1): string | null {
@@ -310,7 +348,7 @@ export function planOmSidecarApply(sidecar: OmSidecarV1, current: ListingOmSnaps
   }
 
   const bands = sidecar.public_bands ?? {};
-  const bandPairs: { path: keyof ListingOmSnapshot & `band_${string}`; label: string; incoming?: string }[] = [
+  const bandPairs: { path: keyof ListingOmSnapshot & `band_${string}`; label: string; incoming?: string | null }[] = [
     { path: "band_gross_rent", label: "Gross Rents", incoming: bands.band_gross_rent },
     { path: "band_expense_load", label: "Operating Expenses", incoming: bands.band_expense_load },
     { path: "band_cash_on_cash", label: "Cash-on-cash", incoming: bands.band_cash_on_cash },
@@ -318,7 +356,7 @@ export function planOmSidecarApply(sidecar: OmSidecarV1, current: ListingOmSnaps
   ];
   for (const band of bandPairs) {
     if (band.incoming === undefined) continue;
-    const next = formatPublicBand(band.incoming);
+    const next = band.incoming == null ? null : formatPublicBand(band.incoming);
     if (sameText(current[band.path], next)) continue;
     patch[band.path] = next;
     changes.push({
@@ -422,6 +460,31 @@ export function planOmSidecarApply(sidecar: OmSidecarV1, current: ListingOmSnaps
       before: displayValue(existingOccupancy?.monthly),
       after: occupancy.monthly?.length ? `${occupancy.monthly.length} months` : displayValue(occupancy),
       group: "occupancy",
+    });
+  }
+
+  const basis = dataBasisFromSidecar(sidecar.data_basis);
+  patch.data_basis_opex = basis.opex;
+  patch.data_basis_opex_note = basis.note;
+  const currentBasis = parseDataBasisOpex(current.data_basis_opex);
+  if (currentBasis !== basis.opex) {
+    changes.push({
+      path: "data_basis.opex",
+      label: "OpEx data basis",
+      before: currentBasis,
+      after: basis.opex,
+      group: "basis",
+    });
+  }
+  const currentNote = (current.data_basis_opex_note ?? "").trim();
+  const nextNote = basis.note ?? "";
+  if (currentNote !== nextNote) {
+    changes.push({
+      path: "data_basis.opex_note",
+      label: "OpEx basis note",
+      before: displayValue(currentNote || null),
+      after: displayValue(nextNote || null),
+      group: "basis",
     });
   }
 

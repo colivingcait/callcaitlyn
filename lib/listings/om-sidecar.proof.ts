@@ -262,4 +262,73 @@ const marketing = readFileSync(join(process.cwd(), "app/(app)/listings/[id]/page
 assert.ok(marketing.includes("ApplyToOmPanel"));
 assert.ok(marketing.includes("listingId={listing.id}"));
 
+assert.equal(plan.patch.data_basis_opex, "actual", "sidecar without data_basis stays actual");
+assert.equal(plan.patch.data_basis_opex_note, null);
+assert.equal(plan.changes.some((c) => c.path === "data_basis.opex"), false);
+
+const projectedRaw = {
+  ...fixture,
+  data_basis: { opex: "projected", opex_note: "Seller T12 still out." },
+  public_bands: { ...fixture.public_bands, band_cash_on_cash: null, band_cap_rate: null },
+  financials: {
+    ...fixture.financials,
+    cap_rate: null,
+    cash_on_cash: null,
+    projected_debt_service: null,
+    purchase_price: null,
+    dscr: null,
+  },
+};
+const projectedParsed = parseOmSidecar(projectedRaw);
+assert.equal(projectedParsed.ok, true, "null cap, CoC, and debt service must parse");
+if (projectedParsed.ok) {
+  const filledBands: ListingOmSnapshot = {
+    ...emptyListing,
+    band_gross_rent: "~$1/mo",
+    band_cash_on_cash: "~20%",
+    band_cap_rate: "~10%",
+    financials: {
+      t12: [],
+      noi: "1",
+      cap_rate: "10.30",
+      cash_on_cash: "19.59",
+      projected_debt_service: "2128.97",
+      purchase_price: "400000",
+      dscr: "1.61",
+      opex: "1",
+      scenarios: [{ label: "keep", coc: "19.59", cash_in: "1", debt_service: "25547.62", cash_flow: "1", dscr: "1.61" }],
+    },
+  };
+  const projectedPlan = planOmSidecarApply(projectedParsed.sidecar, filledBands);
+  assert.equal(projectedPlan.patch.data_basis_opex, "projected");
+  assert.equal(projectedPlan.patch.data_basis_opex_note, "Seller T12 still out.");
+  assert.equal(projectedPlan.patch.band_gross_rent, "~$5,500/mo");
+  assert.equal(projectedPlan.patch.band_cap_rate, null);
+  assert.equal(projectedPlan.patch.band_cash_on_cash, null);
+  assert.equal(projectedPlan.patch.financials.cap_rate, "");
+  assert.equal(projectedPlan.patch.financials.cash_on_cash, "", "explicit null CoC must not fall back to the scenario");
+  assert.equal(projectedPlan.patch.financials.projected_debt_service, "");
+  assert.equal(projectedPlan.patch.financials.purchase_price, "");
+  assert.equal(projectedPlan.patch.financials.dscr, "");
+  assert.equal(projectedPlan.patch.financials.opex, "1007.35");
+  assert.ok(projectedPlan.changes.some((c) => c.group === "basis" && c.after === "projected"));
+}
+
+const invalidBasis = parseOmSidecar({ schema_version: 2, data_basis: { opex: "forecast", opex_note: 12 }, financials: { noi: "1" } });
+assert.equal(invalidBasis.ok, true);
+if (invalidBasis.ok) {
+  const invalidPlan = planOmSidecarApply(invalidBasis.sidecar, emptyListing);
+  assert.equal(invalidPlan.patch.data_basis_opex, "actual");
+  assert.equal(invalidPlan.patch.data_basis_opex_note, null);
+}
+
+const resetPlan = planOmSidecarApply(parsed.sidecar, {
+  ...emptyListing,
+  data_basis_opex: "projected",
+  data_basis_opex_note: "old note",
+});
+assert.equal(resetPlan.patch.data_basis_opex, "actual");
+assert.equal(resetPlan.patch.data_basis_opex_note, null);
+assert.ok(resetPlan.changes.some((c) => c.path === "data_basis.opex" && c.before === "projected" && c.after === "actual"));
+
 console.log("om sidecar: ok");
