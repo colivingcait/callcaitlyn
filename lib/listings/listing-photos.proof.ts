@@ -150,6 +150,8 @@ assert.ok(grid.includes("sortableKeyboardCoordinates"));
 assert.ok(grid.includes("border-dashed"));
 assert.ok(grid.includes("cursor-grab"));
 assert.ok(grid.includes("Drag to reorder"));
+assert.ok(grid.includes("Picked up photo"));
+assert.ok(grid.includes("Photo dropped at position"));
 assert.ok(grid.includes("reorderById"));
 
 const carousel = read("components/listings/om/PhotoCarousel.tsx");

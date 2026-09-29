@@ -10,6 +10,7 @@ import {
   closestCenter,
   useSensor,
   useSensors,
+  type Announcements,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
@@ -70,6 +71,30 @@ export function SortablePhotoGrid<T extends { id: string }>({
     setActiveId(String(event.active.id));
   }
 
+  function place(id: string | number | undefined): number | null {
+    if (id == null) return null;
+    const index = items.findIndex((item) => item.id === String(id));
+    return index >= 0 ? index + 1 : null;
+  }
+
+  const announcements: Announcements = {
+    onDragStart({ active }) {
+      const index = place(active.id);
+      return index ? `Picked up photo ${index} of ${items.length}.` : undefined;
+    },
+    onDragOver({ over }) {
+      const index = place(over?.id);
+      return index ? `Photo is over position ${index} of ${items.length}.` : undefined;
+    },
+    onDragEnd({ over }) {
+      const index = place(over?.id);
+      return index ? `Photo dropped at position ${index} of ${items.length}.` : "Reorder cancelled.";
+    },
+    onDragCancel() {
+      return "Reorder cancelled.";
+    },
+  };
+
   function onDragEnd(event: DragEndEvent) {
     setActiveId(null);
     if (disabled) return;
@@ -85,6 +110,7 @@ export function SortablePhotoGrid<T extends { id: string }>({
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onDragCancel={() => setActiveId(null)}
+      accessibility={{ announcements }}
     >
       <SortableContext items={items.map((item) => item.id)} strategy={rectSortingStrategy}>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
