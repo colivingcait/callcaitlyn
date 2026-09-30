@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
+import { buildOgListingCard } from "@/lib/listings/og-card";
 import { getPublicListing, getPublicListings } from "@/lib/listings/public-data";
 import { formatCurrency } from "@/lib/utils";
 import { PhotoCarousel } from "@/components/listings/om/PhotoCarousel";
@@ -58,13 +60,14 @@ function nicknameOf(listing: { nickname: string | null }): string {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const listing = await getPublicListing(slug);
-  if (!listing) return { title: "Offering Memorandum", description: "Caitlyn Verdugo with KW Metro Atl" };
+  if (!listing) notFound();
 
-  const nickname = nicknameOf(listing);
-  const occupancy = listing.liveOccupied != null && listing.liveTotal != null ? `${listing.liveOccupied}/${listing.liveTotal} rooms occupied` : null;
+  const card = buildOgListingCard(listing);
   return {
-    title: nickname,
-    description: [listing.list_price != null ? formatCurrency(listing.list_price) : null, listing.liveTotal ? `${listing.liveTotal} rooms` : null, occupancy].filter(Boolean).join(" · "),
+    title: card.title,
+    description: card.description,
+    openGraph: { title: card.title, description: card.description },
+    twitter: { card: "summary_large_image", title: card.title, description: card.description },
   };
 }
 
@@ -72,13 +75,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
   const { slug } = await params;
   const listing = await getPublicListing(slug);
 
-  if (!listing) {
-    return (
-      <main style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f4f1ec", padding: 16, textAlign: "center" }}>
-        <p style={{ color: "#574f47" }}>This listing isn&apos;t available anymore.</p>
-      </main>
-    );
-  }
+  if (!listing) notFound();
 
   const nickname = nicknameOf(listing);
   const story = publicListingCopy(listing.story);
