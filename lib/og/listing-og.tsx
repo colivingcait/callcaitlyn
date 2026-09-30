@@ -159,13 +159,26 @@ export async function renderIndexOgImage() {
   });
 }
 
-export async function renderListingOgImage(card: OgListingCard) {
-  const fonts = await loadOgFonts();
-  const photo = card.heroUrl ? await photoDataUrl(card.heroUrl) : null;
-  return new ImageResponse(<ListingCard card={card} photo={photo} />, {
+async function rasterize(card: OgListingCard, photo: string | null, fonts: Awaited<ReturnType<typeof loadOgFonts>>) {
+  const image = new ImageResponse(<ListingCard card={card} photo={photo} />, {
     ...OG_SIZE,
     fonts,
   });
+  const bytes = Buffer.from(await image.arrayBuffer());
+  return new Response(bytes, {
+    headers: { "Content-Type": "image/png" },
+  });
+}
+
+export async function renderListingOgImage(card: OgListingCard) {
+  const fonts = await loadOgFonts();
+  const photo = card.heroUrl ? await photoDataUrl(card.heroUrl) : null;
+  if (!photo) return rasterize(card, null, fonts);
+  try {
+    return await rasterize(card, photo, fonts);
+  } catch {
+    return rasterize(card, null, fonts);
+  }
 }
 
 export { INDEX_ALT };
