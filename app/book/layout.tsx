@@ -5,6 +5,11 @@ import { PublicChrome } from "@/components/public/PublicChrome";
 // www.colivingcait.com, where that file 404s.
 export const metadata: Metadata = {
   manifest: null,
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Coliving Cait",
+  },
 };
 
 export default function BookLayout({ children }: { children: React.ReactNode }) {

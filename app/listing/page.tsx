@@ -34,7 +34,7 @@ export default async function PublicListingsOverviewPage({
       <div className="om-gutter listings-hero" style={{ background: "#211c19", color: "#f4f1ec", padding: "0 28px 62px" }}>
         <div className="listings-hero-inner" style={{ margin: "0 auto", maxWidth: 1180, paddingTop: 56, display: "flex", alignItems: "flex-end", gap: 48, flexWrap: "wrap" }}>
           <div style={{ flex: "1 1 420px", minWidth: 0 }}>
-            <p className="listings-hero-eye" style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.2em", color: "#e9a396" }}>CALLCAITLYN LISTINGS · METRO ATLANTA</p>
+            <p className="listings-hero-eye" style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.2em", color: "#e9a396" }}>LISTINGS · ATLANTA METRO</p>
             <h1 className="listings-h1" style={{ margin: "18px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 60, lineHeight: 1.02, color: "#f4f1ec", maxWidth: "16ch" }}>
               Coliving offerings, and everything else on the board.
             </h1>
