@@ -3,6 +3,7 @@ import { ImageResponse } from "next/og";
 import { loadOgFonts } from "@/lib/og/fonts";
 import { OG_SIZE } from "@/lib/og/listing-metadata";
 import { fitOgLocationLine, OG_PHOTO_PAD_X, ogPhotoContentWidth, ogPriceFontSize, type OgListingCard } from "@/lib/listings/og-card";
+import { getIndexOgInteriorPhotoUrls } from "@/lib/listings/public-data";
 
 const TERRACOTTA = "#A8462A";
 const CREAM = "#F7F1E8";
@@ -42,7 +43,24 @@ function agentLockup(nameSize: number, metaSize: number, metaGap: number) {
   );
 }
 
-function IndexCard() {
+const INDEX_PLACEHOLDERS = [
+  "linear-gradient(160deg, #d6bfa3, #9c7a60)",
+  "linear-gradient(160deg, #cdb9a0, #86705c)",
+];
+
+function indexPhotoSlot(src: string | null, index: number) {
+  if (!src) {
+    return <div style={{ flex: 1, borderRadius: 20, background: INDEX_PLACEHOLDERS[index], display: "flex" }} />;
+  }
+  return (
+    <div style={{ flex: 1, borderRadius: 20, overflow: "hidden", display: "flex" }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt="" width={504} height={279} style={{ width: 504, height: 279, objectFit: "cover" }} />
+    </div>
+  );
+}
+
+function IndexCard({ photos }: { photos: [string | null, string | null] }) {
   return (
     <div style={{ width: 1200, height: 630, display: "flex", background: CREAM, overflow: "hidden" }}>
       <div
@@ -65,9 +83,9 @@ function IndexCard() {
         {agentLockup(28, 22, 6)}
       </div>
       <div style={{ flex: 1, height: 630, background: CREAM, padding: 28, display: "flex", flexDirection: "column" }}>
-        <div style={{ flex: 1, borderRadius: 20, background: "linear-gradient(160deg, #d6bfa3, #9c7a60)", display: "flex" }} />
+        {indexPhotoSlot(photos[0], 0)}
         <div style={{ height: 16, display: "flex" }} />
-        <div style={{ flex: 1, borderRadius: 20, background: "linear-gradient(160deg, #cdb9a0, #86705c)", display: "flex" }} />
+        {indexPhotoSlot(photos[1], 1)}
       </div>
     </div>
   );
@@ -155,12 +173,29 @@ function ListingCard({ card, photo }: { card: OgListingCard; photo: string | nul
   );
 }
 
-export async function renderIndexOgImage() {
-  const fonts = await loadOgFonts();
-  return new ImageResponse(<IndexCard />, {
+async function embeddedIndexOgPhotos(): Promise<[string | null, string | null]> {
+  const urls = await getIndexOgInteriorPhotoUrls();
+  const embedded = await Promise.all(urls.map((url) => (url ? photoDataUrl(url) : Promise.resolve(null))));
+  return [embedded[0] ?? null, embedded[1] ?? null];
+}
+
+function indexImageResponse(photos: [string | null, string | null], fonts: Awaited<ReturnType<typeof loadOgFonts>>) {
+  return new ImageResponse(<IndexCard photos={photos} />, {
     ...OG_SIZE,
     fonts,
   });
+}
+
+export async function renderIndexOgImage() {
+  const fonts = await loadOgFonts();
+  const photos = await embeddedIndexOgPhotos();
+  try {
+    const bytes = Buffer.from(await indexImageResponse(photos, fonts).arrayBuffer());
+    return new Response(bytes, { headers: { "Content-Type": "image/png" } });
+  } catch {
+    const bytes = Buffer.from(await indexImageResponse([null, null], fonts).arrayBuffer());
+    return new Response(bytes, { headers: { "Content-Type": "image/png" } });
+  }
 }
 
 function listingImage(card: OgListingCard, photo: string | null, fonts: Awaited<ReturnType<typeof loadOgFonts>>) {
