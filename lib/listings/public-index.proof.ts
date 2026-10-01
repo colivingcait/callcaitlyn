@@ -263,8 +263,9 @@ const toggle = read("components/listings/PublicPageToggle.tsx");
 assert.ok(toggle.includes("already appear on the public board"));
 assert.ok(toggle.includes("does") && toggle.includes("not hide them"));
 
-const header = read("components/listings/index/ListingsIndexHeader.tsx");
-assert.ok(header.includes("BOOK A CALL"));
-assert.ok(header.includes("/book"));
+const viewToggle = read("components/listings/index/ListingsViewToggle.tsx");
+assert.ok(viewToggle.includes("#sold"), "sold stays reachable from the list/map row");
+assert.equal(read("app/listing/page.tsx").includes("ListingsIndexHeader"), false);
+assert.equal(read("app/listing/map/page.tsx").includes("ListingsIndexHeader"), false);
 
 console.log("public-index proof: ok");

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { getPublicListingsIndex } from "@/lib/listings/public-data";
 import { listingsQueryString } from "@/lib/listings/public-index";
-import { ListingsIndexHeader } from "@/components/listings/index/ListingsIndexHeader";
 import { ListingsViewToggle } from "@/components/listings/index/ListingsViewToggle";
 import { ListingsMapCanvas } from "@/components/listings/index/ListingsMapCanvas";
 import { PUBLIC_LISTINGS_URL } from "@/lib/public-urls";
@@ -29,7 +28,6 @@ export default async function PublicListingsMapPage({
 
   return (
     <div className="om-page listings-map-page" style={{ fontFamily: "var(--font-om-sans), Archivo, ui-sans-serif, system-ui, sans-serif", background: "#f4f1ec", color: "#211c19", minHeight: "100dvh", overflowX: "clip" }}>
-      <ListingsIndexHeader />
       <div className="om-gutter" style={{ margin: "0 auto", maxWidth: 1180, padding: "40px 28px 64px" }}>
         <p className="listings-map-phone-note" style={{ margin: "0 0 18px", fontSize: 15, lineHeight: 1.6, color: "#574f47" }}>
           The map is available on a larger screen. {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
