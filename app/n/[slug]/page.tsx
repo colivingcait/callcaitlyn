@@ -150,8 +150,8 @@ export default function PublicQuotePage() {
         <div className="no-print mt-6 rounded-2xl bg-white/70 p-4 text-center text-sm text-neutral-500">
           <p className="font-semibold text-neutral-700">Caitlyn Verdugo</p>
           <p className="mt-0.5">
-            <a href="tel:+16788848494" className="text-brand-600">
-              (678) 884-8494
+            <a href="tel:+16788844494" className="text-brand-600">
+              678-884-4494
             </a>{" "}
             ·{" "}
             <a href="mailto:cv.sellshomes@gmail.com" className="text-brand-600">

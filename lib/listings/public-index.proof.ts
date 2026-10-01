@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { isPubliclyListed, parsePublicCategory, publicListingHref } from "./public-category";
+import { isPubliclyListed, parsePublicCategory } from "./public-category";
 import { listingsQueryString, partitionPublicListings, sortPublicListings, toPublicIndexCard } from "./public-index";
-import { publicSoldNickname, publicSoldDetail, publicSoldClosedLabel, toPublicSoldEntry } from "./public-sold";
+import { publicSoldDetail, publicSoldClosedLabel, toPublicSoldEntry } from "./public-sold";
+import { publicInteriorCoverUrl, publicListingHref, publicListingPrivacy } from "./public-privacy";
 import { submarketCentroid } from "./submarkets";
 
 const root = process.cwd();
@@ -22,25 +23,45 @@ assert.equal(isPubliclyListed({ status: "coming_soon" }), true);
 assert.equal(isPubliclyListed({ status: "under_contract" }), true);
 assert.equal(isPubliclyListed({ status: "archived" }), false);
 assert.equal(isPubliclyListed({ status: "closed" }), false, "legacy closed stays off the public board");
-assert.equal(publicListingHref({ public_category: "coliving", public_slug: null, zillow_url: "https://zillow.com/x" })?.href, "https://zillow.com/x");
-assert.equal(publicListingHref({ public_category: "coliving", public_slug: null, zillow_url: null }), null);
+assert.equal(
+  publicListingHref({ public_category: "coliving", public_slug: null, zillow_url: "https://zillow.com/x", status: "active" }),
+  null,
+  "coliving never links to Zillow",
+);
+assert.equal(publicListingHref({ public_category: "coliving", public_slug: null, zillow_url: null, status: "active" }), null);
 
-assert.deepEqual(publicListingHref({ public_category: "coliving", public_slug: "adair", zillow_url: "https://zillow.com/x" }), {
+assert.deepEqual(publicListingHref({ public_category: "coliving", public_slug: "adair", zillow_url: "https://zillow.com/x", status: "active" }), {
   href: "/listing/adair",
   external: false,
   cta: "VIEW THE OFFERING →",
 });
-assert.deepEqual(publicListingHref({ public_category: "airbnb", public_slug: "grant", zillow_url: "https://www.zillow.com/homedetails/1" }), {
-  href: "https://www.zillow.com/homedetails/1",
-  external: true,
-  cta: "VIEW ON ZILLOW ↗",
-});
-assert.deepEqual(publicListingHref({ public_category: "primary_residence", public_slug: null, zillow_url: "https://www.firstmls.com/x" }), {
-  href: "https://www.firstmls.com/x",
-  external: true,
-  cta: "VIEW ON FMLS ↗",
-});
-assert.equal(publicListingHref({ public_category: "airbnb", public_slug: null, zillow_url: null }), null, "no dead links");
+assert.deepEqual(
+  publicListingHref({ public_category: "airbnb", public_slug: "grant", zillow_url: "https://www.zillow.com/homedetails/1", status: "active" }),
+  {
+    href: "https://www.zillow.com/homedetails/1",
+    external: true,
+    cta: "VIEW ON ZILLOW ↗",
+  },
+);
+assert.deepEqual(
+  publicListingHref({ public_category: "primary_residence", public_slug: null, zillow_url: "https://www.firstmls.com/x", status: "active" }),
+  {
+    href: "https://www.firstmls.com/x",
+    external: true,
+    cta: "VIEW ON FMLS ↗",
+  },
+);
+assert.equal(publicListingHref({ public_category: "airbnb", public_slug: null, zillow_url: null, status: "active" }), null, "no dead links");
+assert.equal(
+  publicListingHref({
+    public_category: "airbnb",
+    public_slug: "grant",
+    zillow_url: "https://www.zillow.com/homedetails/975-Welch-St",
+    status: "archived",
+  })?.href,
+  "/listing/grant",
+  "off-market keeps the internal page and drops Zillow",
+);
 
 const sorted = sortPublicListings([
   { public_category: "airbnb", created_at: "2026-09-20T00:00:00Z" },
@@ -70,25 +91,40 @@ assert.deepEqual(submarketCentroid("West Atlanta / Westview"), { lat: 33.754, ln
 assert.equal(submarketCentroid("123 Benjamin E. Mays Dr"), null, "never geocode a street address");
 assert.equal(submarketCentroid(null), null);
 
-assert.equal(publicSoldNickname("123 Benjamin E. Mays Dr SW, Atlanta, GA", null), "Benjamin E. Mays Dr SW");
-assert.equal(publicSoldNickname("123 Benjamin E. Mays Dr", "Capitol View"), "Capitol View");
-assert.equal(publicSoldNickname(null, null), null);
-assert.equal(publicSoldNickname("12", null), null);
 assert.equal(publicSoldDetail({ property_type: "co_living", side: "buyer", on_fmls: true }), "coliving · buyer side");
 assert.equal(publicSoldDetail({ property_type: "investment", side: "seller", on_fmls: false }), "Investment · listing side · off-market");
 assert.equal(publicSoldClosedLabel("2026-07-12T00:00:00.000Z"), "CLOSED JUL 2026");
 
-const sold = toPublicSoldEntry({
-  id: "d1",
-  address: "400 Capitol View Ave SW, Atlanta, GA",
-  property_type: "co_living",
-  side: "seller",
-  on_fmls: true,
-  closed_at: "2026-04-02T00:00:00.000Z",
-});
-assert.equal(sold?.name.includes("400"), false);
-assert.equal(sold?.name.toLowerCase().includes("client"), false);
+const sold = toPublicSoldEntry(
+  {
+    id: "d1",
+    property_type: "co_living",
+    side: "seller",
+    on_fmls: true,
+    closed_at: "2026-04-02T00:00:00.000Z",
+  },
+  { nickname: "400 Capitol View Ave SW", submarket: "Capitol View" },
+);
+assert.equal(JSON.stringify(sold).includes("400"), false);
+assert.equal(JSON.stringify(sold).includes("Capitol View Ave"), false);
+assert.equal(sold.name, "Capitol View");
+assert.equal(sold.locationLabel, "Capitol View");
+assert.equal(sold.name.toLowerCase().includes("client"), false);
 assert.equal(JSON.stringify(sold).includes("client_name"), false);
+
+const streetSold = toPublicSoldEntry(
+  {
+    id: "d2",
+    property_type: "primary_residence",
+    side: "buyer",
+    on_fmls: false,
+    closed_at: "2026-08-01T00:00:00.000Z",
+  },
+  { nickname: "Waterlace Way", submarket: null },
+);
+assert.equal(JSON.stringify(streetSold).toLowerCase().includes("waterlace"), false);
+assert.equal(streetSold.name, "Atlanta metro");
+assert.equal(streetSold.locationLabel, "Atlanta metro");
 
 const cardSource = {
   id: "1",
@@ -112,9 +148,12 @@ const card = toPublicIndexCard(cardSource);
 assert.equal(card.tag, "COLIVING");
 assert.equal(card.tagColor, "#cc4a37");
 assert.equal(card.href, "/listing/the-adair");
-assert.equal(card.lat, 33.6795);
+assert.equal(card.showMapPin, false, "coliving is private even when active with a slug");
+assert.equal(card.lat, null);
+assert.equal(card.lng, null);
 assert.equal(card.detail, "7 rooms · 6 of 7 occupied");
 assert.equal(card.name, "The Adair");
+assert.equal(card.submarketLabel, "EAST POINT");
 
 const noSlugCard = toPublicIndexCard({
   ...cardSource,
@@ -126,11 +165,56 @@ assert.equal(noSlugCard.name, "The Adair");
 
 const zillowFallback = toPublicIndexCard({
   ...cardSource,
+  public_category: "primary_residence",
   public_slug: null,
-  zillow_url: "https://zillow.com/x",
+  nickname: "975 Welch St",
+  submarket: "Pittsburgh",
+  zillow_url: "https://www.zillow.com/homedetails/975-Welch-St-SW-Atlanta-GA-30310/69346676_zpid/",
+  status: "active",
 });
-assert.equal(zillowFallback.href, "https://zillow.com/x");
+assert.equal(zillowFallback.href, "https://www.zillow.com/homedetails/975-Welch-St-SW-Atlanta-GA-30310/69346676_zpid/");
 assert.equal(zillowFallback.external, true);
+assert.equal(zillowFallback.name, "975 Welch St");
+assert.equal(zillowFallback.showMapPin, true);
+assert.equal(zillowFallback.lat, 33.73);
+
+const privateStreet = toPublicIndexCard({
+  ...cardSource,
+  nickname: "654 Gillette Ave",
+  submarket: null,
+  zillow_url: "https://www.zillow.com/homedetails/654-Gillette-Ave-SW-Atlanta-GA-30310/1_zpid/",
+  status: "active",
+});
+assert.equal(privateStreet.name, "Atlanta metro");
+assert.equal(privateStreet.submarketLabel, "ATLANTA METRO");
+assert.equal(privateStreet.href, "/listing/the-adair");
+assert.equal(privateStreet.showMapPin, false);
+assert.equal(JSON.stringify(privateStreet).includes("Gillette"), false);
+assert.equal(JSON.stringify(privateStreet).includes("30310"), false);
+assert.equal(JSON.stringify(privateStreet).includes("zillow"), false);
+assert.equal(privateStreet.lat, null);
+
+const privateOffMarket = publicListingPrivacy({
+  nickname: "1410 Willow Bend",
+  submarket: "Snellville",
+  public_category: "primary_residence",
+  status: "archived",
+  zillow_url: "https://www.zillow.com/homedetails/1410-Willow-Bend-Dr/1_zpid/",
+});
+assert.equal(privateOffMarket.showAddress, false);
+assert.equal(privateOffMarket.showZillow, false);
+assert.equal(privateOffMarket.showMapPin, false);
+assert.equal(privateOffMarket.displayTitle, "Snellville");
+assert.equal(JSON.stringify(privateOffMarket).toLowerCase().includes("willow"), false);
+
+assert.equal(
+  publicInteriorCoverUrl([
+    { url: "https://cdn.example/front.jpg", category: "exterior" },
+    { url: "https://cdn.example/kitchen.jpg", category: "kitchen" },
+  ]),
+  "https://cdn.example/kitchen.jpg",
+);
+assert.equal(publicInteriorCoverUrl([{ url: "https://cdn.example/facade.png", category: null }]), null);
 
 assert.equal(listingsQueryString({ view: "map", foo: "bar" }), "foo=bar");
 
@@ -143,6 +227,7 @@ assert.equal(indexPage.includes("listing.address"), false);
 const mapPage = read("app/listing/map/page.tsx");
 assert.ok(mapPage.includes('export const dynamic = "force-dynamic"'));
 assert.ok(mapPage.includes("available"), "map uses the available partition only");
+assert.ok(mapPage.includes("showMapPin"), "private listings are omitted before the map client");
 assert.equal(mapPage.includes("underContract"), false);
 assert.equal(mapPage.includes("geocode"), false);
 
@@ -172,7 +257,7 @@ const category = read("lib/listings/public-category.ts");
 assert.ok(category.includes("isPublicAvailableStatus"));
 assert.ok(category.includes("isPublicUnderContractStatus"));
 assert.equal(category.includes("listing.public_slug) return true"), false, "public_slug is not a board gate");
-assert.equal(category.includes("listing.zillow_url"), true); // href helper still uses it
+assert.ok(read("lib/listings/public-privacy.ts").includes("listing.zillow_url"), "Zillow links go through the privacy helper");
 
 const toggle = read("components/listings/PublicPageToggle.tsx");
 assert.ok(toggle.includes("already appear on the public board"));
