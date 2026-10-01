@@ -8,11 +8,12 @@ import { PUBLIC_LISTINGS_URL } from "@/lib/public-urls";
 
 export const dynamic = "force-dynamic";
 
-const LISTINGS_TITLE = "Available Listings | Caitlyn Verdugo, KW Metro Atlanta";
-const LISTINGS_DESCRIPTION = "Coliving and for-sale homes across Atlanta metro. Caitlyn Verdugo, Keller Williams Metro Atlanta.";
+const LISTINGS_TITLE = "Coliving & Investment Homes for Sale in Atlanta | Coliving Cait";
+const LISTINGS_DESCRIPTION = "Coliving houses, house hacks and investment properties from Caitlyn Verdugo, Keller Williams Metro Atlanta.";
 
 export const metadata: Metadata = {
-  title: LISTINGS_TITLE,
+  // absolute skips any parent title.template so "| Coliving Cait" is not added twice.
+  title: { absolute: LISTINGS_TITLE },
   description: LISTINGS_DESCRIPTION,
   alternates: { canonical: PUBLIC_LISTINGS_URL },
   openGraph: { title: LISTINGS_TITLE, description: LISTINGS_DESCRIPTION, url: PUBLIC_LISTINGS_URL },
