@@ -22,7 +22,7 @@ export function ShareRow({ slug }: { slug: string }) {
   return (
     <div data-om-noprint style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid #ddd6cc", display: "flex", alignItems: "center", gap: 12 }}>
       <p style={{ margin: 0, flex: "1 1 auto", fontSize: 13, lineHeight: 1.5, color: "#574f47" }}>Share this offering — one page, no line items</p>
-      <a href={`/listings/${slug}/one-pager`} className="om-hover-accent" style={{ fontSize: 12, fontWeight: 600, letterSpacing: "0.08em", color: "#a33a29" }}>
+      <a href={`/listings/${slug}/one-pager`} className="om-hover-accent" style={{ fontSize: 12, fontWeight: 600, letterSpacing: "0.08em", color: "#8B6535" }}>
         PDF
       </a>
       <span style={{ color: "#ddd6cc" }}>·</span>
@@ -30,7 +30,7 @@ export function ShareRow({ slug }: { slug: string }) {
         type="button"
         className="om-hover-accent"
         onClick={copyLink}
-        style={{ border: 0, background: "transparent", padding: 0, fontSize: 12, fontWeight: 600, letterSpacing: "0.08em", color: "#a33a29", cursor: "pointer" }}
+        style={{ border: 0, background: "transparent", padding: 0, fontSize: 12, fontWeight: 600, letterSpacing: "0.08em", color: "#8B6535", cursor: "pointer" }}
       >
         {copied ? "COPIED" : "LINK"}
       </button>

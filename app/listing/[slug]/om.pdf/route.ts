@@ -13,7 +13,7 @@ export async function GET(_request: Request, context: { params: Promise<{ slug: 
   <title>Full OM — template pending</title>
   <style>
     @page { size: letter; margin: 0.6in; }
-    body { margin: 0; background: #f4f1ec; color: #211c19; font: 15px/1.6 Archivo, ui-sans-serif, sans-serif; }
+    body { margin: 0; background: #f4f1ec; color: #1C1917; font: 15px/1.6 Archivo, ui-sans-serif, sans-serif; }
     main { max-width: 640px; margin: 48px auto; padding: 0 24px; }
     h1 { font-weight: 600; font-size: 28px; line-height: 1.15; }
     a { color: #a33a29; }

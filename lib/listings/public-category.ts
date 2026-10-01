@@ -34,7 +34,7 @@ export function publicCategoryTag(value: string | null | undefined): string | nu
 }
 
 export function publicCategoryColor(value: string | null | undefined): string {
-  return isColivingCategory(value) ? "#cc4a37" : "#211c19";
+  return isColivingCategory(value) ? "#C4955A" : "#1C1917";
 }
 
 export function externalListingCta(url: string): string {

@@ -65,12 +65,12 @@ export function SellerAnalysisForm() {
         <label htmlFor="s-notes" style={label}>ANYTHING ELSE</label>
         <textarea id="s-notes" name="notes" rows={2} placeholder="Room count, occupancy, timeline" className="om-input" style={{ ...input, resize: "vertical" }} />
       </div>
-      {error && <p style={{ margin: 0, fontSize: 13, color: "#e26e5d" }}>{error}</p>}
+      {error && <p style={{ margin: 0, fontSize: 13, color: "#C4955A" }}>{error}</p>}
       <button
         type="submit"
         disabled={submitting || sent}
         className="om-hover-fill-border"
-        style={{ alignSelf: "flex-start", border: "1px solid #cc4a37", background: "#cc4a37", padding: "13px 26px", fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: "#fff", cursor: "pointer" }}
+        style={{ alignSelf: "flex-start", border: "1px solid #C4955A", background: "#C4955A", padding: "13px 26px", fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: "#fff", cursor: "pointer" }}
       >
         {sent ? "SENT — I'LL BE IN TOUCH" : submitting ? "SENDING…" : "GET MY ANALYSIS"}
       </button>
@@ -149,14 +149,14 @@ export function SellerAnalysisSheet({ onClose }: { onClose: () => void }) {
     <OmSheet zIndex={60} eyebrow="SELLER ANALYSIS" title="What would your PadSplit sell for?" onClose={onClose}>
       {step === "sent" ? (
         <div style={{ padding: "34px 18px 38px", textAlign: "center" }}>
-          <p style={{ margin: 0, fontSize: 11, fontWeight: 500, letterSpacing: "0.18em", color: "#a33a29" }}>SENT</p>
-          <p style={{ margin: "14px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 24, lineHeight: 1.3, color: "#211c19" }}>Caitlyn has your property.</p>
+          <p style={{ margin: 0, fontSize: 11, fontWeight: 500, letterSpacing: "0.18em", color: "#8B6535" }}>SENT</p>
+          <p style={{ margin: "14px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 24, lineHeight: 1.3, color: "#1C1917" }}>Caitlyn has your property.</p>
           <p style={{ margin: "14px 0 0", fontSize: 15, lineHeight: 1.7, color: "#2e2823" }}>Comps and room revenue both, no pressure either way.</p>
           <button
             type="button"
             onClick={onClose}
             className="om-hover-dark"
-            style={{ marginTop: 24, border: "1px solid #211c19", background: "transparent", padding: "13px 26px", fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: "#211c19", cursor: "pointer" }}
+            style={{ marginTop: 24, border: "1px solid #1C1917", background: "transparent", padding: "13px 26px", fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: "#1C1917", cursor: "pointer" }}
           >
             CLOSE
           </button>
@@ -183,12 +183,12 @@ export function SellerAnalysisSheet({ onClose }: { onClose: () => void }) {
               <label htmlFor="ss-address" style={boxedLabel}>Property address</label>
               <input id="ss-address" name="address" defaultValue={contact.address} placeholder="Street, city" className="om-input-boxed" style={boxedField} />
             </div>
-            {error && <p style={{ margin: 0, fontSize: 13, color: "#a33a29" }}>{error}</p>}
+            {error && <p style={{ margin: 0, fontSize: 13, color: "#8B6535" }}>{error}</p>}
             <button
               type="submit"
               disabled={submitting}
               className="om-hover-fill-border"
-              style={{ marginTop: 4, border: "1px solid #cc4a37", background: "#cc4a37", padding: "16px 20px", fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: "#fff", cursor: "pointer" }}
+              style={{ marginTop: 4, border: "1px solid #C4955A", background: "#C4955A", padding: "16px 20px", fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: "#fff", cursor: "pointer" }}
             >
               {submitting ? "SENDING…" : "CONTINUE"}
             </button>
@@ -220,9 +220,9 @@ export function SellerAnalysisSheet({ onClose }: { onClose: () => void }) {
                       type="button"
                       onClick={() => setTimeline(active ? "" : chip.value)}
                       style={{
-                        border: active ? "1px solid #211c19" : "1px solid #d5cdc1",
-                        background: active ? "#211c19" : "#fffdfa",
-                        color: active ? "#f4f1ec" : "#211c19",
+                        border: active ? "1px solid #1C1917" : "1px solid #d5cdc1",
+                        background: active ? "#1C1917" : "#FAF7F2",
+                        color: active ? "#f4f1ec" : "#1C1917",
                         padding: "10px 12px",
                         fontSize: 12,
                         fontWeight: 600,
@@ -246,7 +246,7 @@ export function SellerAnalysisSheet({ onClose }: { onClose: () => void }) {
                 <input id="ss-rents" name="rents" placeholder="$5,500" className="om-input-boxed" style={boxedField} />
               </div>
             </div>
-            {error && <p style={{ margin: 0, fontSize: 13, color: "#a33a29" }}>{error}</p>}
+            {error && <p style={{ margin: 0, fontSize: 13, color: "#8B6535" }}>{error}</p>}
             <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
               <button
                 type="button"
@@ -255,7 +255,7 @@ export function SellerAnalysisSheet({ onClose }: { onClose: () => void }) {
                   setStep(1);
                 }}
                 className="om-hover-dark"
-                style={{ flex: "0 0 auto", border: "1px solid #211c19", background: "transparent", padding: "15px 18px", fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", color: "#211c19", cursor: "pointer" }}
+                style={{ flex: "0 0 auto", border: "1px solid #1C1917", background: "transparent", padding: "15px 18px", fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", color: "#1C1917", cursor: "pointer" }}
               >
                 BACK
               </button>
@@ -263,7 +263,7 @@ export function SellerAnalysisSheet({ onClose }: { onClose: () => void }) {
                 type="submit"
                 disabled={submitting}
                 className="om-hover-fill-border"
-                style={{ flex: "1 1 auto", border: "1px solid #cc4a37", background: "#cc4a37", padding: "15px 18px", fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: "#fff", cursor: "pointer" }}
+                style={{ flex: "1 1 auto", border: "1px solid #C4955A", background: "#C4955A", padding: "15px 18px", fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: "#fff", cursor: "pointer" }}
               >
                 {submitting ? "SENDING…" : "SEND FOR ANALYSIS"}
               </button>

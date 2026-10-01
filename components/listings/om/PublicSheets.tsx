@@ -71,7 +71,7 @@ export function PublicSheetsProvider({ children }: { children: React.ReactNode }
         <div
           role="presentation"
           data-om-noprint
-          style={{ position: "fixed", inset: 0, zIndex: 61, background: "rgba(23,19,17,0.62)", display: "flex", alignItems: "flex-end" }}
+          style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(23,19,17,0.62)", display: "flex", alignItems: "flex-end" }}
           onClick={(e) => {
             if (e.target === e.currentTarget) setBookOpen(false);
           }}
@@ -100,15 +100,22 @@ export function BookCallButton({
 }) {
   const sheets = usePublicSheets();
   return (
-    <>
-      {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-      <a href="/book" className={`om-book-link ${className ?? ""}`} style={style}>
-        {children}
-      </a>
-      <button type="button" className={`om-book-sheet ${className ?? ""}`} style={{ ...bookButtonStyle, ...style }} onClick={() => sheets?.openBook()}>
-        {children}
-      </button>
-    </>
+    // One control. Desktop follows the link to /book. The narrow layout opens
+    // the listing bottom sheet instead of keeping a second, hidden button.
+    // eslint-disable-next-line @next/next/no-html-link-for-pages
+    <a
+      href="/book"
+      className={className}
+      style={style}
+      onClick={(event) => {
+        if (window.matchMedia("(max-width: 900px)").matches) {
+          event.preventDefault();
+          sheets?.openBook();
+        }
+      }}
+    >
+      {children}
+    </a>
   );
 }
 

@@ -1,3 +1,5 @@
+import { looksLikeStreetAddress } from "@/lib/listings/og-card";
+import { publicListingCopy } from "@/lib/listings/public-copy";
 import { publicListingHref, publicListingPrivacy } from "@/lib/listings/public-privacy";
 import {
   isColivingCategory,
@@ -19,6 +21,7 @@ export type PublicIndexSource = {
   public_slug: string | null;
   zillow_url: string | null;
   submarket: string | null;
+  city?: string | null;
   list_price: number | null;
   status: ListingStatus;
   created_at: string;
@@ -89,17 +92,27 @@ export function underContractDetail(listing: PublicIndexSource): string | null {
   return parts.length ? parts.join(" · ") : null;
 }
 
+function cardPlace(listing: PublicIndexSource, locationLabel: string, showAddress: boolean): string {
+  const entered = locationLabel.trim();
+  if (entered) return entered;
+  if (showAddress) {
+    const city = publicListingCopy(listing.city);
+    if (city && !looksLikeStreetAddress(city)) return city;
+  }
+  return "Atlanta metro";
+}
+
 export function toPublicIndexCard(listing: PublicIndexSource): PublicIndexCard {
   const privacy = publicListingPrivacy(listing);
   const link = publicListingHref(listing);
   const centroid = privacy.showMapPin ? submarketCentroid(listing.submarket) : null;
-  const submarket = privacy.locationLabel;
+  const submarket = cardPlace(listing, privacy.locationLabel, privacy.showAddress);
   const cap = formatPublicBand(listing.band_cap_rate);
   const spec = [underContractDetail(listing), cap ? `${cap} cap` : null].filter(Boolean).join(" · ");
   return {
     id: listing.id,
     name: privacy.displayTitle,
-    submarketLabel: submarket ? submarket.toUpperCase() : null,
+    submarketLabel: submarket.toUpperCase(),
     priceLabel: formatCurrency(listing.list_price),
     tag: publicCategoryTag(listing.public_category),
     tagColor: publicCategoryColor(listing.public_category),

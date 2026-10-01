@@ -9,7 +9,7 @@ export function DataBasisNote({ note, marginTop = 18 }: { note?: string | null; 
       style={{
         margin: `${marginTop}px 0 0`,
         maxWidth: "68ch",
-        borderLeft: "2px solid #cc4a37",
+        borderLeft: "2px solid #C4955A",
         paddingLeft: 14,
         fontSize: 14,
         lineHeight: 1.65,
@@ -26,11 +26,16 @@ export function ProjectedMark({ tone = "ink" }: { tone?: "ink" | "light" }) {
     <span
       style={{
         marginLeft: 8,
-        fontSize: 11,
-        fontWeight: 600,
-        letterSpacing: "0.08em",
-        color: tone === "light" ? "#e9a396" : "#a33a29",
+        fontSize: 9,
+        fontWeight: 500,
+        fontStyle: "normal",
+        letterSpacing: "0.14em",
+        textTransform: "uppercase",
+        color: tone === "light" ? "#E8D5B5" : "#8B6535",
+        background: tone === "light" ? "rgba(232,213,181,0.16)" : "rgba(196,149,90,0.12)",
+        padding: "3px 6px",
         whiteSpace: "nowrap",
+        verticalAlign: "1px",
       }}
     >
       Projected

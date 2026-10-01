@@ -125,12 +125,12 @@ export function ListingsMapCanvas({ listings }: { listings: PublicIndexCard[] })
                 display: "block",
                 width: "100%",
                 textAlign: "left",
-                background: "#fffdfa",
+                background: "#FAF7F2",
                 border: "1px solid #e4ddd2",
-                borderLeft: selected === index ? "3px solid #cc4a37" : "3px solid #e4ddd2",
+                borderLeft: selected === index ? "3px solid #C4955A" : "3px solid #e4ddd2",
                 padding: "14px 16px",
                 cursor: "pointer",
-                color: "#211c19",
+                color: "#1C1917",
               }}
             >
               {listing.tag && (
@@ -149,10 +149,10 @@ export function ListingsMapCanvas({ listings }: { listings: PublicIndexCard[] })
                 </span>
               )}
               {listing.submarketLabel && (
-                <p style={{ margin: "10px 0 0", fontSize: 11, fontWeight: 500, letterSpacing: "0.16em", color: "#a33a29" }}>{listing.submarketLabel}</p>
+                <p style={{ margin: "10px 0 0", fontSize: 11, fontWeight: 500, letterSpacing: "0.16em", color: "#8B6535" }}>{listing.submarketLabel}</p>
               )}
-              <p style={{ margin: "6px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 20, lineHeight: 1.2, color: "#211c19" }}>{listing.name}</p>
-              <p style={{ margin: "8px 0 0", fontFamily: "var(--font-om-serif)", fontSize: 20, color: "#211c19" }}>{listing.priceLabel}</p>
+              <p style={{ margin: "6px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 20, lineHeight: 1.2, color: "#1C1917" }}>{listing.name}</p>
+              <p style={{ margin: "8px 0 0", fontFamily: "var(--font-om-serif)", fontSize: 20, color: "#1C1917" }}>{listing.priceLabel}</p>
             </button>
           ))
         )}

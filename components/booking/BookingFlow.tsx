@@ -6,35 +6,71 @@ import { CalendarClock, Check, LayoutGrid, List } from "lucide-react";
 import { getBookingFlowData, startBookingSession, selectBookingSlot, submitBookingDetails, type BookingFlowData } from "@/app/book/booking-actions";
 import { CalendarGridView } from "@/components/booking/CalendarGridView";
 import { ListView } from "@/components/booking/ListView";
+import { BookingSteps } from "@/components/booking/BookingSteps";
 import { BOOKING_CONTACT_TYPE_OPTIONS } from "@/lib/crm/booking-form-options";
 import { TIMELINE_LABELS } from "@/lib/utils";
 import { APP_TIMEZONE } from "@/lib/format-time";
 import { OmBookingPanel } from "@/components/listings/om/OmBookingPanel";
+import type { Slot } from "@/lib/crm/booking-availability";
 import type { BookingContactType, Timeline } from "@/types/database";
+import "./booking.css";
 
 type Step = "info" | "time" | "details" | "done";
 const STEP_NUMBER: Record<Step, number> = { info: 1, time: 2, details: 3, done: 3 };
 
-const inputClass = "mt-1 w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-[15px] text-neutral-900";
+function parseFixture(value: string | null | undefined): Step | null {
+  if (value === "info" || value === "time" || value === "details" || value === "done") return value;
+  return null;
+}
+
+// Stable sample times for screenshots. Never written, and never used unless
+// ?fixture= is set. The anchor is fixed so server and client markup match.
+function fixtureSlots(): Slot[] {
+  const slots: Slot[] = [];
+  const [y, m, d] = [2026, 10, 6];
+  for (let offset = -2; offset <= 10; offset++) {
+    const probe = new Date(Date.UTC(y, m - 1, d + offset));
+    const dow = probe.getUTCDay();
+    if (dow === 0 || dow === 6) continue;
+    for (const [hh, mm] of [
+      [14, 0],
+      [14, 30],
+      [15, 30],
+      [16, 0],
+      [18, 0],
+      [19, 30],
+    ] as const) {
+      const start = new Date(Date.UTC(y, m - 1, d + offset, hh, mm, 0));
+      slots.push({ startAt: start.toISOString(), endAt: new Date(start.getTime() + 20 * 60_000).toISOString() });
+    }
+  }
+  return slots;
+}
 
 export function BookingFlow({
   slug,
   presentation = "page",
   onClose,
+  fixture = null,
 }: {
   slug: string | null;
   presentation?: "page" | "sheet";
   onClose?: () => void;
+  fixture?: string | null;
 }) {
-  const [data, setData] = useState<BookingFlowData | null | "loading">("loading");
-  const [step, setStep] = useState<Step>("info");
+  const fixtureStep = parseFixture(fixture);
+  const sampleSlots = fixtureStep ? fixtureSlots() : [];
+  const [data, setData] = useState<BookingFlowData | null | "loading">(
+    fixtureStep ? { durationMinutes: 20, prefill: null, slots: sampleSlots } : "loading",
+  );
+  const [step, setStep] = useState<Step>(fixtureStep ?? "info");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [view, setView] = useState<"calendar" | "list">(presentation === "sheet" ? "list" : "calendar");
 
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [name, setName] = useState(fixtureStep && fixtureStep !== "info" ? "Jordan Sample" : "");
+  const [phone, setPhone] = useState(fixtureStep && fixtureStep !== "info" ? "(555) 010-0000" : "");
   const [email, setEmail] = useState("");
-  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(fixtureStep === "details" || fixtureStep === "done" ? sampleSlots[2]?.startAt ?? null : null);
   const [contactType, setContactType] = useState<BookingContactType | "">("");
   const [timeline, setTimeline] = useState<Timeline | "">("");
   const [questions, setQuestions] = useState("");
@@ -43,6 +79,7 @@ export function BookingFlow({
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (fixtureStep) return;
     let cancelled = false;
     getBookingFlowData(slug).then((result) => {
       if (cancelled) return;
@@ -56,10 +93,14 @@ export function BookingFlow({
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+  }, [slug, fixtureStep]);
 
   async function submitInfo() {
     if (!name.trim() || !phone.trim()) return;
+    if (fixtureStep) {
+      setStep("time");
+      return;
+    }
     setSubmitting(true);
     setError("");
     const result = await startBookingSession({ slug, name: name.trim(), phone: phone.trim(), email: email.trim() });
@@ -73,7 +114,12 @@ export function BookingFlow({
   }
 
   async function submitTime() {
-    if (!sessionId || !selectedSlot) return;
+    if (!selectedSlot) return;
+    if (fixtureStep) {
+      setStep("details");
+      return;
+    }
+    if (!sessionId) return;
     setSubmitting(true);
     setError("");
     const result = await selectBookingSlot(sessionId, selectedSlot);
@@ -83,6 +129,10 @@ export function BookingFlow({
   }
 
   async function submitDetails() {
+    if (fixtureStep) {
+      setStep("done");
+      return;
+    }
     if (!sessionId) return;
     setSubmitting(true);
     setError("");
@@ -131,192 +181,167 @@ export function BookingFlow({
 
   if (data === "loading") {
     return (
-      <main className="flex min-h-dvh items-center justify-center bg-neutral-50">
-        <p className="text-neutral-400">Loading…</p>
+      <main className="bk">
+        <p className="bk-empty">Loading…</p>
       </main>
     );
   }
 
   if (!data) {
     return (
-      <main className="flex min-h-dvh items-center justify-center bg-neutral-50 px-4 text-center">
-        <p className="text-neutral-500">This link isn&apos;t valid anymore. Ask Caitlyn to send a fresh one.</p>
-      </main>
-    );
-  }
-
-  if (step === "done") {
-    return (
-      <main className="flex min-h-dvh items-center justify-center bg-gradient-to-b from-brand-50 via-white to-white px-4">
-        <div className="mx-auto max-w-sm rounded-3xl border border-neutral-200/70 bg-white p-7 text-center shadow-xl">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-            <Check size={22} />
-          </div>
-          <p className="mt-4 font-serif text-xl font-semibold text-neutral-900">Request sent!</p>
-          <p className="mt-1.5 text-[15px] leading-6 text-neutral-500">
-            {selectedSlot && (
-              <>
-                {formatInTimeZone(selectedSlot, APP_TIMEZONE, "EEEE, MMM d 'at' h:mm a")} — Caitlyn will confirm shortly and text you at {phone}.
-              </>
-            )}
-          </p>
-        </div>
+      <main className="bk">
+        <p className="bk-empty">This link isn&apos;t valid anymore. Ask Caitlyn to send a fresh one.</p>
       </main>
     );
   }
 
   return (
-    <main className="min-h-dvh bg-gradient-to-b from-brand-50 via-white to-white px-4 py-10">
-      <div className="mx-auto max-w-lg">
-        <div className="mb-6 flex items-center gap-2.5">
-          <CalendarClock size={20} className="shrink-0 text-neutral-500" />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-lg font-semibold text-neutral-900">Book time with Caitlyn</p>
-            <p className="truncate text-sm text-neutral-500">{data.durationMinutes} minutes</p>
-          </div>
-          <span className="shrink-0 text-xs font-medium text-neutral-400">Step {STEP_NUMBER[step]} of 3</span>
-        </div>
-
-        <div className="rounded-3xl border border-neutral-200/70 bg-white p-6 shadow-xl">
-          {step === "info" && (
-            <div className="space-y-3">
-              <div>
-                <label htmlFor="book-name" className="text-xs font-medium text-neutral-500">
-                  Your name <span className="text-neutral-400">(required)</span>
-                </label>
-                <input id="book-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" required autoComplete="name" className={inputClass} />
-              </div>
-              <div>
-                <label htmlFor="book-phone" className="text-xs font-medium text-neutral-500">
-                  Phone <span className="text-neutral-400">(required)</span>
-                </label>
-                <input id="book-phone" value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" placeholder="(555) 555-1234" required autoComplete="tel" className={inputClass} />
-              </div>
-              <div>
-                <label htmlFor="book-email" className="text-xs font-medium text-neutral-500">Email (optional)</label>
-                <input id="book-email" value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" className={inputClass} />
-              </div>
-              {error && <p className="text-sm text-red-600">{error}</p>}
-              {(!name.trim() || !phone.trim()) && (
-                <p className="text-sm text-neutral-500">Add your name and phone to continue — Caitlyn uses them to confirm the meeting.</p>
-              )}
-              <button
-                type="button"
-                onClick={submitInfo}
-                disabled={submitting || !name.trim() || !phone.trim()}
-                className="w-full rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
-              >
-                {submitting ? "…" : "Next"}
-              </button>
+    <main className="bk">
+      <div className="bk-col">
+        {step === "done" ? (
+          <div className="bk-card bk-done">
+            <div className="bk-check">
+              <Check size={22} />
             </div>
-          )}
-
-          {step === "time" && (
-            <div>
-              <div className="mb-4 flex items-center justify-end gap-1 rounded-lg bg-neutral-100 p-1 text-xs font-medium">
-                <button
-                  type="button"
-                  onClick={() => setView("calendar")}
-                  className={`flex items-center gap-1 rounded-md px-2.5 py-1.5 ${view === "calendar" ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500"}`}
-                >
-                  <LayoutGrid size={13} /> Calendar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setView("list")}
-                  className={`flex items-center gap-1 rounded-md px-2.5 py-1.5 ${view === "list" ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500"}`}
-                >
-                  <List size={13} /> List
-                </button>
-              </div>
-
-              {view === "calendar" ? (
-                <CalendarGridView slots={data.slots} selected={selectedSlot} onSelect={setSelectedSlot} />
-              ) : (
-                <ListView slots={data.slots} selected={selectedSlot} onSelect={setSelectedSlot} />
-              )}
-
-              {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-
-              <div className="mt-5 flex gap-2 border-t border-neutral-100 pt-5">
-                <button type="button" onClick={() => setStep("info")} className="rounded-xl border border-neutral-200 px-4 py-3 text-sm font-semibold text-neutral-700">
-                  Back
-                </button>
-                <button
-                  type="button"
-                  onClick={submitTime}
-                  disabled={submitting || !selectedSlot}
-                  className="flex-1 rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
-                >
-                  {submitting ? "…" : "Next"}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === "details" && (
-            <div className="space-y-3">
-              <p className="font-serif text-lg font-semibold text-neutral-900">Help me prepare for this meeting:</p>
+            <h2>
+              Request <em>sent!</em>
+            </h2>
+            <p>
               {selectedSlot && (
-                <p className="text-[15px] font-semibold text-neutral-900">{formatInTimeZone(selectedSlot, APP_TIMEZONE, "EEEE, MMM d 'at' h:mm a")}</p>
+                <>
+                  {formatInTimeZone(selectedSlot, APP_TIMEZONE, "EEEE, MMM d 'at' h:mm a")} — Caitlyn will confirm shortly and text you at {phone}.
+                </>
               )}
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="bk-head">
+              <CalendarClock size={22} />
               <div>
-                <label className="text-xs font-medium text-neutral-500">What best describes you? (optional)</label>
-                <div className="mt-1.5 flex flex-wrap gap-2">
-                  {BOOKING_CONTACT_TYPE_OPTIONS.map((o) => {
-                    const active = contactType === o.value;
-                    return (
-                      <button
-                        key={o.value}
-                        type="button"
-                        onClick={() => setContactType(active ? "" : o.value)}
-                        className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
-                          active ? "border-transparent bg-brand-600 text-white" : "border-neutral-200 text-neutral-600"
-                        }`}
-                      >
-                        {o.label}
-                      </button>
-                    );
-                  })}
-                </div>
+                <h1>
+                  Book time with <em>Caitlyn</em>
+                </h1>
+                <p>{data.durationMinutes} minutes</p>
               </div>
-              <div>
-                <label className="text-xs font-medium text-neutral-500">Timeline (optional)</label>
-                <select value={timeline} onChange={(e) => setTimeline(e.target.value as Timeline | "")} className={inputClass}>
-                  <option value="">Not sure yet</option>
-                  {Object.entries(TIMELINE_LABELS)
-                    .filter(([value]) => value !== "unknown")
-                    .map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-neutral-500">Anything you&apos;d like to share or specific topics you&apos;d like to cover? (optional)</label>
-                <textarea value={questions} onChange={(e) => setQuestions(e.target.value)} rows={3} className={inputClass} />
-              </div>
-
-              {error && <p className="text-sm text-red-600">{error}</p>}
-
-              <div className="flex gap-2 pt-2">
-                <button type="button" onClick={() => setStep("time")} className="rounded-xl border border-neutral-200 px-4 py-3 text-sm font-semibold text-neutral-700">
-                  Back
-                </button>
-                <button
-                  type="button"
-                  onClick={submitDetails}
-                  disabled={submitting}
-                  className="flex-1 rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
-                >
-                  {submitting ? "Sending…" : "Request this time"}
-                </button>
-              </div>
-              <p className="text-center text-xs text-neutral-400">Caitlyn confirms every request before it&apos;s final.</p>
+              <span className="bk-stepn">Step {STEP_NUMBER[step]} of 3</span>
             </div>
-          )}
-        </div>
+            <BookingSteps step={step} />
+            <div className="bk-card">
+              {step === "info" && (
+                <>
+                  <div className="bk-field">
+                    <label htmlFor="book-name">
+                      Your name <small>(required)</small>
+                    </label>
+                    <input id="book-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" required autoComplete="name" />
+                  </div>
+                  <div className="bk-field">
+                    <label htmlFor="book-phone">
+                      Phone <small>(required)</small>
+                    </label>
+                    <input id="book-phone" value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" placeholder="(555) 555-1234" required autoComplete="tel" />
+                  </div>
+                  <div className="bk-field">
+                    <label htmlFor="book-email">
+                      Email <small>(optional)</small>
+                    </label>
+                    <input id="book-email" value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" />
+                  </div>
+                  {error && <p className="bk-error">{error}</p>}
+                  {(!name.trim() || !phone.trim()) && (
+                    <p className="bk-hint">Add your name and phone to continue — Caitlyn uses them to confirm the meeting.</p>
+                  )}
+                  <button type="button" className="bk-primary" onClick={submitInfo} disabled={submitting || !name.trim() || !phone.trim()}>
+                    {submitting ? "…" : "Next"}
+                  </button>
+                </>
+              )}
+
+              {step === "time" && (
+                <>
+                  <div className="bk-views">
+                    <div>
+                      <button type="button" className={view === "calendar" ? "on" : ""} onClick={() => setView("calendar")}>
+                        <LayoutGrid size={12} /> Calendar
+                      </button>
+                      <button type="button" className={view === "list" ? "on" : ""} onClick={() => setView("list")}>
+                        <List size={12} /> List
+                      </button>
+                    </div>
+                  </div>
+                  {view === "calendar" ? (
+                    <CalendarGridView slots={data.slots} selected={selectedSlot} onSelect={setSelectedSlot} />
+                  ) : (
+                    <ListView slots={data.slots} selected={selectedSlot} onSelect={setSelectedSlot} />
+                  )}
+                  {error && <p className="bk-error">{error}</p>}
+                  <div className="bk-nav">
+                    <button type="button" className="bk-outline" onClick={() => setStep("info")}>
+                      Back
+                    </button>
+                    <button type="button" className="bk-primary" onClick={submitTime} disabled={submitting || !selectedSlot}>
+                      {submitting ? "…" : "Next"}
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {step === "details" && (
+                <>
+                  <p className="bk-prep">Help me prepare for this meeting:</p>
+                  {selectedSlot && <p className="bk-picked">{formatInTimeZone(selectedSlot, APP_TIMEZONE, "EEEE, MMM d 'at' h:mm a")}</p>}
+                  <div className="bk-field">
+                    <span className="bk-label">
+                      What best describes you? <small>(optional)</small>
+                    </span>
+                    <div className="bk-chips">
+                      {BOOKING_CONTACT_TYPE_OPTIONS.map((o) => {
+                        const active = contactType === o.value;
+                        return (
+                          <button key={o.value} type="button" className={active ? "sel" : ""} onClick={() => setContactType(active ? "" : o.value)}>
+                            {o.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="bk-field">
+                    <label htmlFor="book-timeline">
+                      Timeline <small>(optional)</small>
+                    </label>
+                    <select id="book-timeline" value={timeline} onChange={(e) => setTimeline(e.target.value as Timeline | "")}>
+                      <option value="">Not sure yet</option>
+                      {Object.entries(TIMELINE_LABELS)
+                        .filter(([value]) => value !== "unknown")
+                        .map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                  <div className="bk-field">
+                    <label htmlFor="book-questions">
+                      Anything you&apos;d like to share or specific topics you&apos;d like to cover? <small>(optional)</small>
+                    </label>
+                    <textarea id="book-questions" value={questions} onChange={(e) => setQuestions(e.target.value)} rows={3} />
+                  </div>
+                  {error && <p className="bk-error">{error}</p>}
+                  <div className="bk-nav" style={{ border: 0, paddingTop: 4, marginTop: 6 }}>
+                    <button type="button" className="bk-outline" onClick={() => setStep("time")}>
+                      Back
+                    </button>
+                    <button type="button" className="bk-primary" onClick={submitDetails} disabled={submitting}>
+                      {submitting ? "Sending…" : "Request this time"}
+                    </button>
+                  </div>
+                  <p className="bk-conf">Caitlyn confirms every request before it&apos;s final.</p>
+                </>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </main>
   );

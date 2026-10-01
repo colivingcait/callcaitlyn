@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { PublicChrome } from "@/components/public/PublicChrome";
 
 // Root layout links /manifest.json. Booking pages are also served on
@@ -10,6 +10,10 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "Coliving Cait",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#FAF7F2",
 };
 
 export default function BookLayout({ children }: { children: React.ReactNode }) {

@@ -29,18 +29,18 @@ export function MobileActionBar({ priceLabel, occupancyLabel }: { priceLabel: st
   return (
     <div
       data-om-noprint
-      style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 50, background: "#211c19", borderTop: "1px solid #3a322c", padding: "10px 16px", display: "flex", alignItems: "center", gap: 12 }}
+      style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 50, background: "#1C1917", borderTop: "1px solid #3a322c", padding: "10px 16px", display: "flex", alignItems: "center", gap: 12 }}
     >
       <div style={{ minWidth: 0 }}>
         <p style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 19, lineHeight: 1, color: "#f4f1ec" }}>{priceLabel}</p>
-        <p style={{ margin: "4px 0 0", fontSize: 11, color: unlocked && net ? "#e9a396" : "#a39a8e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{subline}</p>
+        <p style={{ margin: "4px 0 0", fontSize: 11, color: unlocked && net ? "#E8D5B5" : "#a39a8e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{subline}</p>
       </div>
       {unlocked ? (
         <button
           type="button"
           onClick={() => sheets?.openOffer()}
           className="om-hover-fill-border"
-          style={{ flex: "1 1 auto", textAlign: "center", whiteSpace: "nowrap", border: "1px solid #cc4a37", background: "#cc4a37", padding: "14px 12px", fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", color: "#fff", cursor: "pointer" }}
+          style={{ flex: "1 1 auto", textAlign: "center", whiteSpace: "nowrap", border: "1px solid #C4955A", background: "#C4955A", padding: "14px 12px", fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", color: "#fff", cursor: "pointer" }}
         >
           SUBMIT AN OFFER
         </button>
@@ -48,7 +48,7 @@ export function MobileActionBar({ priceLabel, occupancyLabel }: { priceLabel: st
         <a
           href="#unlock"
           className="om-hover-fill-border"
-          style={{ flex: "1 1 auto", textAlign: "center", whiteSpace: "nowrap", border: "1px solid #cc4a37", background: "#cc4a37", padding: "14px 12px", fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", color: "#fff" }}
+          style={{ flex: "1 1 auto", textAlign: "center", whiteSpace: "nowrap", border: "1px solid #C4955A", background: "#C4955A", padding: "14px 12px", fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", color: "#fff" }}
         >
           UNLOCK FINANCIALS
         </a>

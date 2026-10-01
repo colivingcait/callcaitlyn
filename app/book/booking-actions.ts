@@ -30,6 +30,10 @@ const DEFAULT_WEEKLY_HOURS: WeeklyHours = {
 // ever opened Settings > Scheduling (the row that lazily creates
 // scheduling_settings) - falls back to the same defaults that row would
 // get, so the public page always works.
+// Public intro calls are 20 minutes. CRM scheduling settings can still
+// store another length for meetings she books herself.
+const PUBLIC_INTRO_MINUTES = 20;
+
 function withDefaults(row: SchedulingSettings | null) {
   return {
     durationMinutes: row?.duration_minutes ?? 30,
@@ -65,10 +69,10 @@ export async function getBookingFlowData(slug: string | null): Promise<BookingFl
   }
 
   const { data: settingsRow } = await admin.from("scheduling_settings").select("*").eq("owner_id", OWNER_ID).maybeSingle();
-  const settings = withDefaults(settingsRow as SchedulingSettings | null);
+  const settings = { ...withDefaults(settingsRow as SchedulingSettings | null), durationMinutes: PUBLIC_INTRO_MINUTES };
 
   const slots = await computeAvailableSlots(admin, OWNER_ID, settings);
-  return { durationMinutes: settings.durationMinutes, prefill, slots };
+  return { durationMinutes: PUBLIC_INTRO_MINUTES, prefill, slots };
 }
 
 // Step 1: name/phone/email. Creates the booking_requests row right away
@@ -134,7 +138,7 @@ export async function selectBookingSlot(sessionId: string, startsAt: string): Pr
   if (!session || !ACTIVE_STAGES.has(session.stage)) return { ok: false, error: "This booking session isn't active anymore." };
 
   const { data: settingsRow } = await admin.from("scheduling_settings").select("*").eq("owner_id", OWNER_ID).maybeSingle();
-  const settings = withDefaults(settingsRow as SchedulingSettings | null);
+  const settings = { ...withDefaults(settingsRow as SchedulingSettings | null), durationMinutes: PUBLIC_INTRO_MINUTES };
   const slots = await computeAvailableSlots(admin, OWNER_ID, settings);
   const slot = slots.find((s) => s.startAt === startsAt);
   if (!slot) return { ok: false, error: "That time isn't available anymore - pick another." };

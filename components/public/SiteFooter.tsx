@@ -32,8 +32,8 @@ export function SiteFooter() {
       data-om-noprint
       className="public-site-footer bg-charcoal px-8 lg:px-[60px] border-t border-white/[0.04] font-dm font-light leading-[1.8] antialiased"
     >
-      <div className="mx-auto grid w-full max-w-[1320px] gap-10 py-14 md:gap-[60px] md:grid-cols-[1.2fr_1fr_1fr]">
-        <div>
+      <div className="mx-auto grid w-full max-w-[1320px] grid-cols-2 gap-x-8 gap-y-10 py-14 md:gap-[60px] md:grid-cols-[1.2fr_1fr_1fr]">
+        <div className="col-span-2 md:col-span-1">
           <a href={PUBLIC_SITE_URL} className="font-heading text-xl font-normal text-white hover:opacity-70 transition-opacity inline-block">
             Coliving<em className="italic font-light text-gold-light">Cait</em>
           </a>

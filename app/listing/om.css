@@ -4,42 +4,138 @@
    live here instead. */
 .om-hover-fill:hover {
   background: #f4f1ec !important;
-  color: #211c19 !important;
+  color: #1C1917 !important;
 }
 .om-hover-fill-border:hover {
   background: #f4f1ec !important;
   border-color: #f4f1ec !important;
-  color: #211c19 !important;
+  color: #1C1917 !important;
 }
 .om-invert-btn:hover {
   background: #f4f1ec !important;
-  color: #211c19 !important;
+  color: #1C1917 !important;
 }
 .om-hover-dark:hover {
-  background: #211c19 !important;
+  background: #1C1917 !important;
   color: #f4f1ec !important;
 }
 .om-hover-light:hover {
   color: #f4f1ec !important;
 }
 .om-hover-accent:hover {
-  color: #cc4a37 !important;
+  color: #C4955A !important;
 }
 .om-hover-dim:hover {
   opacity: 0.72;
 }
 .om-input:focus {
   outline: none;
-  border-bottom-color: #cc4a37 !important;
+  border-bottom-color: #C4955A !important;
 }
 .om-input-boxed:focus {
   outline: none;
-  border-color: #cc4a37 !important;
+  border-color: #C4955A !important;
 }
 
 .om-page {
   overflow-x: clip;
   max-width: 100%;
+  font-weight: 300;
+  color: #6b6560;
+}
+.om-page [style*="--font-om-serif"] {
+  font-weight: 400 !important;
+}
+.om-page .listings-card-name {
+  font-weight: 500 !important;
+}
+.om-page em {
+  font-style: italic;
+  font-weight: 300;
+  color: #c4955a;
+}
+
+.cc-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #c4955a;
+  line-height: 1.4;
+}
+.cc-eyebrow::before {
+  content: "";
+  width: 32px;
+  height: 1px;
+  background: #c4955a;
+  flex-shrink: 0;
+}
+.cc-eyebrow-plain::before {
+  display: none;
+}
+.cc-eyebrow-on-photo {
+  color: #e8d5b5;
+}
+.cc-eyebrow-on-photo::before {
+  background: #e8d5b5;
+}
+.listings-h1-tail,
+#offer h2 em {
+  white-space: nowrap;
+}
+#offer .om-offer-eyebrow {
+  justify-content: center;
+}
+
+.cc-subnav {
+  position: sticky;
+  top: var(--public-nav-offset, 85px);
+  z-index: 40;
+  background: #faf7f2;
+  border-bottom: 1px solid rgba(28, 25, 23, 0.1);
+}
+.cc-subnav-in {
+  max-width: 1320px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  min-height: 52px;
+  padding: 0 28px;
+}
+.cc-subnav-name {
+  font-family: var(--font-om-serif), "Cormorant Garamond", Georgia, serif;
+  font-size: 20px;
+  font-weight: 500;
+  color: #1c1917;
+  line-height: 1;
+}
+.cc-subnav nav {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 26px;
+}
+.cc-subnav nav a {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #6b6560;
+}
+.cc-subnav nav a.cc-subnav-cta {
+  background: #c4955a;
+  color: #fff;
+  padding: 11px 20px;
+  letter-spacing: 0.12em;
+}
+
+.listings-card:hover {
+  border-color: rgba(196, 149, 90, 0.45) !important;
 }
 .om-page *,
 .om-page *::before,
@@ -73,24 +169,21 @@ main {
   text-decoration: none;
 }
 
-.listings-card:hover {
-  border-top-color: #cc4a37 !important;
-}
 .listings-toggle-idle:hover {
   background: #ece6dd !important;
-  color: #211c19 !important;
+  color: #1C1917 !important;
 }
 .listings-book-primary:hover {
-  background: #cc4a37 !important;
+  background: #C4955A !important;
   color: #f4f1ec !important;
 }
 .listings-book-secondary:hover {
-  background: #211c19 !important;
+  background: #1C1917 !important;
   color: #f4f1ec !important;
 }
 .listings-map-row:hover,
 .listings-map-row[data-selected="true"] {
-  border-left-color: #cc4a37 !important;
+  border-left-color: #C4955A !important;
 }
 .listings-map-pin-icon {
   background: transparent !important;
@@ -110,12 +203,12 @@ main {
 }
 .om-page .leaflet-popup-content-wrapper {
   border-radius: 0 !important;
-  background: #fffdfa !important;
+  background: #FAF7F2 !important;
   box-shadow: none;
   border: 1px solid #e4ddd2;
 }
 .om-page .leaflet-popup-tip {
-  background: #fffdfa;
+  background: #FAF7F2;
 }
 .om-page .leaflet-popup-content {
   margin: 14px 16px !important;
@@ -127,7 +220,7 @@ main {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
-  color: #a33a29 !important;
+  color: #8B6535 !important;
   background: none !important;
   text-decoration: none !important;
 }
@@ -135,20 +228,20 @@ main {
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.16em;
-  color: #a33a29;
+  color: #8B6535;
 }
 .listings-map-pop-name {
   margin-top: 7px;
   font-family: var(--font-om-serif), Newsreader, ui-serif, Georgia, serif;
   font-weight: 600;
   font-size: 19px;
-  color: #211c19;
+  color: #1C1917;
 }
 .listings-map-pop-price {
   margin-top: 6px;
   font-family: var(--font-om-serif), Newsreader, ui-serif, Georgia, serif;
   font-size: 18px;
-  color: #211c19;
+  color: #1C1917;
 }
 .listings-map-pop-cta {
   display: inline-block;
@@ -156,7 +249,7 @@ main {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
-  color: #a33a29;
+  color: #8B6535;
 }
 
 .om-fin {
@@ -183,6 +276,34 @@ main {
 .om-thumbs::-webkit-scrollbar {
   display: none;
 }
+.om-header-nav a:hover {
+  color: #1c1917;
+}
+
+/* Desktop hero: photo stays visible up top; title and the stat band sit on the lower scrim. */
+.om-hero-stack {
+  position: relative;
+}
+
+@media (min-width: 901px) {
+  .om-hero:not(.om-hero-open) {
+    height: 680px !important;
+    min-height: 680px !important;
+  }
+  .om-hero-chrome {
+    bottom: 156px !important;
+  }
+  .om-stats-wrap {
+    margin-top: -156px !important;
+    position: relative;
+    z-index: 2;
+    background: transparent !important;
+  }
+  .om-stat-value {
+    font-size: 40px !important;
+    font-weight: 400 !important;
+  }
+}
 .om-header-menu,
 .om-header-drawer {
   display: none;
@@ -199,9 +320,7 @@ main {
 .om-step-body-mobile,
 .listings-hero-copy-mobile,
 .listings-hero-byline,
-.listings-available-num,
 .listings-live-below,
-.listings-card-spec,
 .listings-card-price-mobile,
 .listings-email-mobile,
 .listings-map-phone-note,
@@ -284,7 +403,7 @@ main {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
   .om-section-head h2 {
-    font-size: 26px !important;
+    font-size: 30px !important;
   }
   .om-capex-row {
     grid-template-columns: minmax(0, 1fr) 56px 84px !important;
@@ -344,14 +463,26 @@ main {
     margin-top: 6px !important;
   }
   .om-stats-wrap {
+    margin-top: 0 !important;
+    padding-top: 8px !important;
     padding-bottom: 20px !important;
+    background: #1C1917 !important;
   }
-  .om-hero {
-    height: 292px !important;
-    min-height: 292px !important;
+  .om-hero:not(.om-hero-open) {
+    height: 300px !important;
+    min-height: 300px !important;
   }
   .om-hero-scrim {
-    background: linear-gradient(to top, #211c19 0%, rgba(33, 28, 25, 0.92) 22%, rgba(33, 28, 25, 0.55) 46%, rgba(33, 28, 25, 0) 82%) !important;
+    display: none !important;
+  }
+  .om-hero-chrome {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    background: #1C1917;
+    padding: 26px 16px 0 !important;
   }
   .om-hero-counter {
     display: block !important;
@@ -366,11 +497,8 @@ main {
     background: rgba(33, 28, 25, 0.6);
     padding: 6px 10px;
   }
-  .om-hero-chrome {
-    padding: 0 16px 16px !important;
-  }
   .om-h1 {
-    font-size: 34px !important;
+    font-size: 40px !important;
     line-height: 1.04 !important;
     margin-top: 8px !important;
   }
@@ -379,9 +507,14 @@ main {
   .om-view-photos-desktop {
     display: none !important;
   }
-  .om-eyebrow-mobile,
+  .om-eyebrow-mobile {
+    display: flex !important;
+  }
   .om-view-photos-mobile {
     display: inline !important;
+  }
+  .om-detail-subnav {
+    display: none !important;
   }
   .om-hero-actions {
     display: block !important;
@@ -430,7 +563,7 @@ main {
     padding-bottom: 10px !important;
   }
   .om-section-head h2 {
-    font-size: 24px !important;
+    font-size: 30px !important;
   }
   .om-num-desktop {
     display: none;
@@ -557,7 +690,7 @@ main {
   }
   .om-cells {
     display: block !important;
-    background: #fffdfa;
+    background: #FAF7F2;
     border: 1px solid #e4ddd2;
     gap: 0 !important;
     margin-top: 16px !important;
@@ -628,7 +761,6 @@ main {
   #offer h2 {
     font-size: 28px !important;
   }
-  .om-offer-eyebrow,
   .om-offer-note {
     font-size: 11px !important;
   }
@@ -695,7 +827,7 @@ main {
     position: fixed !important;
     inset: 0 !important;
     z-index: 62;
-    background: #211c19;
+    background: #1C1917;
   }
   .om-photo-top {
     left: 12px !important;
@@ -718,7 +850,7 @@ main {
     display: none !important;
   }
   .om-photo-rail {
-    background: #211c19 !important;
+    background: #1C1917 !important;
     padding: 12px 14px 16px !important;
     border-top: 1px solid #3a322c;
   }
@@ -744,7 +876,7 @@ main {
     display: block !important;
   }
   .listings-h1 {
-    font-size: 32px !important;
+    font-size: 40px !important;
     line-height: 1.06 !important;
     margin-top: 12px !important;
     max-width: none !important;
@@ -778,7 +910,7 @@ main {
   .listings-hero-byline {
     margin-top: 20px;
     padding-top: 16px;
-    border-top: 1px solid #3a322c;
+    border-top: 1px solid rgba(28, 25, 23, 0.1);
     align-items: center;
     gap: 12px;
   }
@@ -829,9 +961,14 @@ main {
     font-size: 11px !important;
   }
   .listings-tag {
+    top: 0 !important;
+    left: 0 !important;
     font-size: 10px !important;
     letter-spacing: 0.12em !important;
     padding: 5px 8px !important;
+  }
+  .cc-subnav {
+    display: none;
   }
   .listings-contact {
     flex-direction: column !important;
@@ -872,7 +1009,7 @@ main {
     padding: 18px 18px 0 !important;
   }
   .om-agent-eye > p {
-    font-size: 11px !important;
+    font-size: 10px !important;
   }
   .om-agent-row {
     padding: 16px 18px 0 !important;
@@ -902,7 +1039,7 @@ main {
     padding: 14px 16px !important;
   }
   .om-more-label {
-    font-size: 11px !important;
+    font-size: 10px !important;
   }
   .om-more-row {
     padding: 14px 0 !important;
@@ -942,6 +1079,12 @@ main {
   }
 }
 
+@media (max-width: 1023px) {
+  .cc-subnav {
+    display: none;
+  }
+}
+
 @media print {
   @page {
     size: letter;
@@ -954,7 +1097,7 @@ main {
     display: block !important;
   }
   .om-hero {
-    background: #211c19 !important;
+    background: #1C1917 !important;
     background-image: none !important;
     height: auto !important;
     min-height: 0 !important;

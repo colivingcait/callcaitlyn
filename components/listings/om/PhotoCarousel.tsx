@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { PadsplitPhoto } from "@/types/database";
 
 const SCRIM =
-  "linear-gradient(to top, #211c19 0%, rgba(33,28,25,0.97) 26%, rgba(33,28,25,0.75) 45%, rgba(33,28,25,0.1) 72%, rgba(33,28,25,0) 100%)";
+  "linear-gradient(180deg, rgba(28,25,23,0) 30%, rgba(28,25,23,0.78) 72%, rgba(28,25,23,0.94) 100%)";
 
 const arrowStyle: React.CSSProperties = {
   position: "absolute",
@@ -83,47 +83,48 @@ export function PhotoCarousel({
   const viewPhotosCountLabel = count > 0 ? `VIEW ${count} PHOTOS` : viewPhotosLabel;
 
   return (
+    <div className="om-hero-stack">
     <section
-      className="om-hero"
+      className={photoMode ? "om-hero om-hero-open" : "om-hero"}
       style={{
         position: "relative",
         height: photoMode ? 760 : 520,
         minHeight: 520,
         transition: "height 260ms cubic-bezier(0.33,1,0.68,1)",
-        backgroundColor: "#211c19",
+        backgroundColor: "#1C1917",
         backgroundImage: !photoMode && coverImageUrl ? `url(${JSON.stringify(coverImageUrl)})` : undefined,
         backgroundSize: "cover",
         backgroundPosition: "center 62%",
       }}
     >
+      {!photoMode && <div className="om-hero-scrim" style={{ position: "absolute", inset: 0, background: SCRIM }} />}
+      {!photoMode && count > 0 && (
+        <p className="om-hero-counter" style={{ margin: 0 }}>
+          {counter}
+        </p>
+      )}
+    </section>
       {!photoMode && (
-        <>
-          <div className="om-hero-scrim" style={{ position: "absolute", inset: 0, background: SCRIM }} />
-          {count > 0 && (
-            <p className="om-hero-counter" style={{ margin: 0 }}>
-              {counter}
-            </p>
-          )}
-          <div className="om-hero-chrome om-gutter" style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "0 28px 30px" }}>
+          <div className="om-hero-chrome om-gutter" style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "0 28px 30px", zIndex: 2 }}>
             <div style={{ margin: "0 auto", maxWidth: 1180 }}>
-              <p className="om-eyebrow-full" style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.22em", color: "#e9a396" }}>{eyebrow}</p>
-              <p className="om-eyebrow-mobile" style={{ margin: 0, fontSize: 11, fontWeight: 500, letterSpacing: "0.2em", color: "#e9a396" }}>{mobileEyebrow}</p>
+              <p className="om-eyebrow-full cc-eyebrow cc-eyebrow-on-photo">{eyebrow}</p>
+              <p className="om-eyebrow-mobile cc-eyebrow">{mobileEyebrow}</p>
               <h1
                 className="om-h1"
                 style={{
-                  margin: "12px 0 0",
+                  margin: "16px 0 0",
                   fontFamily: "var(--font-om-serif)",
-                  fontWeight: 600,
-                  fontSize: 62,
+                  fontWeight: 400,
+                  fontSize: 64,
                   lineHeight: 1.02,
                   letterSpacing: "-0.02em",
-                  color: "#f4f1ec",
+                  color: "#fff",
                 }}
               >
                 {nickname}
               </h1>
               <div className="om-hero-actions" style={{ marginTop: 18, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 18, flexWrap: "wrap" }}>
-                {summary ? <p className="om-hero-summary" style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: "#ded6cc" }}>{summary}</p> : <span className="om-hero-summary" />}
+                {summary ? <p className="om-hero-summary" style={{ margin: 0, fontSize: 16, lineHeight: 1.6, color: "#E9E2D8" }}>{summary}</p> : <span className="om-hero-summary" />}
                 {count > 0 && (
                   <button
                     type="button"
@@ -132,13 +133,13 @@ export function PhotoCarousel({
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: 12,
-                      border: "1px solid #cc4a37",
-                      background: "#cc4a37",
-                      padding: "12px 18px",
-                      font: "600 12px/1 var(--font-om-sans), Archivo, sans-serif",
+                      gap: 8,
+                      border: "1px solid #fff",
+                      background: "#fff",
+                      padding: "15px 26px",
+                      font: "500 11px/1 var(--font-om-sans), \"DM Sans\", sans-serif",
                       letterSpacing: "0.12em",
-                      color: "#fff",
+                      color: "#1C1917",
                       cursor: "pointer",
                       whiteSpace: "nowrap",
                     }}
@@ -151,7 +152,6 @@ export function PhotoCarousel({
               </div>
             </div>
           </div>
-        </>
       )}
 
       {photoMode && current && (
@@ -252,7 +252,7 @@ export function PhotoCarousel({
                     height: 56,
                     padding: 0,
                     cursor: "pointer",
-                    border: i === index ? "2px solid #cc4a37" : "1px solid rgba(244,241,236,0.3)",
+                    border: i === index ? "2px solid #C4955A" : "1px solid rgba(244,241,236,0.3)",
                     backgroundImage: `url(${JSON.stringify(photo.url)})`,
                     backgroundSize: "cover",
                     backgroundPosition: "center",
@@ -267,6 +267,6 @@ export function PhotoCarousel({
           </div>
         </div>
       )}
-    </section>
+    </div>
   );
 }

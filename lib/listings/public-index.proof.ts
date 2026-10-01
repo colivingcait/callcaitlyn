@@ -146,7 +146,7 @@ const cardSource = {
 };
 const card = toPublicIndexCard(cardSource);
 assert.equal(card.tag, "COLIVING");
-assert.equal(card.tagColor, "#cc4a37");
+assert.equal(card.tagColor, "#C4955A");
 assert.equal(card.href, "/listings/the-adair");
 assert.equal(card.showMapPin, false, "coliving is private even when active with a slug");
 assert.equal(card.lat, null);
@@ -193,6 +193,19 @@ assert.equal(JSON.stringify(privateStreet).includes("Gillette"), false);
 assert.equal(JSON.stringify(privateStreet).includes("30310"), false);
 assert.equal(JSON.stringify(privateStreet).includes("zillow"), false);
 assert.equal(privateStreet.lat, null);
+
+const cityFallback = toPublicIndexCard({
+  ...cardSource,
+  public_category: "primary_residence",
+  nickname: "654 Gillette Ave",
+  submarket: null,
+  city: "Atlanta",
+  zillow_url: "https://www.zillow.com/homedetails/654-Gillette-Ave-SW-Atlanta-GA-30310/1_zpid/",
+  status: "active",
+});
+assert.equal(cityFallback.name, "654 Gillette Ave");
+assert.equal(cityFallback.submarketLabel, "ATLANTA", "a public card with no submarket still shows the city");
+assert.equal(JSON.stringify(cityFallback).includes("Gillette Ave SW"), false);
 
 const privateOffMarket = publicListingPrivacy({
   nickname: "1410 Willow Bend",
@@ -267,7 +280,7 @@ const viewToggle = read("components/listings/index/ListingsViewToggle.tsx");
 assert.ok(viewToggle.includes("#sold"), "sold stays reachable from the list/map row");
 assert.equal(read("app/listing/page.tsx").includes("ListingsIndexHeader"), false);
 assert.equal(read("app/listing/map/page.tsx").includes("ListingsIndexHeader"), false);
-assert.ok(read("app/listing/page.tsx").includes("LISTINGS · ATLANTA METRO"), "listings eyebrow drops the CallCaitlyn brand");
+assert.ok(read("app/listing/page.tsx").includes("Listings · Atlanta metro"), "listings eyebrow drops the CallCaitlyn brand");
 assert.equal(read("app/listing/page.tsx").includes("CALLCAITLYN"), false);
 assert.equal(read("app/not-found.tsx").includes("CallCaitlyn"), false);
 assert.ok(read("app/not-found.tsx").includes("Coliving Cait"));

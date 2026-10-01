@@ -8,28 +8,30 @@ import { TIMELINE_LABELS } from "@/lib/utils";
 import { APP_TIMEZONE } from "@/lib/format-time";
 import type { BookingFlowData } from "@/app/book/booking-actions";
 import type { BookingContactType, Timeline } from "@/types/database";
-import { StepRule, boxedField, boxedLabel } from "./OmSheet";
+import { BookingSteps } from "@/components/booking/BookingSteps";
+import "@/components/booking/booking.css";
+import { boxedField, boxedLabel } from "./OmSheet";
 
 type Step = "info" | "time" | "details" | "done";
 
 const backBtn: React.CSSProperties = {
   flex: "0 0 auto",
-  border: "1px solid #211c19",
+  border: "1px solid #1C1917",
   background: "transparent",
   padding: "15px 18px",
   fontSize: 12,
   fontWeight: 600,
   letterSpacing: "0.1em",
-  color: "#211c19",
+  color: "#1C1917",
   cursor: "pointer",
 };
 const nextBtn: React.CSSProperties = {
   flex: "1 1 auto",
-  border: "1px solid #cc4a37",
-  background: "#cc4a37",
-  padding: "15px 18px",
-  fontSize: 12,
-  fontWeight: 600,
+  border: "none",
+  background: "#1C1917",
+  padding: "16px 18px",
+  fontSize: 11,
+  fontWeight: 500,
   letterSpacing: "0.12em",
   color: "#fff",
   cursor: "pointer",
@@ -91,22 +93,24 @@ export function OmBookingPanel({
   onClose?: () => void;
 }) {
   const duration = data && data !== "loading" ? data.durationMinutes : 20;
-  const eyebrow = `${duration} MINUTES`;
+  const eyebrow = `${duration} minutes`;
   const slotLabel = selectedSlot ? formatInTimeZone(selectedSlot, APP_TIMEZONE, "EEEE, MMM d 'at' h:mm a") : "";
 
   return (
-    <div style={{ width: "100%", background: "#f4f1ec", borderTop: "1px solid #211c19" }}>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, background: "#211c19", padding: 18 }}>
-        <div style={{ minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 11, fontWeight: 500, letterSpacing: "0.18em", color: "#e9a396" }}>{eyebrow}</p>
-          <p style={{ margin: "8px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 21, lineHeight: 1.2, color: "#f4f1ec" }}>Book time with Caitlyn</p>
+    <div className="bk bk-sheet" style={{ width: "100%", borderTop: "1px solid rgba(28,25,23,0.10)" }}>
+      <div className="bk-head" style={{ padding: "22px 18px 0" }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <p style={{ margin: 0, fontSize: 14, color: "#6B6560" }}>{eyebrow}</p>
+          <p style={{ margin: "4px 0 0", fontFamily: "var(--font-cormorant), Georgia, serif", fontWeight: 400, fontSize: 28, lineHeight: 1.1, color: "#1C1917" }}>
+            Book time with <em style={{ fontStyle: "italic", fontWeight: 300, color: "#C4955A" }}>Caitlyn</em>
+          </p>
         </div>
         <button
           type="button"
           onClick={onClose}
           aria-label="Close"
           className="om-hover-fill"
-          style={{ marginLeft: "auto", flex: "0 0 auto", width: 34, height: 34, border: "1px solid #453b34", background: "transparent", color: "#f4f1ec", fontSize: 15, cursor: "pointer" }}
+          style={{ marginLeft: "auto", flex: "0 0 auto", width: 34, height: 34, border: "1px solid rgba(28,25,23,0.15)", background: "#fff", color: "#1C1917", fontSize: 15, cursor: "pointer" }}
         >
           ✕
         </button>
@@ -118,21 +122,21 @@ export function OmBookingPanel({
         <p style={{ margin: 0, padding: "28px 18px", fontSize: 15, lineHeight: 1.6, color: "#574f47" }}>This link isn&apos;t valid anymore. Ask Caitlyn to send a fresh one.</p>
       ) : step === "done" ? (
         <div style={{ padding: "34px 18px 38px", textAlign: "center" }}>
-          <p style={{ margin: 0, fontSize: 11, fontWeight: 500, letterSpacing: "0.18em", color: "#a33a29" }}>REQUEST SENT</p>
-          <p style={{ margin: "14px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 24, lineHeight: 1.3, color: "#211c19" }}>{slotLabel}</p>
+          <p style={{ margin: 0, fontSize: 11, fontWeight: 500, letterSpacing: "0.18em", color: "#8B6535" }}>REQUEST SENT</p>
+          <p style={{ margin: "14px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 24, lineHeight: 1.3, color: "#1C1917" }}>{slotLabel}</p>
           <p style={{ margin: "14px 0 0", fontSize: 15, lineHeight: 1.7, color: "#2e2823" }}>Caitlyn will confirm shortly and text you.</p>
           <button
             type="button"
             onClick={onClose}
             className="om-hover-dark"
-            style={{ marginTop: 24, border: "1px solid #211c19", background: "transparent", padding: "13px 26px", fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: "#211c19", cursor: "pointer" }}
+            style={{ marginTop: 24, border: "1px solid #1C1917", background: "transparent", padding: "13px 26px", fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: "#1C1917", cursor: "pointer" }}
           >
             BACK TO THE OFFERING
           </button>
         </div>
       ) : step === "info" ? (
         <div style={{ padding: "20px 18px 24px" }}>
-          <StepRule label="STEP 1 OF 3" fraction={1 / 3} />
+          <BookingSteps step="info" />
           <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 14 }}>
             <div>
               <label htmlFor="om-book-name" style={boxedLabel}>Your name</label>
@@ -148,7 +152,7 @@ export function OmBookingPanel({
               </label>
               <input id="om-book-email" value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="you@…" autoComplete="email" className="om-input-boxed" style={boxedField} />
             </div>
-            {error && <p style={{ margin: 0, fontSize: 13, color: "#a33a29" }}>{error}</p>}
+            {error && <p style={{ margin: 0, fontSize: 13, color: "#8B6535" }}>{error}</p>}
             <button type="button" onClick={onSubmitInfo} disabled={submitting || !name.trim() || !phone.trim()} className="om-hover-fill-border" style={{ ...nextBtn, marginTop: 4, opacity: !name.trim() || !phone.trim() ? 0.55 : 1 }}>
               {submitting ? "…" : "PICK A TIME"}
             </button>
@@ -156,14 +160,14 @@ export function OmBookingPanel({
         </div>
       ) : step === "time" ? (
         <div style={{ padding: "20px 18px 24px" }}>
-          <StepRule label="STEP 2 OF 3" fraction={2 / 3} />
+          <BookingSteps step="time" />
           <div style={{ marginTop: 16, display: "flex", gap: 6, justifyContent: "flex-end" }}>
             <button
               type="button"
               onClick={() => setView("calendar")}
               style={{
-                border: view === "calendar" ? "1px solid #211c19" : "1px solid #d5cdc1",
-                background: view === "calendar" ? "#211c19" : "#fffdfa",
+                border: view === "calendar" ? "1px solid #1C1917" : "1px solid #d5cdc1",
+                background: view === "calendar" ? "#1C1917" : "#FAF7F2",
                 color: view === "calendar" ? "#f4f1ec" : "#574f47",
                 padding: "8px 12px",
                 fontSize: 12,
@@ -178,8 +182,8 @@ export function OmBookingPanel({
               type="button"
               onClick={() => setView("list")}
               style={{
-                border: view === "list" ? "1px solid #211c19" : "1px solid #d5cdc1",
-                background: view === "list" ? "#211c19" : "#fffdfa",
+                border: view === "list" ? "1px solid #1C1917" : "1px solid #d5cdc1",
+                background: view === "list" ? "#1C1917" : "#FAF7F2",
                 color: view === "list" ? "#f4f1ec" : "#574f47",
                 padding: "8px 12px",
                 fontSize: 12,
@@ -198,7 +202,7 @@ export function OmBookingPanel({
               <ListView variant="om" slots={data.slots} selected={selectedSlot} onSelect={setSelectedSlot} />
             )}
           </div>
-          {error && <p style={{ margin: "12px 0 0", fontSize: 13, color: "#a33a29" }}>{error}</p>}
+          {error && <p style={{ margin: "12px 0 0", fontSize: 13, color: "#8B6535" }}>{error}</p>}
           <div style={{ marginTop: 20, paddingTop: 18, borderTop: "1px solid #ddd6cc", display: "flex", gap: 10 }}>
             <button type="button" onClick={onBackInfo} className="om-hover-dark" style={backBtn}>
               BACK
@@ -210,9 +214,9 @@ export function OmBookingPanel({
         </div>
       ) : (
         <div style={{ padding: "20px 18px 24px" }}>
-          <StepRule label="STEP 3 OF 3" fraction={1} />
-          <p style={{ margin: "16px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 20, lineHeight: 1.3, color: "#211c19" }}>Help me prepare for this meeting</p>
-          {slotLabel && <p style={{ margin: "8px 0 0", fontSize: 15, fontWeight: 600, color: "#211c19" }}>{slotLabel}</p>}
+          <BookingSteps step="details" />
+          <p style={{ margin: "16px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 20, lineHeight: 1.3, color: "#1C1917" }}>Help me prepare for this meeting</p>
+          {slotLabel && <p style={{ margin: "8px 0 0", fontSize: 15, fontWeight: 600, color: "#1C1917" }}>{slotLabel}</p>}
           <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
               <span style={boxedLabel}>
@@ -227,8 +231,8 @@ export function OmBookingPanel({
                       type="button"
                       onClick={() => setContactType(active ? "" : option.value)}
                       style={{
-                        border: active ? "1px solid #211c19" : "1px solid #d5cdc1",
-                        background: active ? "#211c19" : "#fffdfa",
+                        border: active ? "1px solid #1C1917" : "1px solid #d5cdc1",
+                        background: active ? "#1C1917" : "#FAF7F2",
                         color: active ? "#f4f1ec" : "#574f47",
                         padding: "9px 12px",
                         fontSize: 13,
@@ -263,7 +267,7 @@ export function OmBookingPanel({
               </label>
               <textarea id="om-book-questions" value={questions} onChange={(e) => setQuestions(e.target.value)} rows={3} className="om-input-boxed" style={{ ...boxedField, minHeight: 64, lineHeight: 1.6, resize: "vertical" }} />
             </div>
-            {error && <p style={{ margin: 0, fontSize: 13, color: "#a33a29" }}>{error}</p>}
+            {error && <p style={{ margin: 0, fontSize: 13, color: "#8B6535" }}>{error}</p>}
             <div style={{ display: "flex", gap: 10 }}>
               <button type="button" onClick={onBackTime} className="om-hover-dark" style={backBtn}>
                 BACK

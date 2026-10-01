@@ -13,21 +13,21 @@ export function ListingsViewToggle({
 
   return (
     <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 18 }}>
-      <a href={soldHref} style={{ fontSize: 15, fontWeight: 600, letterSpacing: "0.14em", color: "#211c19", textDecoration: "none", whiteSpace: "nowrap" }}>
+      <a href={soldHref} style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.14em", color: "#1C1917", textDecoration: "none", whiteSpace: "nowrap" }}>
         RECENTLY SOLD
       </a>
-      <div style={{ display: "flex", border: "2px solid #211c19" }}>
+      <div style={{ display: "flex", border: "1px solid #1C1917" }}>
       {active === "list" ? (
-        <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: "0.14em", padding: "14px 34px", background: "#211c19", color: "#f4f1ec" }}>LIST</span>
+        <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.14em", padding: "12px 28px", background: "#1C1917", color: "#fff" }}>LIST</span>
       ) : (
-        <a href={listHref} className="listings-toggle-idle" style={{ fontSize: 15, fontWeight: 600, letterSpacing: "0.14em", padding: "14px 34px", color: "#211c19" }}>
+        <a href={listHref} className="listings-toggle-idle" style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.14em", padding: "12px 28px", color: "#1C1917" }}>
           LIST
         </a>
       )}
       {active === "map" ? (
-        <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: "0.14em", padding: "14px 34px", background: "#211c19", color: "#f4f1ec" }}>MAP</span>
+        <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.14em", padding: "12px 28px", background: "#1C1917", color: "#fff" }}>MAP</span>
       ) : (
-        <a href={mapHref} className="listings-toggle-idle" style={{ fontSize: 15, fontWeight: 600, letterSpacing: "0.14em", padding: "14px 34px", color: "#211c19" }}>
+        <a href={mapHref} className="listings-toggle-idle" style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.14em", padding: "12px 28px", color: "#1C1917" }}>
           MAP
         </a>
       )}
