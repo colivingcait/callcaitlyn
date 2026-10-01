@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { usePublicSheets } from "@/components/listings/om/PublicSheets";
 
@@ -20,13 +19,15 @@ export function ListingsIndexHeader({
         className="om-header-inner"
         style={{ margin: "0 auto", maxWidth: 1180, padding: "12px 28px", display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap", minHeight: 62 }}
       >
-        <Link
+        {/* Plain anchors: these pages are proxied on www, where Link RSC requests 404. */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+        <a
           href="/listings"
           className="om-header-brand"
           style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 21, color: "#f4f1ec", whiteSpace: "nowrap" }}
         >
           CallCaitlyn
-        </Link>
+        </a>
         <span className="om-header-rule" style={{ width: 1, height: 22, background: "#453b34" }} />
         <p className="om-header-meta" style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.18em", color: "#a39a8e", whiteSpace: "nowrap" }}>
           LISTINGS
@@ -41,13 +42,14 @@ export function ListingsIndexHeader({
           <a href={soldHref} className="om-hover-light listings-sold-link" style={{ color: "#a39a8e" }}>
             SOLD
           </a>
-          <Link
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a
             href="/book"
             className="om-hover-fill-border om-header-cta"
             style={{ border: "1px solid #574f47", color: "#f4f1ec", padding: "9px 16px", letterSpacing: "0.14em", whiteSpace: "nowrap" }}
           >
             BOOK A CALL
-          </Link>
+          </a>
         </nav>
         <button
           type="button"
@@ -114,7 +116,9 @@ export function ListingsIndexHeader({
                 BOOK A CALL
               </button>
             ) : (
-              <Link
+              // Plain anchor: www rewrite 404s Next RSC requests for /book.
+              // eslint-disable-next-line @next/next/no-html-link-for-pages
+              <a
                 href="/book"
                 onClick={() => setOpen(false)}
                 className="om-hover-fill-border"
@@ -132,7 +136,7 @@ export function ListingsIndexHeader({
                 }}
               >
                 BOOK A CALL
-              </Link>
+              </a>
             )}
           </div>
         )}

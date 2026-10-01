@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { Metadata } from "next";
 import { getPublicListingsIndex } from "@/lib/listings/public-data";
 import { listingsQueryString } from "@/lib/listings/public-index";
@@ -210,9 +209,9 @@ export default async function PublicListingsOverviewPage({
                 }
 
                 return (
-                  <Link key={listing.id} href={listing.href} className="listings-card" style={cardStyle}>
+                  <a key={listing.id} href={listing.href} className="listings-card" style={cardStyle}>
                     {body}
-                  </Link>
+                  </a>
                 );
               })}
             </div>

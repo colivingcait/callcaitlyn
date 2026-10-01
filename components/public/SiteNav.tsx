@@ -1,21 +1,14 @@
 "use client";
 
-import { DM_Sans } from "next/font/google";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { PUBLIC_SITE_URL } from "@/lib/public-urls";
 import styles from "./SiteNav.module.css";
 import "./site-nav.css";
 
-// Logged-out ColivingCait nav (components/Nav.tsx in that repo).
-// Plain <a> tags: these pages are served from the CRM, and next/link
-// would stay inside this app. Listings is the public board on www.
-const dmSans = DM_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  display: "swap",
-  variable: "--font-dm-sans",
-});
+// Logged-out ColivingCait nav (components/Nav.tsx). Plain <a> tags: these
+// pages are served from the CRM, and next/link would stay inside this app.
+// DM Sans comes from PublicChrome (--font-dm-sans).
 
 const LINKS: { href: string; label: string; listings?: boolean }[] = [
   { href: `${PUBLIC_SITE_URL}/about`, label: "About" },
@@ -60,7 +53,7 @@ export function SiteNav() {
   }, [pathname]);
 
   return (
-    <header className={`${dmSans.variable} public-site-nav ${styles.header} ${scrolled ? styles.scrolled : ""}`} data-om-noprint>
+    <header className={`public-site-nav ${styles.header} ${scrolled ? styles.scrolled : ""}`} data-om-noprint>
       <div className={styles.inner}>
         <a href={PUBLIC_SITE_URL} aria-label="ColivingCait — home" className={styles.logo}>
           {/* Absolute www URL, same asset the marketing site uses. */}

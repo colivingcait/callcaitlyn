@@ -17,7 +17,8 @@
     background: transparent;
   }
 
-  .public-site-nav {
+  .public-site-nav,
+  .public-site-footer {
     display: none !important;
   }
 }

@@ -18,3 +18,10 @@ export function publicBookUrl(path?: string): string {
   const cleaned = path.replace(/^\/+/, "").replace(/\/+$/, "");
   return cleaned ? `${base}/${cleaned}` : base;
 }
+
+// Site-relative path on www.colivingcait.com. Hash and already-absolute
+// URLs are left alone (footer social placeholders and Instagram).
+export function publicSiteUrl(path = "/"): string {
+  if (path === "#" || /^https?:\/\//i.test(path) || path.startsWith("mailto:")) return path;
+  return `${PUBLIC_SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+}

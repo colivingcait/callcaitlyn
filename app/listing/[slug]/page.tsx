@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { buildOgListingCard } from "@/lib/listings/og-card";
 import { getPublicListing, getPublicListings } from "@/lib/listings/public-data";
@@ -488,7 +487,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                       const cover = l.coverPhotoUrl;
                       const occ = l.liveOccupied != null && l.liveTotal != null ? `${l.liveOccupied}/${l.liveTotal} occupied` : "Coming soon";
                       return (
-                        <Link
+                        <a
                           key={l.id}
                           href={`/listings/${l.public_slug}`}
                           className="om-hover-dim om-more-row"
@@ -506,12 +505,14 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                               {formatCurrency(l.list_price)} · {l.liveTotal ?? "?"} rooms · {occ}
                             </p>
                           </div>
-                        </Link>
+                        </a>
                       );
                     })}
-                    <Link href="/listings" className="om-hover-accent" style={{ display: "inline-block", marginTop: 14, fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: "#a33a29" }}>
+                    {/* Plain anchor: www rewrite 404s Next RSC prefetches of /listings. */}
+                    {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+                    <a href="/listings" className="om-hover-accent" style={{ display: "inline-block", marginTop: 14, fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: "#a33a29" }}>
                       VIEW ALL LISTINGS →
-                    </Link>
+                    </a>
                   </div>
                 )}
 
