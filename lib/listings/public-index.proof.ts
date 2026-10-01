@@ -280,5 +280,9 @@ const viewToggle = read("components/listings/index/ListingsViewToggle.tsx");
 assert.ok(viewToggle.includes("#sold"), "sold stays reachable from the list/map row");
 assert.equal(read("app/listing/page.tsx").includes("ListingsIndexHeader"), false);
 assert.equal(read("app/listing/map/page.tsx").includes("ListingsIndexHeader"), false);
+assert.ok(read("app/listing/page.tsx").includes("Listings · Atlanta metro"), "listings eyebrow drops the CallCaitlyn brand");
+assert.equal(read("app/listing/page.tsx").includes("CALLCAITLYN"), false);
+assert.equal(read("app/not-found.tsx").includes("CallCaitlyn"), false);
+assert.ok(read("app/not-found.tsx").includes("Coliving Cait"));
 
 console.log("public-index proof: ok");
