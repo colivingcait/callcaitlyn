@@ -9,9 +9,14 @@ import { BookCallButton, PublicSheetsProvider, SellerAnalysisButton } from "@/co
 
 export const dynamic = "force-dynamic";
 
+const LISTINGS_TITLE = "Available Listings | Caitlyn Verdugo, KW Metro Atlanta";
+const LISTINGS_DESCRIPTION = "Coliving and for-sale homes across Atlanta metro. Caitlyn Verdugo, Keller Williams Metro Atlanta.";
+
 export const metadata: Metadata = {
-  title: "Available Listings",
-  description: "Caitlyn Verdugo with KW Metro Atl",
+  title: LISTINGS_TITLE,
+  description: LISTINGS_DESCRIPTION,
+  openGraph: { title: LISTINGS_TITLE, description: LISTINGS_DESCRIPTION },
+  twitter: { card: "summary_large_image", title: LISTINGS_TITLE, description: LISTINGS_DESCRIPTION },
 };
 
 export default async function PublicListingsOverviewPage({
