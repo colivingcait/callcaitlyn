@@ -2,13 +2,14 @@ import React from "react";
 import { ImageResponse } from "next/og";
 import { loadOgFonts } from "@/lib/og/fonts";
 import { OG_SIZE } from "@/lib/og/listing-metadata";
-import type { OgListingCard } from "@/lib/listings/og-card";
+import { fitOgLocationLine, OG_PHOTO_PAD_X, ogPhotoContentWidth, ogPriceFontSize, type OgListingCard } from "@/lib/listings/og-card";
 
 const TERRACOTTA = "#A8462A";
 const CREAM = "#F7F1E8";
 const PEACH = "#F4CBB5";
 
 const INDEX_ALT = "Available Listings | Caitlyn Verdugo, KW Metro Atlanta";
+const PLAIN_PAD_X = 72;
 
 async function photoDataUrl(url: string): Promise<string | null> {
   try {
@@ -77,6 +78,7 @@ function statusPill(label: string) {
     <div
       style={{
         display: "flex",
+        alignSelf: "flex-start",
         background: CREAM,
         color: TERRACOTTA,
         padding: "10px 18px",
@@ -92,25 +94,27 @@ function statusPill(label: string) {
   );
 }
 
-function ListingCopy(card: OgListingCard) {
-  const kickerSize = card.locationLine.length > 42 ? 16 : 20;
+function ListingCopy({ card, contentWidth }: { card: OgListingCard; contentWidth: number }) {
+  const kicker = fitOgLocationLine(card.locationLine, contentWidth);
+  const priceSize = card.price ? ogPriceFontSize(card.price, contentWidth) : card.priceSize;
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
       <div
         style={{
           fontFamily: "Archivo",
           fontWeight: 600,
-          fontSize: kickerSize,
-          letterSpacing: kickerSize === 16 ? 2.2 : 3.2,
+          fontSize: kicker.fontSize,
+          letterSpacing: kicker.letterSpacing,
           opacity: 0.85,
-          lineHeight: 1.25,
+          lineHeight: 1.15,
+          whiteSpace: "nowrap",
           color: CREAM,
         }}
       >
-        {card.locationLine}
+        {kicker.text}
       </div>
       {card.price ? (
-        <div style={{ marginTop: 18, fontFamily: "Newsreader", fontWeight: 400, fontSize: card.priceSize, lineHeight: 1, color: CREAM }}>{card.price}</div>
+        <div style={{ marginTop: 18, fontFamily: "Newsreader", fontWeight: 400, fontSize: priceSize, lineHeight: 1, whiteSpace: "nowrap", color: CREAM }}>{card.price}</div>
       ) : null}
       {card.specs ? (
         <div style={{ marginTop: 20, fontFamily: "Archivo", fontWeight: 600, fontSize: 30, color: CREAM }}>{card.specs}</div>
@@ -127,11 +131,11 @@ function ListingCopy(card: OgListingCard) {
 function ListingCard({ card, photo }: { card: OgListingCard; photo: string | null }) {
   if (!photo) {
     return (
-      <div style={{ width: 1200, height: 630, display: "flex", background: TERRACOTTA, color: CREAM, padding: "60px 72px", overflow: "hidden" }}>
+      <div style={{ width: 1200, height: 630, display: "flex", background: TERRACOTTA, color: CREAM, padding: `60px ${PLAIN_PAD_X}px`, overflow: "hidden" }}>
         <div style={{ display: "flex", flexDirection: "column", width: 720, flex: 1 }}>
           {statusPill(card.statusLabel)}
           <div style={{ height: 28, display: "flex" }} />
-          <ListingCopy {...card} />
+          <ListingCopy card={card} contentWidth={OG_SIZE.width - PLAIN_PAD_X * 2} />
         </div>
       </div>
     );
@@ -144,8 +148,8 @@ function ListingCard({ card, photo }: { card: OgListingCard; photo: string | nul
         <img src={photo} alt="" width={700} height={630} style={{ width: 700, height: 630, objectFit: "cover" }} />
         <div style={{ position: "absolute", top: 32, left: 32, display: "flex" }}>{statusPill(card.statusLabel)}</div>
       </div>
-      <div style={{ width: 500, height: 630, background: TERRACOTTA, color: CREAM, padding: "60px 56px", display: "flex", flexDirection: "column" }}>
-        <ListingCopy {...card} />
+      <div style={{ width: 500, height: 630, background: TERRACOTTA, color: CREAM, padding: `60px ${OG_PHOTO_PAD_X}px`, display: "flex", flexDirection: "column" }}>
+        <ListingCopy card={card} contentWidth={ogPhotoContentWidth()} />
       </div>
     </div>
   );
@@ -159,12 +163,20 @@ export async function renderIndexOgImage() {
   });
 }
 
-async function rasterize(card: OgListingCard, photo: string | null, fonts: Awaited<ReturnType<typeof loadOgFonts>>) {
-  const image = new ImageResponse(<ListingCard card={card} photo={photo} />, {
+function listingImage(card: OgListingCard, photo: string | null, fonts: Awaited<ReturnType<typeof loadOgFonts>>) {
+  return new ImageResponse(<ListingCard card={card} photo={photo} />, {
     ...OG_SIZE,
     fonts,
   });
-  const bytes = Buffer.from(await image.arrayBuffer());
+}
+
+export async function renderListingCardPng(card: OgListingCard, photo: string | null): Promise<Buffer> {
+  const fonts = await loadOgFonts();
+  return Buffer.from(await listingImage(card, photo, fonts).arrayBuffer());
+}
+
+async function rasterize(card: OgListingCard, photo: string | null, fonts: Awaited<ReturnType<typeof loadOgFonts>>) {
+  const bytes = Buffer.from(await listingImage(card, photo, fonts).arrayBuffer());
   return new Response(bytes, {
     headers: { "Content-Type": "image/png" },
   });
