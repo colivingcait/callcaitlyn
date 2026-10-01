@@ -1,7 +1,8 @@
 /* Offset so the fixed ColivingCait nav does not cover public page chrome.
-   The nav itself is styled in SiteNav.module.css. */
+   py-5 + the Book a Call control (11px at the marketing site's 1.8 line
+   height, py-3) + the 1px border. */
 .public-with-site-nav {
-  --public-nav-offset: 69px;
+  --public-nav-offset: 85px;
   padding-top: var(--public-nav-offset);
   background: #fff;
 }
