@@ -216,7 +216,7 @@ assert.ok(gate.includes("isNcf"));
 assert.ok(gate.includes("{ ...omTableValueStyle, whiteSpace: \"nowrap\" }"), "monthly $ uses the shared table value style");
 assert.ok(gate.includes("{ ...omTableValueStyle }}>{row.year || \"—\"}"), "CapEx YEAR uses the same Newsreader table value style as monthly $ and COST");
 assert.ok(gate.includes("...omTableValueStyle"), "CapEx COST uses the same table value style as monthly $");
-assert.ok(gate.includes("{ fontSize: 15, lineHeight: 1.4, color: \"#211c19\" }}>{row.item || \"—\"}"), "CapEx ITEM stays Archivo");
+assert.ok(gate.includes("{ fontSize: 15, lineHeight: 1.4, color: \"#1C1917\" }}>{row.item || \"—\"}"), "CapEx ITEM stays Archivo");
 assert.equal(gate.includes("{ ...omValueStyle, whiteSpace: \"nowrap\" }"), false, "monthly $ must not use the 34px overview/ratio billboard");
 assert.equal(gate.includes("{ fontSize: 15, color: \"#574f47\" }"), false, "CapEx YEAR must not stay Archivo 15");
 assert.match(gate, /omTableValueStyle[\s\S]*fontFamily:\s*"var\(--font-om-serif\)"/, "table numerics are Newsreader");
@@ -268,7 +268,7 @@ assert.ok(hero.includes("photoMode"));
 assert.ok(hero.includes("Escape"));
 assert.ok(hero.includes("ArrowLeft"));
 assert.ok(hero.includes("om-thumbs"));
-assert.ok(hero.includes("rgba(33,28,25,0.97)"));
+assert.ok(hero.includes("rgba(28,25,23,0.94)"), "hero scrim still darkens the lower photo");
 assert.equal(hero.includes("photo.alt"), false, "scrape alt can carry a street address");
 
 assert.deepEqual(

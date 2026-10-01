@@ -91,7 +91,7 @@ export function PhotoCarousel({
         height: photoMode ? 760 : 520,
         minHeight: 520,
         transition: "height 260ms cubic-bezier(0.33,1,0.68,1)",
-        backgroundColor: "#211c19",
+        backgroundColor: "#1C1917",
         backgroundImage: !photoMode && coverImageUrl ? `url(${JSON.stringify(coverImageUrl)})` : undefined,
         backgroundSize: "cover",
         backgroundPosition: "center 62%",
@@ -108,7 +108,7 @@ export function PhotoCarousel({
           <div className="om-hero-chrome om-gutter" style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "0 28px 30px", zIndex: 2 }}>
             <div style={{ margin: "0 auto", maxWidth: 1180 }}>
               <p className="om-eyebrow-full cc-eyebrow cc-eyebrow-on-photo">{eyebrow}</p>
-              <p className="om-eyebrow-mobile" style={{ margin: 0, fontSize: 11, fontWeight: 500, letterSpacing: "0.2em", color: "#E8D5B5" }}>{mobileEyebrow}</p>
+              <p className="om-eyebrow-mobile cc-eyebrow">{mobileEyebrow}</p>
               <h1
                 className="om-h1"
                 style={{

@@ -4,19 +4,19 @@
    live here instead. */
 .om-hover-fill:hover {
   background: #f4f1ec !important;
-  color: #211c19 !important;
+  color: #1C1917 !important;
 }
 .om-hover-fill-border:hover {
   background: #f4f1ec !important;
   border-color: #f4f1ec !important;
-  color: #211c19 !important;
+  color: #1C1917 !important;
 }
 .om-invert-btn:hover {
   background: #f4f1ec !important;
-  color: #211c19 !important;
+  color: #1C1917 !important;
 }
 .om-hover-dark:hover {
-  background: #211c19 !important;
+  background: #1C1917 !important;
   color: #f4f1ec !important;
 }
 .om-hover-light:hover {
@@ -82,6 +82,13 @@
 }
 .cc-eyebrow-on-photo::before {
   background: #e8d5b5;
+}
+.listings-h1-tail,
+#offer h2 em {
+  white-space: nowrap;
+}
+#offer .om-offer-eyebrow {
+  justify-content: center;
 }
 
 .cc-subnav {
@@ -164,14 +171,14 @@ main {
 
 .listings-toggle-idle:hover {
   background: #ece6dd !important;
-  color: #211c19 !important;
+  color: #1C1917 !important;
 }
 .listings-book-primary:hover {
   background: #C4955A !important;
   color: #f4f1ec !important;
 }
 .listings-book-secondary:hover {
-  background: #211c19 !important;
+  background: #1C1917 !important;
   color: #f4f1ec !important;
 }
 .listings-map-row:hover,
@@ -196,12 +203,12 @@ main {
 }
 .om-page .leaflet-popup-content-wrapper {
   border-radius: 0 !important;
-  background: #fffdfa !important;
+  background: #FAF7F2 !important;
   box-shadow: none;
   border: 1px solid #e4ddd2;
 }
 .om-page .leaflet-popup-tip {
-  background: #fffdfa;
+  background: #FAF7F2;
 }
 .om-page .leaflet-popup-content {
   margin: 14px 16px !important;
@@ -228,13 +235,13 @@ main {
   font-family: var(--font-om-serif), Newsreader, ui-serif, Georgia, serif;
   font-weight: 600;
   font-size: 19px;
-  color: #211c19;
+  color: #1C1917;
 }
 .listings-map-pop-price {
   margin-top: 6px;
   font-family: var(--font-om-serif), Newsreader, ui-serif, Georgia, serif;
   font-size: 18px;
-  color: #211c19;
+  color: #1C1917;
 }
 .listings-map-pop-cta {
   display: inline-block;
@@ -313,7 +320,6 @@ main {
 .om-step-body-mobile,
 .listings-hero-copy-mobile,
 .listings-hero-byline,
-.listings-available-num,
 .listings-live-below,
 .listings-card-price-mobile,
 .listings-email-mobile,
@@ -397,7 +403,7 @@ main {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
   .om-section-head h2 {
-    font-size: 26px !important;
+    font-size: 30px !important;
   }
   .om-capex-row {
     grid-template-columns: minmax(0, 1fr) 56px 84px !important;
@@ -460,7 +466,7 @@ main {
     margin-top: 0 !important;
     padding-top: 8px !important;
     padding-bottom: 20px !important;
-    background: #211c19 !important;
+    background: #1C1917 !important;
   }
   .om-hero:not(.om-hero-open) {
     height: 300px !important;
@@ -475,7 +481,7 @@ main {
     right: auto !important;
     bottom: auto !important;
     left: auto !important;
-    background: #211c19;
+    background: #1C1917;
     padding: 26px 16px 0 !important;
   }
   .om-hero-counter {
@@ -492,7 +498,7 @@ main {
     padding: 6px 10px;
   }
   .om-h1 {
-    font-size: 44px !important;
+    font-size: 40px !important;
     line-height: 1.04 !important;
     margin-top: 8px !important;
   }
@@ -501,9 +507,14 @@ main {
   .om-view-photos-desktop {
     display: none !important;
   }
-  .om-eyebrow-mobile,
+  .om-eyebrow-mobile {
+    display: flex !important;
+  }
   .om-view-photos-mobile {
     display: inline !important;
+  }
+  .om-detail-subnav {
+    display: none !important;
   }
   .om-hero-actions {
     display: block !important;
@@ -552,7 +563,7 @@ main {
     padding-bottom: 10px !important;
   }
   .om-section-head h2 {
-    font-size: 24px !important;
+    font-size: 30px !important;
   }
   .om-num-desktop {
     display: none;
@@ -679,7 +690,7 @@ main {
   }
   .om-cells {
     display: block !important;
-    background: #fffdfa;
+    background: #FAF7F2;
     border: 1px solid #e4ddd2;
     gap: 0 !important;
     margin-top: 16px !important;
@@ -750,7 +761,6 @@ main {
   #offer h2 {
     font-size: 28px !important;
   }
-  .om-offer-eyebrow,
   .om-offer-note {
     font-size: 11px !important;
   }
@@ -817,7 +827,7 @@ main {
     position: fixed !important;
     inset: 0 !important;
     z-index: 62;
-    background: #211c19;
+    background: #1C1917;
   }
   .om-photo-top {
     left: 12px !important;
@@ -840,7 +850,7 @@ main {
     display: none !important;
   }
   .om-photo-rail {
-    background: #211c19 !important;
+    background: #1C1917 !important;
     padding: 12px 14px 16px !important;
     border-top: 1px solid #3a322c;
   }
@@ -866,7 +876,7 @@ main {
     display: block !important;
   }
   .listings-h1 {
-    font-size: 32px !important;
+    font-size: 40px !important;
     line-height: 1.06 !important;
     margin-top: 12px !important;
     max-width: none !important;
@@ -999,7 +1009,7 @@ main {
     padding: 18px 18px 0 !important;
   }
   .om-agent-eye > p {
-    font-size: 11px !important;
+    font-size: 10px !important;
   }
   .om-agent-row {
     padding: 16px 18px 0 !important;
@@ -1029,7 +1039,7 @@ main {
     padding: 14px 16px !important;
   }
   .om-more-label {
-    font-size: 11px !important;
+    font-size: 10px !important;
   }
   .om-more-row {
     padding: 14px 0 !important;
@@ -1087,7 +1097,7 @@ main {
     display: block !important;
   }
   .om-hero {
-    background: #211c19 !important;
+    background: #1C1917 !important;
     background-image: none !important;
     height: auto !important;
     min-height: 0 !important;

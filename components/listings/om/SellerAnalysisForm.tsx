@@ -150,13 +150,13 @@ export function SellerAnalysisSheet({ onClose }: { onClose: () => void }) {
       {step === "sent" ? (
         <div style={{ padding: "34px 18px 38px", textAlign: "center" }}>
           <p style={{ margin: 0, fontSize: 11, fontWeight: 500, letterSpacing: "0.18em", color: "#8B6535" }}>SENT</p>
-          <p style={{ margin: "14px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 24, lineHeight: 1.3, color: "#211c19" }}>Caitlyn has your property.</p>
+          <p style={{ margin: "14px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 24, lineHeight: 1.3, color: "#1C1917" }}>Caitlyn has your property.</p>
           <p style={{ margin: "14px 0 0", fontSize: 15, lineHeight: 1.7, color: "#2e2823" }}>Comps and room revenue both, no pressure either way.</p>
           <button
             type="button"
             onClick={onClose}
             className="om-hover-dark"
-            style={{ marginTop: 24, border: "1px solid #211c19", background: "transparent", padding: "13px 26px", fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: "#211c19", cursor: "pointer" }}
+            style={{ marginTop: 24, border: "1px solid #1C1917", background: "transparent", padding: "13px 26px", fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: "#1C1917", cursor: "pointer" }}
           >
             CLOSE
           </button>
@@ -220,9 +220,9 @@ export function SellerAnalysisSheet({ onClose }: { onClose: () => void }) {
                       type="button"
                       onClick={() => setTimeline(active ? "" : chip.value)}
                       style={{
-                        border: active ? "1px solid #211c19" : "1px solid #d5cdc1",
-                        background: active ? "#211c19" : "#fffdfa",
-                        color: active ? "#f4f1ec" : "#211c19",
+                        border: active ? "1px solid #1C1917" : "1px solid #d5cdc1",
+                        background: active ? "#1C1917" : "#FAF7F2",
+                        color: active ? "#f4f1ec" : "#1C1917",
                         padding: "10px 12px",
                         fontSize: 12,
                         fontWeight: 600,
@@ -255,7 +255,7 @@ export function SellerAnalysisSheet({ onClose }: { onClose: () => void }) {
                   setStep(1);
                 }}
                 className="om-hover-dark"
-                style={{ flex: "0 0 auto", border: "1px solid #211c19", background: "transparent", padding: "15px 18px", fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", color: "#211c19", cursor: "pointer" }}
+                style={{ flex: "0 0 auto", border: "1px solid #1C1917", background: "transparent", padding: "15px 18px", fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", color: "#1C1917", cursor: "pointer" }}
               >
                 BACK
               </button>

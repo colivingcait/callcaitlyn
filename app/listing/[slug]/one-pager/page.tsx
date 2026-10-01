@@ -46,8 +46,8 @@ export default async function OnePagerPage({ params }: { params: Promise<{ slug:
   ].filter((row): row is { label: string; value: string; projected: boolean } => Boolean(row.value));
 
   return (
-    <main style={{ background: "#f4f1ec", color: "#211c19", minHeight: "100dvh", fontFamily: "var(--font-om-sans), Archivo, sans-serif" }}>
-      <p data-om-noprint style={{ margin: 0, padding: "14px 28px", background: "#211c19", color: "#cdc4ba", fontSize: 13, lineHeight: 1.5 }}>
+    <main style={{ background: "#f4f1ec", color: "#1C1917", minHeight: "100dvh", fontFamily: "var(--font-om-sans), Archivo, sans-serif" }}>
+      <p data-om-noprint style={{ margin: 0, padding: "14px 28px", background: "#1C1917", color: "#cdc4ba", fontSize: 13, lineHeight: 1.5 }}>
         One-pager template is not designed yet. This print view is a placeholder — public bands only, no line items. Use the browser print dialog to save a PDF.
       </p>
       <article style={{ maxWidth: 720, margin: "0 auto", padding: "36px 28px 64px" }}>
@@ -62,7 +62,7 @@ export default async function OnePagerPage({ params }: { params: Promise<{ slug:
           <p style={{ margin: "22px 0 0", fontSize: 16, lineHeight: 1.7, color: "#2e2823", maxWidth: "62ch" }}>{publicBodyCopy(listing.public_description, privacy)}</p>
         )}
         {bands.length > 0 && (
-          <div style={{ marginTop: 28, borderTop: "1px solid #211c19" }}>
+          <div style={{ marginTop: 28, borderTop: "1px solid #1C1917" }}>
             {bands.map((row) => (
               <div key={row.label} style={{ display: "flex", justifyContent: "space-between", gap: 16, padding: "12px 0", borderBottom: "1px solid #ece5da" }}>
                 <span style={{ fontSize: 13, letterSpacing: "0.08em", color: "#6b6259" }}>

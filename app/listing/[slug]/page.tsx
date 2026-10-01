@@ -14,12 +14,46 @@ import { BookCallButton, PublicSheetsProvider, SellerAnalysisButton } from "@/co
 import { ShareRow } from "@/components/listings/om/ShareRow";
 import { publicBodyCopy, publicListingPrivacy } from "@/lib/listings/public-privacy";
 import { asListingFinancials } from "@/lib/listings/crm-marketing-fields";
-import { occupancyFromFinancials, t12OccupancySummary } from "@/lib/listings/occupancy";
+import { occupancyFromFinancials, t12OccupancySummary, type OccupancyTrendPoint } from "@/lib/listings/occupancy";
 import { formatPublicBand } from "@/lib/listings/public-bands";
 import { isProjectedOpex, showHeroCapRate } from "@/lib/listings/data-basis";
 import { DataBasisNote, ProjectedMark } from "@/components/listings/om/DataBasisNote";
 import { CAITLYN_HEADSHOT_SRC, crmPublicAsset } from "@/lib/brand/caitlyn";
 import { publicListingUrl } from "@/lib/public-urls";
+
+function roomRateLabel(low: number | null, high: number | null): string | null {
+  if (low == null || high == null) return null;
+  if (low === high) return `${formatCurrency(low)} / wk`;
+  return `${formatCurrency(low)}–${formatCurrency(high)} / wk`;
+}
+
+function OccupancyChart({ months, compact }: { months: OccupancyTrendPoint[]; compact?: boolean }) {
+  const track = compact ? 72 : 88;
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(12, minmax(0,1fr))", gap: compact ? 4 : 5, alignItems: "end" }}>
+      {months.map((month, i) => {
+        const noData = month.total == null;
+        return (
+          <div key={`${month.label}-${i}`} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: compact ? 4 : 9, justifyContent: "flex-end", minWidth: 0 }}>
+            <span className="om-occ-pct-label" style={{ fontSize: compact ? 8 : 11, lineHeight: 1, color: noData ? "#A09A94" : "#6B6560" }}>
+              {noData ? "—" : `${month.pct}%`}
+            </span>
+            <div
+              style={{
+                width: "100%",
+                height: noData ? track : Math.max(4, Math.round((month.pct / 100) * track)),
+                background: noData ? "rgba(28,25,23,0.08)" : month.pct >= 88 ? "#C4955A" : "#E8D5B5",
+              }}
+            />
+            <span className="om-occ-month-label" style={{ fontSize: compact ? 8 : 10, letterSpacing: "0.02em", color: "#A09A94", textAlign: "center" }}>
+              {month.label}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 // Occupancy changes daily and a listing can be unpublished at any time -
 // this must never be served from a stale build-time cache.
@@ -89,7 +123,6 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
   const perRoom = listing.list_price && liveTotal ? formatCurrency(Math.round(listing.list_price / liveTotal)) : null;
   const hasOccupancy = liveOccupied != null && liveTotal != null;
   const occupancyPct = hasOccupancy ? Math.round((liveOccupied / liveTotal) * 100) : null;
-  const hasPriceRange = listing.price_low != null && listing.price_high != null;
   const specs = [
     listing.beds != null ? `${listing.beds}` : null,
     listing.baths != null ? `${listing.baths}` : null,
@@ -103,7 +136,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
       label: "ON PADSPLIT SINCE",
       value: listing.padsplit_since ? new Date(listing.padsplit_since).toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" }) : null,
     },
-    { label: "ROOM RATES", value: hasPriceRange ? `${formatCurrency(listing.price_low)}–${formatCurrency(listing.price_high)} / wk` : null },
+    { label: "ROOM RATES", value: roomRateLabel(listing.price_low, listing.price_high) },
     { label: "PARKING", value: publicBodyCopy(listing.parking, privacy) },
     { label: "LAUNDRY", value: publicBodyCopy(listing.laundry, privacy) },
     { label: "FURNISHINGS", value: publicBodyCopy(listing.furnishings, privacy) },
@@ -127,7 +160,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
     .slice(0, 3);
 
   const sectionHead = (title: string, desktopNum: string, mobileNum: string, extra?: React.ReactNode) => (
-    <div className="om-section-head" style={{ display: "flex", alignItems: "baseline", gap: 16, borderBottom: "1px solid #211c19", paddingBottom: 12, flexWrap: "wrap" }}>
+    <div className="om-section-head" style={{ display: "flex", alignItems: "baseline", gap: 16, borderBottom: "1px solid #1C1917", paddingBottom: 12, flexWrap: "wrap" }}>
       <h2 style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 400, fontSize: 36, lineHeight: 1, color: "#1C1917" }}>{title}</h2>
       {extra}
       <p style={{ margin: "0 0 0 auto", fontSize: 12, letterSpacing: "0.1em", color: "#6b6259" }}>
@@ -150,7 +183,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
     <UnlockedProvider slug={slug}>
       <PublicSheetsProvider>
       <div className="om-page" style={{ fontFamily: "var(--font-om-sans), \"DM Sans\", ui-sans-serif, system-ui, sans-serif", background: "#fff", minHeight: "100dvh", color: "#6B6560" }}>
-        <header data-om-noprint style={{ position: "sticky", top: "var(--public-nav-offset, 0px)", zIndex: 40, background: "#FAF7F2", borderBottom: "1px solid rgba(28,25,23,0.10)" }}>
+        <header className="om-detail-subnav" data-om-noprint style={{ position: "sticky", top: "var(--public-nav-offset, 0px)", zIndex: 40, background: "#FAF7F2", borderBottom: "1px solid rgba(28,25,23,0.10)" }}>
           <div className="om-header-inner cc-subnav-in" style={{ margin: "0 auto", maxWidth: 1320, padding: "0 28px", display: "flex", alignItems: "center", gap: 22, minHeight: 52 }}>
             <p className="om-header-brand cc-subnav-name" style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 500, fontSize: 20, color: "#1C1917", whiteSpace: "nowrap" }}>{nickname}</p>
             <span className="om-header-rule" style={{ width: 1, alignSelf: "stretch", margin: "16px 0", background: "rgba(28,25,23,0.10)" }} />
@@ -159,9 +192,9 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
           </div>
         </header>
 
-        <div data-om-printonly style={{ display: "none", borderBottom: "2px solid #211c19", paddingBottom: 14, margin: "22px 28px 0" }}>
+        <div data-om-printonly style={{ display: "none", borderBottom: "2px solid #1C1917", paddingBottom: 14, margin: "22px 28px 0" }}>
           <p style={{ margin: 0, fontSize: 11, fontWeight: 500, letterSpacing: "0.18em", color: "#6b6259" }}>OFFERING MEMORANDUM · {omNumber} · CONFIDENTIAL</p>
-          <p style={{ margin: "8px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 26, color: "#211c19" }}>{nickname}</p>
+          <p style={{ margin: "8px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 26, color: "#1C1917" }}>{nickname}</p>
           <p style={{ margin: "8px 0 0", fontSize: 12, color: "#574f47" }}>
             Caitlyn Verdugo · Keller Williams Metro Atlanta · {OWNER_PHONE_LABEL} · {OWNER_EMAIL}
           </p>
@@ -169,7 +202,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
 
         <PhotoCarousel photos={listing.photos} coverUrl={listing.coverPhotoUrl} nickname={nickname} eyebrow={eyebrow} summary={story} />
 
-        <div className="om-stats-wrap om-gutter" style={{ background: "#211c19", color: "#f4f1ec", padding: "0 28px 34px" }}>
+        <div className="om-stats-wrap om-gutter" style={{ background: "#1C1917", color: "#f4f1ec", padding: "0 28px 34px" }}>
           <div className="om-stats" style={{ margin: "0 auto", maxWidth: 1180, display: "grid", gridTemplateColumns: showHeroCap ? "repeat(4, minmax(0,1fr))" : "repeat(3, minmax(0,1fr))", borderTop: "1px solid rgba(255,255,255,0.16)" }}>
             <div className="om-stat-asking" style={{ padding: "24px 24px 30px 0", borderRight: "1px solid rgba(255,255,255,0.16)" }}>
               <p className="om-stat-label" style={{ margin: 0, fontSize: 10, fontWeight: 500, letterSpacing: "0.2em", color: "#CFC6BA" }}>ASKING PRICE</p>
@@ -254,7 +287,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                     {propertyCells.map((cell) => (
                       <div key={cell.label} style={{ background: "#FAF7F2", padding: "18px 22px" }}>
                         <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.14em", color: "#6b6259" }}>{cell.label}</p>
-                        <p style={{ margin: "10px 0 0", fontWeight: 500, fontSize: 19, lineHeight: 1.3, color: "#211c19" }}>{cell.value}</p>
+                        <p style={{ margin: "10px 0 0", fontWeight: 500, fontSize: 19, lineHeight: 1.3, color: "#1C1917" }}>{cell.value}</p>
                       </div>
                     ))}
                   </div>
@@ -279,7 +312,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                       <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#8B6535" }}>CURRENT OCCUPANCY</p>
                     </div>
                     <div className="om-occ-figures" style={{ marginTop: 16, display: "flex", alignItems: "flex-end", gap: 30, flexWrap: "wrap" }}>
-                      <p className="om-occ-count" style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 50, lineHeight: 1.06, color: "#211c19", whiteSpace: "nowrap" }}>
+                      <p className="om-occ-count" style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 50, lineHeight: 1.06, color: "#1C1917", whiteSpace: "nowrap" }}>
                         {liveOccupied} <span className="om-occ-of" style={{ fontSize: 25, fontWeight: 400, color: "#6b6259" }}>of {liveTotal} rooms</span>
                       </p>
                       <p className="om-occ-pct" style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 36, lineHeight: 1, color: "#8B6535" }}>{occupancyPct}%</p>
@@ -302,62 +335,10 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                     </div>
                   )}
                   <div className="om-occupancy-chart om-occ-chart-desktop" style={{ marginTop: trendSummary ? 22 : 34 }}>
-                    <div className="om-occupancy-chart-inner" style={{ display: "grid", gridTemplateColumns: "repeat(12, minmax(0,1fr))", gap: 5, alignItems: "end", height: 132 }}>
-                      {listing.occupancyTrend.map((month, i) => {
-                        const filled = month.total != null && month.pct > 0;
-                        return (
-                        <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 9, height: "100%", justifyContent: "flex-end" }}>
-                          <span style={{ flex: "0 0 auto", fontSize: 11, color: "#6B6560" }}>{filled ? `${month.pct}%` : ""}</span>
-                          <div
-                            style={{
-                              flex: "0 0 auto",
-                              width: "100%",
-                              background: filled && month.pct >= 88 ? "#C4955A" : "#E8D5B5",
-                              height: `${filled ? Math.max(8, Math.round((month.pct / 100) * 88)) : 8}px`,
-                            }}
-                          />
-                          <span style={{ flex: "0 0 auto", fontSize: 10, letterSpacing: "0.04em", color: "#A09A94" }}>{month.label}</span>
-                        </div>
-                        );
-                      })}
-                    </div>
+                    <OccupancyChart months={listing.occupancyTrend} />
                   </div>
                   <div className="om-occ-chart-mobile" style={{ marginTop: 18 }}>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <div style={{ flex: "0 0 26px", height: 88, position: "relative" }}>
-                        <span style={{ position: "absolute", top: -5, right: 0, fontSize: 9, color: "#6b6259" }}>100%</span>
-                        <span style={{ position: "absolute", top: 39, right: 0, fontSize: 9, color: "#6b6259" }}>50%</span>
-                        <span style={{ position: "absolute", bottom: -5, right: 0, fontSize: 9, color: "#6b6259" }}>0</span>
-                      </div>
-                      <div style={{ flex: "1 1 auto", minWidth: 0 }}>
-                        <div style={{ position: "relative", height: 88 }}>
-                          <span style={{ position: "absolute", left: 0, right: 0, top: 0, height: 1, background: "#cbc2b5" }} />
-                          <span style={{ position: "absolute", left: 0, right: 0, top: 44, height: 1, background: "#e4ddd2" }} />
-                          <span style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 1, background: "#cbc2b5" }} />
-                          <div style={{ position: "absolute", inset: 0, display: "grid", gridTemplateColumns: "repeat(12, minmax(0,1fr))", gap: 4, alignItems: "end" }}>
-                            {listing.occupancyTrend.map((month, i) => {
-                              const filled = month.total != null && month.pct > 0;
-                              return (
-                              <div
-                                key={i}
-                                style={{
-                                  background: filled && month.pct >= 88 ? "#C4955A" : "#E8D5B5",
-                                  height: `${filled ? Math.max(6, Math.round((month.pct / 100) * 88)) : 6}px`,
-                                }}
-                              />
-                              );
-                            })}
-                          </div>
-                        </div>
-                        <div style={{ marginTop: 6, display: "grid", gridTemplateColumns: "repeat(12, minmax(0,1fr))", gap: 4 }}>
-                          {listing.occupancyTrend.map((month, i) => (
-                            <span key={i} style={{ fontSize: 9, textAlign: "center", color: "#6b6259" }}>
-                              {month.label.charAt(0)}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
+                    <OccupancyChart months={listing.occupancyTrend} compact />
                     <p style={{ margin: "12px 0 0", fontSize: 12, lineHeight: 1.6, color: "#6b6259" }}>Share of rooms occupied, month by month.</p>
                   </div>
                 </section>
@@ -369,12 +350,12 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                 {publicFinCells.length > 0 && (
                   <div className="om-fin" style={{ marginTop: 22, display: "grid", gridTemplateColumns: "repeat(2, minmax(0,1fr))", gap: 14 }}>
                     {publicFinCells.map((cell) => (
-                      <div key={cell.label} style={{ background: "#fffdfa", border: "1px solid #e4ddd2", borderTop: "2px solid #211c19", padding: "20px 20px 22px" }}>
+                      <div key={cell.label} style={{ background: "#FAF7F2", border: "1px solid #e4ddd2", borderTop: "2px solid #1C1917", padding: "20px 20px 22px" }}>
                         <p className="om-fin-label" style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.14em", color: "#6b6259" }}>
                           {cell.label}
                           {cell.projected ? <ProjectedMark /> : null}
                         </p>
-                        <p className="om-fin-value" style={{ margin: "14px 0 0", fontFamily: "var(--font-om-serif)", fontSize: 34, lineHeight: 1, color: "#211c19" }}>{cell.value}</p>
+                        <p className="om-fin-value" style={{ margin: "14px 0 0", fontFamily: "var(--font-om-serif)", fontSize: 34, lineHeight: 1, color: "#1C1917" }}>{cell.value}</p>
                         <p className="om-fin-caption" style={{ margin: "10px 0 0", fontSize: 13, lineHeight: 1.55, color: "#574f47" }}>{cell.caption}</p>
                       </div>
                     ))}
@@ -407,9 +388,9 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
 
             <aside className="om-aside om-block om-block-aside" style={{ alignSelf: "stretch" }}>
               <div className="om-aside-sticky" style={{ position: "sticky", top: "calc(94px + var(--public-nav-offset, 0px))", display: "flex", flexDirection: "column", gap: 24 }}>
-                <div className="om-agent-card" style={{ background: "#211c19", border: "1px solid #211c19" }}>
+                <div className="om-agent-card" style={{ background: "#1C1917", border: "1px solid #1C1917" }}>
                   <div className="om-agent-eye" style={{ padding: "18px 20px 0" }}>
-                    <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.18em", color: "#E8D5B5" }}>YOUR CONTACT FOR THIS OFFERING</p>
+                    <p className="cc-eyebrow">YOUR CONTACT FOR THIS OFFERING</p>
                   </div>
                   <div className="om-agent-row" style={{ display: "flex", gap: 14, padding: "16px 20px 0" }}>
                     {/* Paint the headshot as the slot background so a failed
@@ -464,20 +445,20 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                 </div>
 
                 {listing.co_agent_name && (
-                  <div style={{ border: "1px solid #ddd6cc", background: "#fffdfa" }}>
+                  <div style={{ border: "1px solid #ddd6cc", background: "#FAF7F2" }}>
                     <div style={{ padding: "16px 20px 0" }}>
                       <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#6b6259" }}>CO-LISTING AGENT</p>
                     </div>
                     <div style={{ display: "flex", gap: 14, padding: "16px 20px 18px" }}>
                       <div style={{ flex: "0 0 62px", height: 78, background: "repeating-linear-gradient(135deg, #ece6dd 0 8px, #e2dbd0 8px 16px)" }} />
                       <div style={{ minWidth: 0 }}>
-                        <p style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 19, lineHeight: 1.15, color: "#211c19" }}>{listing.co_agent_name}</p>
+                        <p style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 19, lineHeight: 1.15, color: "#1C1917" }}>{listing.co_agent_name}</p>
                         {listing.co_agent_brokerage && <p style={{ margin: "7px 0 0", fontSize: 13, lineHeight: 1.5, color: "#574f47" }}>{listing.co_agent_brokerage}</p>}
                       </div>
                     </div>
                     <div style={{ borderTop: "1px solid #ede7de", display: "flex", flexDirection: "column" }}>
                       {listing.co_agent_phone && (
-                        <a href={`tel:${listing.co_agent_phone.replace(/[^0-9+]/g, "")}`} className="om-hover-dark" style={{ padding: "12px 20px", fontWeight: 500, fontSize: 16, color: "#211c19", borderBottom: "1px solid #ede7de" }}>
+                        <a href={`tel:${listing.co_agent_phone.replace(/[^0-9+]/g, "")}`} className="om-hover-dark" style={{ padding: "12px 20px", fontWeight: 500, fontSize: 16, color: "#1C1917", borderBottom: "1px solid #ede7de" }}>
                           {listing.co_agent_phone}
                         </a>
                       )}
@@ -492,7 +473,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
 
                 {otherListings.length > 0 && (
                   <div>
-                    <p className="om-more-label" style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.18em", color: "#6b6259" }}>MORE OF CAITLYN&apos;S LISTINGS</p>
+                    <p className="om-more-label cc-eyebrow">More of Caitlyn&apos;s listings</p>
                     {otherListings.map((l) => {
                       const cover = l.coverPhotoUrl;
                       const other = publicListingPrivacy(l);
@@ -511,7 +492,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                             )}
                           </div>
                           <div style={{ minWidth: 0 }}>
-                            <p style={{ margin: 0, fontWeight: 500, fontSize: 16, color: "#211c19" }}>{other.displayTitle}</p>
+                            <p style={{ margin: 0, fontWeight: 500, fontSize: 16, color: "#1C1917" }}>{other.displayTitle}</p>
                             <p style={{ margin: "5px 0 0", fontSize: 13, color: "#574f47" }}>
                               {formatCurrency(l.list_price)} · {l.liveTotal ?? "?"} rooms · {occ}
                             </p>
@@ -529,7 +510,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
 
                 {listing.show_seller_section && (
                   <div className="om-seller-teaser" style={{ borderTop: "2px solid #C4955A", paddingTop: 16 }}>
-                    <p style={{ margin: 0, fontWeight: 500, fontSize: 18, lineHeight: 1.3, color: "#211c19" }}>Selling a PadSplit in the next 12 months?</p>
+                    <p style={{ margin: 0, fontWeight: 500, fontSize: 18, lineHeight: 1.3, color: "#1C1917" }}>Selling a PadSplit in the next 12 months?</p>
                     <p style={{ margin: "10px 0 0", fontSize: 13, lineHeight: 1.6, color: "#574f47" }}>
                       A lot of operators are consolidating right now. I&apos;ll tell you what yours is worth before you list it.
                     </p>
@@ -554,7 +535,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                       borderRight: "1px solid #ddd6cc",
                       borderBottom: "1px solid #ddd6cc",
                       borderLeft: "1px solid #ddd6cc",
-                      background: "#fffdfa",
+                      background: "#FAF7F2",
                       padding: "18px 18px 22px",
                       display: "flex",
                       flexDirection: "column",
@@ -562,7 +543,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                     }}
                   >
                     <p className="om-step-num" style={{ margin: 0, fontSize: 12, fontWeight: 600, letterSpacing: "0.14em", color: "#C4955A" }}>{String(i + 1).padStart(2, "0")}</p>
-                    <p className="om-step-title" style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 20, lineHeight: 1.2, color: "#211c19" }}>{step.title}</p>
+                    <p className="om-step-title" style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 20, lineHeight: 1.2, color: "#1C1917" }}>{step.title}</p>
                     <p className="om-step-body om-step-body-desktop" style={{ margin: 0, fontSize: 13, lineHeight: 1.65, color: "#574f47" }}>{step.body}</p>
                     <p className="om-step-body om-step-body-mobile" style={{ margin: 0, fontSize: 12, lineHeight: 1.6, color: "#574f47" }}>{step.bodyMobile}</p>
                   </div>
@@ -576,8 +557,8 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
 
             {listing.show_seller_section && (
               <section id="seller" className="om-block om-block-seller" data-om-noprint>
-                <div className="om-seller-desktop" style={{ background: "#211c19", color: "#f4f1ec", padding: "44px 36px 46px" }}>
-                <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.2em", color: "#E8D5B5" }}>FOR PADSPLIT OWNERS</p>
+                <div className="om-seller-desktop" style={{ background: "#1C1917", color: "#f4f1ec", padding: "44px 36px 46px" }}>
+                <p className="cc-eyebrow">For PadSplit owners</p>
                 <div style={{ marginTop: 20, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(290px, 100%), 1fr))", gap: 40, alignItems: "start" }}>
                   <div>
                     <h2 style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 400, fontSize: 40, lineHeight: 1.12, color: "#fff", maxWidth: "22ch" }}>
@@ -602,8 +583,8 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                   <SellerAnalysisForm />
                 </div>
                 </div>
-                <div className="om-seller-mobile" style={{ background: "#211c19", padding: "32px 18px 34px", textAlign: "center" }}>
-                  <p style={{ margin: 0, fontSize: 11, fontWeight: 500, letterSpacing: "0.2em", color: "#E8D5B5" }}>FOR PADSPLIT OWNERS</p>
+                <div className="om-seller-mobile" style={{ background: "#1C1917", padding: "32px 18px 34px", textAlign: "center" }}>
+                  <p className="cc-eyebrow">For PadSplit owners</p>
                   <h2 style={{ margin: "14px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 400, fontSize: 32, lineHeight: 1.14, color: "#fff" }}>What would your PadSplit <em>sell for?</em></h2>
                   <p style={{ margin: "14px 0 0", fontSize: 15, lineHeight: 1.7, color: "#d6cfc5" }}>
                     A coliving house gets priced with a combination of local comps and the income the asset produces. Get an idea of what yours could sell for here.
@@ -632,7 +613,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
 
             <footer className="om-block om-block-footer om-footer" style={{ borderTop: "1px solid #ddd6cc", paddingTop: 26, display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 24, flexWrap: "wrap" }}>
               <div>
-                <p className="om-footer-name" style={{ margin: 0, fontWeight: 500, fontSize: 15, color: "#211c19" }}>Caitlyn Verdugo · Keller Williams Metro Atlanta</p>
+                <p className="om-footer-name" style={{ margin: 0, fontWeight: 500, fontSize: 15, color: "#1C1917" }}>Caitlyn Verdugo · Keller Williams Metro Atlanta</p>
                 <p className="om-footer-meta" style={{ margin: "7px 0 0", fontSize: 13, color: "#574f47" }}>
                   101 W Ponce de Leon, Decatur, GA 30030 · <a href={OWNER_PHONE_HREF}>{OWNER_PHONE_LABEL}</a>
                 </p>

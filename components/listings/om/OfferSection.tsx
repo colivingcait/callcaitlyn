@@ -5,7 +5,7 @@ import { submitListingOffer } from "@/app/listing/[slug]/actions";
 import { usePublicSheets } from "./PublicSheets";
 
 const boxedLabel: React.CSSProperties = { display: "block", fontSize: 13, color: "#574f47" };
-const boxedInput: React.CSSProperties = { marginTop: 6, width: "100%", boxSizing: "border-box", border: "1px solid #d5cdc1", background: "#fffdfa", padding: "11px 13px", fontSize: 15, color: "#211c19" };
+const boxedInput: React.CSSProperties = { marginTop: 6, width: "100%", boxSizing: "border-box", border: "1px solid #d5cdc1", background: "#FAF7F2", padding: "11px 13px", fontSize: 15, color: "#1C1917" };
 
 // The "Ready to make an offer?" CTA + modal. Never say "letter of intent" -
 // this audience is residential/coliving operators, not institutional
@@ -81,8 +81,8 @@ export function OfferSection({ slug, nickname, omNumber }: { slug: string; nickn
   return (
     <>
       <section id="offer" data-om-noprint style={{ background: "#FAF7F2", padding: "64px 40px", textAlign: "center" }}>
-        <p className="om-offer-eyebrow cc-eyebrow cc-eyebrow-plain">Ready to move</p>
-        <h2 style={{ margin: "20px auto 0", fontFamily: "var(--font-om-serif)", fontWeight: 400, fontSize: 42, lineHeight: 1.08, color: "#1C1917", maxWidth: "16ch" }}>
+        <p className="om-offer-eyebrow cc-eyebrow">Ready to move</p>
+        <h2 style={{ margin: "20px auto 0", fontFamily: "var(--font-om-serif)", fontWeight: 400, fontSize: 42, lineHeight: 1.08, color: "#1C1917" }}>
           Ready to make <em>an offer?</em>
         </h2>
         <p className="om-offer-body" style={{ margin: "16px auto 0", fontSize: 15, fontWeight: 300, lineHeight: 1.8, color: "#6B6560", maxWidth: "46ch" }}>
@@ -114,8 +114,8 @@ export function OfferSection({ slug, nickname, omNumber }: { slug: string; nickn
             if (e.target === e.currentTarget) setOpen(false);
           }}
         >
-          <div ref={panelRef} className="om-offer-panel" style={{ width: "100%", maxWidth: 620, background: "#f4f1ec", border: "1px solid #211c19" }}>
-            <div className="om-offer-head" style={{ display: "flex", alignItems: "flex-start", gap: 20, background: "#211c19", padding: "24px 28px" }}>
+          <div ref={panelRef} className="om-offer-panel" style={{ width: "100%", maxWidth: 620, background: "#f4f1ec", border: "1px solid #1C1917" }}>
+            <div className="om-offer-head" style={{ display: "flex", alignItems: "flex-start", gap: 20, background: "#1C1917", padding: "24px 28px" }}>
               <div style={{ minWidth: 0 }}>
                 <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.18em", color: "#E8D5B5" }}>YOUR OFFER · {omNumber}</p>
                 <p className="om-offer-title" style={{ margin: "10px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 24, color: "#f4f1ec" }}>{nickname}</p>
@@ -135,7 +135,7 @@ export function OfferSection({ slug, nickname, omNumber }: { slug: string; nickn
             {sent ? (
               <div style={{ padding: "44px 28px 48px", textAlign: "center" }}>
                 <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.18em", color: "#8B6535" }}>SENT</p>
-                <p style={{ margin: "14px auto 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 26, lineHeight: 1.3, color: "#211c19", maxWidth: "26ch" }}>
+                <p style={{ margin: "14px auto 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 26, lineHeight: 1.3, color: "#1C1917", maxWidth: "26ch" }}>
                   Caitlyn has been notified.
                 </p>
                 <p style={{ margin: "14px auto 0", fontSize: 15, lineHeight: 1.7, color: "#2e2823", maxWidth: "44ch" }}>
@@ -146,7 +146,7 @@ export function OfferSection({ slug, nickname, omNumber }: { slug: string; nickn
                   type="button"
                   onClick={() => setOpen(false)}
                   className="om-hover-dark"
-                  style={{ marginTop: 26, border: "1px solid #211c19", background: "transparent", padding: "13px 28px", fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: "#211c19", cursor: "pointer" }}
+                  style={{ marginTop: 26, border: "1px solid #1C1917", background: "transparent", padding: "13px 28px", fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: "#1C1917", cursor: "pointer" }}
                 >
                   CLOSE
                 </button>

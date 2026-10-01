@@ -45,8 +45,8 @@ export function OmSheet({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div style={{ width: "100%", maxHeight: "100%", overflowY: "auto", background: "#f4f1ec", borderTop: "1px solid #211c19" }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 14, background: "#211c19", padding: 18 }}>
+      <div style={{ width: "100%", maxHeight: "100%", overflowY: "auto", background: "#f4f1ec", borderTop: "1px solid #1C1917" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 14, background: "#1C1917", padding: 18 }}>
           <div style={{ minWidth: 0 }}>
             <p style={{ margin: 0, fontSize: 11, fontWeight: 500, letterSpacing: "0.18em", color: "#E8D5B5" }}>{eyebrow}</p>
             <p style={{ margin: "8px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 21, lineHeight: 1.2, color: "#f4f1ec" }}>{title}</p>

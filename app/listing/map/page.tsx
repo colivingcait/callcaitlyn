@@ -33,8 +33,8 @@ export default async function PublicListingsMapPage({
           The map is available on a larger screen. {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a href="/listings" style={{ color: "#8B6535", fontWeight: 600 }}>View the listings</a>.
         </p>
-        <div className="om-section-head" style={{ display: "flex", alignItems: "baseline", gap: 16, borderBottom: "1px solid #211c19", paddingBottom: 12, flexWrap: "wrap" }}>
-          <h1 style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 32, lineHeight: 1, color: "#211c19" }}>Available listings</h1>
+        <div className="om-section-head" style={{ display: "flex", alignItems: "baseline", gap: 16, borderBottom: "1px solid #1C1917", paddingBottom: 12, flexWrap: "wrap" }}>
+          <h1 style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 32, lineHeight: 1, color: "#1C1917" }}>Available listings</h1>
           <ListingsViewToggle active="map" search={search} />
         </div>
         <ListingsMapCanvas listings={mapped} />

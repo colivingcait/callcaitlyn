@@ -29,7 +29,7 @@ export function MobileActionBar({ priceLabel, occupancyLabel }: { priceLabel: st
   return (
     <div
       data-om-noprint
-      style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 50, background: "#211c19", borderTop: "1px solid #3a322c", padding: "10px 16px", display: "flex", alignItems: "center", gap: 12 }}
+      style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 50, background: "#1C1917", borderTop: "1px solid #3a322c", padding: "10px 16px", display: "flex", alignItems: "center", gap: 12 }}
     >
       <div style={{ minWidth: 0 }}>
         <p style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 19, lineHeight: 1, color: "#f4f1ec" }}>{priceLabel}</p>

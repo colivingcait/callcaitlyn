@@ -46,8 +46,8 @@ export default async function PublicListingsOverviewPage({
         <div className="listings-hero-inner" style={{ margin: "0 auto", maxWidth: 1180, paddingTop: 88, display: "flex", alignItems: "flex-end", gap: 64, flexWrap: "wrap" }}>
           <div style={{ flex: "1 1 420px", minWidth: 0 }}>
             <p className="listings-hero-eye cc-eyebrow">Listings · Atlanta metro</p>
-            <h1 className="listings-h1" style={{ margin: "24px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 400, fontSize: 60, lineHeight: 1.03, letterSpacing: "-0.025em", color: "#1C1917", maxWidth: "17ch" }}>
-              Coliving offerings, and everything else <em>on the board.</em>
+            <h1 className="listings-h1" style={{ margin: "24px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 400, fontSize: 60, lineHeight: 1.03, letterSpacing: "-0.025em", color: "#1C1917", maxWidth: "20ch" }}>
+              Coliving offerings, and everything <span className="listings-h1-tail">else <em>on the board.</em></span>
             </h1>
             <p className="listings-hero-copy listings-hero-copy-full" style={{ margin: "24px 0 0", fontSize: 16, fontWeight: 300, lineHeight: 1.85, color: "#6B6560", maxWidth: "58ch" }}>
               Click on the card to view each listing. Occupancy and room rates on the coliving offerings pull live from PadSplit, daily. Underwriting unlocks on
@@ -86,7 +86,7 @@ export default async function PublicListingsOverviewPage({
 
       <div className="om-gutter listings-main" style={{ margin: "0 auto", maxWidth: 1180, padding: "0 28px 96px" }}>
         <section id="listings" style={{ paddingTop: 64 }}>
-          <div className="om-section-head listings-available-head" style={{ display: "flex", alignItems: "baseline", gap: 16, borderBottom: "1px solid #211c19", paddingBottom: 12, flexWrap: "wrap" }}>
+          <div className="om-section-head listings-available-head" style={{ display: "flex", alignItems: "baseline", gap: 16, borderBottom: "1px solid #1C1917", paddingBottom: 12, flexWrap: "wrap" }}>
             <h2 style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 400, fontSize: 36, lineHeight: 1, color: "#1C1917" }}>Available listings</h2>
             <div className="listings-live-inline" style={{ display: "flex", alignItems: "center", gap: 7 }}>
               <span style={{ width: 6, height: 6, borderRadius: 999, background: "#C4955A", boxShadow: "0 0 0 3px rgba(196,149,90,0.22)" }} />
@@ -230,8 +230,8 @@ export default async function PublicListingsOverviewPage({
 
         {underContract.length > 0 && (
           <section id="under-contract" className="listings-phone-hide" style={{ paddingTop: 72 }}>
-            <div className="om-section-head" style={{ display: "flex", alignItems: "baseline", gap: 16, borderBottom: "1px solid #211c19", paddingBottom: 12, flexWrap: "wrap" }}>
-              <h2 style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 32, lineHeight: 1, color: "#211c19" }}>Under contract</h2>
+            <div className="om-section-head" style={{ display: "flex", alignItems: "baseline", gap: 16, borderBottom: "1px solid #1C1917", paddingBottom: 12, flexWrap: "wrap" }}>
+              <h2 style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 32, lineHeight: 1, color: "#1C1917" }}>Under contract</h2>
               <p style={{ margin: "0 0 0 auto", fontSize: 12, letterSpacing: "0.1em", color: "#6b6259" }}>02</p>
             </div>
             <p style={{ margin: "18px 0 0", fontSize: 14, lineHeight: 1.7, color: "#574f47", maxWidth: "70ch" }}>
@@ -241,10 +241,10 @@ export default async function PublicListingsOverviewPage({
               {underContract.map((listing) => (
                 <div
                   key={listing.id}
-                  style={{ display: "flex", alignItems: "center", gap: 20, background: "#fffdfa", border: "1px solid #e4ddd2", padding: "16px 20px", flexWrap: "wrap" }}
+                  style={{ display: "flex", alignItems: "center", gap: 20, background: "#FAF7F2", border: "1px solid #e4ddd2", padding: "16px 20px", flexWrap: "wrap" }}
                 >
                   {listing.tag && (
-                    <span style={{ background: "#211c19", color: "#f4f1ec", fontSize: 11, fontWeight: 500, letterSpacing: "0.14em", padding: "7px 11px", whiteSpace: "nowrap" }}>
+                    <span style={{ background: "#1C1917", color: "#f4f1ec", fontSize: 11, fontWeight: 500, letterSpacing: "0.14em", padding: "7px 11px", whiteSpace: "nowrap" }}>
                       {listing.tag}
                     </span>
                   )}
@@ -252,7 +252,7 @@ export default async function PublicListingsOverviewPage({
                     {listing.submarketLabel && (
                       <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#8B6535" }}>{listing.submarketLabel}</p>
                     )}
-                    <p style={{ margin: listing.submarketLabel ? "8px 0 0" : 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 21, lineHeight: 1.2, color: "#211c19" }}>
+                    <p style={{ margin: listing.submarketLabel ? "8px 0 0" : 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 21, lineHeight: 1.2, color: "#1C1917" }}>
                       {listing.name}
                     </p>
                     {listing.detail && <p style={{ margin: "7px 0 0", fontSize: 13, color: "#574f47" }}>{listing.detail}</p>}
@@ -266,14 +266,14 @@ export default async function PublicListingsOverviewPage({
 
         {sold.length > 0 && (
           <section id="sold" className="listings-phone-hide" style={{ paddingTop: 72 }}>
-            <div style={{ background: "#211c19", color: "#f4f1ec", padding: "34px 32px 36px" }}>
+            <div style={{ background: "#1C1917", color: "#f4f1ec", padding: "34px 32px 36px" }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 16, borderBottom: "1px solid #3a322c", paddingBottom: 14, flexWrap: "wrap" }}>
                 <h2 style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 400, fontSize: 30, lineHeight: 1, color: "#fff" }}>Recently sold</h2>
                 <p style={{ margin: "0 0 0 auto", fontSize: 11, letterSpacing: "0.14em", color: "#A09A94" }}>{soldNumber}</p>
               </div>
               <div style={{ marginTop: 26, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 1, background: "#3a322c" }}>
                 {sold.map((entry) => (
-                  <div key={entry.id} style={{ background: "#211c19", padding: "4px 22px 6px 0" }}>
+                  <div key={entry.id} style={{ background: "#1C1917", padding: "4px 22px 6px 0" }}>
                     <p style={{ margin: 0, fontSize: 10, fontWeight: 500, letterSpacing: "0.2em", color: "#C4955A" }}>{entry.closed}</p>
                     {entry.locationLabel && (
                       <p style={{ margin: "10px 0 0", fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#E8D5B5" }}>{entry.locationLabel.toUpperCase()}</p>
@@ -287,7 +287,7 @@ export default async function PublicListingsOverviewPage({
           </section>
         )}
 
-        <section className="listings-mobile-only listings-seller" style={{ marginTop: 40, background: "#211c19", color: "#f4f1ec", padding: "26px 18px 28px" }}>
+        <section className="listings-mobile-only listings-seller" style={{ marginTop: 40, background: "#1C1917", color: "#f4f1ec", padding: "26px 18px 28px" }}>
           <p className="cc-eyebrow cc-eyebrow-on-photo">For PadSplit owners</p>
           <h2 style={{ margin: "16px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 400, fontSize: 30, lineHeight: 1.16, color: "#fff" }}>What would your PadSplit <em>sell for?</em></h2>
           <p style={{ margin: "12px 0 0", fontSize: 15, lineHeight: 1.7, color: "#d6cfc5" }}>

@@ -71,7 +71,7 @@ export function PublicSheetsProvider({ children }: { children: React.ReactNode }
         <div
           role="presentation"
           data-om-noprint
-          style={{ position: "fixed", inset: 0, zIndex: 61, background: "rgba(23,19,17,0.62)", display: "flex", alignItems: "flex-end" }}
+          style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(23,19,17,0.62)", display: "flex", alignItems: "flex-end" }}
           onClick={(e) => {
             if (e.target === e.currentTarget) setBookOpen(false);
           }}

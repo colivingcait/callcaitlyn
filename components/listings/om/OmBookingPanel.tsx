@@ -16,13 +16,13 @@ type Step = "info" | "time" | "details" | "done";
 
 const backBtn: React.CSSProperties = {
   flex: "0 0 auto",
-  border: "1px solid #211c19",
+  border: "1px solid #1C1917",
   background: "transparent",
   padding: "15px 18px",
   fontSize: 12,
   fontWeight: 600,
   letterSpacing: "0.1em",
-  color: "#211c19",
+  color: "#1C1917",
   cursor: "pointer",
 };
 const nextBtn: React.CSSProperties = {
@@ -123,13 +123,13 @@ export function OmBookingPanel({
       ) : step === "done" ? (
         <div style={{ padding: "34px 18px 38px", textAlign: "center" }}>
           <p style={{ margin: 0, fontSize: 11, fontWeight: 500, letterSpacing: "0.18em", color: "#8B6535" }}>REQUEST SENT</p>
-          <p style={{ margin: "14px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 24, lineHeight: 1.3, color: "#211c19" }}>{slotLabel}</p>
+          <p style={{ margin: "14px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 24, lineHeight: 1.3, color: "#1C1917" }}>{slotLabel}</p>
           <p style={{ margin: "14px 0 0", fontSize: 15, lineHeight: 1.7, color: "#2e2823" }}>Caitlyn will confirm shortly and text you.</p>
           <button
             type="button"
             onClick={onClose}
             className="om-hover-dark"
-            style={{ marginTop: 24, border: "1px solid #211c19", background: "transparent", padding: "13px 26px", fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: "#211c19", cursor: "pointer" }}
+            style={{ marginTop: 24, border: "1px solid #1C1917", background: "transparent", padding: "13px 26px", fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: "#1C1917", cursor: "pointer" }}
           >
             BACK TO THE OFFERING
           </button>
@@ -166,8 +166,8 @@ export function OmBookingPanel({
               type="button"
               onClick={() => setView("calendar")}
               style={{
-                border: view === "calendar" ? "1px solid #211c19" : "1px solid #d5cdc1",
-                background: view === "calendar" ? "#211c19" : "#fffdfa",
+                border: view === "calendar" ? "1px solid #1C1917" : "1px solid #d5cdc1",
+                background: view === "calendar" ? "#1C1917" : "#FAF7F2",
                 color: view === "calendar" ? "#f4f1ec" : "#574f47",
                 padding: "8px 12px",
                 fontSize: 12,
@@ -182,8 +182,8 @@ export function OmBookingPanel({
               type="button"
               onClick={() => setView("list")}
               style={{
-                border: view === "list" ? "1px solid #211c19" : "1px solid #d5cdc1",
-                background: view === "list" ? "#211c19" : "#fffdfa",
+                border: view === "list" ? "1px solid #1C1917" : "1px solid #d5cdc1",
+                background: view === "list" ? "#1C1917" : "#FAF7F2",
                 color: view === "list" ? "#f4f1ec" : "#574f47",
                 padding: "8px 12px",
                 fontSize: 12,
@@ -215,8 +215,8 @@ export function OmBookingPanel({
       ) : (
         <div style={{ padding: "20px 18px 24px" }}>
           <BookingSteps step="details" />
-          <p style={{ margin: "16px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 20, lineHeight: 1.3, color: "#211c19" }}>Help me prepare for this meeting</p>
-          {slotLabel && <p style={{ margin: "8px 0 0", fontSize: 15, fontWeight: 600, color: "#211c19" }}>{slotLabel}</p>}
+          <p style={{ margin: "16px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 20, lineHeight: 1.3, color: "#1C1917" }}>Help me prepare for this meeting</p>
+          {slotLabel && <p style={{ margin: "8px 0 0", fontSize: 15, fontWeight: 600, color: "#1C1917" }}>{slotLabel}</p>}
           <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
               <span style={boxedLabel}>
@@ -231,8 +231,8 @@ export function OmBookingPanel({
                       type="button"
                       onClick={() => setContactType(active ? "" : option.value)}
                       style={{
-                        border: active ? "1px solid #211c19" : "1px solid #d5cdc1",
-                        background: active ? "#211c19" : "#fffdfa",
+                        border: active ? "1px solid #1C1917" : "1px solid #d5cdc1",
+                        background: active ? "#1C1917" : "#FAF7F2",
                         color: active ? "#f4f1ec" : "#574f47",
                         padding: "9px 12px",
                         fontSize: 13,
