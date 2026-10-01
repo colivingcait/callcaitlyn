@@ -1,0 +1,25 @@
+/* Offset so the fixed ColivingCait nav does not cover public page chrome.
+   py-5 + the Book a Call control (11px at the marketing site's 1.8 line
+   height, py-3) + the 1px border. */
+.public-with-site-nav {
+  --public-nav-offset: 85px;
+  padding-top: var(--public-nav-offset);
+  background: #fff;
+}
+
+.public-with-site-nav :is(#property, #financials, #unlock, #occupancy, #process, #offer, #seller, #listings, #sold, #contact) {
+  scroll-margin-top: calc(62px + var(--public-nav-offset));
+}
+
+@media print {
+  .public-with-site-nav {
+    --public-nav-offset: 0px;
+    padding-top: 0;
+    background: transparent;
+  }
+
+  .public-site-nav,
+  .public-site-footer {
+    display: none !important;
+  }
+}

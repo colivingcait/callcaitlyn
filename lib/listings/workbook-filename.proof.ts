@@ -35,7 +35,7 @@ const token = createWorkbookDownloadToken("candace", exp);
 assert.equal(verifyWorkbookDownloadToken("candace", token), true);
 assert.equal(verifyWorkbookDownloadToken("other", token), false);
 assert.equal(verifyWorkbookDownloadToken("candace", createWorkbookDownloadToken("candace", Date.now() - 1000)), false);
-assert.match(workbookDownloadPath("gresham-park-eight"), /^\/listing\/gresham-park-eight\/workbook\?t=/);
+assert.match(workbookDownloadPath("gresham-park-eight"), /^\/listings\/gresham-park-eight\/workbook\?t=/);
 
 const unlock = readFileSync(join(process.cwd(), "app/listing/[slug]/actions.ts"), "utf8");
 assert.ok(unlock.includes("workbookDownloadPath"));

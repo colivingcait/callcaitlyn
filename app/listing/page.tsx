@@ -1,11 +1,10 @@
-import Link from "next/link";
 import type { Metadata } from "next";
 import { getPublicListingsIndex } from "@/lib/listings/public-data";
 import { listingsQueryString } from "@/lib/listings/public-index";
 import { CAITLYN_HEADSHOT_SRC, crmPublicAsset } from "@/lib/brand/caitlyn";
-import { ListingsIndexHeader } from "@/components/listings/index/ListingsIndexHeader";
 import { ListingsViewToggle } from "@/components/listings/index/ListingsViewToggle";
 import { BookCallButton, PublicSheetsProvider, SellerAnalysisButton } from "@/components/listings/om/PublicSheets";
+import { PUBLIC_LISTINGS_URL } from "@/lib/public-urls";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +14,8 @@ const LISTINGS_DESCRIPTION = "Coliving and for-sale homes across Atlanta metro. 
 export const metadata: Metadata = {
   title: LISTINGS_TITLE,
   description: LISTINGS_DESCRIPTION,
-  openGraph: { title: LISTINGS_TITLE, description: LISTINGS_DESCRIPTION },
+  alternates: { canonical: PUBLIC_LISTINGS_URL },
+  openGraph: { title: LISTINGS_TITLE, description: LISTINGS_DESCRIPTION, url: PUBLIC_LISTINGS_URL },
   twitter: { card: "summary_large_image", title: LISTINGS_TITLE, description: LISTINGS_DESCRIPTION },
 };
 
@@ -31,8 +31,6 @@ export default async function PublicListingsOverviewPage({
   return (
     <PublicSheetsProvider>
     <div className="om-page" style={{ fontFamily: "var(--font-om-sans), Archivo, ui-sans-serif, system-ui, sans-serif", background: "#f4f1ec", color: "#211c19", minHeight: "100dvh", overflowX: "clip" }}>
-      <ListingsIndexHeader />
-
       <div className="om-gutter listings-hero" style={{ background: "#211c19", color: "#f4f1ec", padding: "0 28px 62px" }}>
         <div className="listings-hero-inner" style={{ margin: "0 auto", maxWidth: 1180, paddingTop: 56, display: "flex", alignItems: "flex-end", gap: 48, flexWrap: "wrap" }}>
           <div style={{ flex: "1 1 420px", minWidth: 0 }}>
@@ -85,7 +83,7 @@ export default async function PublicListingsOverviewPage({
             </div>
             <p className="listings-available-num" style={{ margin: "0 0 0 auto", fontSize: 12, letterSpacing: "0.1em", color: "#6b6259" }}>01</p>
             <div className="listings-view-toggle">
-              <ListingsViewToggle active="list" search={search} />
+              <ListingsViewToggle active="list" search={search} soldHref="#sold" />
             </div>
           </div>
           <div className="listings-live-below">
@@ -208,9 +206,9 @@ export default async function PublicListingsOverviewPage({
                 }
 
                 return (
-                  <Link key={listing.id} href={listing.href} className="listings-card" style={cardStyle}>
+                  <a key={listing.id} href={listing.href} className="listings-card" style={cardStyle}>
                     {body}
-                  </Link>
+                  </a>
                 );
               })}
             </div>

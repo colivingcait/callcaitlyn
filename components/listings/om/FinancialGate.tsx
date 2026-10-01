@@ -424,7 +424,7 @@ export function FinancialGate({
           Everything on this page including the line-item financials, CapEx, and occupancy history — for your lender or your partner.
         </p>
         <a
-          href={`/listing/${slug}/om.pdf`}
+          href={`/listings/${slug}/om.pdf`}
           className="om-hover-dark om-download-cta"
           style={{ display: "inline-block", marginTop: 16, border: "1px solid #211c19", padding: "15px 28px", fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: "#211c19" }}
         >
@@ -432,7 +432,7 @@ export function FinancialGate({
         </a>
         <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid #ede7de", display: "flex", alignItems: "baseline", gap: 12 }}>
           <p style={{ margin: 0, flex: "1 1 auto", fontSize: 13, lineHeight: 1.6, color: "#574f47" }}>Need a version without the numbers?</p>
-          <a href={`/listing/${slug}/one-pager`} className="om-hover-accent" style={{ flex: "0 0 auto", fontSize: 12, fontWeight: 600, letterSpacing: "0.08em", color: "#a33a29" }}>
+          <a href={`/listings/${slug}/one-pager`} className="om-hover-accent" style={{ flex: "0 0 auto", fontSize: 12, fontWeight: 600, letterSpacing: "0.08em", color: "#a33a29" }}>
             ONE-PAGER →
           </a>
         </div>

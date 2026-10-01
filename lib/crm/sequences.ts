@@ -9,7 +9,7 @@ export { applyMergeFields };
 export type { SequenceContact };
 
 export function baseUrl() {
-  return (process.env.APP_BASE_URL ?? "https://www.callcaitlyn.com").replace(/\/$/, "");
+  return (process.env.APP_BASE_URL ?? "https://crm.callcaitlyn.com").replace(/\/$/, "");
 }
 
 // Sending many near-identical emails back-to-back from one Gmail account in

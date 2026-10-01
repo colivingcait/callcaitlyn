@@ -4,19 +4,20 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Copy } from "lucide-react";
 import { setListingPublicPage } from "@/app/(app)/listings/actions";
+import { publicListingUrl } from "@/lib/public-urls";
 
-// Dedicated OM at /listing/[slug] for a listing that may not have MLS/Zillow.
-// Does not control /listing board visibility (status does). Turning this on
-// is still the integration with agent-outreach templates — see
-// setListingPublicPage (auto-fills the Zillow field rather than needing the
-// template code to know about a second kind of link).
-export function PublicPageToggle({ listingId, publicSlug, appOrigin }: { listingId: string; publicSlug: string | null; appOrigin: string }) {
+// Dedicated OM on www.colivingcait.com/listings/[slug] for a listing that
+// may not have MLS/Zillow. Does not control public board visibility (status
+// does). Turning this on is still the integration with agent-outreach
+// templates — see setListingPublicPage (auto-fills the Zillow field rather
+// than needing the template code to know about a second kind of link).
+export function PublicPageToggle({ listingId, publicSlug }: { listingId: string; publicSlug: string | null }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
 
-  const url = publicSlug ? `${appOrigin}/listing/${publicSlug}` : null;
+  const url = publicSlug ? publicListingUrl(publicSlug) : null;
 
   async function toggle(enabled: boolean) {
     setSaving(true);
@@ -45,7 +46,7 @@ export function PublicPageToggle({ listingId, publicSlug, appOrigin }: { listing
         <div>
           <p className="text-sm font-medium text-neutral-800">Public marketing page</p>
           <p className="text-xs text-neutral-400">
-            Publishes a dedicated OM at /listing/[slug]. Coming soon, active, and under-contract listings already appear on the public board — this toggle does not hide them.
+            Publishes a dedicated offering page on colivingcait.com. Coming soon, active, and under-contract listings already appear on the public board — this toggle does not hide them.
           </p>
         </div>
         <button

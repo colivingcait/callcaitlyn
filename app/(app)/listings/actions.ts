@@ -11,7 +11,7 @@ import { dedupeListingTextRecipients } from "@/lib/crm/listing-text-dedupe";
 import { sendQuoText } from "@/lib/quo/send-message";
 import { sendGmailMessage } from "@/lib/google/send-email";
 import { draftToHtml } from "@/lib/crm/merge-fields";
-import { baseUrl } from "@/lib/crm/sequences";
+import { publicListingUrl } from "@/lib/public-urls";
 import { generateUniqueListingSlug } from "@/lib/listings/public-slug";
 import { LISTING_DOCUMENT_TYPES } from "@/lib/listings/documents";
 import { planOwnedOmSidecarApply, type OmApplyListingRow } from "@/lib/listings/om-apply";
@@ -650,7 +650,7 @@ export async function setListingPublicPage(listingId: string, enabled: boolean):
   }
 
   const slug = listing.public_slug ?? (await generateUniqueListingSlug(admin, listing.address));
-  const url = `${baseUrl()}/listing/${slug}`;
+  const url = publicListingUrl(slug);
   const patch: Record<string, unknown> = { public_slug: slug };
   if (!listing.zillow_url) patch.zillow_url = url;
 

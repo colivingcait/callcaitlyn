@@ -25,7 +25,7 @@ export async function GET(_request: Request, context: { params: Promise<{ slug: 
     <h1>The full offering memorandum PDF is not designed yet.</h1>
     <p>Line-item financials, CapEx, and occupancy history belong in this document once the template exists. This stub does not include those numbers.</p>
     <p>Until then, open the unlocked offering and use the browser print dialog. Print CSS is already on the page.</p>
-    <p><a href="/listing/${encodeURIComponent(slug)}">Back to the offering</a></p>
+    <p><a href="/listings/${encodeURIComponent(slug)}">Back to the offering</a></p>
   </main>
 </body>
 </html>`;

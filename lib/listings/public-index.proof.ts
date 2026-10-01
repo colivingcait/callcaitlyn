@@ -31,7 +31,7 @@ assert.equal(
 assert.equal(publicListingHref({ public_category: "coliving", public_slug: null, zillow_url: null, status: "active" }), null);
 
 assert.deepEqual(publicListingHref({ public_category: "coliving", public_slug: "adair", zillow_url: "https://zillow.com/x", status: "active" }), {
-  href: "/listing/adair",
+  href: "/listings/adair",
   external: false,
   cta: "VIEW THE OFFERING →",
 });
@@ -59,7 +59,7 @@ assert.equal(
     zillow_url: "https://www.zillow.com/homedetails/975-Welch-St",
     status: "archived",
   })?.href,
-  "/listing/grant",
+  "/listings/grant",
   "off-market keeps the internal page and drops Zillow",
 );
 
@@ -147,7 +147,7 @@ const cardSource = {
 const card = toPublicIndexCard(cardSource);
 assert.equal(card.tag, "COLIVING");
 assert.equal(card.tagColor, "#cc4a37");
-assert.equal(card.href, "/listing/the-adair");
+assert.equal(card.href, "/listings/the-adair");
 assert.equal(card.showMapPin, false, "coliving is private even when active with a slug");
 assert.equal(card.lat, null);
 assert.equal(card.lng, null);
@@ -187,7 +187,7 @@ const privateStreet = toPublicIndexCard({
 });
 assert.equal(privateStreet.name, "Atlanta metro");
 assert.equal(privateStreet.submarketLabel, "ATLANTA METRO");
-assert.equal(privateStreet.href, "/listing/the-adair");
+assert.equal(privateStreet.href, "/listings/the-adair");
 assert.equal(privateStreet.showMapPin, false);
 assert.equal(JSON.stringify(privateStreet).includes("Gillette"), false);
 assert.equal(JSON.stringify(privateStreet).includes("30310"), false);
@@ -263,8 +263,9 @@ const toggle = read("components/listings/PublicPageToggle.tsx");
 assert.ok(toggle.includes("already appear on the public board"));
 assert.ok(toggle.includes("does") && toggle.includes("not hide them"));
 
-const header = read("components/listings/index/ListingsIndexHeader.tsx");
-assert.ok(header.includes("BOOK A CALL"));
-assert.ok(header.includes("/book"));
+const viewToggle = read("components/listings/index/ListingsViewToggle.tsx");
+assert.ok(viewToggle.includes("#sold"), "sold stays reachable from the list/map row");
+assert.equal(read("app/listing/page.tsx").includes("ListingsIndexHeader"), false);
+assert.equal(read("app/listing/map/page.tsx").includes("ListingsIndexHeader"), false);
 
 console.log("public-index proof: ok");

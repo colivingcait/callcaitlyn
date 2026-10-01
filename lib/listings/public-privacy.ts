@@ -99,7 +99,7 @@ export function publicListingHref(listing: PublicListingPrivacyInput & {
     return { href: listing.zillow_url, external: true, cta: externalListingCta(listing.zillow_url) };
   }
   if (listing.public_slug) {
-    return { href: `/listing/${listing.public_slug}`, external: false, cta: "VIEW THE OFFERING →" };
+    return { href: `/listings/${listing.public_slug}`, external: false, cta: "VIEW THE OFFERING →" };
   }
   return null;
 }

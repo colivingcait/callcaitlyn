@@ -67,7 +67,7 @@ export function verifyWorkbookDownloadToken(slug: string, token: string): boolea
 
 export function workbookDownloadPath(slug: string, ttlSeconds = WORKBOOK_TTL_SECONDS): string {
   const token = createWorkbookDownloadToken(slug, Date.now() + ttlSeconds * 1000);
-  return `/listing/${encodeURIComponent(slug)}/workbook?t=${encodeURIComponent(token)}`;
+  return `/listings/${encodeURIComponent(slug)}/workbook?t=${encodeURIComponent(token)}`;
 }
 
 export function contentDispositionAttachment(filename: string): string {

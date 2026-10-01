@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { BookingFlow } from "@/components/booking/BookingFlow";
 import { SellerAnalysisSheet } from "./SellerAnalysisForm";
 
@@ -102,9 +101,10 @@ export function BookCallButton({
   const sheets = usePublicSheets();
   return (
     <>
-      <Link href="/book" className={`om-book-link ${className ?? ""}`} style={style}>
+      {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+      <a href="/book" className={`om-book-link ${className ?? ""}`} style={style}>
         {children}
-      </Link>
+      </a>
       <button type="button" className={`om-book-sheet ${className ?? ""}`} style={{ ...bookButtonStyle, ...style }} onClick={() => sheets?.openBook()}>
         {children}
       </button>
