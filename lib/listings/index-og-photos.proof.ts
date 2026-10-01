@@ -86,5 +86,27 @@ const image = read("lib/og/listing-og.tsx");
 assert.ok(image.includes("photoDataUrl"));
 assert.ok(image.includes("getIndexOgInteriorPhotoUrls"));
 assert.equal(image.includes("alt=\"\""), true);
+const indexCard = image.slice(image.indexOf("function IndexCard"), image.indexOf("function statusPill"));
+assert.ok(indexCard.includes("Cormorant Garamond"));
+assert.ok(indexCard.includes("DM Sans"));
+assert.ok(indexCard.includes("GOLD"));
+assert.ok(indexCard.includes("INDEX_CREAM"));
+assert.ok(image.includes('const GOLD = "#C4955A"'));
+assert.ok(image.includes('const INDEX_CREAM = "#FAF7F2"'));
+assert.ok(indexCard.includes("LISTINGS · ATLANTA METRO"));
+assert.equal(indexCard.includes("borderRadius"), false);
+assert.equal(indexCard.includes("#A8462A"), false);
+assert.equal(indexCard.includes("#cc4a37"), false);
+assert.ok(image.includes("function ListingCard"));
+assert.ok(image.includes("background: TERRACOTTA"));
+const fonts = read("lib/og/fonts.ts");
+const listingFonts = fonts.slice(fonts.indexOf("async function readOgFonts"), fonts.indexOf("export function loadOgFonts"));
+assert.equal(listingFonts.includes("Cormorant"), false);
+assert.ok(fonts.includes("CormorantGaramond-Regular.ttf"));
+assert.ok(fonts.includes("CormorantGaramond-LightItalic.ttf"));
+assert.ok(fonts.includes("DMSans-Light.ttf"));
+for (const file of ["CormorantGaramond-Regular.ttf", "CormorantGaramond-LightItalic.ttf", "DMSans-Light.ttf"]) {
+  assert.ok(read(`assets/fonts/${file}`).length > 1000, file);
+}
 
 console.log("index og photos proof ok");

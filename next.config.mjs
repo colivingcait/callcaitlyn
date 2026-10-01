@@ -60,7 +60,7 @@ const nextConfig = {
   // Dynamic OG routes read these TTFs at request time. The path is built
   // with process.cwd(), which the file tracer does not follow on its own.
   outputFileTracingIncludes: {
-    "/listing/**": ["./assets/fonts/**/*"],
+    "/listing/**": ["./assets/fonts/**/*", "./assets/brand/**/*"],
   },
   async headers() {
     return [
