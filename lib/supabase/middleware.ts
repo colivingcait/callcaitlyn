@@ -53,7 +53,14 @@ export async function updateSession(request: NextRequest) {
   // session too. The bare "/book" (no trailing slash) is the easy
   // generic address, distinct from "/book/{slug}" contact links - both
   // need the bypass.
-  const isPublicBooking = request.nextUrl.pathname === "/book" || request.nextUrl.pathname.startsWith("/book/");
+  // /public-book is the alias the marketing site rewrites to. Middleware
+  // runs before beforeFiles rewrites, so the alias must be public too or
+  // visitors are bounced to /login before the rewrite to /book.
+  const isPublicBooking =
+    request.nextUrl.pathname === "/book" ||
+    request.nextUrl.pathname.startsWith("/book/") ||
+    request.nextUrl.pathname === "/public-book" ||
+    request.nextUrl.pathname.startsWith("/public-book/");
   // The "confirm this time?" page for a proposed-new-time text - opened by
   // the visitor from that text, not the logged-in agent.
   const isPublicConfirm = request.nextUrl.pathname.startsWith("/confirm/");
@@ -61,7 +68,12 @@ export async function updateSession(request: NextRequest) {
   // (/listing overview + /listing/[slug]) - opened by an agent or investor
   // she shared the link with, not the logged-in agent. Distinct from the
   // authenticated /listings (plural) reverse-prospecting section.
-  const isPublicListing = request.nextUrl.pathname === "/listing" || request.nextUrl.pathname.startsWith("/listing/");
+  // /public-listings is the pre-rewrite alias, same as /public-book.
+  const isPublicListing =
+    request.nextUrl.pathname === "/listing" ||
+    request.nextUrl.pathname.startsWith("/listing/") ||
+    request.nextUrl.pathname === "/public-listings" ||
+    request.nextUrl.pathname.startsWith("/public-listings/");
   // Webhooks (Quo, and any future integration) authenticate via their own
   // signature, not a Supabase session - they must bypass the login guard.
   // Same for cron jobs (authenticate via CRON_SECRET, no browser session),
@@ -82,6 +94,7 @@ export async function updateSession(request: NextRequest) {
   const isPublicAsset =
     request.nextUrl.pathname.startsWith("/manifest.json") ||
     request.nextUrl.pathname.startsWith("/_next") ||
+    request.nextUrl.pathname.startsWith("/crm-static") ||
     request.nextUrl.pathname.startsWith("/favicon") ||
     request.nextUrl.pathname.startsWith("/sw.js") ||
     request.nextUrl.pathname === "/robots.txt" ||

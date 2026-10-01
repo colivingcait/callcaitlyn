@@ -14,6 +14,7 @@ import {
   GATED_MONTHLY_DOLLAR_FIELDS,
 } from "./gated-underwriting";
 import { SIDECAR_FIELD_MAP } from "./om-sidecar";
+import { CAITLYN_HEADSHOT_SRC, crmPublicAsset } from "../brand/caitlyn";
 
 // Locked Marketing/OM SoT: PadSplit ID, exterior photo skip, workbook-only
 // upload, process 4-up, monthly gated underwriting. Run with:
@@ -128,7 +129,9 @@ const slotEnd = contactCard.indexOf("</div>", slotStart);
 const photoSlot = contactCard.slice(slotStart, slotEnd);
 assert.ok(photoSlot.includes("CAITLYN_HEADSHOT_SRC"), "headshot src is set on the photo slot");
 assert.ok(photoSlot.includes("backgroundImage"), "slot paints the headshot as its background");
-assert.ok(photoSlot.includes("url(${CAITLYN_HEADSHOT_SRC})"), "background-image reuses CAITLYN_HEADSHOT_SRC");
+assert.ok(photoSlot.includes("url(${crmPublicAsset(CAITLYN_HEADSHOT_SRC)})"), "background-image reuses the CRM-absolute headshot");
+assert.equal(crmPublicAsset(CAITLYN_HEADSHOT_SRC), "https://crm.callcaitlyn.com/images/checkin/caitlyn.jpg");
+assert.equal(CAITLYN_HEADSHOT_SRC, "/images/checkin/caitlyn.jpg", "CRM chrome keeps the root-relative headshot path");
 assert.equal(photoSlot.includes("repeating-linear-gradient"), false, "no stripe placeholder styles remain on the contact slot when headshot src is set");
 assert.equal(/stripe|placeholder/i.test(photoSlot), false, "no stripe/placeholder classes remain on the contact slot when headshot src is set");
 assert.ok(contactCard.includes('transformOrigin: "center 14%"'), "standing portrait is face-cropped in the 84×104 slot");
