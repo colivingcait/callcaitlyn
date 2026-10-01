@@ -83,6 +83,9 @@
 .cc-eyebrow-on-photo::before {
   background: #e8d5b5;
 }
+.om-agent-eye .cc-eyebrow {
+  white-space: nowrap;
+}
 .listings-h1-tail,
 #offer h2 em {
   white-space: nowrap;
@@ -397,7 +400,7 @@ main {
     border-right: none !important;
   }
   .om-h1 {
-    font-size: 40px !important;
+    font-size: 44px !important;
   }
   .om-process {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
@@ -498,7 +501,7 @@ main {
     padding: 6px 10px;
   }
   .om-h1 {
-    font-size: 40px !important;
+    font-size: 44px !important;
     line-height: 1.04 !important;
     margin-top: 8px !important;
   }

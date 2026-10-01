@@ -288,7 +288,7 @@ export default async function PublicListingsOverviewPage({
         )}
 
         <section className="listings-mobile-only listings-seller" style={{ marginTop: 40, background: "#1C1917", color: "#f4f1ec", padding: "26px 18px 28px" }}>
-          <p className="cc-eyebrow cc-eyebrow-on-photo">For PadSplit owners</p>
+          <p className="cc-eyebrow">For PadSplit owners</p>
           <h2 style={{ margin: "16px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 400, fontSize: 30, lineHeight: 1.16, color: "#fff" }}>What would your PadSplit <em>sell for?</em></h2>
           <p style={{ margin: "12px 0 0", fontSize: 15, lineHeight: 1.7, color: "#d6cfc5" }}>
             A coliving house gets priced with a combination of local comps and the income the asset produces. Get an idea of what yours could sell for here.
