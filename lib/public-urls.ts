@@ -19,6 +19,30 @@ export function publicBookUrl(path?: string): string {
   return cleaned ? `${base}/${cleaned}` : base;
 }
 
+// www.colivingcait.com proxies /listings and /book onto this app. File-based
+// OG routes resolve against metadataBase (the CRM host), and on preview Next
+// ignores metadataBase for those files. Public pages set these absolute URLs
+// instead. The CRM /listing and /book image routes stay up for old shares.
+export type PublicOgImage = { url: string; width: 1200; height: 630; alt: string };
+
+export function publicOgImage(url: string, alt: string): PublicOgImage {
+  return { url, width: 1200, height: 630, alt };
+}
+
+export function publicListingImageUrls(slug?: string, version?: string): { openGraph: string; twitter: string } {
+  const base = slug ? publicListingUrl(slug) : PUBLIC_LISTINGS_URL;
+  const suffix = version ? `/${encodeURIComponent(version)}` : "";
+  return {
+    openGraph: `${base}/opengraph-image${suffix}`,
+    twitter: `${base}/twitter-image${suffix}`,
+  };
+}
+
+export function publicBookImageUrl(path?: string): string {
+  const segment = path ? encodeURIComponent(path.replace(/^\/+/, "").replace(/\/+$/, "")) : "";
+  return `${publicBookUrl(segment || undefined)}/opengraph-image`;
+}
+
 // Site-relative path on www.colivingcait.com. Hash and already-absolute
 // URLs are left alone (footer social placeholders and Instagram).
 export function publicSiteUrl(path = "/"): string {

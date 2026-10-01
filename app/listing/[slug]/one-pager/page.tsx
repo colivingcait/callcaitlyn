@@ -5,7 +5,8 @@ import { formatPublicBand } from "@/lib/listings/public-bands";
 import { isProjectedOpex } from "@/lib/listings/data-basis";
 import { DataBasisNote, ProjectedMark } from "@/components/listings/om/DataBasisNote";
 import { formatCurrency } from "@/lib/utils";
-import { publicListingUrl } from "@/lib/public-urls";
+import { buildOgListingCard } from "@/lib/listings/og-card";
+import { publicListingImageUrls, publicListingUrl, publicOgImage } from "@/lib/public-urls";
 
 export const dynamic = "force-dynamic";
 
@@ -17,10 +18,19 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const listing = await getPublicListing(slug);
   const nickname = listing ? publicListingPrivacy(listing).displayTitle : "One-pager";
   const canonical = `${publicListingUrl(slug)}/one-pager`;
+  const card = listing ? buildOgListingCard(listing) : null;
+  const images = card ? publicListingImageUrls(slug, card.version) : null;
   return {
     title: `${nickname} — one-pager`,
     alternates: { canonical },
-    openGraph: { title: `${nickname} — one-pager`, url: canonical },
+    openGraph: {
+      title: `${nickname} — one-pager`,
+      url: canonical,
+      ...(images && card ? { images: [publicOgImage(images.openGraph, card.title)] } : {}),
+    },
+    ...(images && card
+      ? { twitter: { card: "summary_large_image" as const, images: [publicOgImage(images.twitter, card.title)] } }
+      : {}),
   };
 }
 

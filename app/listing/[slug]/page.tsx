@@ -19,7 +19,7 @@ import { formatPublicBand } from "@/lib/listings/public-bands";
 import { isProjectedOpex, showHeroCapRate } from "@/lib/listings/data-basis";
 import { DataBasisNote, ProjectedMark } from "@/components/listings/om/DataBasisNote";
 import { CAITLYN_HEADSHOT_SRC, crmPublicAsset } from "@/lib/brand/caitlyn";
-import { publicListingUrl } from "@/lib/public-urls";
+import { publicListingImageUrls, publicListingUrl, publicOgImage } from "@/lib/public-urls";
 
 function roomRateLabel(low: number | null, high: number | null): string | null {
   if (low == null || high == null) return null;
@@ -96,12 +96,23 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   const card = buildOgListingCard(listing);
   const canonical = publicListingUrl(slug);
+  const images = publicListingImageUrls(slug, card.version);
   return {
     title: card.title,
     description: card.description,
     alternates: { canonical },
-    openGraph: { title: card.title, description: card.description, url: canonical },
-    twitter: { card: "summary_large_image", title: card.title, description: card.description },
+    openGraph: {
+      title: card.title,
+      description: card.description,
+      url: canonical,
+      images: [publicOgImage(images.openGraph, card.title)],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: card.title,
+      description: card.description,
+      images: [publicOgImage(images.twitter, card.title)],
+    },
   };
 }
 

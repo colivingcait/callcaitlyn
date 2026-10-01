@@ -64,7 +64,7 @@ function indexPhotoSlot(src: string | null, index: number) {
 
 function IndexCard({ photos, wordmark }: { photos: [string | null, string | null]; wordmark: string }) {
   return (
-    <div style={{ width: 1200, height: 630, display: "flex", background: INDEX_CREAM, overflow: "hidden" }}>
+    <div style={{ width: 1200, height: 630, display: "flex", background: INDEX_CREAM }}>
       <div
         style={{
           width: 680,
@@ -77,7 +77,7 @@ function IndexCard({ photos, wordmark }: { photos: [string | null, string | null
         }}
       >
         <div style={{ display: "flex", alignItems: "center" }}>
-          <div style={{ width: 32, height: 1, background: GOLD, display: "flex" }} />
+          <div style={{ width: 32, height: 1, backgroundColor: GOLD, flexShrink: 0 }} />
           <div
             style={{
               marginLeft: 12,

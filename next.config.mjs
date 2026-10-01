@@ -43,8 +43,9 @@ const nextConfig = {
     // One path segment, and not the index OG/Twitter image, the nested
     // sitemap, or /listing/map (that one has its own rule). [^/]+ keeps
     // :slug from swallowing /workbook, /om.pdf, /one-pager, or
-    // /opengraph-image under a slug. Those stay on this host so metadataBase
-    // can still load file-based OG images from the CRM.
+    // /opengraph-image under a slug. Those stay on this host so already-shared
+    // CRM image URLs keep returning 200. Public metadata points og:image and
+    // twitter:image at www.colivingcait.com.
     const listingSlug = ":slug((?!opengraph-image$|twitter-image$|sitemap\\.xml$|map$)[^/]+)";
     // One or more segments, none of which is an OG or Twitter image.
     const bookPath = ":path((?!(?:[^/]+/)*(?:opengraph-image|twitter-image)(?:/|$))(?:[^/]+/)*[^/]+)";
