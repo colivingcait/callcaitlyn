@@ -274,8 +274,12 @@ main {
 }
 
 /* Desktop hero: photo stays visible up top; title and the stat band sit on the lower scrim. */
+.om-hero-stack {
+  position: relative;
+}
+
 @media (min-width: 901px) {
-  .om-hero {
+  .om-hero:not(.om-hero-open) {
     height: 680px !important;
     min-height: 680px !important;
   }
@@ -453,14 +457,26 @@ main {
     margin-top: 6px !important;
   }
   .om-stats-wrap {
+    margin-top: 0 !important;
+    padding-top: 8px !important;
     padding-bottom: 20px !important;
+    background: #211c19 !important;
   }
-  .om-hero {
-    height: 292px !important;
-    min-height: 292px !important;
+  .om-hero:not(.om-hero-open) {
+    height: 300px !important;
+    min-height: 300px !important;
   }
   .om-hero-scrim {
-    background: linear-gradient(to top, #211c19 0%, rgba(33, 28, 25, 0.92) 22%, rgba(33, 28, 25, 0.55) 46%, rgba(33, 28, 25, 0) 82%) !important;
+    display: none !important;
+  }
+  .om-hero-chrome {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    background: #211c19;
+    padding: 26px 16px 0 !important;
   }
   .om-hero-counter {
     display: block !important;
@@ -475,11 +491,8 @@ main {
     background: rgba(33, 28, 25, 0.6);
     padding: 6px 10px;
   }
-  .om-hero-chrome {
-    padding: 0 16px 16px !important;
-  }
   .om-h1 {
-    font-size: 34px !important;
+    font-size: 44px !important;
     line-height: 1.04 !important;
     margin-top: 8px !important;
   }

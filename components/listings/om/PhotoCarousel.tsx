@@ -83,8 +83,9 @@ export function PhotoCarousel({
   const viewPhotosCountLabel = count > 0 ? `VIEW ${count} PHOTOS` : viewPhotosLabel;
 
   return (
+    <div className="om-hero-stack">
     <section
-      className="om-hero"
+      className={photoMode ? "om-hero om-hero-open" : "om-hero"}
       style={{
         position: "relative",
         height: photoMode ? 760 : 520,
@@ -96,15 +97,15 @@ export function PhotoCarousel({
         backgroundPosition: "center 62%",
       }}
     >
+      {!photoMode && <div className="om-hero-scrim" style={{ position: "absolute", inset: 0, background: SCRIM }} />}
+      {!photoMode && count > 0 && (
+        <p className="om-hero-counter" style={{ margin: 0 }}>
+          {counter}
+        </p>
+      )}
+    </section>
       {!photoMode && (
-        <>
-          <div className="om-hero-scrim" style={{ position: "absolute", inset: 0, background: SCRIM }} />
-          {count > 0 && (
-            <p className="om-hero-counter" style={{ margin: 0 }}>
-              {counter}
-            </p>
-          )}
-          <div className="om-hero-chrome om-gutter" style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "0 28px 30px" }}>
+          <div className="om-hero-chrome om-gutter" style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "0 28px 30px", zIndex: 2 }}>
             <div style={{ margin: "0 auto", maxWidth: 1180 }}>
               <p className="om-eyebrow-full cc-eyebrow cc-eyebrow-on-photo">{eyebrow}</p>
               <p className="om-eyebrow-mobile" style={{ margin: 0, fontSize: 11, fontWeight: 500, letterSpacing: "0.2em", color: "#E8D5B5" }}>{mobileEyebrow}</p>
@@ -151,7 +152,6 @@ export function PhotoCarousel({
               </div>
             </div>
           </div>
-        </>
       )}
 
       {photoMode && current && (
@@ -267,6 +267,6 @@ export function PhotoCarousel({
           </div>
         </div>
       )}
-    </section>
+    </div>
   );
 }
