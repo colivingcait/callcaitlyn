@@ -1,11 +1,22 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { PUBLIC_LISTINGS_URL } from "@/lib/public-urls";
+
+export const metadata: Metadata = {
+  title: "Page not found | Coliving Cait",
+  manifest: null,
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Coliving Cait",
+  },
+};
 
 export default function NotFound() {
   return (
     <main className="flex min-h-dvh items-center justify-center bg-neutral-50 px-4 text-center">
       <div className="max-w-sm">
-        <p className="font-serif text-3xl font-semibold text-neutral-900">CallCaitlyn</p>
+        <p className="font-serif text-3xl font-semibold text-neutral-900">Coliving Cait</p>
         <p className="mt-3 text-[15px] text-neutral-600">That page isn&apos;t here.</p>
         <div className="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-2 text-sm font-semibold text-brand-700">
           <Link href="/book">Book a call</Link>
