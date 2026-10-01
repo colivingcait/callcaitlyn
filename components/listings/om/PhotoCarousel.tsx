@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { PadsplitPhoto } from "@/types/database";
 
 const SCRIM =
-  "linear-gradient(to top, #211c19 0%, rgba(33,28,25,0.97) 26%, rgba(33,28,25,0.75) 45%, rgba(33,28,25,0.1) 72%, rgba(33,28,25,0) 100%)";
+  "linear-gradient(180deg, rgba(28,25,23,0) 30%, rgba(28,25,23,0.78) 72%, rgba(28,25,23,0.94) 100%)";
 
 const arrowStyle: React.CSSProperties = {
   position: "absolute",
@@ -111,19 +111,19 @@ export function PhotoCarousel({
               <h1
                 className="om-h1"
                 style={{
-                  margin: "12px 0 0",
+                  margin: "16px 0 0",
                   fontFamily: "var(--font-om-serif)",
-                  fontWeight: 600,
-                  fontSize: 62,
+                  fontWeight: 400,
+                  fontSize: 64,
                   lineHeight: 1.02,
                   letterSpacing: "-0.02em",
-                  color: "#f4f1ec",
+                  color: "#fff",
                 }}
               >
                 {nickname}
               </h1>
               <div className="om-hero-actions" style={{ marginTop: 18, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 18, flexWrap: "wrap" }}>
-                {summary ? <p className="om-hero-summary" style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: "#ded6cc" }}>{summary}</p> : <span className="om-hero-summary" />}
+                {summary ? <p className="om-hero-summary" style={{ margin: 0, fontSize: 16, lineHeight: 1.6, color: "#E9E2D8" }}>{summary}</p> : <span className="om-hero-summary" />}
                 {count > 0 && (
                   <button
                     type="button"
@@ -132,13 +132,13 @@ export function PhotoCarousel({
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: 12,
-                      border: "1px solid #C4955A",
-                      background: "#C4955A",
-                      padding: "12px 18px",
-                      font: "600 12px/1 var(--font-om-sans), Archivo, sans-serif",
+                      gap: 8,
+                      border: "1px solid #fff",
+                      background: "#fff",
+                      padding: "15px 26px",
+                      font: "500 11px/1 var(--font-om-sans), \"DM Sans\", sans-serif",
                       letterSpacing: "0.12em",
-                      color: "#fff",
+                      color: "#1C1917",
                       cursor: "pointer",
                       whiteSpace: "nowrap",
                     }}

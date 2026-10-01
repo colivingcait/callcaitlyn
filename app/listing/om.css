@@ -272,6 +272,27 @@ main {
 .om-header-nav a:hover {
   color: #1c1917;
 }
+
+/* Desktop hero: photo stays visible up top; title and the stat band sit on the lower scrim. */
+@media (min-width: 901px) {
+  .om-hero {
+    height: 680px !important;
+    min-height: 680px !important;
+  }
+  .om-hero-chrome {
+    bottom: 156px !important;
+  }
+  .om-stats-wrap {
+    margin-top: -156px !important;
+    position: relative;
+    z-index: 2;
+    background: transparent !important;
+  }
+  .om-stat-value {
+    font-size: 40px !important;
+    font-weight: 400 !important;
+  }
+}
 .om-header-menu,
 .om-header-drawer {
   display: none;

@@ -170,18 +170,18 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
         <PhotoCarousel photos={listing.photos} coverUrl={listing.coverPhotoUrl} nickname={nickname} eyebrow={eyebrow} summary={story} />
 
         <div className="om-stats-wrap om-gutter" style={{ background: "#211c19", color: "#f4f1ec", padding: "0 28px 34px" }}>
-          <div className="om-stats" style={{ margin: "0 auto", maxWidth: 1180, display: "grid", gridTemplateColumns: showHeroCap ? "repeat(4, minmax(0,1fr))" : "repeat(3, minmax(0,1fr))", borderTop: "1px solid #3a322c" }}>
-            <div className="om-stat-asking" style={{ padding: "20px 24px 22px 0", borderRight: "1px solid #3a322c" }}>
-              <p className="om-stat-label" style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#a39a8e" }}>ASKING PRICE</p>
+          <div className="om-stats" style={{ margin: "0 auto", maxWidth: 1180, display: "grid", gridTemplateColumns: showHeroCap ? "repeat(4, minmax(0,1fr))" : "repeat(3, minmax(0,1fr))", borderTop: "1px solid rgba(255,255,255,0.16)" }}>
+            <div className="om-stat-asking" style={{ padding: "24px 24px 30px 0", borderRight: "1px solid rgba(255,255,255,0.16)" }}>
+              <p className="om-stat-label" style={{ margin: 0, fontSize: 10, fontWeight: 500, letterSpacing: "0.2em", color: "#CFC6BA" }}>ASKING PRICE</p>
               <p className="om-stat-value" style={{ margin: "10px 0 0", fontFamily: "var(--font-om-serif)", fontSize: 36, lineHeight: 1, color: "#f4f1ec" }}>{formatCurrency(listing.list_price)}</p>
-              {perRoom && <p className="om-stat-caption" style={{ margin: "7px 0 0", fontSize: 13, color: "#b3aaa0" }}>{perRoom} per room</p>}
+              {perRoom && <p className="om-stat-caption" style={{ margin: "8px 0 0", fontSize: 12, color: "#CFC6BA" }}>{perRoom} per room</p>}
             </div>
-            <div className="om-stat-beds" style={{ padding: "20px 24px 22px", borderRight: "1px solid #3a322c" }}>
-              <p className="om-stat-label" style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#a39a8e" }}>BEDS / BATHS</p>
+            <div className="om-stat-beds" style={{ padding: "24px 24px 30px", borderRight: "1px solid rgba(255,255,255,0.16)" }}>
+              <p className="om-stat-label" style={{ margin: 0, fontSize: 10, fontWeight: 500, letterSpacing: "0.2em", color: "#CFC6BA" }}>BEDS / BATHS</p>
               <p className="om-stat-value" style={{ margin: "10px 0 0", fontFamily: "var(--font-om-serif)", fontSize: 36, lineHeight: 1, color: "#f4f1ec" }}>
-                {specs[0] ?? "—"} <span className="om-stat-unit" style={{ fontSize: 20, color: "#a39a8e" }}>bd</span> / {specs[1] ?? "—"} <span className="om-stat-unit" style={{ fontSize: 20, color: "#a39a8e" }}>ba</span>
+                {specs[0] ?? "—"} <span className="om-stat-unit" style={{ fontSize: 22, color: "#CFC6BA" }}>bd</span> / {specs[1] ?? "—"} <span className="om-stat-unit" style={{ fontSize: 22, color: "#CFC6BA" }}>ba</span>
               </p>
-              <p className="om-stat-caption" style={{ margin: "7px 0 0", fontSize: 13, color: "#b3aaa0" }}>
+              <p className="om-stat-caption" style={{ margin: "8px 0 0", fontSize: 12, color: "#CFC6BA" }}>
                 {[
                   listing.private_bathrooms != null && listing.private_bathrooms > 0
                     ? `${listing.private_bathrooms} private bathroom${listing.private_bathrooms === 1 ? "" : "s"}`
@@ -193,8 +193,8 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
               </p>
             </div>
             {showHeroCap && (
-            <div className="om-stat-cap" style={{ padding: "20px 24px 22px", borderRight: "1px solid #3a322c" }}>
-              <p className="om-stat-label" style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#a39a8e" }}>
+            <div className="om-stat-cap" style={{ padding: "24px 24px 30px", borderRight: "1px solid rgba(255,255,255,0.16)" }}>
+              <p className="om-stat-label" style={{ margin: 0, fontSize: 10, fontWeight: 500, letterSpacing: "0.2em", color: "#CFC6BA" }}>
                 CAP RATE
                 {projectedOpex && capBand ? <ProjectedMark tone="light" /> : null}
               </p>
@@ -205,10 +205,10 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                   </a>
                 )}
               </p>
-              <p className="om-stat-caption" style={{ margin: "7px 0 0", fontSize: 13, color: "#b3aaa0" }}>{capBand ? "On in-place income" : "Share contact info to see the numbers"}</p>
+              <p className="om-stat-caption" style={{ margin: "8px 0 0", fontSize: 12, color: "#CFC6BA" }}>{capBand ? "On in-place income" : "Share contact info to see the numbers"}</p>
             </div>
             )}
-            <div className="om-stat-occ" style={{ padding: "20px 0 22px 24px" }}>
+            <div className="om-stat-occ" style={{ padding: "24px 0 30px 24px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ width: 6, height: 6, borderRadius: 999, background: "#C4955A", boxShadow: "0 0 0 3px rgba(196,149,90,0.22)" }} />
                 <p className="om-stat-label" style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#E8D5B5", whiteSpace: "nowrap" }}>LIVE OCCUPANCY</p>
@@ -216,13 +216,13 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
               <p className="om-stat-value" style={{ margin: "10px 0 0", fontFamily: "var(--font-om-serif)", fontSize: 36, lineHeight: 1, color: "#f4f1ec" }}>
                 {hasOccupancy ? (
                   <>
-                    {liveOccupied} <span className="om-stat-unit" style={{ fontSize: 20, color: "#a39a8e" }}>of {liveTotal}</span>
+                    {liveOccupied} <span className="om-stat-unit" style={{ fontSize: 22, color: "#CFC6BA" }}>of {liveTotal}</span>
                   </>
                 ) : (
                   "—"
                 )}
               </p>
-              <p className="om-stat-caption" style={{ margin: "7px 0 0", fontSize: 13, color: "#b3aaa0" }}>From PadSplit · pulled daily</p>
+              <p className="om-stat-caption" style={{ margin: "8px 0 0", fontSize: 12, color: "#CFC6BA" }}>From PadSplit · pulled daily</p>
             </div>
           </div>
         </div>
@@ -234,10 +234,10 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
               <section className="om-block om-block-offering">
                 {publicDescription && (
                   <>
-                    <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.2em", color: "#8B6535" }}>THE OFFERING</p>
+                    <p className="cc-eyebrow">The offering</p>
                     <div className="om-offering-grid" style={{ marginTop: 20, display: "grid", gap: 20, fontSize: 17, lineHeight: 1.75, color: "#2e2823", maxWidth: "66ch" }}>
                       {publicDescription.split(/\n{2,}/).map((para, i) => (
-                        <p key={i} className={i === 0 ? "om-offer-lead" : "om-offer-rest"} style={i === 0 ? { margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 26, lineHeight: 1.45, color: "#211c19" } : { margin: 0 }}>
+                        <p key={i} className={i === 0 ? "om-offer-lead" : "om-offer-rest"} style={i === 0 ? { margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 400, fontSize: 30, lineHeight: 1.25, letterSpacing: "-0.01em", color: "#1C1917" } : { margin: 0 }}>
                           {para}
                         </p>
                       ))}
