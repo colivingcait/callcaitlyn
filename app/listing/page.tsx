@@ -265,6 +265,9 @@ export default async function PublicListingsOverviewPage({
                 {sold.map((entry) => (
                   <div key={entry.id} style={{ background: "#211c19", padding: "4px 22px 6px 0" }}>
                     <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#a39a8e" }}>{entry.closed}</p>
+                    {entry.locationLabel && (
+                      <p style={{ margin: "10px 0 0", fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#e9a396" }}>{entry.locationLabel.toUpperCase()}</p>
+                    )}
                     <p style={{ margin: "10px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 21, lineHeight: 1.2, color: "#f4f1ec" }}>{entry.name}</p>
                     {entry.detail && <p style={{ margin: "9px 0 0", fontSize: 13, color: "#b3aaa0" }}>{entry.detail}</p>}
                   </div>
@@ -308,11 +311,11 @@ export default async function PublicListingsOverviewPage({
                 BOOK A CALL
               </BookCallButton>
               <a
-                href="tel:+16788848494"
+                href="tel:+16788844494"
                 className="listings-book-secondary"
                 style={{ display: "block", border: "1px solid #211c19", color: "#211c19", textAlign: "center", padding: "15px 22px", fontSize: 13, fontWeight: 600, letterSpacing: "0.12em" }}
               >
-                (678) 884-8494
+                678-884-4494
               </a>
               <p className="listings-email-desktop" style={{ margin: "6px 0 0", fontSize: 13, color: "#6b6259", textAlign: "center" }}>cv.sellshomes@gmail.com</p>
               <a className="listings-email-mobile" href="mailto:cv.sellshomes@gmail.com" style={{ display: "block", marginTop: 6, fontSize: 13, color: "#6b6259", textAlign: "center" }}>

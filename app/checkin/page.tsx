@@ -31,8 +31,8 @@ export default function CheckInIndexPage() {
             Book a call
           </Link>
           {" · "}
-          <a href="tel:+16788848494" className="underline underline-offset-2">
-            (678) 884-8494
+          <a href="tel:+16788844494" className="underline underline-offset-2">
+            678-884-4494
           </a>
         </p>
       </div>

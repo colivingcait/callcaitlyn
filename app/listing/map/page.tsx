@@ -25,6 +25,7 @@ export default async function PublicListingsMapPage({
   const raw = searchParams ? await searchParams : {};
   const search = listingsQueryString(raw);
   const { available } = await getPublicListingsIndex();
+  const mapped = available.filter((listing) => listing.showMapPin);
 
   return (
     <div className="om-page listings-map-page" style={{ fontFamily: "var(--font-om-sans), Archivo, ui-sans-serif, system-ui, sans-serif", background: "#f4f1ec", color: "#211c19", minHeight: "100dvh", overflowX: "clip" }}>
@@ -38,7 +39,7 @@ export default async function PublicListingsMapPage({
           <h1 style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 32, lineHeight: 1, color: "#211c19" }}>Available listings</h1>
           <ListingsViewToggle active="map" search={search} />
         </div>
-        <ListingsMapCanvas listings={available} />
+        <ListingsMapCanvas listings={mapped} />
       </div>
     </div>
   );

@@ -12,7 +12,7 @@ import type { ActivitySource, ListingFinancials } from "@/types/database";
 const OWNER_ID = process.env.CRM_OWNER_USER_ID;
 // She wants offer terms on her own phone, not only in the CRM - same
 // hardcoded-contact-info convention as AGENT_SIGNATURE elsewhere.
-const OWNER_PHONE = "+16788848494";
+const OWNER_PHONE = "+16788844494";
 // Long enough that a lead who unlocks on a Friday can still open the
 // documents Monday, short enough that an old link floating around doesn't
 // keep working indefinitely.

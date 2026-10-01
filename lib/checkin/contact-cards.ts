@@ -29,7 +29,7 @@ export const CAITLYN_CARD: ContactCard = {
   name: "Caitlyn Verdugo",
   role: "Realtor | Investor, Keller Williams Metro Atlanta",
   photo: CAITLYN_HEADSHOT_SRC,
-  phone: "(678) 884-8494",
+  phone: "678-884-4494",
   email: "cv.sellshomes@gmail.com",
   bookingUrl: "/book",
 };

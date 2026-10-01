@@ -12,7 +12,7 @@ import { UnlockedProvider } from "@/components/listings/om/UnlockContext";
 import { OmHeaderNav } from "@/components/listings/om/OmHeaderNav";
 import { BookCallButton, PublicSheetsProvider, SellerAnalysisButton } from "@/components/listings/om/PublicSheets";
 import { ShareRow } from "@/components/listings/om/ShareRow";
-import { publicListingCopy } from "@/lib/listings/public-copy";
+import { publicBodyCopy, publicListingPrivacy } from "@/lib/listings/public-privacy";
 import { asListingFinancials } from "@/lib/listings/crm-marketing-fields";
 import { occupancyFromFinancials, t12OccupancySummary } from "@/lib/listings/occupancy";
 import { formatPublicBand } from "@/lib/listings/public-bands";
@@ -25,7 +25,8 @@ import { publicListingUrl } from "@/lib/public-urls";
 // this must never be served from a stale build-time cache.
 export const dynamic = "force-dynamic";
 
-const OWNER_PHONE_HREF = "tel:+16788848494";
+const OWNER_PHONE_HREF = "tel:+16788844494";
+const OWNER_PHONE_LABEL = "678-884-4494";
 const OWNER_EMAIL = "cv.sellshomes@gmail.com";
 
 const PROCESS_STEPS = [
@@ -51,12 +52,9 @@ const PROCESS_STEPS = [
   },
 ] as const;
 
-function nicknameOf(listing: { nickname: string | null }): string {
-  return publicListingCopy(listing.nickname) || "This PadSplit";
-}
-
-// Never the street address, anywhere - it's shared only at showing.
-// generateMetadata and the OG image both key off the nickname.
+// Public title and place come from publicListingPrivacy. PRIVATE listings
+// never use a street nickname. generateMetadata still uses the OG card,
+// which applies the same street rejection.
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const listing = await getPublicListing(slug);
@@ -79,11 +77,12 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
 
   if (!listing) notFound();
 
-  const nickname = nicknameOf(listing);
-  const story = publicListingCopy(listing.story);
-  const publicDescription = publicListingCopy(listing.public_description);
+  const privacy = publicListingPrivacy(listing);
+  const nickname = privacy.displayTitle;
+  const story = publicBodyCopy(listing.story, privacy);
+  const publicDescription = publicBodyCopy(listing.public_description, privacy);
   const omNumber = listing.om_number || "OM";
-  const eyebrow = ["OFFERING MEMORANDUM", publicListingCopy(listing.submarket), "COLIVING"].filter(Boolean).join(" · ");
+  const eyebrow = ["OFFERING MEMORANDUM", privacy.locationLabel, "COLIVING"].filter(Boolean).join(" · ");
 
   const liveOccupied = listing.liveOccupied;
   const liveTotal = listing.liveTotal;
@@ -97,7 +96,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
   ];
 
   const propertyCells: { label: string; value: string | null }[] = [
-    { label: "PROPERTY TYPE", value: publicListingCopy(listing.property_type) },
+    { label: "PROPERTY TYPE", value: publicBodyCopy(listing.property_type, privacy) },
     { label: "SQUARE FEET", value: listing.sqft ? listing.sqft.toLocaleString() : null },
     { label: "BUILT / RENOVATED", value: [listing.year_built, listing.year_renovated].filter(Boolean).join(" / ") || null },
     {
@@ -105,9 +104,9 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
       value: listing.padsplit_since ? new Date(listing.padsplit_since).toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" }) : null,
     },
     { label: "ROOM RATES", value: hasPriceRange ? `${formatCurrency(listing.price_low)}–${formatCurrency(listing.price_high)} / wk` : null },
-    { label: "PARKING", value: listing.parking },
-    { label: "LAUNDRY", value: listing.laundry },
-    { label: "FURNISHINGS", value: listing.furnishings },
+    { label: "PARKING", value: publicBodyCopy(listing.parking, privacy) },
+    { label: "LAUNDRY", value: publicBodyCopy(listing.laundry, privacy) },
+    { label: "FURNISHINGS", value: publicBodyCopy(listing.furnishings, privacy) },
   ].filter((c) => c.value);
 
   const projectedOpex = isProjectedOpex(listing.data_basis_opex);
@@ -164,7 +163,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
           <p style={{ margin: 0, fontSize: 11, fontWeight: 500, letterSpacing: "0.18em", color: "#6b6259" }}>OFFERING MEMORANDUM · {omNumber} · CONFIDENTIAL</p>
           <p style={{ margin: "8px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 26, color: "#211c19" }}>{nickname}</p>
           <p style={{ margin: "8px 0 0", fontSize: 12, color: "#574f47" }}>
-            Caitlyn Verdugo · Keller Williams Metro Atlanta · (678) 884-8494 · {OWNER_EMAIL}
+            Caitlyn Verdugo · Keller Williams Metro Atlanta · {OWNER_PHONE_LABEL} · {OWNER_EMAIL}
           </p>
         </div>
 
@@ -440,7 +439,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                   </div>
                   <div style={{ borderTop: "1px solid #3a322c", display: "flex", flexDirection: "column" }}>
                     <a href={OWNER_PHONE_HREF} className="om-hover-fill om-agent-phone" style={{ padding: "13px 20px", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 20, color: "#f4f1ec", borderBottom: "1px solid #3a322c" }}>
-                      (678) 884-8494
+                      {OWNER_PHONE_LABEL}
                     </a>
                     <a href={`mailto:${OWNER_EMAIL}`} className="om-hover-fill om-agent-email" style={{ padding: "13px 20px", fontSize: 15, color: "#e9a396", borderBottom: "1px solid #3a322c", overflowWrap: "anywhere" }}>
                       {OWNER_EMAIL}
@@ -485,6 +484,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                     <p className="om-more-label" style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.18em", color: "#6b6259" }}>MORE OF CAITLYN&apos;S LISTINGS</p>
                     {otherListings.map((l) => {
                       const cover = l.coverPhotoUrl;
+                      const other = publicListingPrivacy(l);
                       const occ = l.liveOccupied != null && l.liveTotal != null ? `${l.liveOccupied}/${l.liveTotal} occupied` : "Coming soon";
                       return (
                         <a
@@ -496,11 +496,11 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                           <div style={{ flex: "0 0 58px", height: 58, background: cover ? undefined : "repeating-linear-gradient(135deg, #ece6dd 0 8px, #e2dbd0 8px 16px)" }}>
                             {cover && (
                               // eslint-disable-next-line @next/next/no-img-element
-                              <img src={cover} alt={publicListingCopy(l.nickname) || publicListingCopy(l.property_type) || "Listing"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                              <img src={cover} alt={other.displayTitle} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                             )}
                           </div>
                           <div style={{ minWidth: 0 }}>
-                            <p style={{ margin: 0, fontWeight: 500, fontSize: 16, color: "#211c19" }}>{publicListingCopy(l.nickname) || publicListingCopy(l.property_type) || "Listing"}</p>
+                            <p style={{ margin: 0, fontWeight: 500, fontSize: 16, color: "#211c19" }}>{other.displayTitle}</p>
                             <p style={{ margin: "5px 0 0", fontSize: 13, color: "#574f47" }}>
                               {formatCurrency(l.list_price)} · {l.liveTotal ?? "?"} rooms · {occ}
                             </p>
@@ -623,7 +623,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
               <div>
                 <p className="om-footer-name" style={{ margin: 0, fontWeight: 500, fontSize: 15, color: "#211c19" }}>Caitlyn Verdugo · Keller Williams Metro Atlanta</p>
                 <p className="om-footer-meta" style={{ margin: "7px 0 0", fontSize: 13, color: "#574f47" }}>
-                  101 W Ponce de Leon, Decatur, GA 30030 · <a href={OWNER_PHONE_HREF}>(678) 884-8494</a>
+                  101 W Ponce de Leon, Decatur, GA 30030 · <a href={OWNER_PHONE_HREF}>{OWNER_PHONE_LABEL}</a>
                 </p>
               </div>
             </footer>

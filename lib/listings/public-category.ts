@@ -42,26 +42,6 @@ export function externalListingCta(url: string): string {
   return "VIEW ON ZILLOW ↗";
 }
 
-export function publicListingHref(listing: {
-  public_category: string | null;
-  public_slug: string | null;
-  zillow_url: string | null;
-}): { href: string; external: boolean; cta: string } | null {
-  const category = parsePublicCategory(listing.public_category);
-  if (category === "coliving") {
-    if (listing.public_slug) return { href: `/listings/${listing.public_slug}`, external: false, cta: "VIEW THE OFFERING →" };
-    if (listing.zillow_url) return { href: listing.zillow_url, external: true, cta: externalListingCta(listing.zillow_url) };
-    return null;
-  }
-  if (listing.zillow_url) {
-    return { href: listing.zillow_url, external: true, cta: externalListingCta(listing.zillow_url) };
-  }
-  if (listing.public_slug) {
-    return { href: `/listings/${listing.public_slug}`, external: false, cta: "VIEW THE OFFERING →" };
-  }
-  return null;
-}
-
 export function isPubliclyListed(listing: { status: string }): boolean {
   return isPublicAvailableStatus(listing.status) || isPublicUnderContractStatus(listing.status);
 }

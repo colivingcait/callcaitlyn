@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getPublicListing } from "@/lib/listings/public-data";
-import { publicListingCopy } from "@/lib/listings/public-copy";
+import { publicBodyCopy, publicListingPrivacy } from "@/lib/listings/public-privacy";
 import { formatPublicBand } from "@/lib/listings/public-bands";
 import { isProjectedOpex } from "@/lib/listings/data-basis";
 import { DataBasisNote, ProjectedMark } from "@/components/listings/om/DataBasisNote";
@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const listing = await getPublicListing(slug);
-  const nickname = listing ? publicListingCopy(listing.nickname) || "Offering" : "One-pager";
+  const nickname = listing ? publicListingPrivacy(listing).displayTitle : "One-pager";
   const canonical = `${publicListingUrl(slug)}/one-pager`;
   return {
     title: `${nickname} — one-pager`,
@@ -35,7 +35,8 @@ export default async function OnePagerPage({ params }: { params: Promise<{ slug:
     );
   }
 
-  const nickname = publicListingCopy(listing.nickname) || "This PadSplit";
+  const privacy = publicListingPrivacy(listing);
+  const nickname = privacy.displayTitle;
   const projected = isProjectedOpex(listing.data_basis_opex);
   const bands = [
     { label: "Gross rents", value: formatPublicBand(listing.band_gross_rent), projected: false },
@@ -51,13 +52,14 @@ export default async function OnePagerPage({ params }: { params: Promise<{ slug:
       </p>
       <article style={{ maxWidth: 720, margin: "0 auto", padding: "36px 28px 64px" }}>
         <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.18em", color: "#a33a29" }}>ONE-PAGER · {listing.om_number || "OM"}</p>
+        <p style={{ margin: "12px 0 0", fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#a33a29" }}>{privacy.locationLabel.toUpperCase()}</p>
         <h1 style={{ margin: "12px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 40, lineHeight: 1.05 }}>{nickname}</h1>
         {listing.list_price != null && (
           <p style={{ margin: "16px 0 0", fontFamily: "var(--font-om-serif)", fontSize: 28 }}>{formatCurrency(listing.list_price)}</p>
         )}
         {projected && <DataBasisNote note={listing.data_basis_opex_note} />}
-        {publicListingCopy(listing.public_description) && (
-          <p style={{ margin: "22px 0 0", fontSize: 16, lineHeight: 1.7, color: "#2e2823", maxWidth: "62ch" }}>{publicListingCopy(listing.public_description)}</p>
+        {publicBodyCopy(listing.public_description, privacy) && (
+          <p style={{ margin: "22px 0 0", fontSize: 16, lineHeight: 1.7, color: "#2e2823", maxWidth: "62ch" }}>{publicBodyCopy(listing.public_description, privacy)}</p>
         )}
         {bands.length > 0 && (
           <div style={{ marginTop: 28, borderTop: "1px solid #211c19" }}>
@@ -73,7 +75,7 @@ export default async function OnePagerPage({ params }: { params: Promise<{ slug:
           </div>
         )}
         <p style={{ margin: "28px 0 0", fontSize: 12, lineHeight: 1.6, color: "#574f47" }}>
-          Public summary only. Line-item financials stay on the offering page after unlock. Caitlyn Verdugo · Keller Williams Metro Atlanta · (678) 884-8494
+          Public summary only. Line-item financials stay on the offering page after unlock. Caitlyn Verdugo · Keller Williams Metro Atlanta · 678-884-4494
         </p>
       </article>
     </main>
