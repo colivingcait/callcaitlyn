@@ -3,17 +3,25 @@ import { getPublicListingsIndex } from "@/lib/listings/public-data";
 import { listingsQueryString } from "@/lib/listings/public-index";
 import { ListingsViewToggle } from "@/components/listings/index/ListingsViewToggle";
 import { ListingsMapCanvas } from "@/components/listings/index/ListingsMapCanvas";
-import { PUBLIC_LISTINGS_URL } from "@/lib/public-urls";
+import { INDEX_ALT } from "@/lib/og/listing-og";
+import { PUBLIC_LISTINGS_URL, publicListingImageUrls, publicOgImage } from "@/lib/public-urls";
 
 export const dynamic = "force-dynamic";
 
 const MAP_URL = `${PUBLIC_LISTINGS_URL}/map`;
+const listingImages = publicListingImageUrls();
 
 export const metadata: Metadata = {
   title: "Available Listings · Map",
   description: "Caitlyn Verdugo with KW Metro Atl",
   alternates: { canonical: MAP_URL },
-  openGraph: { title: "Available Listings · Map", description: "Caitlyn Verdugo with KW Metro Atl", url: MAP_URL },
+  openGraph: {
+    title: "Available Listings · Map",
+    description: "Caitlyn Verdugo with KW Metro Atl",
+    url: MAP_URL,
+    images: [publicOgImage(listingImages.openGraph, INDEX_ALT)],
+  },
+  twitter: { card: "summary_large_image", images: [publicOgImage(listingImages.twitter, INDEX_ALT)] },
 };
 
 export default async function PublicListingsMapPage({

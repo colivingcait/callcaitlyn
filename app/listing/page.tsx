@@ -4,20 +4,32 @@ import { listingsQueryString } from "@/lib/listings/public-index";
 import { CAITLYN_HEADSHOT_SRC, crmPublicAsset } from "@/lib/brand/caitlyn";
 import { ListingsViewToggle } from "@/components/listings/index/ListingsViewToggle";
 import { BookCallButton, PublicSheetsProvider, SellerAnalysisButton } from "@/components/listings/om/PublicSheets";
-import { PUBLIC_LISTINGS_URL } from "@/lib/public-urls";
+import { INDEX_ALT } from "@/lib/og/listing-og";
+import { PUBLIC_LISTINGS_URL, publicListingImageUrls, publicOgImage } from "@/lib/public-urls";
 
 export const dynamic = "force-dynamic";
 
 const LISTINGS_TITLE = "Coliving Properties for Sale | Coliving Cait";
 const LISTINGS_DESCRIPTION = "Coliving houses, house hacks and investment properties from Caitlyn Verdugo, Keller Williams Metro Atlanta.";
+const listingImages = publicListingImageUrls();
 
 export const metadata: Metadata = {
   // absolute skips any parent title.template so "| Coliving Cait" is not added twice.
   title: { absolute: LISTINGS_TITLE },
   description: LISTINGS_DESCRIPTION,
   alternates: { canonical: PUBLIC_LISTINGS_URL },
-  openGraph: { title: LISTINGS_TITLE, description: LISTINGS_DESCRIPTION, url: PUBLIC_LISTINGS_URL },
-  twitter: { card: "summary_large_image", title: LISTINGS_TITLE, description: LISTINGS_DESCRIPTION },
+  openGraph: {
+    title: LISTINGS_TITLE,
+    description: LISTINGS_DESCRIPTION,
+    url: PUBLIC_LISTINGS_URL,
+    images: [publicOgImage(listingImages.openGraph, INDEX_ALT)],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: LISTINGS_TITLE,
+    description: LISTINGS_DESCRIPTION,
+    images: [publicOgImage(listingImages.twitter, INDEX_ALT)],
+  },
 };
 
 export default async function PublicListingsOverviewPage({

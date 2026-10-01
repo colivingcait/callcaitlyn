@@ -138,6 +138,17 @@ assert.ok(imageRoute.includes("notFound"));
 assert.ok(imageRoute.includes("generateImageMetadata"));
 assert.ok(read("app/listing/page.tsx").includes("Coliving Properties for Sale | Coliving Cait"));
 assert.ok(read("app/listing/page.tsx").includes("title: { absolute: LISTINGS_TITLE }"));
+assert.ok(read("app/listing/page.tsx").includes("https://www.colivingcait.com") === false);
+const urls = read("lib/public-urls.ts");
+assert.ok(urls.includes('PUBLIC_SITE_URL = (process.env.NEXT_PUBLIC_PUBLIC_SITE_URL ?? "https://www.colivingcait.com")'));
+assert.ok(urls.includes("publicListingImageUrls"));
+assert.ok(urls.includes("/opengraph-image"));
+assert.ok(read("app/layout.tsx").includes('metadataBase: new URL(process.env.APP_BASE_URL ?? "https://crm.callcaitlyn.com")'));
+assert.ok(read("next.config.mjs").includes("opengraph-image$|twitter-image$"));
+for (const rel of ["app/listing/page.tsx", "app/listing/map/page.tsx", "app/listing/[slug]/page.tsx", "app/listing/[slug]/one-pager/page.tsx", "app/book/page.tsx", "app/book/[slug]/page.tsx"]) {
+  assert.ok(read(rel).includes("publicOgImage"), `${rel} sets an absolute public OG image`);
+  assert.equal(read(rel).includes("crm.callcaitlyn.com"), false, `${rel} must not hardcode the CRM host`);
+}
 assert.ok(read("lib/listings/public-data.ts").includes('.neq("status", "archived")'));
 assert.ok(read("assets/fonts/Newsreader-Regular.ttf").length > 1000);
 assert.ok(read("assets/fonts/Archivo-SemiBold.ttf").length > 1000);
