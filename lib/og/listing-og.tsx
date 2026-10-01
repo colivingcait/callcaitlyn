@@ -1,8 +1,11 @@
 import React from "react";
 import { ImageResponse } from "next/og";
-import { loadOgFonts } from "@/lib/og/fonts";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { loadIndexOgFonts, loadOgFonts } from "@/lib/og/fonts";
 import { OG_SIZE } from "@/lib/og/listing-metadata";
 import { fitOgLocationLine, OG_PHOTO_PAD_X, ogPhotoContentWidth, ogPriceFontSize, type OgListingCard } from "@/lib/listings/og-card";
+import { getIndexOgInteriorPhotoUrls } from "@/lib/listings/public-data";
 
 const TERRACOTTA = "#A8462A";
 const CREAM = "#F7F1E8";
@@ -42,32 +45,65 @@ function agentLockup(nameSize: number, metaSize: number, metaGap: number) {
   );
 }
 
-function IndexCard() {
+const INK = "#1C1917";
+const INDEX_CREAM = "#FAF7F2";
+const GOLD = "#C4955A";
+const INDEX_PLACEHOLDERS = ["#E7E1D8", "#DDD4C8"];
+
+function indexPhotoSlot(src: string | null, index: number) {
+  if (!src) {
+    return <div style={{ flex: 1, background: INDEX_PLACEHOLDERS[index], display: "flex" }} />;
+  }
   return (
-    <div style={{ width: 1200, height: 630, display: "flex", background: CREAM, overflow: "hidden" }}>
+    <div style={{ flex: 1, overflow: "hidden", display: "flex" }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt="" width={520} height={307} style={{ width: 520, height: 307, objectFit: "cover" }} />
+    </div>
+  );
+}
+
+function IndexCard({ photos, wordmark }: { photos: [string | null, string | null]; wordmark: string }) {
+  return (
+    <div style={{ width: 1200, height: 630, display: "flex", background: INDEX_CREAM, overflow: "hidden" }}>
       <div
         style={{
-          width: 640,
+          width: 680,
           height: 630,
-          background: TERRACOTTA,
-          color: CREAM,
-          padding: "70px 72px",
+          background: INDEX_CREAM,
+          color: INK,
+          padding: "64px 56px",
           display: "flex",
           flexDirection: "column",
         }}
       >
-        <div style={{ fontFamily: "Archivo", fontSize: 22, fontWeight: 600, letterSpacing: 3.5, opacity: 0.85 }}>ATLANTA METRO</div>
-        <div style={{ display: "flex", flexDirection: "column", marginTop: 28, fontFamily: "Newsreader", fontWeight: 400, fontSize: 112, lineHeight: 0.95, color: CREAM }}>
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <div style={{ width: 32, height: 1, background: GOLD, display: "flex" }} />
+          <div
+            style={{
+              marginLeft: 12,
+              fontFamily: "DM Sans",
+              fontWeight: 300,
+              fontSize: 10,
+              letterSpacing: 2,
+              color: GOLD,
+              lineHeight: 1.4,
+            }}
+          >
+            LISTINGS · ATLANTA METRO
+          </div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", marginTop: 28, fontFamily: "Cormorant Garamond", fontWeight: 400, fontSize: 92, lineHeight: 0.92, color: INK }}>
           <div>Available</div>
-          <div style={{ fontStyle: "italic", color: PEACH, lineHeight: 1 }}>listings</div>
+          <div style={{ fontStyle: "italic", fontWeight: 300, color: GOLD, lineHeight: 1 }}>listings</div>
         </div>
         <div style={{ display: "flex", flex: 1 }} />
-        {agentLockup(28, 22, 6)}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={wordmark} alt="" width={250} height={52} style={{ width: 250, height: 52, objectFit: "contain", objectPosition: "left" }} />
       </div>
-      <div style={{ flex: 1, height: 630, background: CREAM, padding: 28, display: "flex", flexDirection: "column" }}>
-        <div style={{ flex: 1, borderRadius: 20, background: "linear-gradient(160deg, #d6bfa3, #9c7a60)", display: "flex" }} />
-        <div style={{ height: 16, display: "flex" }} />
-        <div style={{ flex: 1, borderRadius: 20, background: "linear-gradient(160deg, #cdb9a0, #86705c)", display: "flex" }} />
+      <div style={{ width: 520, height: 630, background: INDEX_CREAM, display: "flex", flexDirection: "column" }}>
+        {indexPhotoSlot(photos[0], 0)}
+        <div style={{ height: 16, background: INDEX_CREAM, display: "flex" }} />
+        {indexPhotoSlot(photos[1], 1)}
       </div>
     </div>
   );
@@ -155,12 +191,42 @@ function ListingCard({ card, photo }: { card: OgListingCard; photo: string | nul
   );
 }
 
-export async function renderIndexOgImage() {
-  const fonts = await loadOgFonts();
-  return new ImageResponse(<IndexCard />, {
+async function embeddedIndexOgPhotos(): Promise<[string | null, string | null]> {
+  const urls = await getIndexOgInteriorPhotoUrls();
+  const embedded = await Promise.all(urls.map((url) => (url ? photoDataUrl(url) : Promise.resolve(null))));
+  return [embedded[0] ?? null, embedded[1] ?? null];
+}
+
+async function indexWordmarkDataUrl(): Promise<string> {
+  const bytes = await readFile(path.join(process.cwd(), "assets/brand/colivingcait-wordmark.png"));
+  return `data:image/png;base64,${bytes.toString("base64")}`;
+}
+
+function indexImageResponse(
+  photos: [string | null, string | null],
+  wordmark: string,
+  fonts: Awaited<ReturnType<typeof loadIndexOgFonts>>,
+) {
+  return new ImageResponse(<IndexCard photos={photos} wordmark={wordmark} />, {
     ...OG_SIZE,
     fonts,
   });
+}
+
+export async function renderIndexOgCardPng(photos: [string | null, string | null]): Promise<Buffer> {
+  const [fonts, wordmark] = await Promise.all([loadIndexOgFonts(), indexWordmarkDataUrl()]);
+  return Buffer.from(await indexImageResponse(photos, wordmark, fonts).arrayBuffer());
+}
+
+export async function renderIndexOgImage() {
+  const photos = await embeddedIndexOgPhotos();
+  try {
+    const bytes = await renderIndexOgCardPng(photos);
+    return new Response(new Uint8Array(bytes), { headers: { "Content-Type": "image/png" } });
+  } catch {
+    const bytes = await renderIndexOgCardPng([null, null]);
+    return new Response(new Uint8Array(bytes), { headers: { "Content-Type": "image/png" } });
+  }
 }
 
 function listingImage(card: OgListingCard, photo: string | null, fonts: Awaited<ReturnType<typeof loadOgFonts>>) {

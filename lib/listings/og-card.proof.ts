@@ -136,7 +136,8 @@ for (const rel of ["lib/listings/og-card.ts", "lib/og/listing-og.tsx", "lib/og/l
 const imageRoute = read("app/listing/[slug]/opengraph-image.tsx");
 assert.ok(imageRoute.includes("notFound"));
 assert.ok(imageRoute.includes("generateImageMetadata"));
-assert.ok(read("app/listing/page.tsx").includes("Available Listings | Caitlyn Verdugo, KW Metro Atlanta"));
+assert.ok(read("app/listing/page.tsx").includes("Coliving Properties for Sale | Coliving Cait"));
+assert.ok(read("app/listing/page.tsx").includes("title: { absolute: LISTINGS_TITLE }"));
 assert.ok(read("lib/listings/public-data.ts").includes('.neq("status", "archived")'));
 assert.ok(read("assets/fonts/Newsreader-Regular.ttf").length > 1000);
 assert.ok(read("assets/fonts/Archivo-SemiBold.ttf").length > 1000);

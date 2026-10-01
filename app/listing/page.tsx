@@ -8,11 +8,12 @@ import { PUBLIC_LISTINGS_URL } from "@/lib/public-urls";
 
 export const dynamic = "force-dynamic";
 
-const LISTINGS_TITLE = "Available Listings | Caitlyn Verdugo, KW Metro Atlanta";
-const LISTINGS_DESCRIPTION = "Coliving and for-sale homes across Atlanta metro. Caitlyn Verdugo, Keller Williams Metro Atlanta.";
+const LISTINGS_TITLE = "Coliving Properties for Sale | Coliving Cait";
+const LISTINGS_DESCRIPTION = "Coliving houses, house hacks and investment properties from Caitlyn Verdugo, Keller Williams Metro Atlanta.";
 
 export const metadata: Metadata = {
-  title: LISTINGS_TITLE,
+  // absolute skips any parent title.template so "| Coliving Cait" is not added twice.
+  title: { absolute: LISTINGS_TITLE },
   description: LISTINGS_DESCRIPTION,
   alternates: { canonical: PUBLIC_LISTINGS_URL },
   openGraph: { title: LISTINGS_TITLE, description: LISTINGS_DESCRIPTION, url: PUBLIC_LISTINGS_URL },
@@ -288,7 +289,7 @@ export default async function PublicListingsOverviewPage({
         )}
 
         <section className="listings-mobile-only listings-seller" style={{ marginTop: 40, background: "#1C1917", color: "#f4f1ec", padding: "26px 18px 28px" }}>
-          <p className="cc-eyebrow cc-eyebrow-on-photo">For PadSplit owners</p>
+          <p className="cc-eyebrow">For PadSplit owners</p>
           <h2 style={{ margin: "16px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 400, fontSize: 30, lineHeight: 1.16, color: "#fff" }}>What would your PadSplit <em>sell for?</em></h2>
           <p style={{ margin: "12px 0 0", fontSize: 15, lineHeight: 1.7, color: "#d6cfc5" }}>
             A coliving house gets priced with a combination of local comps and the income the asset produces. Get an idea of what yours could sell for here.

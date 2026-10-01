@@ -4,7 +4,7 @@ import path from "node:path";
 export type OgFont = {
   name: string;
   data: Buffer;
-  weight: 400 | 500 | 600;
+  weight: 300 | 400 | 500 | 600;
   style: "normal" | "italic";
 };
 
@@ -29,4 +29,26 @@ async function readOgFonts(): Promise<OgFont[]> {
 export function loadOgFonts(): Promise<OgFont[]> {
   if (!pending) pending = readOgFonts();
   return pending;
+}
+
+let indexPending: Promise<OgFont[]> | null = null;
+
+// Index card only. Listing cards keep Newsreader and Archivo.
+async function readIndexOgFonts(): Promise<OgFont[]> {
+  const dir = path.join(process.cwd(), "assets/fonts");
+  const [regular, italic, sans] = await Promise.all([
+    readFile(path.join(dir, "CormorantGaramond-Regular.ttf")),
+    readFile(path.join(dir, "CormorantGaramond-LightItalic.ttf")),
+    readFile(path.join(dir, "DMSans-Light.ttf")),
+  ]);
+  return [
+    { name: "Cormorant Garamond", data: regular, weight: 400, style: "normal" },
+    { name: "Cormorant Garamond", data: italic, weight: 300, style: "italic" },
+    { name: "DM Sans", data: sans, weight: 300, style: "normal" },
+  ];
+}
+
+export function loadIndexOgFonts(): Promise<OgFont[]> {
+  if (!indexPending) indexPending = readIndexOgFonts();
+  return indexPending;
 }

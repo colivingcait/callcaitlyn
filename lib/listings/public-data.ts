@@ -10,6 +10,7 @@ import {
   type OccupancyTrendPoint,
 } from "@/lib/listings/occupancy";
 import { isPubliclyListed } from "@/lib/listings/public-category";
+import { selectIndexOgInteriorUrls } from "@/lib/listings/index-og-photos";
 import { partitionPublicListings, sortPublicListings, toPublicIndexCard, type PublicIndexCard } from "@/lib/listings/public-index";
 import { normalizeListingAddress, toPublicSoldEntry, type PublicSoldEntry, type PublicSoldListingMatch } from "@/lib/listings/public-sold";
 
@@ -92,6 +93,35 @@ export async function getPublicListings(): Promise<PublicListingCard[]> {
         ...withLiveOccupancy(redacted),
         photoUrls: privacy.showExteriors ? photoUrls : photos.map((photo) => photo.url),
         coverPhotoUrl,
+      };
+    }),
+  );
+}
+
+const INDEX_OG_PHOTO_COLUMNS =
+  "id, status, created_at, photo_paths, photo_source, padsplit_gallery, padsplit_photos, padsplit_photo_urls, excluded_photo_urls";
+
+// Server-only photo URLs for the index card. The image route fetches the
+// bytes and embeds them; these URLs are not drawn on the card.
+export async function getIndexOgInteriorPhotoUrls(): Promise<[string | null, string | null]> {
+  if (!OWNER_ID) return [null, null];
+  const admin = createAdminClient();
+  const { data: listings } = await admin
+    .from("listings")
+    .select(INDEX_OG_PHOTO_COLUMNS)
+    .eq("owner_id", OWNER_ID)
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
+
+  return selectIndexOgInteriorUrls(
+    (listings ?? []).map((listing) => {
+      const paths = Array.isArray(listing.photo_paths) ? listing.photo_paths : [];
+      const photoUrls = paths.map((path) => admin.storage.from("listing-photos").getPublicUrl(path).data.publicUrl);
+      return {
+        id: listing.id,
+        status: listing.status,
+        created_at: listing.created_at,
+        photos: listingPublicPhotos(listing, photoUrls),
       };
     }),
   );
