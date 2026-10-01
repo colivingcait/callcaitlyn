@@ -5,6 +5,7 @@ import { formatPublicBand } from "@/lib/listings/public-bands";
 import { isProjectedOpex } from "@/lib/listings/data-basis";
 import { DataBasisNote, ProjectedMark } from "@/components/listings/om/DataBasisNote";
 import { formatCurrency } from "@/lib/utils";
+import { publicListingUrl } from "@/lib/public-urls";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const listing = await getPublicListing(slug);
   const nickname = listing ? publicListingCopy(listing.nickname) || "Offering" : "One-pager";
-  return { title: `${nickname} — one-pager` };
+  const canonical = `${publicListingUrl(slug)}/one-pager`;
+  return {
+    title: `${nickname} — one-pager`,
+    alternates: { canonical },
+    openGraph: { title: `${nickname} — one-pager`, url: canonical },
+  };
 }
 
 export default async function OnePagerPage({ params }: { params: Promise<{ slug: string }> }) {

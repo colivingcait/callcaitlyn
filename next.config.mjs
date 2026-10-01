@@ -25,14 +25,37 @@ const nextConfig = {
   async rewrites() {
     return {
       beforeFiles: [
-        // Alias paths the marketing site proxies to. Kept off /listing and
-        // /book so this host can later 301 those URLs without a loop.
+        // Alias paths the marketing site proxies to. Redirects below are
+        // host-scoped to crm.callcaitlyn.com and only match /listing and
+        // /book, so a proxied request to /public-listings or /public-book
+        // never hits them (no loop). /crm-static is the asset prefix.
         { source: "/public-listings", destination: "/listing" },
         { source: "/public-listings/:path*", destination: "/listing/:path*" },
         { source: "/public-book", destination: "/book" },
         { source: "/public-book/:path*", destination: "/book/:path*" },
       ],
     };
+  },
+  async redirects() {
+    const has = [{ type: "host", value: "crm.callcaitlyn.com" }];
+    const permanent = true;
+    const site = "https://www.colivingcait.com";
+    // One path segment, and not the index OG/Twitter image, the nested
+    // sitemap, or /listing/map (that one has its own rule). [^/]+ keeps
+    // :slug from swallowing /workbook, /om.pdf, /one-pager, or
+    // /opengraph-image under a slug. Those stay on this host so metadataBase
+    // can still load file-based OG images from the CRM.
+    const listingSlug = ":slug((?!opengraph-image$|twitter-image$|sitemap\\.xml$|map$)[^/]+)";
+    // One or more segments, none of which is an OG or Twitter image.
+    const bookPath = ":path((?!(?:[^/]+/)*(?:opengraph-image|twitter-image)(?:/|$))(?:[^/]+/)*[^/]+)";
+    return [
+      { source: "/listing", has, destination: `${site}/listings`, permanent },
+      { source: "/listing/map", has, destination: `${site}/listings/map`, permanent },
+      { source: `/listing/${listingSlug}/one-pager`, has, destination: `${site}/listings/:slug/one-pager`, permanent },
+      { source: `/listing/${listingSlug}`, has, destination: `${site}/listings/:slug`, permanent },
+      { source: "/book", has, destination: `${site}/book`, permanent },
+      { source: `/book/${bookPath}`, has, destination: `${site}/book/:path`, permanent },
+    ];
   },
   // Dynamic OG routes read these TTFs at request time. The path is built
   // with process.cwd(), which the file tracer does not follow on its own.

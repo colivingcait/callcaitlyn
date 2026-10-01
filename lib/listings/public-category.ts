@@ -49,7 +49,7 @@ export function publicListingHref(listing: {
 }): { href: string; external: boolean; cta: string } | null {
   const category = parsePublicCategory(listing.public_category);
   if (category === "coliving") {
-    if (listing.public_slug) return { href: `/listing/${listing.public_slug}`, external: false, cta: "VIEW THE OFFERING →" };
+    if (listing.public_slug) return { href: `/listings/${listing.public_slug}`, external: false, cta: "VIEW THE OFFERING →" };
     if (listing.zillow_url) return { href: listing.zillow_url, external: true, cta: externalListingCta(listing.zillow_url) };
     return null;
   }
@@ -57,7 +57,7 @@ export function publicListingHref(listing: {
     return { href: listing.zillow_url, external: true, cta: externalListingCta(listing.zillow_url) };
   }
   if (listing.public_slug) {
-    return { href: `/listing/${listing.public_slug}`, external: false, cta: "VIEW THE OFFERING →" };
+    return { href: `/listings/${listing.public_slug}`, external: false, cta: "VIEW THE OFFERING →" };
   }
   return null;
 }

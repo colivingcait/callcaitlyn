@@ -1,0 +1,23 @@
+/* Offset so the fixed ColivingCait nav does not cover public page chrome.
+   The nav itself is styled in SiteNav.module.css. */
+.public-with-site-nav {
+  --public-nav-offset: 69px;
+  padding-top: var(--public-nav-offset);
+  background: #fff;
+}
+
+.public-with-site-nav :is(#property, #financials, #unlock, #occupancy, #process, #offer, #seller, #listings, #sold, #contact) {
+  scroll-margin-top: calc(62px + var(--public-nav-offset));
+}
+
+@media print {
+  .public-with-site-nav {
+    --public-nav-offset: 0px;
+    padding-top: 0;
+    background: transparent;
+  }
+
+  .public-site-nav {
+    display: none !important;
+  }
+}

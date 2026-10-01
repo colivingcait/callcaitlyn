@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Newsreader, Archivo } from "next/font/google";
 import "leaflet/dist/leaflet.css";
 import "./om.css";
+import { SiteNav } from "@/components/public/SiteNav";
 
 // Root layout links /manifest.json. These pages are also served on
 // www.colivingcait.com, where that file 404s.
@@ -28,5 +29,10 @@ const archivo = Archivo({
 });
 
 export default function ListingLayout({ children }: { children: React.ReactNode }) {
-  return <div className={`${newsreader.variable} ${archivo.variable}`}>{children}</div>;
+  return (
+    <div className={`${newsreader.variable} ${archivo.variable} public-with-site-nav`}>
+      <SiteNav />
+      {children}
+    </div>
+  );
 }

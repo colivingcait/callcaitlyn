@@ -5,12 +5,17 @@ import { listingsQueryString } from "@/lib/listings/public-index";
 import { ListingsIndexHeader } from "@/components/listings/index/ListingsIndexHeader";
 import { ListingsViewToggle } from "@/components/listings/index/ListingsViewToggle";
 import { ListingsMapCanvas } from "@/components/listings/index/ListingsMapCanvas";
+import { PUBLIC_LISTINGS_URL } from "@/lib/public-urls";
 
 export const dynamic = "force-dynamic";
+
+const MAP_URL = `${PUBLIC_LISTINGS_URL}/map`;
 
 export const metadata: Metadata = {
   title: "Available Listings · Map",
   description: "Caitlyn Verdugo with KW Metro Atl",
+  alternates: { canonical: MAP_URL },
+  openGraph: { title: "Available Listings · Map", description: "Caitlyn Verdugo with KW Metro Atl", url: MAP_URL },
 };
 
 export default async function PublicListingsMapPage({
@@ -27,7 +32,7 @@ export default async function PublicListingsMapPage({
       <ListingsIndexHeader />
       <div className="om-gutter" style={{ margin: "0 auto", maxWidth: 1180, padding: "40px 28px 64px" }}>
         <p className="listings-map-phone-note" style={{ margin: "0 0 18px", fontSize: 15, lineHeight: 1.6, color: "#574f47" }}>
-          The map is available on a larger screen. <Link href="/listing" style={{ color: "#a33a29", fontWeight: 600 }}>View the listings</Link>.
+          The map is available on a larger screen. <Link href="/listings" style={{ color: "#a33a29", fontWeight: 600 }}>View the listings</Link>.
         </p>
         <div className="om-section-head" style={{ display: "flex", alignItems: "baseline", gap: 16, borderBottom: "1px solid #211c19", paddingBottom: 12, flexWrap: "wrap" }}>
           <h1 style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 32, lineHeight: 1, color: "#211c19" }}>Available listings</h1>

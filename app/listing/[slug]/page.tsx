@@ -20,6 +20,7 @@ import { formatPublicBand } from "@/lib/listings/public-bands";
 import { isProjectedOpex, showHeroCapRate } from "@/lib/listings/data-basis";
 import { DataBasisNote, ProjectedMark } from "@/components/listings/om/DataBasisNote";
 import { CAITLYN_HEADSHOT_SRC, crmPublicAsset } from "@/lib/brand/caitlyn";
+import { publicListingUrl } from "@/lib/public-urls";
 
 // Occupancy changes daily and a listing can be unpublished at any time -
 // this must never be served from a stale build-time cache.
@@ -63,10 +64,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!listing) notFound();
 
   const card = buildOgListingCard(listing);
+  const canonical = publicListingUrl(slug);
   return {
     title: card.title,
     description: card.description,
-    openGraph: { title: card.title, description: card.description },
+    alternates: { canonical },
+    openGraph: { title: card.title, description: card.description, url: canonical },
     twitter: { card: "summary_large_image", title: card.title, description: card.description },
   };
 }
@@ -149,7 +152,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
     <UnlockedProvider slug={slug}>
       <PublicSheetsProvider>
       <div className="om-page" style={{ fontFamily: "var(--font-om-sans), Archivo, ui-sans-serif, system-ui, sans-serif", background: "#f4f1ec", minHeight: "100dvh", color: "#211c19" }}>
-        <header data-om-noprint style={{ position: "sticky", top: 0, zIndex: 30, background: "#211c19", borderBottom: "1px solid #332b26" }}>
+        <header data-om-noprint style={{ position: "sticky", top: "var(--public-nav-offset, 0px)", zIndex: 30, background: "#211c19", borderBottom: "1px solid #332b26" }}>
           <div className="om-header-inner" style={{ margin: "0 auto", maxWidth: 1180, padding: "0 28px", display: "flex", alignItems: "center", gap: 24, height: 62 }}>
             <p className="om-header-brand" style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 21, letterSpacing: "0.01em", color: "#f4f1ec", whiteSpace: "nowrap" }}>{nickname}</p>
             <span className="om-header-rule" style={{ width: 1, height: 22, background: "#453b34" }} />
@@ -394,7 +397,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
             </main>
 
             <aside className="om-aside om-block om-block-aside" style={{ alignSelf: "stretch" }}>
-              <div className="om-aside-sticky" style={{ position: "sticky", top: 94, display: "flex", flexDirection: "column", gap: 24 }}>
+              <div className="om-aside-sticky" style={{ position: "sticky", top: "calc(94px + var(--public-nav-offset, 0px))", display: "flex", flexDirection: "column", gap: 24 }}>
                 <div className="om-agent-card" style={{ background: "#211c19", border: "1px solid #211c19" }}>
                   <div className="om-agent-eye" style={{ padding: "18px 20px 0" }}>
                     <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.18em", color: "#e9a396" }}>YOUR CONTACT FOR THIS OFFERING</p>
@@ -487,7 +490,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                       return (
                         <Link
                           key={l.id}
-                          href={`/listing/${l.public_slug}`}
+                          href={`/listings/${l.public_slug}`}
                           className="om-hover-dim om-more-row"
                           style={{ display: "flex", gap: 14, padding: "16px 0", borderBottom: "1px solid #ddd6cc", color: "inherit", marginTop: 10 }}
                         >
@@ -506,7 +509,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                         </Link>
                       );
                     })}
-                    <Link href="/listing" className="om-hover-accent" style={{ display: "inline-block", marginTop: 14, fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: "#a33a29" }}>
+                    <Link href="/listings" className="om-hover-accent" style={{ display: "inline-block", marginTop: 14, fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: "#a33a29" }}>
                       VIEW ALL LISTINGS →
                     </Link>
                   </div>

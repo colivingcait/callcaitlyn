@@ -6,6 +6,7 @@ import { CAITLYN_HEADSHOT_SRC, crmPublicAsset } from "@/lib/brand/caitlyn";
 import { ListingsIndexHeader } from "@/components/listings/index/ListingsIndexHeader";
 import { ListingsViewToggle } from "@/components/listings/index/ListingsViewToggle";
 import { BookCallButton, PublicSheetsProvider, SellerAnalysisButton } from "@/components/listings/om/PublicSheets";
+import { PUBLIC_LISTINGS_URL } from "@/lib/public-urls";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,8 @@ const LISTINGS_DESCRIPTION = "Coliving and for-sale homes across Atlanta metro. 
 export const metadata: Metadata = {
   title: LISTINGS_TITLE,
   description: LISTINGS_DESCRIPTION,
-  openGraph: { title: LISTINGS_TITLE, description: LISTINGS_DESCRIPTION },
+  alternates: { canonical: PUBLIC_LISTINGS_URL },
+  openGraph: { title: LISTINGS_TITLE, description: LISTINGS_DESCRIPTION, url: PUBLIC_LISTINGS_URL },
   twitter: { card: "summary_large_image", title: LISTINGS_TITLE, description: LISTINGS_DESCRIPTION },
 };
 

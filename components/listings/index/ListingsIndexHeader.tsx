@@ -5,8 +5,8 @@ import { useState } from "react";
 import { usePublicSheets } from "@/components/listings/om/PublicSheets";
 
 export function ListingsIndexHeader({
-  listingsHref = "/listing#listings",
-  soldHref = "/listing#sold",
+  listingsHref = "/listings#listings",
+  soldHref = "/listings#sold",
 }: {
   listingsHref?: string;
   soldHref?: string;
@@ -15,13 +15,13 @@ export function ListingsIndexHeader({
   const sheets = usePublicSheets();
 
   return (
-    <header data-om-noprint style={{ position: "sticky", top: 0, zIndex: 30, background: "#211c19", borderBottom: "1px solid #332b26" }}>
+    <header data-om-noprint style={{ position: "sticky", top: "var(--public-nav-offset, 0px)", zIndex: 30, background: "#211c19", borderBottom: "1px solid #332b26" }}>
       <div
         className="om-header-inner"
         style={{ margin: "0 auto", maxWidth: 1180, padding: "12px 28px", display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap", minHeight: 62 }}
       >
         <Link
-          href="/listing"
+          href="/listings"
           className="om-header-brand"
           style={{ margin: 0, fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 21, color: "#f4f1ec", whiteSpace: "nowrap" }}
         >

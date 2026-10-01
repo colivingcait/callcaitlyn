@@ -2,8 +2,8 @@ import Link from "next/link";
 
 export function ListingsViewToggle({ active, search = "" }: { active: "list" | "map"; search?: string }) {
   const query = search ? `?${search}` : "";
-  const listHref = `/listing${query}`;
-  const mapHref = `/listing/map${query}`;
+  const listHref = `/listings${query}`;
+  const mapHref = `/listings/map${query}`;
 
   return (
     <div style={{ marginLeft: "auto", display: "flex", border: "2px solid #211c19" }}>

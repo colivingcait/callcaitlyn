@@ -26,7 +26,7 @@ assert.equal(publicListingHref({ public_category: "coliving", public_slug: null,
 assert.equal(publicListingHref({ public_category: "coliving", public_slug: null, zillow_url: null }), null);
 
 assert.deepEqual(publicListingHref({ public_category: "coliving", public_slug: "adair", zillow_url: "https://zillow.com/x" }), {
-  href: "/listing/adair",
+  href: "/listings/adair",
   external: false,
   cta: "VIEW THE OFFERING →",
 });
@@ -111,7 +111,7 @@ const cardSource = {
 const card = toPublicIndexCard(cardSource);
 assert.equal(card.tag, "COLIVING");
 assert.equal(card.tagColor, "#cc4a37");
-assert.equal(card.href, "/listing/the-adair");
+assert.equal(card.href, "/listings/the-adair");
 assert.equal(card.lat, 33.6795);
 assert.equal(card.detail, "7 rooms · 6 of 7 occupied");
 assert.equal(card.name, "The Adair");
