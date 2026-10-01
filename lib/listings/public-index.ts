@@ -1,10 +1,9 @@
-import { publicListingCopy } from "@/lib/listings/public-copy";
+import { publicListingHref, publicListingPrivacy } from "@/lib/listings/public-privacy";
 import {
   isColivingCategory,
   parsePublicCategory,
   publicCategoryColor,
   publicCategoryTag,
-  publicListingHref,
 } from "@/lib/listings/public-category";
 import { submarketCentroid } from "@/lib/listings/submarkets";
 import { formatPublicBand } from "@/lib/listings/public-bands";
@@ -46,6 +45,7 @@ export type PublicIndexCard = {
   cta: string | null;
   detail: string | null;
   spec: string;
+  showMapPin: boolean;
   lat: number | null;
   lng: number | null;
 };
@@ -90,25 +90,27 @@ export function underContractDetail(listing: PublicIndexSource): string | null {
 }
 
 export function toPublicIndexCard(listing: PublicIndexSource): PublicIndexCard {
+  const privacy = publicListingPrivacy(listing);
   const link = publicListingHref(listing);
-  const centroid = submarketCentroid(listing.submarket);
-  const submarket = publicListingCopy(listing.submarket);
+  const centroid = privacy.showMapPin ? submarketCentroid(listing.submarket) : null;
+  const submarket = privacy.locationLabel;
   const cap = formatPublicBand(listing.band_cap_rate);
   const spec = [underContractDetail(listing), cap ? `${cap} cap` : null].filter(Boolean).join(" · ");
   return {
     id: listing.id,
-    name: publicListingCopy(listing.nickname) || "Listing",
+    name: privacy.displayTitle,
     submarketLabel: submarket ? submarket.toUpperCase() : null,
     priceLabel: formatCurrency(listing.list_price),
     tag: publicCategoryTag(listing.public_category),
     tagColor: publicCategoryColor(listing.public_category),
     coverPhotoUrl: listing.coverPhotoUrl,
-    photoCaption: isColivingCategory(listing.public_category) ? "exterior photo" : "listing photo",
+    photoCaption: privacy.showExteriors && isColivingCategory(listing.public_category) ? "exterior photo" : "listing photo",
     href: link?.href ?? null,
     external: link?.external ?? false,
     cta: link?.cta ?? null,
     detail: underContractDetail(listing),
     spec,
+    showMapPin: privacy.showMapPin,
     lat: centroid?.lat ?? null,
     lng: centroid?.lng ?? null,
   };

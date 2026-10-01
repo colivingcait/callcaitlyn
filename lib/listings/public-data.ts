@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { DealSide, Listing, PadsplitPhoto, PropertyType } from "@/types/database";
 import { listingCoverPhotoUrl, listingPublicPhotos } from "@/lib/listings/padsplit-photos";
+import { publicGalleryPhotos, publicInteriorCoverUrl, publicListingPrivacy } from "@/lib/listings/public-privacy";
 import { asListingFinancials } from "@/lib/listings/crm-marketing-fields";
 import {
   listingLiveOccupancy,
@@ -10,7 +11,7 @@ import {
 } from "@/lib/listings/occupancy";
 import { isPubliclyListed } from "@/lib/listings/public-category";
 import { partitionPublicListings, sortPublicListings, toPublicIndexCard, type PublicIndexCard } from "@/lib/listings/public-index";
-import { normalizeListingAddress, toPublicSoldEntry, type PublicSoldEntry } from "@/lib/listings/public-sold";
+import { normalizeListingAddress, toPublicSoldEntry, type PublicSoldEntry, type PublicSoldListingMatch } from "@/lib/listings/public-sold";
 
 export { interiorPhotos, listingCoverPhotoUrl, listingPublicPhotos } from "@/lib/listings/padsplit-photos";
 export type { OccupancyTrendPoint } from "@/lib/listings/occupancy";
@@ -44,15 +45,21 @@ export async function getPublicListing(slug: string): Promise<PublicListing | nu
   if (!listing) return null;
 
   const photoUrls = (listing.photo_paths as string[]).map((p) => admin.storage.from("listing-photos").getPublicUrl(p).data.publicUrl);
-  const photos = listingPublicPhotos(listing, photoUrls);
+  const privacy = publicListingPrivacy(listing);
+  const photos = publicGalleryPhotos(listingPublicPhotos(listing, photoUrls), privacy);
   const occupancy = occupancyFromFinancials(asListingFinancials(listing.financials));
   const occupancyTrend = occupancyTrendFromSidecar(occupancy);
+  const coverPhotoUrl = privacy.showExteriors ? listingCoverPhotoUrl(listing, photoUrls) : publicInteriorCoverUrl(photos);
+  // PRIVATE pages must not carry street, zip, or a Zillow URL into the RSC tree.
+  const redacted = privacy.showAddress
+    ? listing
+    : { ...listing, address: "", city: null, state: null, zip: null, zillow_url: null };
 
   return {
-    ...withLiveOccupancy(listing),
-    photoUrls,
+    ...withLiveOccupancy(redacted),
+    photoUrls: privacy.showExteriors ? photoUrls : photos.map((photo) => photo.url),
     photos,
-    coverPhotoUrl: listingCoverPhotoUrl(listing, photoUrls),
+    coverPhotoUrl,
     occupancyTrend,
   };
 }
@@ -75,10 +82,16 @@ export async function getPublicListings(): Promise<PublicListingCard[]> {
   return sortPublicListings(
     visible.map((listing) => {
       const photoUrls = (listing.photo_paths as string[]).map((p) => admin.storage.from("listing-photos").getPublicUrl(p).data.publicUrl);
+      const privacy = publicListingPrivacy(listing);
+      const photos = publicGalleryPhotos(listingPublicPhotos(listing, photoUrls), privacy);
+      const coverPhotoUrl = privacy.showExteriors ? listingCoverPhotoUrl(listing, photoUrls) : publicInteriorCoverUrl(photos);
+      const redacted = privacy.showAddress
+        ? listing
+        : { ...listing, address: "", city: null, state: null, zip: null, zillow_url: null };
       return {
-        ...withLiveOccupancy(listing),
-        photoUrls,
-        coverPhotoUrl: listingCoverPhotoUrl(listing, photoUrls),
+        ...withLiveOccupancy(redacted),
+        photoUrls: privacy.showExteriors ? photoUrls : photos.map((photo) => photo.url),
+        coverPhotoUrl,
       };
     }),
   );
@@ -95,31 +108,34 @@ export async function getRecentlySoldPublic(): Promise<PublicSoldEntry[]> {
       .eq("status", "won")
       .order("closed_at", { ascending: false })
       .limit(12),
-    admin.from("listings").select("address, nickname").eq("owner_id", OWNER_ID).eq("status", "archived").not("nickname", "is", null),
+    admin.from("listings").select("address, nickname, submarket, public_category").eq("owner_id", OWNER_ID).eq("status", "archived"),
   ]);
 
-  const nicknamesByAddress = new Map<string, string>();
+  const matchesByAddress = new Map<string, PublicSoldListingMatch>();
   for (const listing of closedListings ?? []) {
-    if (!listing.address || !listing.nickname) continue;
-    nicknamesByAddress.set(normalizeListingAddress(listing.address), listing.nickname);
+    if (!listing.address) continue;
+    matchesByAddress.set(normalizeListingAddress(listing.address), {
+      nickname: listing.nickname,
+      submarket: listing.submarket,
+      public_category: listing.public_category,
+    });
   }
 
   const sold: PublicSoldEntry[] = [];
   for (const deal of deals ?? []) {
-    const nickname = deal.address ? nicknamesByAddress.get(normalizeListingAddress(deal.address)) : undefined;
-    const entry = toPublicSoldEntry(
-      {
-        id: deal.id,
-        address: deal.address,
-        property_type: deal.property_type as PropertyType | null,
-        side: deal.side as DealSide | null,
-        on_fmls: Boolean(deal.on_fmls),
-        closed_at: deal.closed_at,
-      },
-      nickname,
+    const matched = deal.address ? matchesByAddress.get(normalizeListingAddress(deal.address)) : undefined;
+    sold.push(
+      toPublicSoldEntry(
+        {
+          id: deal.id,
+          property_type: deal.property_type as PropertyType | null,
+          side: deal.side as DealSide | null,
+          on_fmls: Boolean(deal.on_fmls),
+          closed_at: deal.closed_at,
+        },
+        matched,
+      ),
     );
-    if (!entry) continue;
-    sold.push(entry);
     if (sold.length === 4) break;
   }
   return sold;
