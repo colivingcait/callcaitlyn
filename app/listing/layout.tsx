@@ -1,6 +1,13 @@
+import type { Metadata } from "next";
 import { Newsreader, Archivo } from "next/font/google";
 import "leaflet/dist/leaflet.css";
 import "./om.css";
+
+// Root layout links /manifest.json. These pages are also served on
+// www.colivingcait.com, where that file 404s.
+export const metadata: Metadata = {
+  manifest: null,
+};
 
 // Deliberate deviation from the rest of the CRM (Inter + Fraunces): this is
 // a public marketing surface, not app chrome, and the design spec calls for

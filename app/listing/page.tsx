@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getPublicListingsIndex } from "@/lib/listings/public-data";
 import { listingsQueryString } from "@/lib/listings/public-index";
-import { CAITLYN_HEADSHOT_SRC } from "@/lib/brand/caitlyn";
+import { CAITLYN_HEADSHOT_SRC, crmPublicAsset } from "@/lib/brand/caitlyn";
 import { ListingsIndexHeader } from "@/components/listings/index/ListingsIndexHeader";
 import { ListingsViewToggle } from "@/components/listings/index/ListingsViewToggle";
 import { BookCallButton, PublicSheetsProvider, SellerAnalysisButton } from "@/components/listings/om/PublicSheets";
@@ -54,7 +54,7 @@ export default async function PublicListingsOverviewPage({
                   width: 44,
                   height: 44,
                   overflow: "hidden",
-                  backgroundImage: `url(${CAITLYN_HEADSHOT_SRC})`,
+                  backgroundImage: `url(${crmPublicAsset(CAITLYN_HEADSHOT_SRC)})`,
                   backgroundSize: "155%",
                   backgroundPosition: "center 14%",
                   backgroundRepeat: "no-repeat",
@@ -68,7 +68,7 @@ export default async function PublicListingsOverviewPage({
           </div>
           <div className="listings-hero-shot" style={{ flex: "0 0 auto", width: 260, maxWidth: "100%" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={CAITLYN_HEADSHOT_SRC} alt="Caitlyn Verdugo" style={{ display: "block", width: "100%", aspectRatio: "4 / 5", objectFit: "cover" }} />
+            <img src={crmPublicAsset(CAITLYN_HEADSHOT_SRC)} alt="Caitlyn Verdugo" style={{ display: "block", width: "100%", aspectRatio: "4 / 5", objectFit: "cover" }} />
             <p style={{ margin: "14px 0 0", fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#f4f1ec" }}>CAITLYN VERDUGO | REALTOR</p>
             <p style={{ margin: "6px 0 0", fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#a39a8e" }}>KELLER WILLIAMS METRO ATLANTA</p>
           </div>

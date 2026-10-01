@@ -19,7 +19,7 @@ import { occupancyFromFinancials, t12OccupancySummary } from "@/lib/listings/occ
 import { formatPublicBand } from "@/lib/listings/public-bands";
 import { isProjectedOpex, showHeroCapRate } from "@/lib/listings/data-basis";
 import { DataBasisNote, ProjectedMark } from "@/components/listings/om/DataBasisNote";
-import { CAITLYN_HEADSHOT_SRC } from "@/lib/brand/caitlyn";
+import { CAITLYN_HEADSHOT_SRC, crmPublicAsset } from "@/lib/brand/caitlyn";
 
 // Occupancy changes daily and a listing can be unpublished at any time -
 // this must never be served from a stale build-time cache.
@@ -411,7 +411,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                         height: 104,
                         overflow: "hidden",
                         position: "relative",
-                        backgroundImage: `url(${CAITLYN_HEADSHOT_SRC})`,
+                        backgroundImage: `url(${crmPublicAsset(CAITLYN_HEADSHOT_SRC)})`,
                         backgroundSize: "155%",
                         backgroundPosition: "center 14%",
                         backgroundRepeat: "no-repeat",
@@ -419,7 +419,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={CAITLYN_HEADSHOT_SRC}
+                        src={crmPublicAsset(CAITLYN_HEADSHOT_SRC)}
                         alt="Caitlyn Verdugo"
                         width={84}
                         height={104}
