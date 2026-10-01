@@ -61,30 +61,20 @@ export function CalendarGridView({
   }
 
   return (
-    <div className="flex flex-col gap-5 sm:flex-row">
-      <div className="sm:w-[280px] sm:shrink-0">
-        <div className="mb-2 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => changeMonth(-1)}
-            disabled={viewMonthKey <= minMonthKey}
-            className="rounded-lg p-1.5 text-neutral-500 disabled:opacity-30"
-          >
-            <ChevronLeft size={16} />
+    <div className="bk-when">
+      <div className="bk-cal">
+        <div className="bk-month">
+          <button type="button" onClick={() => changeMonth(-1)} disabled={viewMonthKey <= minMonthKey} aria-label="Previous month">
+            <ChevronLeft size={14} />
           </button>
-          <p className="text-sm font-semibold text-neutral-900">{MONTH_NAMES[viewMonth.getMonth()]} {viewMonth.getFullYear()}</p>
-          <button
-            type="button"
-            onClick={() => changeMonth(1)}
-            disabled={viewMonthKey >= maxMonthKey}
-            className="rounded-lg p-1.5 text-neutral-500 disabled:opacity-30"
-          >
-            <ChevronRight size={16} />
+          <b>{MONTH_NAMES[viewMonth.getMonth()]} {viewMonth.getFullYear()}</b>
+          <button type="button" onClick={() => changeMonth(1)} disabled={viewMonthKey >= maxMonthKey} aria-label="Next month">
+            <ChevronRight size={14} />
           </button>
         </div>
-        <div className="grid grid-cols-7 gap-1 text-center">
+        <div className="bk-days">
           {WEEKDAY_HEADERS.map((d, i) => (
-            <span key={i} className="text-xs font-medium text-neutral-400">
+            <span key={i} className="dw">
               {d}
             </span>
           ))}
@@ -99,39 +89,24 @@ export function CalendarGridView({
                 type="button"
                 disabled={!hasSlots}
                 onClick={() => setSelectedDay(key)}
-                className={`relative aspect-square rounded-lg text-sm ${
-                  isSelected
-                    ? "bg-brand-600 font-semibold text-white"
-                    : hasSlots
-                      ? "font-medium text-neutral-900 hover:bg-neutral-100"
-                      : "text-neutral-300"
-                }`}
+                className={`${hasSlots ? "av" : ""} ${isSelected ? "sel" : ""} ${isToday ? "today" : ""}`}
               >
                 {Number(key.slice(-2))}
-                {hasSlots && !isSelected && <span className="absolute bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-brand-600" />}
-                {isToday && !isSelected && <span className="absolute inset-x-2 top-0 h-0.5 rounded-full bg-neutral-300" />}
               </button>
             );
           })}
         </div>
       </div>
 
-      <div className="min-w-0 flex-1">
+      <div className="bk-slots">
         {!selectedDay || !byDay.has(selectedDay) ? (
-          <p className="py-6 text-center text-sm text-neutral-400">Pick a highlighted day to see times.</p>
+          <p className="bk-empty">Pick a highlighted day to see times.</p>
         ) : (
           <>
-            <p className="mb-2 text-sm font-semibold text-neutral-700">{formatInTimeZone(`${selectedDay}T12:00:00`, APP_TIMEZONE, "EEEE, MMM d")}</p>
-            <div className="flex flex-wrap gap-2">
+            <p className="bk-daylabel">{formatInTimeZone(`${selectedDay}T12:00:00`, APP_TIMEZONE, "EEEE, MMM d")}</p>
+            <div className="bk-times">
               {byDay.get(selectedDay)!.map((slot) => (
-                <button
-                  key={slot.startAt}
-                  type="button"
-                  onClick={() => onSelect(slot.startAt)}
-                  className={`rounded-xl border px-3 py-2 text-sm font-medium ${
-                    selected === slot.startAt ? "border-brand-600 bg-brand-600 text-white" : "border-neutral-200 text-neutral-700 hover:border-neutral-300"
-                  }`}
-                >
+                <button key={slot.startAt} type="button" onClick={() => onSelect(slot.startAt)} className={selected === slot.startAt ? "sel" : ""}>
                   {formatInTimeZone(slot.startAt, APP_TIMEZONE, "h:mm a")}
                 </button>
               ))}

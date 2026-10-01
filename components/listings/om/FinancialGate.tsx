@@ -170,7 +170,7 @@ export function FinancialGate({
     return (
       <div>
         <div className="om-gate-mobile" style={{ marginTop: 22, border: "1px solid #211c19", background: "#211c19", padding: "20px 18px 22px" }}>
-          <p style={{ margin: 0, fontSize: 11, fontWeight: 500, letterSpacing: "0.2em", color: "#e9a396" }}>LINE-ITEM DETAIL LOCKED</p>
+          <p style={{ margin: 0, fontSize: 11, fontWeight: 500, letterSpacing: "0.2em", color: "#E8D5B5" }}>LINE-ITEM DETAIL LOCKED</p>
           <p style={{ margin: "10px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 21, lineHeight: 1.3, color: "#f4f1ec" }}>
             Rents, expenses, debt service, and CapEx open on this page.
           </p>
@@ -191,15 +191,15 @@ export function FinancialGate({
               </label>
               <input id="u-email-m" name="email" type="email" className="om-input" style={{ ...inputStyle, marginTop: 6, padding: "10px 0" }} />
             </div>
-            {error && <p style={{ margin: 0, fontSize: 13, color: "#e26e5d" }}>{error}</p>}
+            {error && <p style={{ margin: 0, fontSize: 13, color: "#C4955A" }}>{error}</p>}
             <button
               type="submit"
               disabled={submitting}
               className="om-hover-fill-border"
               style={{
                 marginTop: 4,
-                border: "1px solid #cc4a37",
-                background: "#cc4a37",
+                border: "1px solid #C4955A",
+                background: "#C4955A",
                 padding: "15px 20px",
                 fontSize: 12,
                 fontWeight: 600,
@@ -244,7 +244,7 @@ export function FinancialGate({
               }}
             >
               <div style={{ textAlign: "center", maxWidth: "42ch" }}>
-                <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.2em", color: "#a33a29" }}>LINE-ITEM DETAIL LOCKED</p>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.2em", color: "#8B6535" }}>LINE-ITEM DETAIL LOCKED</p>
                 <p style={{ margin: "12px 0 0", fontFamily: "var(--font-om-serif)", fontSize: 23, lineHeight: 1.3, color: "#211c19" }}>
                   Monthly rents, expenses, debt service, and CapEx open on this page.
                 </p>
@@ -273,7 +273,7 @@ export function FinancialGate({
                   <label htmlFor="u-email" style={labelStyle}>EMAIL</label>
                   <input id="u-email" name="email" type="email" className="om-input" style={inputStyle} />
                 </div>
-                {error && <p style={{ margin: 0, fontSize: 13, color: "#e26e5d" }}>{error}</p>}
+                {error && <p style={{ margin: 0, fontSize: 13, color: "#C4955A" }}>{error}</p>}
                 <button
                   type="submit"
                   disabled={submitting}
@@ -281,8 +281,8 @@ export function FinancialGate({
                   style={{
                     alignSelf: "flex-start",
                     marginTop: 4,
-                    border: "1px solid #cc4a37",
-                    background: "#cc4a37",
+                    border: "1px solid #C4955A",
+                    background: "#C4955A",
                     padding: "13px 26px",
                     fontSize: 12,
                     fontWeight: 600,
@@ -324,8 +324,8 @@ export function FinancialGate({
 
   return (
     <div className="om-unlocked-stack" style={{ marginTop: 32 }} aria-live="polite">
-      <div className="om-unlock-banner" style={{ display: "flex", alignItems: "center", gap: 10, border: "1px solid #a33a29", background: "#fdf3f2", padding: "13px 18px" }}>
-        <span style={{ width: 6, height: 6, borderRadius: 999, background: "#cc4a37" }} />
+      <div className="om-unlock-banner" style={{ display: "flex", alignItems: "center", gap: 10, border: "1px solid #8B6535", background: "#fdf3f2", padding: "13px 18px" }}>
+        <span style={{ width: 6, height: 6, borderRadius: 999, background: "#C4955A" }} />
         <p style={{ margin: 0, fontSize: 13, color: "#8a2c1e" }}>Unlocked. The line items are below.</p>
       </div>
 
@@ -334,7 +334,7 @@ export function FinancialGate({
       {ratioCards.length > 0 && financials && (
         <div className="om-fin-ratios" style={{ marginTop: 26, display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 14 }}>
           {ratioCards.map((field) => (
-            <div key={field.key} style={{ background: "#fffdfa", border: "1px solid #e4ddd2", borderTop: "2px solid #cc4a37", padding: "18px 18px 20px" }}>
+            <div key={field.key} style={{ background: "#fffdfa", border: "1px solid #e4ddd2", borderTop: "2px solid #C4955A", padding: "18px 18px 20px" }}>
               <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.14em", color: "#6b6259" }}>
                 {field.omLabel}
                 {isProjectedGatedField(field.key, dataBasisOpex) ? <ProjectedMark /> : null}
@@ -403,8 +403,8 @@ export function FinancialGate({
             className="om-hover-fill-border"
             style={{
               flex: "0 0 auto",
-              border: "1px solid #cc4a37",
-              background: "#cc4a37",
+              border: "1px solid #C4955A",
+              background: "#C4955A",
               padding: "15px 28px",
               fontSize: 12,
               fontWeight: 600,
@@ -432,7 +432,7 @@ export function FinancialGate({
         </a>
         <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid #ede7de", display: "flex", alignItems: "baseline", gap: 12 }}>
           <p style={{ margin: 0, flex: "1 1 auto", fontSize: 13, lineHeight: 1.6, color: "#574f47" }}>Need a version without the numbers?</p>
-          <a href={`/listings/${slug}/one-pager`} className="om-hover-accent" style={{ flex: "0 0 auto", fontSize: 12, fontWeight: 600, letterSpacing: "0.08em", color: "#a33a29" }}>
+          <a href={`/listings/${slug}/one-pager`} className="om-hover-accent" style={{ flex: "0 0 auto", fontSize: 12, fontWeight: 600, letterSpacing: "0.08em", color: "#8B6535" }}>
             ONE-PAGER →
           </a>
         </div>

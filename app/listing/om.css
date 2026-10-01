@@ -23,23 +23,112 @@
   color: #f4f1ec !important;
 }
 .om-hover-accent:hover {
-  color: #cc4a37 !important;
+  color: #C4955A !important;
 }
 .om-hover-dim:hover {
   opacity: 0.72;
 }
 .om-input:focus {
   outline: none;
-  border-bottom-color: #cc4a37 !important;
+  border-bottom-color: #C4955A !important;
 }
 .om-input-boxed:focus {
   outline: none;
-  border-color: #cc4a37 !important;
+  border-color: #C4955A !important;
 }
 
 .om-page {
   overflow-x: clip;
   max-width: 100%;
+  font-weight: 300;
+  color: #6b6560;
+}
+.om-page [style*="--font-om-serif"] {
+  font-weight: 400 !important;
+}
+.om-page .listings-card-name {
+  font-weight: 500 !important;
+}
+.om-page em {
+  font-style: italic;
+  font-weight: 300;
+  color: #c4955a;
+}
+
+.cc-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #c4955a;
+  line-height: 1.4;
+}
+.cc-eyebrow::before {
+  content: "";
+  width: 32px;
+  height: 1px;
+  background: #c4955a;
+  flex-shrink: 0;
+}
+.cc-eyebrow-plain::before {
+  display: none;
+}
+.cc-eyebrow-on-photo {
+  color: #e8d5b5;
+}
+.cc-eyebrow-on-photo::before {
+  background: #e8d5b5;
+}
+
+.cc-subnav {
+  position: sticky;
+  top: var(--public-nav-offset, 85px);
+  z-index: 40;
+  background: #faf7f2;
+  border-bottom: 1px solid rgba(28, 25, 23, 0.1);
+}
+.cc-subnav-in {
+  max-width: 1320px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  min-height: 52px;
+  padding: 0 28px;
+}
+.cc-subnav-name {
+  font-family: var(--font-om-serif), "Cormorant Garamond", Georgia, serif;
+  font-size: 20px;
+  font-weight: 500;
+  color: #1c1917;
+  line-height: 1;
+}
+.cc-subnav nav {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 26px;
+}
+.cc-subnav nav a {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #6b6560;
+}
+.cc-subnav nav a.cc-subnav-cta {
+  background: #c4955a;
+  color: #fff;
+  padding: 11px 20px;
+  letter-spacing: 0.12em;
+}
+
+.listings-card:hover {
+  border-color: rgba(196, 149, 90, 0.45) !important;
 }
 .om-page *,
 .om-page *::before,
@@ -73,15 +162,12 @@ main {
   text-decoration: none;
 }
 
-.listings-card:hover {
-  border-top-color: #cc4a37 !important;
-}
 .listings-toggle-idle:hover {
   background: #ece6dd !important;
   color: #211c19 !important;
 }
 .listings-book-primary:hover {
-  background: #cc4a37 !important;
+  background: #C4955A !important;
   color: #f4f1ec !important;
 }
 .listings-book-secondary:hover {
@@ -90,7 +176,7 @@ main {
 }
 .listings-map-row:hover,
 .listings-map-row[data-selected="true"] {
-  border-left-color: #cc4a37 !important;
+  border-left-color: #C4955A !important;
 }
 .listings-map-pin-icon {
   background: transparent !important;
@@ -127,7 +213,7 @@ main {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
-  color: #a33a29 !important;
+  color: #8B6535 !important;
   background: none !important;
   text-decoration: none !important;
 }
@@ -135,7 +221,7 @@ main {
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.16em;
-  color: #a33a29;
+  color: #8B6535;
 }
 .listings-map-pop-name {
   margin-top: 7px;
@@ -156,7 +242,7 @@ main {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
-  color: #a33a29;
+  color: #8B6535;
 }
 
 .om-fin {
@@ -183,6 +269,9 @@ main {
 .om-thumbs::-webkit-scrollbar {
   display: none;
 }
+.om-header-nav a:hover {
+  color: #1c1917;
+}
 .om-header-menu,
 .om-header-drawer {
   display: none;
@@ -201,7 +290,6 @@ main {
 .listings-hero-byline,
 .listings-available-num,
 .listings-live-below,
-.listings-card-spec,
 .listings-card-price-mobile,
 .listings-email-mobile,
 .listings-map-phone-note,
@@ -778,7 +866,7 @@ main {
   .listings-hero-byline {
     margin-top: 20px;
     padding-top: 16px;
-    border-top: 1px solid #3a322c;
+    border-top: 1px solid rgba(28, 25, 23, 0.1);
     align-items: center;
     gap: 12px;
   }
@@ -829,9 +917,14 @@ main {
     font-size: 11px !important;
   }
   .listings-tag {
+    top: 0 !important;
+    left: 0 !important;
     font-size: 10px !important;
     letter-spacing: 0.12em !important;
     padding: 5px 8px !important;
+  }
+  .cc-subnav {
+    display: none;
   }
   .listings-contact {
     flex-direction: column !important;
@@ -939,6 +1032,12 @@ main {
 @media (max-width: 560px) {
   .om-cells {
     grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+@media (max-width: 1023px) {
+  .cc-subnav {
+    display: none;
   }
 }
 

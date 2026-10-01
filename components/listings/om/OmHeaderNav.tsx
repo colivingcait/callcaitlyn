@@ -20,17 +20,17 @@ export function OmHeaderNav() {
 
   return (
     <>
-      <nav className="om-header-nav" style={{ marginLeft: "auto", minWidth: 0, overflow: "hidden", display: "flex", gap: 18, fontSize: 12, fontWeight: 500, letterSpacing: "0.06em", color: "#b6aca2" }}>
+      <nav className="om-header-nav" style={{ marginLeft: "auto", minWidth: 0, overflow: "hidden", display: "flex", alignItems: "center", gap: 26, fontSize: 11, fontWeight: 500, letterSpacing: "0.14em", color: "#6B6560" }}>
         {LINKS.map((link) => (
-          <a key={link.href} href={link.href} className="om-hover-light" style={{ color: "inherit", whiteSpace: "nowrap" }}>
+          <a key={link.href} href={link.href} style={{ color: "inherit", whiteSpace: "nowrap" }}>
             {link.label}
           </a>
         ))}
       </nav>
       <a
         href={ctaHref}
-        className="om-hover-fill om-header-cta"
-        style={{ flex: "0 0 auto", whiteSpace: "nowrap", border: "1px solid #cc4a37", background: "#cc4a37", padding: "9px 18px", fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", color: "#fff" }}
+        className="om-header-cta"
+        style={{ flex: "0 0 auto", whiteSpace: "nowrap", border: "none", background: "#C4955A", padding: "11px 20px", fontSize: 11, fontWeight: 500, letterSpacing: "0.12em", color: "#fff" }}
       >
         {ctaLabel}
       </a>
@@ -43,13 +43,13 @@ export function OmHeaderNav() {
         style={{
           marginLeft: "auto",
           flex: "0 0 auto",
-          border: "1px solid #453b34",
+          border: "1px solid #1C1917",
           background: "transparent",
           padding: "8px 12px",
-          fontSize: 12,
-          fontWeight: 600,
+          fontSize: 11,
+          fontWeight: 500,
           letterSpacing: "0.1em",
-          color: "#f4f1ec",
+          color: "#1C1917",
           cursor: "pointer",
         }}
       >
@@ -62,8 +62,7 @@ export function OmHeaderNav() {
               key={link.href}
               href={link.href}
               onClick={() => setOpen(false)}
-              className="om-hover-light"
-              style={{ display: "block", padding: "11px 0", fontSize: 13, fontWeight: 500, letterSpacing: "0.08em", color: "#b6aca2", textAlign: "left" }}
+              style={{ display: "block", padding: "11px 0", fontSize: 13, fontWeight: 500, letterSpacing: "0.08em", color: "#6B6560", textAlign: "left" }}
             >
               {link.label}
             </a>
@@ -76,7 +75,7 @@ export function OmHeaderNav() {
                 sheets?.openOffer();
               }}
               className="om-hover-fill"
-              style={{ marginTop: 8, display: "block", textAlign: "center", border: "1px solid #cc4a37", background: "#cc4a37", padding: "13px 16px", fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", color: "#fff", whiteSpace: "nowrap", cursor: "pointer" }}
+              style={{ marginTop: 8, display: "block", textAlign: "center", border: "1px solid #C4955A", background: "#C4955A", padding: "13px 16px", fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", color: "#fff", whiteSpace: "nowrap", cursor: "pointer" }}
             >
               {ctaLabel}
             </button>
@@ -85,7 +84,7 @@ export function OmHeaderNav() {
               href={ctaHref}
               onClick={() => setOpen(false)}
               className="om-hover-fill"
-              style={{ marginTop: 8, display: "block", textAlign: "center", border: "1px solid #cc4a37", background: "#cc4a37", padding: "13px 16px", fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", color: "#fff", whiteSpace: "nowrap" }}
+              style={{ marginTop: 8, display: "block", textAlign: "center", border: "1px solid #C4955A", background: "#C4955A", padding: "13px 16px", fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", color: "#fff", whiteSpace: "nowrap" }}
             >
               {ctaLabel}
             </a>

@@ -51,8 +51,8 @@ export default async function OnePagerPage({ params }: { params: Promise<{ slug:
         One-pager template is not designed yet. This print view is a placeholder — public bands only, no line items. Use the browser print dialog to save a PDF.
       </p>
       <article style={{ maxWidth: 720, margin: "0 auto", padding: "36px 28px 64px" }}>
-        <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.18em", color: "#a33a29" }}>ONE-PAGER · {listing.om_number || "OM"}</p>
-        <p style={{ margin: "12px 0 0", fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#a33a29" }}>{privacy.locationLabel.toUpperCase()}</p>
+        <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.18em", color: "#8B6535" }}>ONE-PAGER · {listing.om_number || "OM"}</p>
+        <p style={{ margin: "12px 0 0", fontSize: 12, fontWeight: 500, letterSpacing: "0.16em", color: "#8B6535" }}>{privacy.locationLabel.toUpperCase()}</p>
         <h1 style={{ margin: "12px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 40, lineHeight: 1.05 }}>{nickname}</h1>
         {listing.list_price != null && (
           <p style={{ margin: "16px 0 0", fontFamily: "var(--font-om-serif)", fontSize: 28 }}>{formatCurrency(listing.list_price)}</p>

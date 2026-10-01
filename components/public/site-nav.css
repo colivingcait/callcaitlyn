@@ -3,6 +3,8 @@
    height, py-3) + the 1px border. */
 .public-with-site-nav {
   --public-nav-offset: 85px;
+  --font-om-serif: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
+  --font-om-sans: var(--font-dm-sans), "DM Sans", system-ui, sans-serif;
   padding-top: var(--public-nav-offset);
   background: #fff;
 }

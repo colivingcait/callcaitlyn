@@ -100,15 +100,22 @@ export function BookCallButton({
 }) {
   const sheets = usePublicSheets();
   return (
-    <>
-      {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-      <a href="/book" className={`om-book-link ${className ?? ""}`} style={style}>
-        {children}
-      </a>
-      <button type="button" className={`om-book-sheet ${className ?? ""}`} style={{ ...bookButtonStyle, ...style }} onClick={() => sheets?.openBook()}>
-        {children}
-      </button>
-    </>
+    // One control. Desktop follows the link to /book. The narrow layout opens
+    // the listing bottom sheet instead of keeping a second, hidden button.
+    // eslint-disable-next-line @next/next/no-html-link-for-pages
+    <a
+      href="/book"
+      className={className}
+      style={style}
+      onClick={(event) => {
+        if (window.matchMedia("(max-width: 900px)").matches) {
+          event.preventDefault();
+          sheets?.openBook();
+        }
+      }}
+    >
+      {children}
+    </a>
   );
 }
 

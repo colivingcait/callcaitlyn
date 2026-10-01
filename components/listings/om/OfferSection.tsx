@@ -80,12 +80,12 @@ export function OfferSection({ slug, nickname, omNumber }: { slug: string; nickn
 
   return (
     <>
-      <section id="offer" data-om-noprint style={{ background: "#211c19", padding: "46px 36px 48px", textAlign: "center" }}>
-        <p className="om-offer-eyebrow" style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.2em", color: "#e9a396" }}>READY TO MOVE</p>
-        <h2 style={{ margin: "16px auto 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 34, lineHeight: 1.14, color: "#f4f1ec", maxWidth: "24ch" }}>
-          Ready to make an offer?
+      <section id="offer" data-om-noprint style={{ background: "#FAF7F2", padding: "64px 40px", textAlign: "center" }}>
+        <p className="om-offer-eyebrow cc-eyebrow cc-eyebrow-plain">Ready to move</p>
+        <h2 style={{ margin: "20px auto 0", fontFamily: "var(--font-om-serif)", fontWeight: 400, fontSize: 42, lineHeight: 1.08, color: "#1C1917", maxWidth: "16ch" }}>
+          Ready to make <em>an offer?</em>
         </h2>
-        <p className="om-offer-body" style={{ margin: "16px auto 0", fontSize: 16, lineHeight: 1.7, color: "#d6cfc5", maxWidth: "56ch" }}>
+        <p className="om-offer-body" style={{ margin: "16px auto 0", fontSize: 15, fontWeight: 300, lineHeight: 1.8, color: "#6B6560", maxWidth: "46ch" }}>
           Tell me your price and terms and I&apos;ll call you the same day to walk through them. Nothing here is a contract and nothing goes to the seller
           until we&apos;ve talked.
         </p>
@@ -97,7 +97,7 @@ export function OfferSection({ slug, nickname, omNumber }: { slug: string; nickn
             setUnsureTerms(false);
           }}
           className="om-hover-fill-border om-offer-cta"
-          style={{ marginTop: 28, border: "1px solid #cc4a37", background: "#cc4a37", padding: "18px 40px", fontSize: 14, fontWeight: 600, letterSpacing: "0.12em", color: "#fff", cursor: "pointer", whiteSpace: "nowrap" }}
+          style={{ marginTop: 28, border: "none", background: "#1C1917", padding: "18px 40px", fontSize: 11, fontWeight: 500, letterSpacing: "0.12em", color: "#fff", cursor: "pointer", whiteSpace: "nowrap" }}
         >
           SUBMIT AN OFFER
         </button>
@@ -117,7 +117,7 @@ export function OfferSection({ slug, nickname, omNumber }: { slug: string; nickn
           <div ref={panelRef} className="om-offer-panel" style={{ width: "100%", maxWidth: 620, background: "#f4f1ec", border: "1px solid #211c19" }}>
             <div className="om-offer-head" style={{ display: "flex", alignItems: "flex-start", gap: 20, background: "#211c19", padding: "24px 28px" }}>
               <div style={{ minWidth: 0 }}>
-                <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.18em", color: "#e9a396" }}>YOUR OFFER · {omNumber}</p>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.18em", color: "#E8D5B5" }}>YOUR OFFER · {omNumber}</p>
                 <p className="om-offer-title" style={{ margin: "10px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 24, color: "#f4f1ec" }}>{nickname}</p>
                 <p style={{ margin: "8px 0 0", fontSize: 13, lineHeight: 1.6, color: "#cdc4ba" }}>Not a contract — just your terms, so we have something specific to talk about.</p>
               </div>
@@ -134,7 +134,7 @@ export function OfferSection({ slug, nickname, omNumber }: { slug: string; nickn
 
             {sent ? (
               <div style={{ padding: "44px 28px 48px", textAlign: "center" }}>
-                <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.18em", color: "#a33a29" }}>SENT</p>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.18em", color: "#8B6535" }}>SENT</p>
                 <p style={{ margin: "14px auto 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 26, lineHeight: 1.3, color: "#211c19", maxWidth: "26ch" }}>
                   Caitlyn has been notified.
                 </p>
@@ -180,7 +180,7 @@ export function OfferSection({ slug, nickname, omNumber }: { slug: string; nickn
                       type="checkbox"
                       checked={unsureTerms}
                       onChange={(e) => setUnsureTerms(e.target.checked)}
-                      style={{ marginTop: 3, width: 16, height: 16, accentColor: "#cc4a37" }}
+                      style={{ marginTop: 3, width: 16, height: 16, accentColor: "#C4955A" }}
                     />
                     <span style={{ fontSize: 14, lineHeight: 1.45, color: "#2e2823" }}>Unsure about offer terms</span>
                   </label>
@@ -245,14 +245,14 @@ export function OfferSection({ slug, nickname, omNumber }: { slug: string; nickn
                 </>
                 )}
 
-                {error && <p style={{ margin: "16px 0 0", fontSize: 13, color: "#a33a29" }}>{error}</p>}
+                {error && <p style={{ margin: "16px 0 0", fontSize: 13, color: "#8B6535" }}>{error}</p>}
 
                 <div className="om-offer-send-row" style={{ marginTop: 24, display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
                   <button
                     type="submit"
                     disabled={submitting}
                     className="om-hover-dark om-offer-send"
-                    style={{ border: "1px solid #cc4a37", background: "#cc4a37", padding: "15px 32px", fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: "#fff", cursor: "pointer" }}
+                    style={{ border: "1px solid #C4955A", background: "#C4955A", padding: "15px 32px", fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: "#fff", cursor: "pointer" }}
                   >
                     {submitting ? "SENDING…" : "SEND TO CAITLYN"}
                   </button>

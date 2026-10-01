@@ -1,5 +1,4 @@
-import type { Metadata } from "next";
-import { Newsreader, Archivo } from "next/font/google";
+import type { Metadata, Viewport } from "next";
 import "leaflet/dist/leaflet.css";
 import "./om.css";
 import { PublicChrome } from "@/components/public/PublicChrome";
@@ -10,24 +9,12 @@ export const metadata: Metadata = {
   manifest: null,
 };
 
-// Deliberate deviation from the rest of the CRM (Inter + Fraunces): this is
-// a public marketing surface, not app chrome, and the design spec calls for
-// Newsreader (display) + Archivo (UI) specifically. Scoped to this route
-// only, not the app-wide root layout.
-const newsreader = Newsreader({
-  subsets: ["latin"],
-  variable: "--font-om-serif",
-  weight: ["400", "500", "600"],
-  display: "swap",
-});
+export const viewport: Viewport = {
+  themeColor: "#FAF7F2",
+};
 
-const archivo = Archivo({
-  subsets: ["latin"],
-  variable: "--font-om-sans",
-  weight: ["400", "500", "600"],
-  display: "swap",
-});
-
+// Cormorant Garamond + DM Sans come from PublicChrome (same families as the
+// marketing site). --font-om-serif / --font-om-sans alias those variables.
 export default function ListingLayout({ children }: { children: React.ReactNode }) {
-  return <PublicChrome className={`${newsreader.variable} ${archivo.variable}`}>{children}</PublicChrome>;
+  return <PublicChrome>{children}</PublicChrome>;
 }

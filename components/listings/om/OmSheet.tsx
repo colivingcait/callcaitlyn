@@ -48,7 +48,7 @@ export function OmSheet({
       <div style={{ width: "100%", maxHeight: "100%", overflowY: "auto", background: "#f4f1ec", borderTop: "1px solid #211c19" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 14, background: "#211c19", padding: 18 }}>
           <div style={{ minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 11, fontWeight: 500, letterSpacing: "0.18em", color: "#e9a396" }}>{eyebrow}</p>
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 500, letterSpacing: "0.18em", color: "#E8D5B5" }}>{eyebrow}</p>
             <p style={{ margin: "8px 0 0", fontFamily: "var(--font-om-serif)", fontWeight: 600, fontSize: 21, lineHeight: 1.2, color: "#f4f1ec" }}>{title}</p>
             {subtitle ? <p style={{ margin: "8px 0 0", fontSize: 13, lineHeight: 1.6, color: "#cdc4ba" }}>{subtitle}</p> : null}
           </div>
@@ -72,22 +72,31 @@ export function StepRule({ label, fraction }: { label: string; fraction: number 
   const full = fraction >= 1;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.14em", color: "#a33a29", whiteSpace: "nowrap" }}>{label}</span>
-      <span style={{ flex: "1 1 auto", height: 3, background: full ? "#cc4a37" : "#e4ddd2", display: "flex" }}>
-        {full ? null : <span style={{ width: `${Math.round(fraction * 100)}%`, background: "#cc4a37" }} />}
+      <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.14em", color: "#8B6535", whiteSpace: "nowrap" }}>{label}</span>
+      <span style={{ flex: "1 1 auto", height: 3, background: full ? "#C4955A" : "#e4ddd2", display: "flex" }}>
+        {full ? null : <span style={{ width: `${Math.round(fraction * 100)}%`, background: "#C4955A" }} />}
       </span>
     </div>
   );
 }
 
-export const boxedLabel: React.CSSProperties = { display: "block", fontSize: 13, color: "#574f47" };
+export const boxedLabel: React.CSSProperties = {
+  display: "block",
+  fontSize: 10,
+  fontWeight: 500,
+  letterSpacing: "0.18em",
+  textTransform: "uppercase",
+  color: "#6B6560",
+  marginBottom: 8,
+};
 export const boxedField: React.CSSProperties = {
-  marginTop: 6,
   width: "100%",
   boxSizing: "border-box",
-  border: "1px solid #d5cdc1",
-  background: "#fffdfa",
-  padding: "13px",
+  border: "1px solid rgba(28,25,23,0.10)",
+  borderRadius: 0,
+  background: "#fff",
+  padding: "14px 16px",
   fontSize: 15,
-  color: "#211c19",
+  fontWeight: 300,
+  color: "#1C1917",
 };

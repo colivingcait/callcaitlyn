@@ -106,8 +106,8 @@ export function PhotoCarousel({
           )}
           <div className="om-hero-chrome om-gutter" style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "0 28px 30px" }}>
             <div style={{ margin: "0 auto", maxWidth: 1180 }}>
-              <p className="om-eyebrow-full" style={{ margin: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.22em", color: "#e9a396" }}>{eyebrow}</p>
-              <p className="om-eyebrow-mobile" style={{ margin: 0, fontSize: 11, fontWeight: 500, letterSpacing: "0.2em", color: "#e9a396" }}>{mobileEyebrow}</p>
+              <p className="om-eyebrow-full cc-eyebrow cc-eyebrow-on-photo">{eyebrow}</p>
+              <p className="om-eyebrow-mobile" style={{ margin: 0, fontSize: 11, fontWeight: 500, letterSpacing: "0.2em", color: "#E8D5B5" }}>{mobileEyebrow}</p>
               <h1
                 className="om-h1"
                 style={{
@@ -133,8 +133,8 @@ export function PhotoCarousel({
                       display: "flex",
                       alignItems: "center",
                       gap: 12,
-                      border: "1px solid #cc4a37",
-                      background: "#cc4a37",
+                      border: "1px solid #C4955A",
+                      background: "#C4955A",
                       padding: "12px 18px",
                       font: "600 12px/1 var(--font-om-sans), Archivo, sans-serif",
                       letterSpacing: "0.12em",
@@ -252,7 +252,7 @@ export function PhotoCarousel({
                     height: 56,
                     padding: 0,
                     cursor: "pointer",
-                    border: i === index ? "2px solid #cc4a37" : "1px solid rgba(244,241,236,0.3)",
+                    border: i === index ? "2px solid #C4955A" : "1px solid rgba(244,241,236,0.3)",
                     backgroundImage: `url(${JSON.stringify(photo.url)})`,
                     backgroundSize: "cover",
                     backgroundPosition: "center",

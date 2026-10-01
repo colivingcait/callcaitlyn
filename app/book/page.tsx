@@ -6,6 +6,12 @@ export const metadata: Metadata = {
   description: "Chat with Caitlyn Verdugo — pick a time that works for you.",
 };
 
-export default function BookPage() {
-  return <BookingFlow slug={null} />;
+export default async function BookPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const raw = searchParams ? await searchParams : {};
+  const fixture = typeof raw.fixture === "string" ? raw.fixture : null;
+  return <BookingFlow slug={null} fixture={fixture} />;
 }
