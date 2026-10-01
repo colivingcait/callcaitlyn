@@ -2,12 +2,18 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  archivoSemiboldTextWidth,
   buildOgListingCard,
+  fitOgLocationLine,
   looksLikeStreetAddress,
+  newsreaderTextWidth,
+  OG_TEXT_SAFE_INSET,
   ogHeroPhoto,
   ogHook,
   ogLocationLine,
+  ogPhotoContentWidth,
   ogPlaceName,
+  ogPriceFontSize,
   ogShareDescription,
   ogShareTitle,
   ogSpecs,
@@ -76,7 +82,36 @@ assert.equal(coliving.locationLine, "GRESHAM PARK · ATLANTA METRO");
 assert.equal(offMarket.locationLine, "GRESHAM PARK · ATLANTA METRO", "off-market still shows the entered submarket");
 assert.equal(forSale.locationLine, "EAST POINT · ATLANTA METRO");
 assert.equal(coliving.price, "$425,000");
-assert.equal(coliving.priceSize, 108);
+assert.equal(coliving.priceSize, ogPriceFontSize("$425,000"));
+const photoLimit = ogPhotoContentWidth() - OG_TEXT_SAFE_INSET;
+for (const price of ["$300,000", "$320,000", "$425,000", "$1,250,000"]) {
+  const size = ogPriceFontSize(price);
+  assert.ok(newsreaderTextWidth(price, size) <= photoLimit, `${price} at ${size}px fits the photo panel`);
+  assert.ok(size >= 64, `${price} stays a display size`);
+}
+assert.equal(ogPriceFontSize("$300,000"), ogPriceFontSize("$320,000"));
+assert.ok(ogPriceFontSize("$300,000") < 108, "six-figure prices step down from 108 so the last digit is not clipped");
+assert.ok(ogPriceFontSize("$1,250,000") < ogPriceFontSize("$300,000"), "a 7-digit price steps down further");
+assert.equal(ogPriceFontSize("$99,000"), 108);
+
+const stoneLine = ogLocationLine("Stone Mountain");
+assert.equal(stoneLine, "STONE MOUNTAIN · ATLANTA METRO");
+const stoneFit = fitOgLocationLine(stoneLine);
+assert.equal(stoneFit.text, stoneLine, "Stone Mountain keeps the metro suffix");
+assert.ok(archivoSemiboldTextWidth(stoneFit.text, stoneFit.fontSize, stoneFit.letterSpacing) <= photoLimit);
+assert.ok(stoneFit.fontSize < 20 || stoneFit.letterSpacing < 3.2);
+
+const lithoniaFit = fitOgLocationLine(ogLocationLine("Lithonia"));
+assert.equal(lithoniaFit.text, "LITHONIA · ATLANTA METRO");
+assert.equal(lithoniaFit.fontSize, 20);
+assert.equal(lithoniaFit.letterSpacing, 3.2);
+
+const longLine = ogLocationLine("A Very Long Submarket Name That Will Not Fit On One Line");
+const longFit = fitOgLocationLine(longLine);
+assert.equal(longFit.text.includes("ATLANTA METRO"), false, "a line that cannot fit drops the metro suffix");
+assert.equal(longFit.text, "A VERY LONG SUBMARKET NAME THAT WILL NOT FIT ON ONE LINE");
+assert.equal(longFit.text.includes("\n"), false);
+assert.ok(archivoSemiboldTextWidth(longFit.text, longFit.fontSize, longFit.letterSpacing) <= photoLimit);
 assert.equal(ogSpecs({ beds: 8, baths: 2.5, sqft: 2400 }), "8 bd · 2.5 ba · 2,400 sqft");
 assert.equal(coliving.heroUrl, "https://cdn.example/kitchen.jpg");
 assert.equal(ogShareTitle({ nickname: "123 Oak Dr", submarket: "Lithonia" }), "Lithonia | Caitlyn Verdugo, KW Metro Atlanta");

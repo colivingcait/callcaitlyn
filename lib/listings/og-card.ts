@@ -68,11 +68,154 @@ export function ogPrice(listPrice: number | null | undefined): string | null {
   return `$${Math.round(listPrice).toLocaleString("en-US")}`;
 }
 
-export function ogPriceFontSize(price: string): number {
-  if (price.length <= 8) return 108;
-  if (price.length === 9) return 96;
-  if (price.length === 10) return 86;
-  return 72;
+// Photo-card right panel. Padding is inside the 500px panel (border-box),
+// so the price and location share this content width.
+export const OG_PHOTO_PANEL_WIDTH = 500;
+export const OG_PHOTO_PAD_X = 48;
+export const OG_TEXT_SAFE_INSET = 8;
+export const OG_PRICE_MAX = 108;
+export const OG_PRICE_MIN = 64;
+
+export function ogPhotoContentWidth(): number {
+  return OG_PHOTO_PANEL_WIDTH - OG_PHOTO_PAD_X * 2;
+}
+
+// Newsreader Regular, UPM 2000. Digits and "$" are tabular (1133). Measured
+// from assets/fonts/Newsreader-Regular.ttf.
+const NEWSREADER_UPM = 2000;
+const NEWSREADER_DIGIT = 1133;
+const NEWSREADER_ADVANCE: Record<string, number> = {
+  $: 1133,
+  ",": 477,
+  "0": 1133,
+  "1": 1133,
+  "2": 1133,
+  "3": 1133,
+  "4": 1133,
+  "5": 1133,
+  "6": 1133,
+  "7": 1133,
+  "8": 1133,
+  "9": 1133,
+};
+
+export function newsreaderTextWidth(text: string, fontSize: number): number {
+  let units = 0;
+  for (const ch of text) units += NEWSREADER_ADVANCE[ch] ?? NEWSREADER_DIGIT;
+  return (units * fontSize) / NEWSREADER_UPM;
+}
+
+export function ogPriceFontSize(price: string, maxWidth = ogPhotoContentWidth()): number {
+  const limit = Math.max(0, maxWidth - OG_TEXT_SAFE_INSET);
+  let size = OG_PRICE_MAX;
+  while (size > OG_PRICE_MIN && newsreaderTextWidth(price, size) > limit) size -= 1;
+  return size;
+}
+
+// Archivo SemiBold, UPM 1000. Satori adds letter-spacing after every glyph,
+// including the last. Unknown glyphs use "M" so a long line shrinks instead
+// of clipping. Measured from assets/fonts/Archivo-SemiBold.ttf.
+const ARCHIVO_UPM = 1000;
+const ARCHIVO_FALLBACK = 844;
+const ARCHIVO_ADVANCE: Record<string, number> = {
+  " ": 200,
+  $: 541,
+  "&": 729,
+  "'": 246,
+  ",": 300,
+  "-": 333,
+  ".": 300,
+  "/": 298,
+  "0": 575,
+  "1": 576,
+  "2": 576,
+  "3": 576,
+  "4": 577,
+  "5": 575,
+  "6": 576,
+  "7": 576,
+  "8": 576,
+  "9": 575,
+  A: 709,
+  B: 706,
+  C: 721,
+  D: 728,
+  E: 672,
+  F: 609,
+  G: 794,
+  H: 732,
+  I: 282,
+  J: 585,
+  K: 695,
+  L: 570,
+  M: 844,
+  N: 732,
+  O: 782,
+  P: 670,
+  Q: 782,
+  R: 717,
+  S: 667,
+  T: 619,
+  U: 724,
+  V: 671,
+  W: 954,
+  X: 686,
+  Y: 677,
+  Z: 634,
+  "·": 333,
+};
+
+export function archivoSemiboldTextWidth(text: string, fontSize: number, letterSpacing: number): number {
+  let units = 0;
+  let count = 0;
+  for (const ch of text) {
+    units += ARCHIVO_ADVANCE[ch] ?? ARCHIVO_FALLBACK;
+    count += 1;
+  }
+  return (units * fontSize) / ARCHIVO_UPM + letterSpacing * count;
+}
+
+const LOCATION_STEPS: Array<{ fontSize: number; letterSpacing: number }> = [
+  { fontSize: 20, letterSpacing: 3.2 },
+  { fontSize: 18, letterSpacing: 2.2 },
+  { fontSize: 18, letterSpacing: 1.6 },
+  { fontSize: 17, letterSpacing: 1.4 },
+  { fontSize: 16, letterSpacing: 1.2 },
+  { fontSize: 15, letterSpacing: 0.8 },
+  { fontSize: 14, letterSpacing: 0.4 },
+];
+
+const METRO_SUFFIX = " · ATLANTA METRO";
+
+function fitLocationStep(text: string, limit: number): { fontSize: number; letterSpacing: number } | null {
+  for (const step of LOCATION_STEPS) {
+    if (archivoSemiboldTextWidth(text, step.fontSize, step.letterSpacing) <= limit) return step;
+  }
+  return null;
+}
+
+function shrinkLocationStep(text: string, limit: number): { fontSize: number; letterSpacing: number } {
+  let fontSize = 13;
+  while (fontSize > 8 && archivoSemiboldTextWidth(text, fontSize, 0) > limit) fontSize -= 1;
+  return { fontSize, letterSpacing: 0 };
+}
+
+// Display fit only. ogLocationLine still returns the full submarket line;
+// this drops the metro suffix when that line cannot stay on one row.
+export function fitOgLocationLine(
+  line: string,
+  maxWidth = ogPhotoContentWidth(),
+): { text: string; fontSize: number; letterSpacing: number } {
+  const limit = Math.max(0, maxWidth - OG_TEXT_SAFE_INSET);
+  const full = fitLocationStep(line, limit);
+  if (full) return { text: line, ...full };
+  if (line.endsWith(METRO_SUFFIX)) {
+    const place = line.slice(0, -METRO_SUFFIX.length).trim();
+    if (place) {
+      return { text: place, ...(fitLocationStep(place, limit) ?? shrinkLocationStep(place, limit)) };
+    }
+  }
+  return { text: line, ...shrinkLocationStep(line, limit) };
 }
 
 function formatCount(value: number): string {
