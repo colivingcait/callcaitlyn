@@ -1,0 +1,226 @@
+/* Approved site footer. Measurements from the handoff (cc.css .site-footer,
+   .ftop, .g3, .fbook, .broker, .kwimg, .btxt, .ind, .eho). Colors are the
+   reskin tokens in tailwind.config.ts. Fonts are the PublicChrome
+   next/font variables (Cormorant Garamond and DM Sans). */
+
+.site-footer {
+  --footer-max: 1320px;
+  background: #1c1917;
+  padding: 0 60px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  font-family: var(--font-dm-sans), "DM Sans", system-ui, sans-serif;
+  font-weight: 300;
+  font-size: 16px;
+  line-height: 1.8;
+  color: #6b6560;
+  -webkit-font-smoothing: antialiased;
+}
+
+.site-footer a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.site-footer .ftop {
+  max-width: var(--footer-max);
+  margin: 0 auto 36px;
+  padding-top: 56px;
+}
+
+.site-footer .brand {
+  font-family: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
+  font-size: 20px;
+  font-weight: 300;
+  color: #fff;
+  line-height: 1.4;
+}
+
+.site-footer .brand em {
+  font-style: italic;
+  font-weight: 300;
+  color: #e8d5b5;
+}
+
+.site-footer .ftop p {
+  margin: 8px 0 0;
+  max-width: 280px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #6b6560;
+  text-wrap: pretty;
+}
+
+.site-footer .grid {
+  max-width: var(--footer-max);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 60px;
+  padding: 56px 0;
+}
+
+.site-footer .grid.g3 {
+  grid-template-columns: 1fr 1fr 1.2fr !important;
+  padding-top: 0;
+}
+
+.site-footer h4 {
+  margin: 0 0 20px;
+  font-family: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #c4955a;
+}
+
+.site-footer ul {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-footer ul a {
+  font-size: 13px;
+  line-height: 1.4;
+  color: #a09a94;
+}
+
+.site-footer .fbook {
+  display: inline-block;
+  margin-top: 18px;
+  background: #c4955a;
+  color: #1c1917;
+  padding: 13px 22px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  line-height: 1.8;
+  text-decoration: none;
+}
+
+.site-footer .broker {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  max-width: var(--footer-max);
+  margin: 40px auto 0;
+  padding: 28px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.site-footer .kwimg {
+  height: 52px;
+  width: auto;
+  max-width: none;
+  flex: none;
+}
+
+.site-footer .btxt {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: #a09a94;
+}
+
+.site-footer .btxt b {
+  font-family: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
+  font-weight: 400;
+  font-size: 22px;
+  font-style: normal;
+  color: #faf7f2;
+}
+
+.site-footer .btxt .ind {
+  font-size: 12px;
+  font-style: italic;
+  color: #8a847e;
+}
+
+.site-footer .eho {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: #a09a94;
+}
+
+.site-footer .eho svg {
+  display: block;
+  width: 16px;
+  height: 12px;
+  flex: none;
+}
+
+.site-footer .legal {
+  max-width: var(--footer-max);
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 24px 0;
+  font-size: 11px;
+  color: #6b6560;
+}
+
+@media (max-width: 1023px) {
+  .site-footer {
+    padding: 0 32px;
+  }
+
+  .site-footer .grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+  }
+
+  .site-footer .grid > div:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .site-footer .legal {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+}
+
+@media (max-width: 700px) {
+  .site-footer .grid.g3 {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px 20px;
+  }
+
+  .site-footer .grid.g3 > div:first-child {
+    grid-column: auto;
+  }
+
+  .site-footer .grid.g3 > div:nth-child(2) h4 {
+    display: block;
+  }
+
+  .site-footer .grid.g3 > div:last-child {
+    grid-column: 1 / -1;
+    margin-top: 28px;
+  }
+
+  .site-footer .broker {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .site-footer .eho {
+    margin-left: 0;
+  }
+}
