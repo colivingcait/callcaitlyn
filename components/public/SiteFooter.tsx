@@ -96,7 +96,7 @@ export function SiteFooter() {
       </div>
 
       <div className="legal">
-        <span>© 2026 Coliving Cait · Lustra House LLC</span>
+        <span>© 2026 Coliving Cait</span>
         <span>Keller Williams Realty Metro Atlanta</span>
       </div>
     </footer>
