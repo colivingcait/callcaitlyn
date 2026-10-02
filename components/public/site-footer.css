@@ -218,9 +218,28 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
+    min-width: 0;
+  }
+
+  .site-footer .kwimg {
+    flex: 0 1 auto;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 52px;
+    min-width: 0;
   }
 
   .site-footer .eho {
     margin-left: 0;
+  }
+}
+
+/* Detail pages show the fixed unlock bar at this width. The bar is 69px
+   (measured). Pad the footer by that height, plus the home-indicator inset,
+   so the legal line can scroll clear of it. */
+@media (max-width: 759px) {
+  .public-with-site-nav:has(.om-detail-subnav) .site-footer {
+    padding-bottom: calc(69px + env(safe-area-inset-bottom, 0px));
   }
 }
