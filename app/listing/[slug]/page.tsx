@@ -377,7 +377,7 @@ export default async function OfferingMemorandumPage({ params }: { params: Promi
                 <p className="om-fin-explainer" style={{ margin: "22px 0 0", fontSize: 14, lineHeight: 1.7, color: "#574f47", maxWidth: "70ch" }}>
                   {publicFinCells.length > 0
                     ? "The asking price reflects both local comparable sales and the income the asset produces — coliving houses are underwritten on both."
-                    : "Line-item rent, expenses, and cap rate are locked until you share a name and a phone or email. Nothing here is a projection — it is the seller’s underwriting, unlocked on this page."}
+                    : "Line-item rent, expenses, and cap rate are locked until you share a name, phone number, and email. Nothing here is a projection — it is the seller’s underwriting, unlocked on this page."}
                 </p>
                 )}
                 {projectedOpex && listing.list_price != null && publicFinCells.length > 0 && (

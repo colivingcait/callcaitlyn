@@ -98,7 +98,7 @@ async function recordUnlockActivity(
   return null;
 }
 
-// The underwriting gate: name + phone or email, in place, no navigation.
+// The underwriting gate: name, phone, and email, in place, no navigation.
 // Real financials are fetched here and returned to the client only on
 // success - the locked page's HTML never contains them (see
 // components/listings/om/FinancialGate.tsx).
@@ -107,20 +107,25 @@ export async function unlockListingFinancials(
   input: { name: string; phone: string; email: string },
 ): Promise<ActionResult & { financials?: ListingFinancials; workbookUrl?: string | null }> {
   if (!OWNER_ID) return { ok: false, error: "Not configured" };
-  if (!input.phone.trim() && !input.email.trim()) return { ok: false, error: "Enter a phone number or email" };
+  const name = input.name.trim();
+  const phone = input.phone.trim();
+  const email = input.email.trim();
+  if (!name) return { ok: false, error: "Enter your name" };
+  if (!phone || phone.replace(/\D/g, "").length < 10) return { ok: false, error: "Enter your phone number" };
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, error: "Enter your email" };
 
   try {
     const { admin, listing } = await findPublicListing(slug);
     if (!listing) return { ok: false, error: "This listing isn't available anymore" };
     const nickname = listing.nickname || listing.address;
 
-    const { contact, name, phone, email } = await captureContact(
+    const { contact, name: contactName, phone: contactPhone, email: contactEmail } = await captureContact(
       admin,
-      input,
+      { name, phone, email },
       `Listing page — ${nickname}`,
       { skipQuoSync: true },
     );
-    if (!contact) return { ok: false, error: "Enter a valid phone number or email" };
+    if (!contact) return { ok: false, error: "Could not unlock. Try again." };
 
     const tagged = await addTagByName(admin, OWNER_ID, contact.id, "Investor Lead");
     if (!tagged) return { ok: false, error: "Could not save this lead. Try again." };
@@ -134,7 +139,7 @@ export async function unlockListingFinancials(
 
     await withTimeout(
       notifyNewLead(admin, OWNER_ID, {
-        title: name || email || phone,
+        title: contactName || contactEmail || contactPhone,
         body: `Unlocked financials on ${nickname}`,
         url: `/contacts/${contact.id}`,
       }),

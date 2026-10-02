@@ -182,14 +182,12 @@ export function FinancialGate({
               </div>
               <div style={{ flex: "1 1 0", minWidth: 0 }}>
                 <label htmlFor="u-phone-m" style={labelStyle}>PHONE</label>
-                <input id="u-phone-m" name="phone" type="tel" className="om-input" style={{ ...inputStyle, marginTop: 6, padding: "10px 0" }} />
+                <input id="u-phone-m" name="phone" type="tel" required className="om-input" style={{ ...inputStyle, marginTop: 6, padding: "10px 0" }} />
               </div>
             </div>
             <div>
-              <label htmlFor="u-email-m" style={labelStyle}>
-                EMAIL <span style={{ color: "#6b6259" }}>(OPTIONAL)</span>
-              </label>
-              <input id="u-email-m" name="email" type="email" className="om-input" style={{ ...inputStyle, marginTop: 6, padding: "10px 0" }} />
+              <label htmlFor="u-email-m" style={labelStyle}>EMAIL</label>
+              <input id="u-email-m" name="email" type="email" required className="om-input" style={{ ...inputStyle, marginTop: 6, padding: "10px 0" }} />
             </div>
             {error && <p style={{ margin: 0, fontSize: 13, color: "#C4955A" }}>{error}</p>}
             <button
@@ -267,11 +265,11 @@ export function FinancialGate({
                 </div>
                 <div>
                   <label htmlFor="u-phone" style={labelStyle}>PHONE</label>
-                  <input id="u-phone" name="phone" type="tel" className="om-input" style={inputStyle} />
+                  <input id="u-phone" name="phone" type="tel" required className="om-input" style={inputStyle} />
                 </div>
                 <div>
                   <label htmlFor="u-email" style={labelStyle}>EMAIL</label>
-                  <input id="u-email" name="email" type="email" className="om-input" style={inputStyle} />
+                  <input id="u-email" name="email" type="email" required className="om-input" style={inputStyle} />
                 </div>
                 {error && <p style={{ margin: 0, fontSize: 13, color: "#C4955A" }}>{error}</p>}
                 <button
